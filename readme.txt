@@ -144,7 +144,7 @@ No. The free version includes static segments. Dynamic smart segments, automatio
 
 == Changelog ==
 
-= 1.1.0 =
+= 1.1.0 (Jun 15, 2026) =
 
 * Updated the WordPress Dashboard follow-up tasks widget to appear at the top of the Dashboard.
 * Refreshed the Tasks admin page with a task-specific header, summary cards, clearer form/list panels, and responsive layout improvements while staying familiar to WordPress admin.
