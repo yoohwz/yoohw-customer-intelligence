@@ -1,0 +1,2209 @@
+# Copyright (C) 2026 YoOhw Studio
+# This file is distributed under the GPLv2 or later.
+msgid ""
+msgstr ""
+"Project-Id-Version: YoOhw Customer Intelligence for WooCommerce 1.1.0\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/yoohw-customer-intelligence\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2026-06-10T09:48:08+00:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: WP-CLI 2.9.0\n"
+"X-Domain: yoohw-customer-intelligence\n"
+
+#. Plugin Name of the plugin
+#: admin/class-yoohw-cos-admin-menu.php:64
+msgid "YoOhw Customer Intelligence for WooCommerce"
+msgstr ""
+
+#. Description of the plugin
+msgid "Unified customer intelligence and operations platform for WooCommerce."
+msgstr ""
+
+#. Author of the plugin
+msgid "YoOhw Studio"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:170
+#: admin/class-yoohw-cos-admin-menu.php:1136
+msgid "Follow-up tasks"
+msgstr ""
+
+#: admin/class-yoohw-cos-activity-list.php:22
+#: admin/class-yoohw-cos-customer-profile.php:534
+msgid "Date"
+msgstr ""
+
+#: admin/class-yoohw-cos-activity-list.php:23
+#: admin/class-yoohw-cos-admin-menu.php:1011
+#: admin/class-yoohw-cos-customers-list.php:29
+#: admin/class-yoohw-cos-tasks-list.php:24
+msgid "Customer"
+msgstr ""
+
+#: admin/class-yoohw-cos-activity-list.php:24
+msgid "Event"
+msgstr ""
+
+#: admin/class-yoohw-cos-activity-list.php:25
+#: admin/class-yoohw-cos-admin-menu.php:1022
+#: admin/class-yoohw-cos-admin-menu.php:1457
+#: admin/class-yoohw-cos-admin-menu.php:1727
+#: admin/class-yoohw-cos-segments-list.php:26
+#: admin/class-yoohw-cos-tags-list.php:26
+msgid "Description"
+msgstr ""
+
+#: admin/class-yoohw-cos-activity-list.php:26
+#: admin/class-yoohw-cos-customer-profile.php:446
+msgid "Source"
+msgstr ""
+
+#: admin/class-yoohw-cos-activity-list.php:27
+msgid "Severity"
+msgstr ""
+
+#: admin/class-yoohw-cos-activity-list.php:28
+msgid "Object"
+msgstr ""
+
+#: admin/class-yoohw-cos-activity-list.php:134
+#: admin/class-yoohw-cos-customers-list.php:185
+#: admin/class-yoohw-cos-tasks-list.php:184
+msgid "All"
+msgstr ""
+
+#: admin/class-yoohw-cos-activity-list.php:135
+msgid "Info"
+msgstr ""
+
+#: admin/class-yoohw-cos-activity-list.php:136
+msgid "Success"
+msgstr ""
+
+#: admin/class-yoohw-cos-activity-list.php:137
+msgid "Warning"
+msgstr ""
+
+#: admin/class-yoohw-cos-activity-list.php:138
+msgid "Error"
+msgstr ""
+
+#: admin/class-yoohw-cos-activity-list.php:274
+msgid "All event types"
+msgstr ""
+
+#: admin/class-yoohw-cos-activity-list.php:275
+#: admin/class-yoohw-cos-admin-menu.php:2555
+msgid "Order Synced"
+msgstr ""
+
+#: admin/class-yoohw-cos-activity-list.php:276
+msgid "Tag Assigned"
+msgstr ""
+
+#: admin/class-yoohw-cos-activity-list.php:277
+#: admin/class-yoohw-cos-admin-menu.php:2561
+msgid "Tag Removed"
+msgstr ""
+
+#: admin/class-yoohw-cos-activity-list.php:278
+#: admin/class-yoohw-cos-admin-menu.php:2552
+msgid "Note Added"
+msgstr ""
+
+#: admin/class-yoohw-cos-activity-list.php:279
+#: admin/class-yoohw-cos-admin-menu.php:2554
+msgid "Note Updated"
+msgstr ""
+
+#: admin/class-yoohw-cos-activity-list.php:280
+#: admin/class-yoohw-cos-admin-menu.php:2553
+msgid "Note Deleted"
+msgstr ""
+
+#: admin/class-yoohw-cos-activity-list.php:281
+#: admin/class-yoohw-cos-admin-menu.php:2559
+msgid "Task Created"
+msgstr ""
+
+#: admin/class-yoohw-cos-activity-list.php:282
+#: admin/class-yoohw-cos-admin-menu.php:2558
+msgid "Task Completed"
+msgstr ""
+
+#: admin/class-yoohw-cos-activity-list.php:283
+msgid "Bulk Customer Action"
+msgstr ""
+
+#: admin/class-yoohw-cos-activity-list.php:291
+msgid "All sources"
+msgstr ""
+
+#: admin/class-yoohw-cos-activity-list.php:292
+#: admin/class-yoohw-cos-admin-menu.php:2599
+msgid "System"
+msgstr ""
+
+#: admin/class-yoohw-cos-activity-list.php:293
+#: admin/class-yoohw-cos-admin-menu.php:2170
+msgid "WooCommerce"
+msgstr ""
+
+#: admin/class-yoohw-cos-activity-list.php:294
+#: admin/class-yoohw-cos-customer-profile.php:181
+msgid "Customer Intelligence"
+msgstr ""
+
+#: admin/class-yoohw-cos-activity-list.php:299
+#: admin/class-yoohw-cos-customers-list.php:495
+#: admin/class-yoohw-cos-tasks-list.php:240
+msgid "Filter"
+msgstr ""
+
+#: admin/class-yoohw-cos-activity-list.php:351
+msgid "No activity matches the current filters."
+msgstr ""
+
+#: admin/class-yoohw-cos-activity-list.php:352
+msgid "Adjust filters or clear search to see more activity."
+msgstr ""
+
+#: admin/class-yoohw-cos-activity-list.php:358
+msgid "No activity recorded yet."
+msgstr ""
+
+#: admin/class-yoohw-cos-activity-list.php:359
+#: admin/class-yoohw-cos-admin-menu.php:2401
+msgid "Customer sync and team actions will appear here."
+msgstr ""
+
+#: admin/class-yoohw-cos-activity-list.php:370
+#: admin/class-yoohw-cos-admin-menu.php:1149
+#: admin/class-yoohw-cos-customer-exporter.php:215
+#: admin/class-yoohw-cos-customer-profile.php:642
+#: admin/class-yoohw-cos-customers-list.php:120
+#: admin/class-yoohw-cos-tasks-list.php:391
+msgid "(No name)"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:53
+msgid "Copied!"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:54
+msgid "Sync could not be completed. Please try again."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:56
+msgid "Syncing orders..."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:57
+#: admin/class-yoohw-cos-admin-menu.php:2224
+msgid "Sync complete."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:65
+#: admin/class-yoohw-cos-admin-menu.php:84
+#: admin/class-yoohw-cos-admin-menu.php:85
+#: admin/class-yoohw-cos-admin-menu.php:182
+#: admin/class-yoohw-cos-admin-menu.php:256
+#: admin/class-yoohw-cos-segments-list.php:25
+#: admin/class-yoohw-cos-tags-list.php:25
+msgid "Customers"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:75
+#: admin/class-yoohw-cos-admin-menu.php:76
+#: admin/class-yoohw-cos-admin-menu.php:168
+#: admin/class-yoohw-cos-customer-profile.php:155
+msgid "Overview"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:93
+#: admin/class-yoohw-cos-admin-menu.php:94
+#: admin/class-yoohw-cos-admin-menu.php:828
+#: admin/class-yoohw-cos-admin-menu.php:2371
+#: admin/class-yoohw-cos-customer-profile.php:823
+msgid "Tasks"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:102
+#: admin/class-yoohw-cos-admin-menu.php:103
+#: admin/class-yoohw-cos-admin-menu.php:1223
+#: admin/class-yoohw-cos-customer-exporter.php:99
+#: admin/class-yoohw-cos-customer-profile.php:651
+msgid "Tags"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:111
+#: admin/class-yoohw-cos-admin-menu.php:112
+#: admin/class-yoohw-cos-admin-menu.php:1492
+#: admin/class-yoohw-cos-customer-exporter.php:100
+#: admin/class-yoohw-cos-customer-profile.php:732
+msgid "Segments"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:120
+#: admin/class-yoohw-cos-admin-menu.php:121
+#: admin/class-yoohw-cos-admin-menu.php:1760
+#: admin/class-yoohw-cos-admin-menu.php:2547
+#: admin/class-yoohw-cos-customer-profile.php:188
+msgid "Activity"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:129
+#: admin/class-yoohw-cos-admin-menu.php:130
+#: admin/class-yoohw-cos-admin-menu.php:1785
+msgid "Settings"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:147
+#: admin/class-yoohw-cos-admin-menu.php:214
+#: admin/class-yoohw-cos-admin-menu.php:811
+#: admin/class-yoohw-cos-admin-menu.php:1206
+#: admin/class-yoohw-cos-admin-menu.php:1483
+#: admin/class-yoohw-cos-admin-menu.php:1753
+#: admin/class-yoohw-cos-admin-menu.php:1781
+msgid "You do not have permission to access this page."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:169
+msgid "A quick view of customer health, lifecycle, and recent store activity."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:173
+msgid "No synced customer data found yet. Sync existing orders to populate the dashboard."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:174
+#: admin/class-yoohw-cos-customers-list.php:170
+msgid "Open Sync Center"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:179
+msgid "Summary"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:183
+#: admin/class-yoohw-cos-customer-exporter.php:92
+#: admin/class-yoohw-cos-customer-profile.php:110
+msgid "Orders"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:184
+msgid "Revenue"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:185
+#: admin/class-yoohw-cos-admin-menu.php:2299
+#: admin/class-yoohw-cos-customer-exporter.php:97
+#: admin/class-yoohw-cos-customer-exporter.php:242
+#: admin/class-yoohw-cos-customer-profile.php:1143
+#: admin/class-yoohw-cos-customer-profile.php:1155
+#: admin/class-yoohw-cos-customer-profile.php:1305
+#: admin/class-yoohw-cos-customers-list.php:190
+#: admin/class-yoohw-cos-customers-list.php:482
+#: admin/class-yoohw-cos-customers-list.php:621
+#: admin/class-yoohw-cos-customers-list.php:660
+msgid "VIP"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:186
+#: admin/class-yoohw-cos-customer-profile.php:1141
+#: admin/class-yoohw-cos-customer-profile.php:1153
+#: admin/class-yoohw-cos-customers-list.php:188
+#: admin/class-yoohw-cos-customers-list.php:619
+msgid "At Risk"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:187
+#: admin/class-yoohw-cos-admin-menu.php:2039
+#: admin/class-yoohw-cos-customer-profile.php:1142
+#: admin/class-yoohw-cos-customer-profile.php:1154
+#: admin/class-yoohw-cos-customers-list.php:189
+#: admin/class-yoohw-cos-customers-list.php:620
+msgid "Inactive"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:257
+msgid "Search, filter, export, and manage customer profiles synced from WooCommerce orders."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:274
+msgid "Please select at least one customer before applying a bulk action."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:275
+msgid "Please select a tag before applying this bulk action."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:276
+msgid "Please select a segment before applying this bulk action."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:277
+msgid "Please enter a follow-up task title before applying this bulk action."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:278
+msgid "Please select a valid assignee. Tasks can only be assigned to Administrators or Shop managers."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:279
+msgid "Please enter a valid task due date or leave it empty."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:280
+msgid "Bulk action completed, but no customer records were changed."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:282
+msgid "Bulk action could not be completed."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:302
+msgid "Search"
+msgstr ""
+
+#. translators: 1: bulk action label, 2: number of customers.
+#: admin/class-yoohw-cos-admin-menu.php:655
+msgid "Bulk customer action completed: %1$s. %2$d customers changed."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:702
+#: admin/class-yoohw-cos-customers-list.php:52
+msgid "Assign tag"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:703
+#: admin/class-yoohw-cos-customers-list.php:53
+msgid "Remove tag"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:704
+#: admin/class-yoohw-cos-customers-list.php:54
+msgid "Assign segment"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:705
+#: admin/class-yoohw-cos-customers-list.php:55
+msgid "Remove segment"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:706
+#: admin/class-yoohw-cos-customers-list.php:56
+msgid "Create follow-up task"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:707
+#: admin/class-yoohw-cos-customers-list.php:57
+msgid "Archive customers"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:708
+#: admin/class-yoohw-cos-customers-list.php:47
+msgid "Restore customers"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:711
+msgid "Bulk action"
+msgstr ""
+
+#. translators: 1: number of customers, 2: task title.
+#: admin/class-yoohw-cos-admin-menu.php:722
+msgid "Created follow-up tasks for %1$s customers: %2$s."
+msgstr ""
+
+#. translators: %s: number of customers.
+#: admin/class-yoohw-cos-admin-menu.php:728
+msgid "Created follow-up tasks for %s customers."
+msgstr ""
+
+#. translators: %s: number of customers.
+#: admin/class-yoohw-cos-admin-menu.php:736
+msgid "Archived %s customers."
+msgstr ""
+
+#. translators: %s: number of customers.
+#: admin/class-yoohw-cos-admin-menu.php:744
+msgid "Restored %s customers from archive."
+msgstr ""
+
+#. translators: 1: bulk action label, 2: target label, 3: number of customers.
+#: admin/class-yoohw-cos-admin-menu.php:752
+msgid "%1$s \"%2$s\" completed for %3$s customers."
+msgstr ""
+
+#. translators: 1: bulk action label, 2: number of customers.
+#: admin/class-yoohw-cos-admin-menu.php:761
+msgid "%1$s completed for %2$s customers."
+msgstr ""
+
+#. translators: 1: bulk action label, 2: target label.
+#: admin/class-yoohw-cos-admin-menu.php:773
+msgid "%1$s \"%2$s\" did not change any selected customers. They may already match that state."
+msgstr ""
+
+#. translators: %s: bulk action label.
+#: admin/class-yoohw-cos-admin-menu.php:781
+msgid "%s did not change any selected customers."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:829
+msgid "Track follow-ups for customers and orders."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:853
+msgid "Search tasks"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:939
+msgid "Please select a valid customer."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:940
+msgid "Please enter a task title."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:941
+msgid "Please assign tasks only to an Administrator or Shop Manager."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:942
+msgid "Task could not be found."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:943
+msgid "Task could not be saved."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:947
+#: admin/class-yoohw-cos-customer-profile.php:846
+msgid "Task action could not be completed."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:952
+#: admin/class-yoohw-cos-customer-profile.php:828
+msgid "Task created successfully."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:953
+msgid "Task updated successfully."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:954
+#: admin/class-yoohw-cos-customer-profile.php:834
+msgid "Task marked complete."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:955
+#: admin/class-yoohw-cos-customer-profile.php:840
+msgid "Task reopened."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:956
+msgid "Task deleted."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:967
+msgid "Please select at least one task before applying a bulk action."
+msgstr ""
+
+#. translators: 1: number of tasks, 2: task bulk action name.
+#: admin/class-yoohw-cos-admin-menu.php:978
+msgid "%1$s tasks processed for action: %2$s."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:995
+msgid "Edit Task"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:996
+msgid "Add New Task"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1013
+msgid "Tasks are stored against Customer Intelligence profiles."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1017
+msgid "Title"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1027
+#: admin/class-yoohw-cos-customer-profile.php:877
+msgid "Due date"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1032
+#: admin/class-yoohw-cos-customer-profile.php:866
+#: admin/class-yoohw-cos-tasks-list.php:27
+msgid "Priority"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1044
+#: admin/class-yoohw-cos-admin-menu.php:2242
+#: admin/class-yoohw-cos-customer-profile.php:208
+#: admin/class-yoohw-cos-customer-profile.php:535
+#: admin/class-yoohw-cos-tasks-list.php:26
+msgid "Status"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1056
+#: admin/class-yoohw-cos-tasks-list.php:28
+msgid "Assignee"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1061
+msgid "Order ID"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1063
+msgid "Optional WooCommerce order reference."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1068
+msgid "Update Task"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1069
+#: admin/class-yoohw-cos-customer-profile.php:857
+#: admin/class-yoohw-cos-customer-profile.php:892
+msgid "Add Task"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1077
+#: admin/class-yoohw-cos-admin-menu.php:1473
+#: admin/class-yoohw-cos-admin-menu.php:1743
+#: admin/class-yoohw-cos-customer-profile.php:1122
+msgid "Cancel"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1089
+msgid "Select customer"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1167
+#: admin/class-yoohw-cos-customer-profile.php:981
+#: admin/class-yoohw-cos-customers-list.php:391
+msgid "Unassigned"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1224
+msgid "Create reusable customer labels for profiles, filters, and bulk actions."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1230
+msgid "Please enter a tag name."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1231
+msgid "A tag with this name already exists."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1235
+msgid "Tag could not be saved."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1242
+msgid "Tag created successfully."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1246
+msgid "Tag could not be created."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1254
+msgid "Tag updated successfully."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1258
+msgid "Tag could not be updated."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1266
+msgid "Tag deleted successfully."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1270
+msgid "Tag could not be deleted."
+msgstr ""
+
+#. translators: %s: number of tags deleted.
+#: admin/class-yoohw-cos-admin-menu.php:1283
+msgid "%s tags deleted."
+msgstr ""
+
+#. translators: %s: number of assigned tags skipped during bulk deletion.
+#: admin/class-yoohw-cos-admin-menu.php:1293
+msgid "%s assigned tags were skipped. Remove assignments or use the individual force-delete action."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1302
+msgid "Please select at least one tag before applying a bulk action."
+msgstr ""
+
+#. translators: %s: number of customers assigned to this tag.
+#: admin/class-yoohw-cos-admin-menu.php:1325
+msgid "This tag is assigned to %s customers. Delete it anyway?"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1328
+msgid "This will remove the tag from all assigned customers. Continue?"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1329
+msgid "Force Delete Tag"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1346
+msgid "Search tags"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1429
+msgid "Edit Tag"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1430
+#: admin/class-yoohw-cos-admin-menu.php:1465
+msgid "Add New Tag"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1446
+#: admin/class-yoohw-cos-admin-menu.php:1721
+#: admin/class-yoohw-cos-customer-exporter.php:89
+msgid "Name"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1447
+#: admin/class-yoohw-cos-customer-profile.php:714
+msgid "VIP, High Risk, Needs Follow-up..."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1448
+msgid "The name is how the tag appears on customer profiles and customer lists."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1452
+#: admin/class-yoohw-cos-tags-list.php:24
+msgid "Color"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1458
+msgid "Describe how this tag should be used..."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1459
+#: admin/class-yoohw-cos-admin-menu.php:1729
+msgid "Descriptions are shown internally only."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1464
+msgid "Update Tag"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1493
+msgid "Create customer groups for filters, operations, and reporting."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1499
+msgid "Please enter a segment name."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1500
+msgid "A segment with this name already exists."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1504
+msgid "Segment could not be saved."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1511
+msgid "Segment created successfully."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1515
+msgid "Segment could not be created."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1523
+msgid "Segment deleted successfully."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1527
+msgid "Segment could not be deleted."
+msgstr ""
+
+#. translators: %s: number of segments deleted.
+#: admin/class-yoohw-cos-admin-menu.php:1540
+msgid "%s segments deleted."
+msgstr ""
+
+#. translators: %s: number of assigned segments skipped during bulk deletion.
+#: admin/class-yoohw-cos-admin-menu.php:1550
+msgid "%s assigned segments were skipped. Remove assignments or use the individual force-delete action."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1559
+msgid "Please select at least one segment before applying a bulk action."
+msgstr ""
+
+#. translators: %s: number of customers assigned to this segment.
+#: admin/class-yoohw-cos-admin-menu.php:1582
+msgid "This segment is assigned to %s customers. Delete it anyway?"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1585
+msgid "This will remove the segment from all assigned customers. Continue?"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1586
+msgid "Force Delete Segment"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1594
+msgid "Segment updated successfully."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1598
+msgid "Segment could not be updated."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1623
+msgid "Search segments"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1705
+msgid "Edit Segment"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1706
+#: admin/class-yoohw-cos-admin-menu.php:1735
+msgid "Add New Segment"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1722
+msgid "VIP Recovery, Wholesale, Repeat Buyers..."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1723
+msgid "The name is how the segment appears on customer profiles and customer lists."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1728
+msgid "Describe what this segment is used for..."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1734
+msgid "Update Segment"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1761
+msgid "Review order sync, notes, tags, segments, and task events."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1772
+msgid "Search activity"
+msgstr ""
+
+#. translators: %s: number of orders processed by customer sync.
+#: admin/class-yoohw-cos-admin-menu.php:1800
+msgid "Customer sync completed. %s orders processed in this batch."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1807
+msgid "No more orders found. Customer sync appears to be complete."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1814
+msgid "Customer Intelligence data has been reset."
+msgstr ""
+
+#. translators: %s: number of customers updated by intelligence recalculation.
+#: admin/class-yoohw-cos-admin-menu.php:1825
+msgid "Customer intelligence recalculated. %s customers updated in this batch."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1832
+msgid "No more customers found. Intelligence recalculation appears to be complete."
+msgstr ""
+
+#. translators: %s: number of customers updated by first-order backfill.
+#: admin/class-yoohw-cos-admin-menu.php:1844
+msgid "First order data backfilled. %s customers updated in this batch."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1851
+msgid "No more customers found. First order backfill appears to be complete."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1857
+#: admin/class-yoohw-cos-customer-profile.php:168
+msgid "Operations"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1861
+msgid "Sync Center"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1887
+#: admin/class-yoohw-cos-admin-menu.php:2151
+msgid "Continue Sync"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1888
+#: admin/class-yoohw-cos-admin-menu.php:2152
+msgid "Sync Existing Orders"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1900
+msgid "Maintenance"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1909
+#: admin/class-yoohw-cos-admin-menu.php:1921
+msgid "Recalculate Intelligence"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1910
+msgid "Refresh customer status, lifecycle, VIP, risk, and trust scores for existing profiles."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1920
+msgid "Continue Recalculation"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1936
+#: admin/class-yoohw-cos-admin-menu.php:1948
+msgid "Backfill First Order Data"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1937
+msgid "Populate first order ID and first order date for customer profiles that are missing acquisition data."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1947
+msgid "Continue Backfill"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1959
+msgid "Reset Customer Intelligence Data"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1960
+msgid "Clear normalized Customer Intelligence data. WooCommerce orders and WordPress users are not deleted."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1962
+msgid "Are you sure you want to reset Customer Intelligence data?"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:1967
+msgid "Reset Data"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2038
+#: admin/class-yoohw-cos-customer-profile.php:1140
+#: admin/class-yoohw-cos-customer-profile.php:1152
+#: admin/class-yoohw-cos-customers-list.php:187
+#: admin/class-yoohw-cos-customers-list.php:618
+msgid "Active"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2041
+msgid "Required dependency"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2074
+msgid "Ready"
+msgstr ""
+
+#. translators: %1$s: available database tables, %2$s: expected database tables.
+#: admin/class-yoohw-cos-admin-menu.php:2078
+msgid "%1$s/%2$s tables"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2087
+msgid "Needs repair"
+msgstr ""
+
+#. translators: %s: comma-separated missing database table keys.
+#: admin/class-yoohw-cos-admin-menu.php:2091
+msgid "Missing: %s"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2109
+msgid "Enabled"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2110
+msgid "Legacy storage"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2112
+msgid "Compatibility declared"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2117
+#: admin/class-yoohw-cos-customer-profile.php:447
+msgid "Unknown"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2119
+msgid "WooCommerce HPOS status API unavailable"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2126
+msgid "Not synced"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2128
+msgid "Run the first order sync"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2134
+msgid "In progress"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2136
+msgid "More orders are ready to process"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2141
+#: admin/class-yoohw-cos-customer-profile.php:973
+#: admin/class-yoohw-cos-tasks-list.php:277
+msgid "Complete"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2143
+msgid "Last sync completed"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2156
+msgid "View Customers"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2160
+msgid "Store Setup"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2164
+msgid "Confirm the store is ready, then sync existing WooCommerce orders into Customer Intelligence."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2171
+msgid "HPOS"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2172
+msgid "Database"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2173
+msgid "Order Sync"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2178
+msgid "No synced customer data found yet. Run the order sync to build the initial Customer Intelligence workspace."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2182
+msgid "The previous sync stopped before all orders were processed. Continue syncing from the saved resume point."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2206
+msgid "Import and normalize customer data from existing WooCommerce orders."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2210
+msgid "Order sync has not run yet. Start sync to create customer profiles from existing WooCommerce orders."
+msgstr ""
+
+#. translators: %s: next sync page number.
+#: admin/class-yoohw-cos-admin-menu.php:2216
+msgid "Sync can resume from page %s."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2223
+msgid "Ready to sync."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2224
+msgid "Sync is in progress."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2235
+msgid "Orders scanned:"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2236
+msgid "Total orders:"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2237
+msgid "Profiles updated:"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2243
+msgid "Batch size"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2244
+msgid "Last batch scanned"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2245
+msgid "Orders scanned"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2246
+msgid "Customer profiles updated"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2247
+msgid "Total orders"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2248
+msgid "Resume page"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2249
+msgid "Last sync run"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2287
+msgid "Customer Health"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2292
+#: admin/class-yoohw-cos-customer-exporter.php:98
+#: admin/class-yoohw-cos-customer-profile.php:1316
+msgid "Lifecycle"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2296
+#: admin/class-yoohw-cos-customer-exporter.php:239
+#: admin/class-yoohw-cos-customer-profile.php:1139
+#: admin/class-yoohw-cos-customer-profile.php:1151
+#: admin/class-yoohw-cos-customer-profile.php:1302
+#: admin/class-yoohw-cos-customers-list.php:186
+#: admin/class-yoohw-cos-customers-list.php:479
+#: admin/class-yoohw-cos-customers-list.php:617
+#: admin/class-yoohw-cos-customers-list.php:657
+msgid "New"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2297
+#: admin/class-yoohw-cos-customer-exporter.php:240
+#: admin/class-yoohw-cos-customer-profile.php:1303
+#: admin/class-yoohw-cos-customers-list.php:480
+#: admin/class-yoohw-cos-customers-list.php:658
+msgid "Repeat"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2298
+#: admin/class-yoohw-cos-customer-exporter.php:241
+#: admin/class-yoohw-cos-customer-profile.php:1304
+#: admin/class-yoohw-cos-customers-list.php:481
+#: admin/class-yoohw-cos-customers-list.php:659
+msgid "Loyal"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2300
+#: admin/class-yoohw-cos-customer-exporter.php:243
+#: admin/class-yoohw-cos-customer-profile.php:1306
+#: admin/class-yoohw-cos-customers-list.php:483
+#: admin/class-yoohw-cos-customers-list.php:661
+msgid "Dormant"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2306
+msgid "Risk"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2310
+#: admin/class-yoohw-cos-customer-profile.php:1167
+#: admin/class-yoohw-cos-customers-list.php:461
+#: admin/class-yoohw-cos-customers-list.php:646
+msgid "No Risk"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2311
+#: admin/class-yoohw-cos-customer-profile.php:1168
+#: admin/class-yoohw-cos-customers-list.php:462
+msgid "Low Risk"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2312
+#: admin/class-yoohw-cos-customer-profile.php:1169
+#: admin/class-yoohw-cos-customers-list.php:463
+msgid "Medium Risk"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2313
+#: admin/class-yoohw-cos-customer-profile.php:1170
+#: admin/class-yoohw-cos-customers-list.php:464
+msgid "High Risk"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2341
+msgid "No customer data yet."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2342
+msgid "Run order sync to populate customer health metrics."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2375
+msgid "Open tasks"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2376
+msgid "Overdue tasks"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2377
+msgid "Completed tasks"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2382
+#: admin/class-yoohw-cos-tasks-list.php:356
+msgid "No tasks yet."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2383
+msgid "Create follow-up tasks from a customer profile or the Tasks page."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2395
+msgid "Recent Activity"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2400
+#: admin/class-yoohw-cos-customer-profile.php:601
+msgid "No activity yet."
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2436
+#: admin/class-yoohw-cos-customer-profile.php:617
+msgid "View all activity"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2551
+msgid "Bulk Action"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2556
+msgid "Segment Added"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2557
+msgid "Segment Removed"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-menu.php:2560
+msgid "Tag Added"
+msgstr ""
+
+#: admin/class-yoohw-cos-admin-tools.php:34
+#: admin/class-yoohw-cos-admin-tools.php:65
+#: admin/class-yoohw-cos-admin-tools.php:190
+#: admin/class-yoohw-cos-admin-tools.php:211
+#: admin/class-yoohw-cos-admin-tools.php:243
+#: admin/class-yoohw-cos-admin-tools.php:276
+#: admin/class-yoohw-cos-admin-tools.php:304
+#: admin/class-yoohw-cos-admin-tools.php:338
+#: admin/class-yoohw-cos-admin-tools.php:370
+#: admin/class-yoohw-cos-admin-tools.php:397
+#: admin/class-yoohw-cos-admin-tools.php:424
+#: admin/class-yoohw-cos-admin-tools.php:456
+#: admin/class-yoohw-cos-admin-tools.php:489
+#: admin/class-yoohw-cos-admin-tools.php:523
+#: admin/class-yoohw-cos-admin-tools.php:579
+#: admin/class-yoohw-cos-admin-tools.php:600
+#: admin/class-yoohw-cos-admin-tools.php:703
+#: admin/class-yoohw-cos-admin-tools.php:754
+#: admin/class-yoohw-cos-admin-tools.php:814
+#: admin/class-yoohw-cos-admin-tools.php:867
+#: admin/class-yoohw-cos-admin-tools.php:921
+#: admin/class-yoohw-cos-admin-tools.php:974
+msgid "You do not have permission to perform this action."
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-exporter.php:16
+msgid "You do not have permission to export customers."
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-exporter.php:24
+msgid "Customer export request could not be verified."
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-exporter.php:56
+msgid "Customer export could not start because output was already sent."
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-exporter.php:80
+msgid "Customer export file could not be opened."
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-exporter.php:90
+#: admin/class-yoohw-cos-customer-profile.php:300
+msgid "Email"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-exporter.php:91
+#: admin/class-yoohw-cos-customer-profile.php:305
+msgid "Phone"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-exporter.php:93
+msgid "Spent"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-exporter.php:94
+msgid "AOV"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-exporter.php:95
+#: admin/class-yoohw-cos-customer-profile.php:120
+#: admin/class-yoohw-cos-customer-profile.php:1180
+msgid "Risk Score"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-exporter.php:96
+#: admin/class-yoohw-cos-customer-profile.php:125
+#: admin/class-yoohw-cos-customer-profile.php:1244
+msgid "Trust Score"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-exporter.php:226
+#: admin/class-yoohw-cos-customers-list.php:631
+msgid "None"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-exporter.php:227
+#: admin/class-yoohw-cos-customers-list.php:444
+#: admin/class-yoohw-cos-customers-list.php:632
+msgid "Silver"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-exporter.php:228
+#: admin/class-yoohw-cos-customers-list.php:445
+#: admin/class-yoohw-cos-customers-list.php:633
+msgid "Gold"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-exporter.php:229
+#: admin/class-yoohw-cos-customers-list.php:446
+#: admin/class-yoohw-cos-customers-list.php:634
+msgid "Platinum"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:1314
+msgid "Silver VIP"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:1315
+msgid "Gold VIP"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:1316
+msgid "Platinum VIP"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:11
+msgid "Customer not found"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:12
+msgid "The requested customer profile does not exist."
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:55
+msgid "Back to Customers"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:73
+msgid "Edit WP User"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:100
+msgid "Customer Summary"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:105
+#: admin/class-yoohw-cos-customer-profile.php:230
+msgid "Total Spent"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:115
+#: admin/class-yoohw-cos-customer-profile.php:238
+msgid "Average Order Value"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:161
+#: admin/class-yoohw-cos-customers-list.php:32
+msgid "Commerce"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:202
+msgid "Commerce Summary"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:214
+msgid "Lifecycle Stage"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:220
+msgid "VIP Status"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:225
+msgid "Total Orders"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:246
+msgid "Last Order"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:252
+msgid "Last Order Date"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:257
+msgid "Last Activity"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:284
+msgid "Identity"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:290
+msgid "Customer Intelligence ID"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:295
+msgid "WP User ID"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:310
+#: admin/class-yoohw-cos-segments-list.php:27
+#: admin/class-yoohw-cos-tags-list.php:27
+msgid "Created"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:315
+#: admin/class-yoohw-cos-customer-profile.php:1083
+#: admin/class-yoohw-cos-tasks-list.php:30
+msgid "Updated"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:325
+msgid "Email Customer"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:329
+msgid "Copy Email"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:335
+msgid "Call Customer"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:339
+msgid "Copy Phone"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:362
+msgid "Addresses"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:367
+msgid "No address data yet."
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:368
+msgid "Billing and shipping addresses will appear after this customer has a synced WooCommerce order."
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:380
+msgid "Billing Address"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:385
+msgid "Shipping Address"
+msgstr ""
+
+#. translators: %s: WooCommerce order number.
+#: admin/class-yoohw-cos-customer-profile.php:394
+msgid "Address data is based on the latest WooCommerce order: #%s."
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:408
+msgid "No address available."
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:418
+msgid "Acquisition"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:424
+msgid "First Seen"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:429
+msgid "First Order"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:435
+msgid "First Order Date"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:440
+msgid "Latest Order"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:451
+msgid "Campaign"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:452
+msgid "Not tracked yet"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:515
+msgid "Recent Orders"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:520
+msgid "No orders found."
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:521
+msgid "Recent WooCommerce orders will appear here after this customer is synced."
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:533
+#: admin/class-yoohw-cos-tasks-list.php:29
+msgid "Order"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:536
+msgid "Total"
+msgstr ""
+
+#. translators: 1: number of orders currently shown, 2: total number of customer orders.
+#: admin/class-yoohw-cos-customer-profile.php:573
+msgid "Showing the latest %1$s of %2$s orders."
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:577
+msgid "View all orders"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:596
+msgid "Timeline"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:602
+msgid "Orders, notes, tags, segments, and tasks will appear here as activity is recorded."
+msgstr ""
+
+#. translators: 1: number of events currently shown, 2: total number of customer activity events.
+#: admin/class-yoohw-cos-customer-profile.php:613
+msgid "Showing the latest %1$s of %2$s activity events."
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:656
+msgid "Tag assigned successfully."
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:662
+msgid "Tag removed successfully."
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:668
+msgid "No tags assigned."
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:669
+msgid "Use tags for quick internal labels."
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:694
+msgid "Remove this tag?"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:710
+msgid "Add Tag"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:718
+msgid "Assign Tag"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:737
+msgid "Segment assigned successfully."
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:743
+msgid "Segment removed successfully."
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:749
+msgid "No segments assigned."
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:750
+msgid "Use segments to group this customer for filtering and operations."
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:774
+msgid "Remove this segment?"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:790
+msgid "Add Segment"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:794
+msgid "Wholesale, VIP Recovery, B2B..."
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:798
+msgid "Assign Segment"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:861
+msgid "Follow up with this customer..."
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:882
+msgid "Assigned to"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:888
+msgid "Optional task notes..."
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:903
+#: admin/class-yoohw-cos-tasks-list.php:360
+msgid "No open tasks."
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:904
+msgid "Add a task above to schedule a follow-up."
+msgstr ""
+
+#. translators: 1: number of tasks currently shown, 2: total number of open customer tasks.
+#: admin/class-yoohw-cos-customer-profile.php:912
+msgid "Showing %1$s of %2$s open tasks."
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:916
+msgid "View all tasks"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:960
+#: includes/class-yoohw-cos-tasks.php:23
+msgid "Normal"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:973
+#: admin/class-yoohw-cos-tasks-list.php:41
+#: admin/class-yoohw-cos-tasks-list.php:276
+msgid "Reopen"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:996
+msgid "Internal Notes"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:1001
+msgid "Note added successfully."
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:1007
+msgid "Note updated successfully."
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:1013
+msgid "Note deleted successfully."
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:1023
+msgid "Add an internal note about this customer..."
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:1027
+msgid "Add Note"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:1039
+msgid "No internal notes."
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:1040
+msgid "Add the first note above."
+msgstr ""
+
+#. translators: 1: number of notes currently shown, 2: total number of customer notes.
+#: admin/class-yoohw-cos-customer-profile.php:1048
+msgid "Showing the latest %1$s of %2$s internal notes."
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:1090
+#: admin/class-yoohw-cos-segments-list.php:143
+#: admin/class-yoohw-cos-tags-list.php:132
+#: admin/class-yoohw-cos-tasks-list.php:305
+msgid "Edit"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:1093
+msgid "Delete this note?"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:1094
+#: admin/class-yoohw-cos-segments-list.php:37
+#: admin/class-yoohw-cos-segments-list.php:160
+#: admin/class-yoohw-cos-tags-list.php:37
+#: admin/class-yoohw-cos-tags-list.php:136
+#: admin/class-yoohw-cos-tasks-list.php:42
+#: admin/class-yoohw-cos-tasks-list.php:309
+msgid "Delete"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:1115
+msgid "Save Note"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:1225
+msgid "High Trust"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:1228
+msgid "Medium Trust"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:1231
+msgid "Low Trust"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:1234
+msgid "Limited Trust"
+msgstr ""
+
+#: admin/class-yoohw-cos-customers-list.php:30
+msgid "Contact"
+msgstr ""
+
+#: admin/class-yoohw-cos-customers-list.php:31
+msgid "Labels"
+msgstr ""
+
+#: admin/class-yoohw-cos-customers-list.php:33
+msgid "Health"
+msgstr ""
+
+#: admin/class-yoohw-cos-customers-list.php:34
+msgid "Last Active"
+msgstr ""
+
+#: admin/class-yoohw-cos-customers-list.php:137
+msgid "Edit user"
+msgstr ""
+
+#: admin/class-yoohw-cos-customers-list.php:150
+msgid "No archived customers."
+msgstr ""
+
+#: admin/class-yoohw-cos-customers-list.php:151
+msgid "Archived customer profiles will appear here after you archive them from the Customers list."
+msgstr ""
+
+#: admin/class-yoohw-cos-customers-list.php:158
+msgid "No customers match the current filters."
+msgstr ""
+
+#: admin/class-yoohw-cos-customers-list.php:159
+msgid "Adjust the filters or clear the search to broaden the list."
+msgstr ""
+
+#: admin/class-yoohw-cos-customers-list.php:165
+msgid "No customers synced yet."
+msgstr ""
+
+#: admin/class-yoohw-cos-customers-list.php:166
+msgid "Sync existing WooCommerce orders to create customer profiles."
+msgstr ""
+
+#: admin/class-yoohw-cos-customers-list.php:234
+msgid "Archived"
+msgstr ""
+
+#. translators: %s: number of customer orders.
+#: admin/class-yoohw-cos-customers-list.php:298
+msgid "%s order"
+msgid_plural "%s orders"
+msgstr[0] ""
+msgstr[1] ""
+
+#: admin/class-yoohw-cos-customers-list.php:342
+#: admin/class-yoohw-cos-customers-list.php:345
+msgid "Tag for bulk action"
+msgstr ""
+
+#: admin/class-yoohw-cos-customers-list.php:354
+#: admin/class-yoohw-cos-customers-list.php:357
+msgid "Segment for bulk action"
+msgstr ""
+
+#: admin/class-yoohw-cos-customers-list.php:367
+msgid "Follow-up task title"
+msgstr ""
+
+#: admin/class-yoohw-cos-customers-list.php:369
+msgid "Task title"
+msgstr ""
+
+#: admin/class-yoohw-cos-customers-list.php:372
+msgid "Task priority"
+msgstr ""
+
+#: admin/class-yoohw-cos-customers-list.php:383
+msgid "Task due date"
+msgstr ""
+
+#: admin/class-yoohw-cos-customers-list.php:388
+msgid "Task assignee"
+msgstr ""
+
+#: admin/class-yoohw-cos-customers-list.php:409
+msgid "Filter by tag"
+msgstr ""
+
+#: admin/class-yoohw-cos-customers-list.php:413
+msgid "All tags"
+msgstr ""
+
+#: admin/class-yoohw-cos-customers-list.php:428
+msgid "All segments"
+msgstr ""
+
+#: admin/class-yoohw-cos-customers-list.php:442
+msgid "All VIP levels"
+msgstr ""
+
+#: admin/class-yoohw-cos-customers-list.php:443
+msgid "No VIP"
+msgstr ""
+
+#: admin/class-yoohw-cos-customers-list.php:460
+msgid "All risk levels"
+msgstr ""
+
+#: admin/class-yoohw-cos-customers-list.php:478
+msgid "All lifecycle stages"
+msgstr ""
+
+#: admin/class-yoohw-cos-customers-list.php:502
+msgid "Export CSV"
+msgstr ""
+
+#: admin/class-yoohw-cos-customers-list.php:647
+#: includes/class-yoohw-cos-tasks.php:22
+msgid "Low"
+msgstr ""
+
+#: admin/class-yoohw-cos-customers-list.php:648
+msgid "Medium"
+msgstr ""
+
+#: admin/class-yoohw-cos-customers-list.php:649
+#: includes/class-yoohw-cos-tasks.php:24
+msgid "High"
+msgstr ""
+
+#: admin/class-yoohw-cos-segments-list.php:23
+msgid "Segment"
+msgstr ""
+
+#: admin/class-yoohw-cos-segments-list.php:24
+msgid "Type"
+msgstr ""
+
+#: admin/class-yoohw-cos-segments-list.php:145
+#: admin/class-yoohw-cos-tags-list.php:134
+msgid "View customers"
+msgstr ""
+
+#: admin/class-yoohw-cos-segments-list.php:159
+msgid "Delete this segment?"
+msgstr ""
+
+#: admin/class-yoohw-cos-segments-list.php:170
+msgid "No segments match your search."
+msgstr ""
+
+#: admin/class-yoohw-cos-segments-list.php:171
+msgid "Clear the search or create a new segment."
+msgstr ""
+
+#: admin/class-yoohw-cos-segments-list.php:177
+msgid "No segments yet."
+msgstr ""
+
+#: admin/class-yoohw-cos-segments-list.php:178
+msgid "Create static segments to group customers for filters and operations."
+msgstr ""
+
+#: admin/class-yoohw-cos-tags-list.php:23
+msgid "Tag"
+msgstr ""
+
+#: admin/class-yoohw-cos-tags-list.php:136
+msgid "Delete this tag?"
+msgstr ""
+
+#: admin/class-yoohw-cos-tags-list.php:166
+msgid "No tags match your search."
+msgstr ""
+
+#: admin/class-yoohw-cos-tags-list.php:167
+msgid "Clear the search or create a new tag."
+msgstr ""
+
+#: admin/class-yoohw-cos-tags-list.php:173
+msgid "No tags yet."
+msgstr ""
+
+#: admin/class-yoohw-cos-tags-list.php:174
+msgid "Create tags to mark customers for internal workflows."
+msgstr ""
+
+#: admin/class-yoohw-cos-tasks-list.php:23
+msgid "Task"
+msgstr ""
+
+#: admin/class-yoohw-cos-tasks-list.php:25
+msgid "Due"
+msgstr ""
+
+#: admin/class-yoohw-cos-tasks-list.php:40
+msgid "Mark complete"
+msgstr ""
+
+#: admin/class-yoohw-cos-tasks-list.php:185
+#: includes/class-yoohw-cos-tasks.php:15
+msgid "Open"
+msgstr ""
+
+#: admin/class-yoohw-cos-tasks-list.php:186
+msgid "Overdue"
+msgstr ""
+
+#: admin/class-yoohw-cos-tasks-list.php:187
+#: includes/class-yoohw-cos-tasks.php:16
+msgid "Completed"
+msgstr ""
+
+#: admin/class-yoohw-cos-tasks-list.php:188
+msgid "Assigned to me"
+msgstr ""
+
+#: admin/class-yoohw-cos-tasks-list.php:229
+msgid "All priorities"
+msgstr ""
+
+#: admin/class-yoohw-cos-tasks-list.php:253
+msgid "All assignees"
+msgstr ""
+
+#: admin/class-yoohw-cos-tasks-list.php:309
+msgid "Delete this task?"
+msgstr ""
+
+#: admin/class-yoohw-cos-tasks-list.php:348
+msgid "No tasks match the current filters."
+msgstr ""
+
+#: admin/class-yoohw-cos-tasks-list.php:349
+msgid "Adjust the filters or clear the search to see more tasks."
+msgstr ""
+
+#: admin/class-yoohw-cos-tasks-list.php:357
+msgid "Create follow-up tasks from a customer profile or the task form."
+msgstr ""
+
+#: admin/class-yoohw-cos-tasks-list.php:361
+msgid "Create a follow-up task when a customer needs manual action."
+msgstr ""
+
+#: admin/class-yoohw-cos-tasks-list.php:364
+msgid "No overdue tasks."
+msgstr ""
+
+#: admin/class-yoohw-cos-tasks-list.php:365
+msgid "Tasks past their due date will appear here."
+msgstr ""
+
+#: admin/class-yoohw-cos-tasks-list.php:368
+msgid "No completed tasks yet."
+msgstr ""
+
+#: admin/class-yoohw-cos-tasks-list.php:369
+msgid "Completed follow-ups will appear here."
+msgstr ""
+
+#: admin/class-yoohw-cos-tasks-list.php:372
+msgid "No tasks assigned to you."
+msgstr ""
+
+#: admin/class-yoohw-cos-tasks-list.php:373
+msgid "Open tasks assigned to your account will appear here."
+msgstr ""
+
+#. translators: %s: order number
+#: includes/class-yoohw-cos-customers.php:113
+msgid "Order #%s synced to customer profile."
+msgstr ""
+
+#: includes/class-yoohw-cos-customers.php:339
+msgid "Customer archived."
+msgstr ""
+
+#: includes/class-yoohw-cos-customers.php:371
+msgid "Customer restored from archive."
+msgstr ""
+
+#: includes/class-yoohw-cos-intelligence.php:151
+msgid "Missing email address"
+msgstr ""
+
+#: includes/class-yoohw-cos-intelligence.php:153
+msgid "This customer profile does not have an email address."
+msgstr ""
+
+#: includes/class-yoohw-cos-intelligence.php:159
+msgid "Missing phone number"
+msgstr ""
+
+#: includes/class-yoohw-cos-intelligence.php:161
+msgid "This customer profile does not have a phone number."
+msgstr ""
+
+#: includes/class-yoohw-cos-intelligence.php:167
+msgid "New or low-history customer"
+msgstr ""
+
+#: includes/class-yoohw-cos-intelligence.php:169
+msgid "Customers with very limited order history have less trust data available."
+msgstr ""
+
+#: includes/class-yoohw-cos-intelligence.php:175
+msgid "High value with limited history"
+msgstr ""
+
+#: includes/class-yoohw-cos-intelligence.php:177
+msgid "A high-value purchase from a customer with limited history can require closer review."
+msgstr ""
+
+#: includes/class-yoohw-cos-intelligence.php:183
+msgid "Long inactive period"
+msgstr ""
+
+#: includes/class-yoohw-cos-intelligence.php:185
+msgid "This customer has not had recent recorded activity."
+msgstr ""
+
+#: includes/class-yoohw-cos-intelligence.php:191
+msgid "No major risk factors detected"
+msgstr ""
+
+#: includes/class-yoohw-cos-intelligence.php:193
+msgid "Based on the current basic rules, this customer does not show obvious risk indicators."
+msgstr ""
+
+#: includes/class-yoohw-cos-intelligence.php:210
+msgid "Email available"
+msgstr ""
+
+#: includes/class-yoohw-cos-intelligence.php:212
+msgid "This customer profile has an email address."
+msgstr ""
+
+#: includes/class-yoohw-cos-intelligence.php:218
+msgid "Phone available"
+msgstr ""
+
+#: includes/class-yoohw-cos-intelligence.php:220
+msgid "This customer profile has a phone number."
+msgstr ""
+
+#: includes/class-yoohw-cos-intelligence.php:226
+#: includes/class-yoohw-cos-intelligence.php:324
+msgid "Repeat customer"
+msgstr ""
+
+#: includes/class-yoohw-cos-intelligence.php:228
+msgid "This customer has placed at least 2 orders."
+msgstr ""
+
+#: includes/class-yoohw-cos-intelligence.php:234
+msgid "Established order history"
+msgstr ""
+
+#: includes/class-yoohw-cos-intelligence.php:236
+msgid "This customer has placed at least 5 orders."
+msgstr ""
+
+#: includes/class-yoohw-cos-intelligence.php:242
+msgid "Strong order history"
+msgstr ""
+
+#: includes/class-yoohw-cos-intelligence.php:244
+msgid "This customer has placed at least 10 orders."
+msgstr ""
+
+#: includes/class-yoohw-cos-intelligence.php:250
+msgid "Meaningful purchase value"
+msgstr ""
+
+#: includes/class-yoohw-cos-intelligence.php:252
+msgid "This customer has spent at least 500 in store currency."
+msgstr ""
+
+#: includes/class-yoohw-cos-intelligence.php:258
+msgid "High purchase value"
+msgstr ""
+
+#: includes/class-yoohw-cos-intelligence.php:260
+msgid "This customer has spent at least 1000 in store currency."
+msgstr ""
+
+#: includes/class-yoohw-cos-intelligence.php:266
+msgid "Limited trust signals"
+msgstr ""
+
+#: includes/class-yoohw-cos-intelligence.php:268
+msgid "There is not enough customer history yet to build a stronger trust score."
+msgstr ""
+
+#: includes/class-yoohw-cos-intelligence.php:309
+msgid "Dormant customer"
+msgstr ""
+
+#: includes/class-yoohw-cos-intelligence.php:310
+msgid "This customer has not had recorded activity for at least 180 days."
+msgstr ""
+
+#: includes/class-yoohw-cos-intelligence.php:314
+msgid "VIP customer"
+msgstr ""
+
+#: includes/class-yoohw-cos-intelligence.php:315
+msgid "This customer has very high order count or purchase value."
+msgstr ""
+
+#: includes/class-yoohw-cos-intelligence.php:319
+msgid "Loyal customer"
+msgstr ""
+
+#: includes/class-yoohw-cos-intelligence.php:320
+msgid "This customer has strong repeat purchase behavior or meaningful lifetime value."
+msgstr ""
+
+#: includes/class-yoohw-cos-intelligence.php:325
+msgid "This customer has placed more than one order."
+msgstr ""
+
+#: includes/class-yoohw-cos-intelligence.php:329
+msgid "New customer"
+msgstr ""
+
+#: includes/class-yoohw-cos-intelligence.php:330
+msgid "This customer has limited order history so far."
+msgstr ""
+
+#: includes/class-yoohw-cos-intelligence.php:335
+msgid "Order count"
+msgstr ""
+
+#. translators: %d: order count
+#: includes/class-yoohw-cos-intelligence.php:338
+msgid "This customer has placed %d orders."
+msgstr ""
+
+#: includes/class-yoohw-cos-intelligence.php:344
+msgid "Lifetime value"
+msgstr ""
+
+#. translators: %s: total spent
+#: includes/class-yoohw-cos-intelligence.php:347
+msgid "This customer has spent %s in store currency."
+msgstr ""
+
+#: includes/class-yoohw-cos-intelligence.php:353
+msgid "Last activity"
+msgstr ""
+
+#. translators: %d: days since last activity
+#: includes/class-yoohw-cos-intelligence.php:356
+msgid "Last recorded activity was %d days ago."
+msgstr ""
+
+#: includes/class-yoohw-cos-loader.php:72
+msgid "YoOhw Customer Intelligence for WooCommerce requires WooCommerce to be active."
+msgstr ""
+
+#: includes/class-yoohw-cos-notes.php:48
+msgid "Internal note added."
+msgstr ""
+
+#: includes/class-yoohw-cos-notes.php:148
+msgid "Internal note updated."
+msgstr ""
+
+#: includes/class-yoohw-cos-notes.php:183
+msgid "Internal note deleted."
+msgstr ""
+
+#. translators: %s: segment name
+#: includes/class-yoohw-cos-segments.php:113
+msgid "Segment assigned: %s"
+msgstr ""
+
+#. translators: %s: segment name
+#: includes/class-yoohw-cos-segments.php:152
+msgid "Segment removed: %s"
+msgstr ""
+
+#. translators: %s: tag name
+#: includes/class-yoohw-cos-tags.php:95
+msgid "Tag assigned: %s"
+msgstr ""
+
+#. translators: %s: tag name
+#: includes/class-yoohw-cos-tags.php:197
+msgid "Tag removed: %s"
+msgstr ""
+
+#: includes/class-yoohw-cos-tasks.php:25
+msgid "Urgent"
+msgstr ""
+
+#. translators: %s: task title
+#: includes/class-yoohw-cos-tasks.php:484
+msgid "Task completed: %s"
+msgstr ""
+
+#. translators: %s: task title
+#: includes/class-yoohw-cos-tasks.php:489
+msgid "Task created: %s"
+msgstr ""
