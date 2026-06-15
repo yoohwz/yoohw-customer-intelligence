@@ -1,4 +1,4 @@
-=== YoOhw Customer Intelligence for WooCommerce ===
+=== Customer Intelligence for WooCommerce ===
 Contributors: yoohw
 Tags: woocommerce, crm, customers, customer-notes, customer-analytics
 Requires at least: 6.9
@@ -15,7 +15,7 @@ Customer profiles, WooCommerce CRM tasks, notes, tags, segments, activity timeli
 
 == Description ==
 
-YoOhw Customer Intelligence for WooCommerce adds a practical customer operations workspace to WordPress admin. It helps WooCommerce store owners, support teams, and shop managers understand customer history, organize customer follow-ups, and work from one clear customer profile instead of jumping between order screens.
+Customer Intelligence for WooCommerce adds a practical customer operations workspace to WordPress admin. It helps WooCommerce store owners, support teams, and shop managers understand customer history, organize customer follow-ups, and work from one clear customer profile instead of jumping between order screens.
 
 The plugin focuses on useful free-version customer intelligence: customer profiles, commerce metrics, notes, tasks, tags, static segments, activity timeline, CSV export, order sync, diagnostics, and WooCommerce order admin integration.
 
@@ -170,4 +170,4 @@ Improves the Tasks admin page UI and elevates follow-up task reminders on the Wo
 
 = 1.0.0 =
 
-Initial release of YoOhw Customer Intelligence for WooCommerce.
+Initial release of Customer Intelligence for WooCommerce.
