@@ -141,9 +141,6 @@ No. The free version includes static segments. Dynamic smart segments, automatio
 5. Tasks screen for follow-up management.
 6. Tags management screen.
 7. Segments management screen.
-8. Activity timeline list table.
-9. Settings, Sync Center, diagnostics, and maintenance tools.
-10. WordPress Dashboard follow-up tasks widget.
 
 == Changelog ==
 
