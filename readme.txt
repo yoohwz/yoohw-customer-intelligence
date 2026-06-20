@@ -1,39 +1,39 @@
 === Customer Intelligence for WooCommerce ===
 Contributors: yoohw
-Tags: woocommerce, crm, customers, customer-notes, customer-analytics
+Tags: woocommerce, woocommerce-crm, crm, customer-management, customer-analytics
 Requires at least: 6.9
 Tested up to: 7.0
 Requires PHP: 7.4
 Requires Plugins: woocommerce
 WC requires at least: 8.2
 WC tested up to: 10.8
-Stable tag: 1.1.0
+Stable tag: 1.1.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Customer profiles, WooCommerce CRM tasks, notes, tags, segments, activity timeline, sync, export, and HPOS-ready order insights.
+WooCommerce CRM for customer profiles, notes, tasks, tags, segments, order sync, CSV export, and HPOS-ready insights.
 
 == Description ==
 
-Customer Intelligence for WooCommerce adds a practical customer operations workspace to WordPress admin. It helps WooCommerce store owners, support teams, and shop managers understand customer history, organize customer follow-ups, and work from one clear customer profile instead of jumping between order screens.
+Customer Intelligence for WooCommerce is a lightweight WooCommerce CRM and customer management workspace inside WordPress admin. It turns WooCommerce order history into customer profiles for notes, follow-up tasks, tags, segments, activity history, and order insights.
 
-The plugin focuses on useful free-version customer intelligence: customer profiles, commerce metrics, notes, tasks, tags, static segments, activity timeline, CSV export, order sync, diagnostics, and WooCommerce order admin integration.
+Use it to search WooCommerce customers, track customer status, lifecycle, VIP level, risk, and trust, create internal notes, schedule customer follow-ups, segment customers, export filtered customer data, and connect customer profiles back to WooCommerce orders.
 
-It stores Customer Intelligence data in dedicated custom database tables. It does not use `wp_usermeta` as the primary CRM data store.
+It stores customer data in dedicated custom database tables. It does not use `wp_usermeta` as the primary CRM data store.
 
 = Main features =
 
 * Customer overview dashboard for totals, revenue, orders, VIP customers, risk, lifecycle, tasks, and recent activity.
-* Searchable customer list with WordPress-style filters, sorting, pagination, archive/restore actions, and CSV export.
+* Searchable customer list with status, VIP, risk, lifecycle, tag, and segment filters, plus sorting, pagination, clickable rows, archive/restore, and CSV export.
 * Customer profiles with identity, commerce summary, addresses, recent orders, notes, follow-up tasks, tags, segments, and activity timeline.
 * Internal customer notes with create, edit, and delete actions.
-* Follow-up tasks with due date, priority, status, assignee, customer link, optional order link, complete/reopen/edit/delete actions, and dashboard reminders.
-* Customer tags and static segments with WordPress taxonomy-style management screens.
+* Follow-up tasks with due date, priority, status, assignee, customer/order context, complete/reopen/edit/delete actions, reminders, and a WordPress Dashboard widget.
+* Customer tags and static segments with WordPress taxonomy-style management, autocomplete assignment, existing-term selection, and colored tag chips.
 * Bulk actions for tags, segments, follow-up tasks, archive, and restore.
-* WooCommerce order edit integration with Customer Intelligence profile selection and a customer task metabox.
+* WooCommerce order list filtering and order edit integration with customer profile selection and a customer task metabox.
 * Sync Center for importing customer profiles from existing WooCommerce orders.
 * Batch sync progress, resume support, first-order backfill, and recalculation tools.
-* Diagnostics for WooCommerce readiness, HPOS status, and Customer Intelligence database tables.
+* Diagnostics for WooCommerce readiness, HPOS status, and customer database tables.
 * High-Performance Order Storage (HPOS) compatibility declaration.
 
 = WooCommerce customer profiles =
@@ -57,17 +57,17 @@ Tasks can be assigned to Administrators and Shop Managers. They support priority
 
 Use tags for flexible labels such as "wholesale", "needs review", "VIP candidate", or "support follow-up".
 
-Use static segments for manually maintained customer groups such as loyal customers, repeat buyers, B2B customers, or retention lists.
+Use static segments for manual customer segmentation such as loyal customers, repeat buyers, B2B customers, or retention lists.
 
 = Sync and HPOS =
 
-The Sync Center imports and normalizes customer data from WooCommerce orders. Order data is read through WooCommerce order APIs for HPOS compatibility. When an order is synced or linked from order admin, the order can store the related Customer Intelligence profile ID so order admin, profile views, tasks, and profile queries stay aligned.
+The Sync Center imports and normalizes customer data from WooCommerce orders. Order data is read through WooCommerce order APIs for HPOS compatibility. When an order is synced or linked from order admin, the order can store the related customer profile ID so order admin, profile views, tasks, and profile queries stay aligned.
 
 = Data and privacy =
 
 The free version keeps customer intelligence data inside your WordPress database unless an administrator exports it manually or another plugin/custom integration moves it.
 
-Customer Intelligence data is stored in custom tables for customers, events, notes, tasks, tags, segments, and relationships. WooCommerce orders and WordPress users remain managed by WooCommerce and WordPress.
+Customer data is stored in custom tables for customers, events, notes, tasks, tags, segments, and relationships. WooCommerce orders and WordPress users remain managed by WooCommerce and WordPress.
 
 == Requirements ==
 
@@ -90,7 +90,11 @@ Customer Intelligence data is stored in custom tables for customers, events, not
 
 = Does this plugin require WooCommerce? =
 
-Yes. WooCommerce is required. If WooCommerce is inactive, the plugin shows an admin notice and does not load its Customer Intelligence admin screens.
+Yes. WooCommerce is required. If WooCommerce is inactive, the plugin shows an admin notice and does not load its Customer admin screens.
+
+= Is this a WooCommerce CRM? =
+
+Yes. It adds CRM-style customer profiles, internal notes, follow-up tasks, customer tags, static segments, CSV export, and WooCommerce order insights inside WordPress admin.
 
 = Is this compatible with WooCommerce HPOS? =
 
@@ -102,11 +106,11 @@ No. This plugin is developed by YoOhw Studio. It is not affiliated with, endorse
 
 = Does this replace WooCommerce customers or WordPress users? =
 
-No. It adds Customer Intelligence profiles for store operations. WooCommerce customers and WordPress users remain managed by WooCommerce and WordPress.
+No. It adds customer profiles for store operations. WooCommerce customers and WordPress users remain managed by WooCommerce and WordPress.
 
 = Does it store CRM data in wp_usermeta? =
 
-No. Customer Intelligence uses custom database tables as the primary data store for profiles, notes, tasks, tags, segments, and activity events.
+No. Customer data uses custom database tables as the primary data store for profiles, notes, tasks, tags, segments, and activity events.
 
 = Can I create customer follow-up tasks? =
 
@@ -120,29 +124,42 @@ Tasks can be assigned to Administrators and Shop Managers.
 
 Yes. The customer list includes CSV export for the current filter set. The export is capped to avoid heavy single-request exports on large stores.
 
+= Can I filter WooCommerce orders by customer profile? =
+
+Yes. The WooCommerce orders list can filter by plugin customer profiles, and order edit screens can link to the matching profile.
+
 = What does Archive do? =
 
-Archive hides a Customer Intelligence profile from the main list. It does not delete WooCommerce orders or WordPress users. Archived profiles can be restored.
+Archive hides a customer profile from the main list. It does not delete WooCommerce orders or WordPress users. Archived profiles can be restored.
 
 = What does Reset data remove? =
 
-Reset clears Customer Intelligence customers, events, notes, tasks, and customer tag/segment relationships. It does not delete WooCommerce orders, WordPress users, tag definitions, or segment definitions.
+Reset clears customer data for customers, events, notes, tasks, and customer tag/segment relationships. It does not delete WooCommerce orders, WordPress users, tag definitions, or segment definitions.
 
-= Are dynamic smart segments included? =
+= Can I segment WooCommerce customers? =
 
-No. The free version includes static segments. Dynamic smart segments, automations, AI workflows, and cross-store intelligence are planned for future/premium scope.
+Yes. Use customer tags and static segments for manually maintained customer groups. Dynamic smart segments, automations, AI workflows, and cross-store intelligence are planned for future/premium scope.
 
 == Screenshots ==
 
 1. Overview dashboard with customer health, lifecycle, risk, tasks, and recent activity.
 2. Customer list with filters, search, bulk actions, export, archive, and customer intelligence columns.
 3. Customer profile with commerce summary, identity, orders, notes, tasks, tags, segments, and activity.
-4. WooCommerce order edit screen with Customer Intelligence profile selection and customer task metabox.
+4. WooCommerce order edit screen with customer profile selection and customer task metabox.
 5. Tasks screen for follow-up management.
 6. Tags management screen.
 7. Segments management screen.
 
 == Changelog ==
+
+= 1.1.1 (Jun 19, 2026) =
+
+* Improved profile tags and segments with Product tags-style autocomplete, existing-term selection, colored chips, readable contrast, and scroll-preserving add/remove actions.
+* Added clickable Customers list rows with keyboard support while preserving form controls, links, buttons, and bulk actions.
+* Replaced the WooCommerce registered-customer order filter with Customer profile filtering, better phone search normalization, and "Filter by Customer" wording.
+* Refined SelectWoo fields, task form alignment, priority/status spacing, and order customer selector styling.
+* Moved email and phone copy actions inline in the Identity metabox using icon buttons.
+* Simplified customer wording, including "Customer ID", sentence-case labels, and the Customers menu position before WooCommerce Products.
 
 = 1.1.0 (Jun 15, 2026) =
 
@@ -151,18 +168,13 @@ No. The free version includes static segments. Dynamic smart segments, automatio
 
 = 1.0.0 =
 
-* Initial release.
-* Added Customer Intelligence overview dashboard.
-* Added customer profiles with commerce summary, identity, orders, addresses, notes, tasks, tags, segments, and activity timeline.
-* Added customer list filters, sorting, search, pagination, bulk actions, archive/restore, and CSV export.
-* Added internal notes and follow-up tasks.
-* Added tag and static segment management screens.
-* Added WooCommerce order admin Customer Intelligence profile mapping and customer task metabox.
-* Added Sync Center, order sync, progress state, backfill, recalculation, diagnostics, and reset tools.
-* Added HPOS compatibility declaration and WooCommerce dependency metadata.
-* Added custom database tables and migration/versioning baseline.
+* Initial release with overview dashboard, customer profiles, customer list filters/export, notes, tasks, tags, segments, WooCommerce order integration, Sync Center, HPOS compatibility, and custom database tables.
 
 == Upgrade Notice ==
+
+= 1.1.1 =
+
+Improves customer profile tags/segments, order customer filtering, clickable customer rows, and admin UI consistency.
 
 = 1.1.0 =
 
@@ -170,4 +182,4 @@ Improves the Tasks admin page UI and elevates follow-up task reminders on the Wo
 
 = 1.0.0 =
 
-Initial release of Customer Intelligence for WooCommerce.
+Initial release.

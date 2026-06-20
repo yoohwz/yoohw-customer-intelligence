@@ -12,7 +12,7 @@ Use this checklist after admin UI changes before planning the next product roadm
 
 ## Customer Profile
 
-- Header summary, KPI cards, Commerce, Customer Intelligence, Operations, and Activity sections scan cleanly at desktop admin widths.
+- Header summary, KPI cards, Commerce, Customer, Operations, and Activity sections scan cleanly at desktop admin widths.
 - Email and phone copy buttons work without inline scripts and show copied feedback.
 - Note edit and cancel controls toggle without layout shift.
 - View all activity opens the Activity page filtered by the current customer.

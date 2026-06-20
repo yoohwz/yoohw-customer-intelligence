@@ -36,7 +36,7 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 				)
 			);
 
-			$this->assertSame( $table, $found, "Missing Customer Intelligence table: {$table_key}" );
+			$this->assertSame( $table, $found, "Missing customer table: {$table_key}" );
 		}
 	}
 
@@ -44,7 +44,7 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 		$customer_id = YoOhw_COS_Customers::create_customer(
 			array(
 				'email'          => 'format-check@example.test',
-				'display_name'   => 'Format Check',
+				'display_name'   => 'Format check',
 				'total_orders'   => 1,
 				'total_spent'    => 25.50,
 				'trust_score'    => 50,
@@ -78,11 +78,11 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 		$customer_id = YoOhw_COS_Customers::create_customer(
 			array(
 				'email'        => 'reset-check@example.test',
-				'display_name' => 'Reset Check',
+				'display_name' => 'Reset check',
 			)
 		);
-		$tag_id      = YoOhw_COS_Tags::create_tag( 'Reset Check Tag' );
-		$segment_id  = YoOhw_COS_Segments::create_segment( 'Reset Check Segment' );
+		$tag_id      = YoOhw_COS_Tags::create_tag( 'Reset check tag' );
+		$segment_id  = YoOhw_COS_Segments::create_segment( 'Reset check segment' );
 
 		YoOhw_COS_Tags::assign_tag( $customer_id, $tag_id, 0, false );
 		YoOhw_COS_Segments::assign_customer( $customer_id, $segment_id, 0, false );
@@ -132,7 +132,7 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 		$customer_id = YoOhw_COS_Customers::create_customer(
 			array(
 				'email'          => 'archive-check@example.test',
-				'display_name'   => 'Archive Check',
+				'display_name'   => 'Archive check',
 				'customer_status' => 'active',
 			)
 		);
@@ -260,7 +260,7 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 		$root = dirname( __DIR__, 2 );
 
 		if ( ! defined( 'YOOHW_COS_VERSION' ) ) {
-			define( 'YOOHW_COS_VERSION', '1.1.0' );
+			define( 'YOOHW_COS_VERSION', '1.1.1' );
 		}
 
 		if ( ! defined( 'YOOHW_COS_DB_VERSION' ) ) {

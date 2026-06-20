@@ -272,15 +272,15 @@ final class YoOhw_COS_Activity_List extends WP_List_Table {
 			$current_type,
 			array(
 				''                => __( 'All event types', 'yoohw-customer-intelligence' ),
-				'order_synced'    => __( 'Order Synced', 'yoohw-customer-intelligence' ),
-				'tag_assigned'    => __( 'Tag Assigned', 'yoohw-customer-intelligence' ),
-				'tag_removed'     => __( 'Tag Removed', 'yoohw-customer-intelligence' ),
-				'note_added'      => __( 'Note Added', 'yoohw-customer-intelligence' ),
-				'note_updated'    => __( 'Note Updated', 'yoohw-customer-intelligence' ),
-				'note_deleted'    => __( 'Note Deleted', 'yoohw-customer-intelligence' ),
-				'task_created'    => __( 'Task Created', 'yoohw-customer-intelligence' ),
-				'task_completed'  => __( 'Task Completed', 'yoohw-customer-intelligence' ),
-				'bulk_customer_action' => __( 'Bulk Customer Action', 'yoohw-customer-intelligence' ),
+				'order_synced'    => __( 'Order synced', 'yoohw-customer-intelligence' ),
+				'tag_assigned'    => __( 'Tag assigned', 'yoohw-customer-intelligence' ),
+				'tag_removed'     => __( 'Tag removed', 'yoohw-customer-intelligence' ),
+				'note_added'      => __( 'Note added', 'yoohw-customer-intelligence' ),
+				'note_updated'    => __( 'Note updated', 'yoohw-customer-intelligence' ),
+				'note_deleted'    => __( 'Note deleted', 'yoohw-customer-intelligence' ),
+				'task_created'    => __( 'Task created', 'yoohw-customer-intelligence' ),
+				'task_completed'  => __( 'Task completed', 'yoohw-customer-intelligence' ),
+				'bulk_customer_action' => __( 'Bulk customer action', 'yoohw-customer-intelligence' ),
 			)
 		);
 
@@ -291,7 +291,7 @@ final class YoOhw_COS_Activity_List extends WP_List_Table {
 				''            => __( 'All sources', 'yoohw-customer-intelligence' ),
 				'system'      => __( 'System', 'yoohw-customer-intelligence' ),
 				'woocommerce' => __( 'WooCommerce', 'yoohw-customer-intelligence' ),
-				'customer_os' => __( 'Customer Intelligence', 'yoohw-customer-intelligence' ),
+				'customer_os' => __( 'Customer', 'yoohw-customer-intelligence' ),
 			)
 		);
 

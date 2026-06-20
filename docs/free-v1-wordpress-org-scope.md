@@ -12,7 +12,7 @@ Premium functionality must live in a separate premium add-on plugin that require
 
 ## Positioning
 
-YoOhw Customer Intelligence for WooCommerce Free is a lightweight Customer Intelligence and Customer Operations workspace for WooCommerce stores that need a better customer list, customer profile, activity history, notes, tags, static segments, basic customer scoring, manual follow-ups, safe order sync/backfill tools, export, diagnostics, and an understandable onboarding flow.
+YoOhw Customer Intelligence for WooCommerce Free is a lightweight customer operations workspace for WooCommerce stores that need a better customer list, customer profile, activity history, notes, tags, static segments, basic customer scoring, manual follow-ups, safe order sync/backfill tools, export, diagnostics, and an understandable onboarding flow.
 
 The free version targets store owners and operators who have outgrown the default WooCommerce customer view but do not yet need automation, AI, cross-store intelligence, dynamic workflows, or enterprise collaboration.
 
@@ -24,7 +24,7 @@ The free version targets store owners and operators who have outgrown the defaul
 - WooCommerce is a required dependency.
 - HPOS compatibility must be declared and tested.
 - WooCommerce order reads and writes must use WooCommerce CRUD/order APIs unless a direct query is explicitly proven HPOS-safe.
-- Customer Intelligence CRM data must use custom database tables, not `wp_usermeta` as the primary store.
+- Customer CRM data must use custom database tables, not `wp_usermeta` as the primary store.
 - Free version must remain genuinely useful without Premium.
 - Premium upsell must be limited, contextual, and never block core free workflows.
 - Backward compatibility must be preserved for existing custom tables and saved data.
@@ -35,12 +35,12 @@ The free version targets store owners and operators who have outgrown the defaul
 
 Must ship:
 
-- Activation creates all eight Customer Intelligence tables.
+- Activation creates all eight customer tables.
 - Migration/versioning can repair missing columns and indexes.
 - WooCommerce dependency guard displays a clear admin notice when WooCommerce is inactive.
 - HPOS compatibility is declared in the main plugin file.
 - Plugin headers are ready for WordPress.org and WooCommerce compatibility metadata.
-- Plugin loads only its admin assets on Customer Intelligence screens.
+- Plugin loads only its admin assets on customer screens.
 
 Done when:
 
@@ -208,7 +208,7 @@ Out of scope for Free v1.0:
 - Scheduled segment rebuilding.
 - Segment performance analytics.
 
-### 10. Customer Intelligence Lite
+### 10. Customer Lite
 
 Must ship:
 
@@ -239,7 +239,7 @@ Must ship:
 - Sync Center with last sync state, batch size, processed counts, completion notices, and resume state.
 - Backfill first order data in batches.
 - Recalculate intelligence in batches.
-- Reset Customer Intelligence data with clear wording and confirmation.
+- Reset customer data with clear wording and confirmation.
 - Admin notices for processed counts, completion state, and errors.
 - Batch operations must avoid unlimited object scans.
 

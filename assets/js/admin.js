@@ -87,6 +87,60 @@
 		setBulkTargetVisibility('task', showTask);
 	}
 
+	function saveScrollPosition() {
+		try {
+			window.sessionStorage.setItem('yoohwCosProfileScrollY', String(window.scrollY || window.pageYOffset || 0));
+		} catch (error) {
+			// Ignore browsers that block sessionStorage.
+		}
+	}
+
+	function restoreScrollPosition() {
+		try {
+			var scrollY = window.sessionStorage.getItem('yoohwCosProfileScrollY');
+
+			if (null === scrollY) {
+				return;
+			}
+
+			window.sessionStorage.removeItem('yoohwCosProfileScrollY');
+
+			setTimeout(function() {
+				window.scrollTo(window.scrollX || window.pageXOffset || 0, parseInt(scrollY, 10) || 0);
+			}, 0);
+		} catch (error) {
+			// Ignore browsers that block sessionStorage.
+		}
+	}
+
+	function isInteractiveRowTarget(target) {
+		return !!target.closest('a, button, input, select, textarea, label, summary, .row-actions, [data-yoohw-cos-row-ignore]');
+	}
+
+	function shouldIgnoreRowClick(event) {
+		var selection = window.getSelection ? window.getSelection() : null;
+
+		return event.defaultPrevented
+			|| (event.button && 0 !== event.button)
+			|| isInteractiveRowTarget(event.target)
+			|| !!(selection && selection.toString());
+	}
+
+	function openClickableRow(row, event) {
+		var url = row ? row.getAttribute('data-yoohw-cos-row-url') : '';
+
+		if (!url) {
+			return;
+		}
+
+		if (event && (event.metaKey || event.ctrlKey)) {
+			window.open(url, '_blank', 'noopener');
+			return;
+		}
+
+		window.location.href = url;
+	}
+
 	function escapeHtml(value) {
 		var div = document.createElement('div');
 		div.textContent = value;
@@ -323,9 +377,182 @@
 			});
 		});
 	}
+
+	function splitTermNames(value) {
+		return value.split(',').map(function(term) {
+			return term.trim();
+		});
+	}
+
+	function getCurrentTermFragment(value) {
+		var names = splitTermNames(value);
+
+		return names.length ? names[names.length - 1] : '';
+	}
+
+	function setTermInputValue(input, names) {
+		input.value = names.length ? names.join(', ') + ', ' : '';
+		input.focus();
+
+		if ('function' === typeof input.setSelectionRange) {
+			input.setSelectionRange(input.value.length, input.value.length);
+		}
+	}
+
+	function appendTermName(input, name) {
+		var currentNames = splitTermNames(input.value).filter(Boolean);
+		var lowerName = name.toLowerCase();
+		var exists = currentNames.some(function(value) {
+			return value.toLowerCase() === lowerName;
+		});
+
+		if (!exists) {
+			currentNames.push(name);
+		}
+
+		setTermInputValue(input, currentNames);
+	}
+
+	function replaceCurrentTermName(input, name) {
+		var currentNames = splitTermNames(input.value);
+		var lowerName = name.toLowerCase();
+
+		currentNames.pop();
+
+		currentNames = currentNames.filter(Boolean);
+
+		if (!currentNames.some(function(value) {
+			return value.toLowerCase() === lowerName;
+		})) {
+			currentNames.push(name);
+		}
+
+		setTermInputValue(input, currentNames);
+	}
+
+	function getTermSuggestionSource(input) {
+		var raw = input.getAttribute('data-yoohw-cos-term-source') || '[]';
+
+		try {
+			var source = JSON.parse(raw);
+
+			return Array.isArray(source) ? source.filter(Boolean) : [];
+		} catch (error) {
+			return [];
+		}
+	}
+
+	function initTermSuggestions($) {
+		if (!$ || !$.fn || !$.fn.autocomplete) {
+			return;
+		}
+
+		$('[data-yoohw-cos-term-suggest="1"]').each(function() {
+			var input = this;
+			var $input = $(input);
+
+			if ($input.data('yoohwCosTermSuggestReady')) {
+				return;
+			}
+
+			var source = getTermSuggestionSource(input);
+
+			if (!source.length) {
+				return;
+			}
+
+			$input.data('yoohwCosTermSuggestReady', true);
+			$input.autocomplete({
+				source: function(request, response) {
+					var query = getCurrentTermFragment(request.term).toLowerCase();
+					var selectedNames = splitTermNames(request.term).filter(Boolean).map(function(value) {
+						return value.toLowerCase();
+					});
+
+					if (!query) {
+						response([]);
+						return;
+					}
+
+					response(source.filter(function(name) {
+						var lowerName = name.toLowerCase();
+
+						return selectedNames.indexOf(lowerName) === -1 && lowerName.indexOf(query) !== -1;
+					}).slice(0, 20).map(function(name, index) {
+						return {
+							id: input.id + '-' + index,
+							label: name,
+							name: name,
+							value: name
+						};
+					}));
+				},
+				focus: function(event, ui) {
+					$input.attr('aria-activedescendant', 'wp-tags-autocomplete-' + ui.item.id);
+					event.preventDefault();
+				},
+				select: function(event, ui) {
+					replaceCurrentTermName(input, ui.item.name);
+					event.preventDefault();
+					return false;
+				},
+				open: function() {
+					$input.attr('aria-expanded', 'true');
+				},
+				close: function() {
+					$input.attr('aria-expanded', 'false');
+				},
+				minLength: 1,
+				position: {
+					my: 'left top+2',
+					at: 'left bottom',
+					collision: 'none'
+				}
+			});
+
+			if (!$input.autocomplete('instance')) {
+				return;
+			}
+
+			$input.autocomplete('instance')._renderItem = function(ul, item) {
+				return $('<li role="option" id="wp-tags-autocomplete-' + item.id + '">')
+					.text(item.name)
+					.appendTo(ul);
+			};
+
+			$input.attr({
+				'role': 'combobox',
+				'aria-autocomplete': 'list',
+				'aria-expanded': 'false',
+				'aria-owns': $input.autocomplete('widget').attr('id')
+			})
+			.on('keydown', function() {
+				$input.removeAttr('aria-activedescendant');
+			})
+			.on('focus', function() {
+				if (getCurrentTermFragment(input.value)) {
+					$input.autocomplete('search');
+				}
+			});
+
+			$input.autocomplete('widget')
+				.addClass('wp-tags-autocomplete')
+				.attr('role', 'listbox')
+				.removeAttr('tabindex')
+				.on('menufocus', function(event, ui) {
+					ui.item.attr('aria-selected', 'true');
+				})
+				.on('menublur', function() {
+					$(this).find('[aria-selected="true"]').removeAttr('aria-selected');
+				});
+		});
+	}
+
 	ready(function() {
 		updateBulkTargets();
 		initTaskSearchableSelects();
+		initTermSuggestions(window.jQuery);
+		restoreScrollPosition();
 
 		document.addEventListener('change', function(event) {
 			if (event.target.matches('select[name="action"], select[name="action2"]')) {
@@ -349,6 +576,12 @@
 		});
 
 		document.addEventListener('submit', function(event) {
+			if (event.target.closest('.yoohw-cos-term-box-form')) {
+				saveScrollPosition();
+			}
+		});
+
+		document.addEventListener('submit', function(event) {
 			var target = event.target.closest('[data-yoohw-cos-confirm]');
 
 			if (target && !window.confirm(target.getAttribute('data-yoohw-cos-confirm'))) {
@@ -359,12 +592,57 @@
 		document.addEventListener('click', function(event) {
 			var confirmTarget = event.target.closest('[data-yoohw-cos-confirm]');
 
+			var clickableRow = event.target.closest('[data-yoohw-cos-row-url]');
+
+			if (clickableRow && !shouldIgnoreRowClick(event)) {
+				openClickableRow(clickableRow, event);
+				return;
+			}
+
 			if (
 				confirmTarget
 				&& 'FORM' !== confirmTarget.tagName
 				&& !window.confirm(confirmTarget.getAttribute('data-yoohw-cos-confirm'))
 			) {
 				event.preventDefault();
+				return;
+			}
+
+			if (confirmTarget && confirmTarget.matches('.yoohw-cos-term-add-form .ntdelbutton')) {
+				saveScrollPosition();
+			}
+
+			var termCloudToggle = event.target.closest('[data-yoohw-cos-term-cloud-toggle]');
+
+			if (termCloudToggle) {
+				event.preventDefault();
+
+				var targetId = termCloudToggle.getAttribute('data-yoohw-cos-term-cloud-target');
+				var cloud = targetId ? document.getElementById(targetId) : null;
+
+				if (!cloud) {
+					return;
+				}
+
+				var isExpanded = 'true' === termCloudToggle.getAttribute('aria-expanded');
+				termCloudToggle.setAttribute('aria-expanded', isExpanded ? 'false' : 'true');
+				cloud.hidden = isExpanded;
+				return;
+			}
+
+			var termCloudLink = event.target.closest('[data-yoohw-cos-term-name]');
+
+			if (termCloudLink) {
+				event.preventDefault();
+
+				var termName = termCloudLink.getAttribute('data-yoohw-cos-term-name');
+				var inputId = termCloudLink.getAttribute('data-yoohw-cos-term-input');
+				var input = inputId ? document.getElementById(inputId) : null;
+
+				if (termName && input) {
+					appendTermName(input, termName);
+				}
+
 				return;
 			}
 
@@ -378,8 +656,30 @@
 				}
 
 				navigator.clipboard.writeText(value).then(function() {
-					var original = copyButton.textContent;
 					var copiedText = window.yoohwCosAdmin && window.yoohwCosAdmin.copiedText ? window.yoohwCosAdmin.copiedText : 'Copied!';
+					var icon = copyButton.querySelector('.dashicons');
+
+					if (copyButton.classList.contains('yoohw-cos-copy-icon') && icon) {
+						var originalClassName = icon.className;
+						var originalLabel = copyButton.getAttribute('aria-label');
+
+						copyButton.classList.add('is-copied');
+						copyButton.setAttribute('aria-label', copiedText);
+						icon.className = 'dashicons dashicons-yes';
+
+						setTimeout(function() {
+							icon.className = originalClassName;
+							copyButton.classList.remove('is-copied');
+
+							if (originalLabel) {
+								copyButton.setAttribute('aria-label', originalLabel);
+							}
+						}, 1200);
+
+						return;
+					}
+
+					var original = copyButton.textContent;
 
 					copyButton.textContent = copiedText;
 
@@ -405,6 +705,17 @@
 				event.preventDefault();
 				toggleNote(cancelButton.getAttribute('data-note-id'), false);
 			}
+		});
+
+		document.addEventListener('keydown', function(event) {
+			var row = event.target.closest('[data-yoohw-cos-row-url]');
+
+			if (!row || isInteractiveRowTarget(event.target) || ('Enter' !== event.key && ' ' !== event.key)) {
+				return;
+			}
+
+			event.preventDefault();
+			openClickableRow(row, event);
 		});
 	});
 })();

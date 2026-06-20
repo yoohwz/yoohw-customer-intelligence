@@ -31,7 +31,7 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 			'labels'             => __( 'Labels', 'yoohw-customer-intelligence' ),
 			'commerce'           => __( 'Commerce', 'yoohw-customer-intelligence' ),
 			'health'             => __( 'Health', 'yoohw-customer-intelligence' ),
-			'last_activity_date' => __( 'Last Active', 'yoohw-customer-intelligence' ),
+			'last_activity_date' => __( 'Last active', 'yoohw-customer-intelligence' ),
 		);
 	}
 
@@ -116,16 +116,22 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 		}
 	}
 
-	public function column_customer( array $item ): string {
-		$name = ! empty( $item['display_name'] ) ? $item['display_name'] : __( '(No name)', 'yoohw-customer-intelligence' );
+	public function single_row( $item ) {
+		$name = $this->get_customer_name( $item );
+		$url  = $this->get_customer_profile_url( $item );
 
-		$profile_url = add_query_arg(
-			array(
-				'page'        => 'yoohw-customer-intelligence',
-				'customer_id' => absint( $item['id'] ),
-			),
-			admin_url( 'admin.php' )
-		);
+		echo '<tr class="yoohw-cos-clickable-row" data-yoohw-cos-row-url="' . esc_url( $url ) . '" tabindex="0" role="link" aria-label="' . esc_attr( sprintf(
+			/* translators: %s: customer display name. */
+			__( 'Open customer profile: %s', 'yoohw-customer-intelligence' ),
+			$name
+		) ) . '">';
+		$this->single_row_columns( $item );
+		echo '</tr>';
+	}
+
+	public function column_customer( array $item ): string {
+		$name        = $this->get_customer_name( $item );
+		$profile_url = $this->get_customer_profile_url( $item );
 
 		$output = '<strong><a href="' . esc_url( $profile_url ) . '">' . esc_html( $name ) . '</a></strong>';
 
@@ -142,13 +148,27 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 		return $output;
 	}
 
+	private function get_customer_name( array $item ): string {
+		return ! empty( $item['display_name'] ) ? (string) $item['display_name'] : __( '(No name)', 'yoohw-customer-intelligence' );
+	}
+
+	private function get_customer_profile_url( array $item ): string {
+		return add_query_arg(
+			array(
+				'page'        => 'yoohw-customer-intelligence',
+				'customer_id' => absint( $item['id'] ?? 0 ),
+			),
+			admin_url( 'admin.php' )
+		);
+	}
+
 	public function no_items(): void {
 		$customer_view = isset( $_REQUEST['customer_view'] ) ? sanitize_key( wp_unslash( $_REQUEST['customer_view'] ) ) : '';
 
 		if ( 'archived' === $customer_view ) {
 			YoOhw_COS_Admin_UI::render_empty_state(
 				__( 'No archived customers.', 'yoohw-customer-intelligence' ),
-				__( 'Archived customer profiles will appear here after you archive them from the Customers list.', 'yoohw-customer-intelligence' )
+				__( 'Archived customer profiles will appear here after you archive them from the customers list.', 'yoohw-customer-intelligence' )
 			);
 			return;
 		}
@@ -167,7 +187,7 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 			array(
 				array(
 					'url'   => admin_url( 'admin.php?page=yoohw-customer-intelligence-settings#yoohw-cos-sync-center' ),
-					'label' => __( 'Open Sync Center', 'yoohw-customer-intelligence' ),
+					'label' => __( 'Open sync center', 'yoohw-customer-intelligence' ),
 					'class' => 'button button-primary',
 				),
 			)
@@ -185,7 +205,7 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 			''         => __( 'All', 'yoohw-customer-intelligence' ),
 			'new'      => __( 'New', 'yoohw-customer-intelligence' ),
 			'active'   => __( 'Active', 'yoohw-customer-intelligence' ),
-			'at_risk'  => __( 'At Risk', 'yoohw-customer-intelligence' ),
+			'at_risk'  => __( 'At risk', 'yoohw-customer-intelligence' ),
 			'inactive' => __( 'Inactive', 'yoohw-customer-intelligence' ),
 			'vip'      => __( 'VIP', 'yoohw-customer-intelligence' ),
 		);
@@ -466,10 +486,10 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 
 		$risk_levels = array(
 			''       => __( 'All risk levels', 'yoohw-customer-intelligence' ),
-			'none'   => __( 'No Risk', 'yoohw-customer-intelligence' ),
-			'low'    => __( 'Low Risk', 'yoohw-customer-intelligence' ),
-			'medium' => __( 'Medium Risk', 'yoohw-customer-intelligence' ),
-			'high'   => __( 'High Risk', 'yoohw-customer-intelligence' ),
+			'none'   => __( 'No risk', 'yoohw-customer-intelligence' ),
+			'low'    => __( 'Low risk', 'yoohw-customer-intelligence' ),
+			'medium' => __( 'Medium risk', 'yoohw-customer-intelligence' ),
+			'high'   => __( 'High risk', 'yoohw-customer-intelligence' ),
 		);
 
 		echo '<select name="risk_level">';
@@ -612,7 +632,7 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 		foreach ( $tags as $tag ) {
 			$color = ! empty( $tag['color'] ) ? sanitize_hex_color( $tag['color'] ) : '#f0f0f1';
 
-			$output .= '<span class="yoohw-cos-chip" style="background:' . esc_attr( $color ) . ';">';
+			$output .= '<span class="yoohw-cos-chip" style="' . esc_attr( YoOhw_COS_Admin_UI::get_readable_chip_style( $color ) ) . '">';
 			$output .= esc_html( $tag['name'] );
 			$output .= '</span>';
 		}
@@ -624,7 +644,7 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 		$labels = array(
 			'new'      => __( 'New', 'yoohw-customer-intelligence' ),
 			'active'   => __( 'Active', 'yoohw-customer-intelligence' ),
-			'at_risk'  => __( 'At Risk', 'yoohw-customer-intelligence' ),
+			'at_risk'  => __( 'At risk', 'yoohw-customer-intelligence' ),
 			'inactive' => __( 'Inactive', 'yoohw-customer-intelligence' ),
 			'vip'      => __( 'VIP', 'yoohw-customer-intelligence' ),
 		);
@@ -651,7 +671,7 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 		$level = YoOhw_COS_Intelligence::calculate_risk_level( $risk_score );
 
 		$labels = array(
-			'none'   => __( 'No Risk', 'yoohw-customer-intelligence' ),
+			'none'   => __( 'No risk', 'yoohw-customer-intelligence' ),
 			'low'    => __( 'Low', 'yoohw-customer-intelligence' ),
 			'medium' => __( 'Medium', 'yoohw-customer-intelligence' ),
 			'high'   => __( 'High', 'yoohw-customer-intelligence' ),

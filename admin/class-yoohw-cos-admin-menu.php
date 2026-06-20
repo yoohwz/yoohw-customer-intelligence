@@ -4,9 +4,14 @@ defined( 'ABSPATH' ) || exit;
 final class YoOhw_COS_Admin_Menu {
 
 	private const DASHBOARD_TASKS_WIDGET_ID = 'yoohw_cos_dashboard_followup_tasks';
+	private const MENU_SLUG = 'yoohw-customer-intelligence-overview';
+	private const WOOCOMMERCE_MENU_SLUG = 'woocommerce';
+	private const PRODUCTS_MENU_SLUG = 'edit.php?post_type=product';
 
 	public static function init(): void {
 		add_action( 'admin_menu', array( __CLASS__, 'register_menu' ) );
+		add_action( 'admin_menu', array( __CLASS__, 'move_menu_before_products' ), 999 );
+		add_filter( 'menu_order', array( __CLASS__, 'order_menu_before_products' ), 2000 );
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_admin_assets' ) );
 		add_action( 'wp_dashboard_setup', array( __CLASS__, 'register_dashboard_widgets' ), 100 );
 		add_action( 'wp_ajax_yoohw_cos_json_search_assignable_users', array( __CLASS__, 'handle_assignable_user_search' ) );
@@ -57,7 +62,7 @@ final class YoOhw_COS_Admin_Menu {
 		wp_enqueue_script(
 			'yoohw-cos-admin',
 			YOOHW_COS_URL . 'assets/js/admin.js',
-			array( 'jquery', 'wc-enhanced-select' ),
+			array( 'jquery', 'jquery-ui-autocomplete', 'wc-enhanced-select' ),
 			$admin_js_ver,
 			true
 		);
@@ -256,7 +261,7 @@ final class YoOhw_COS_Admin_Menu {
 				__( 'Open customer follow-ups assigned to your account will appear here.', 'yoohw-customer-intelligence' ),
 				array(
 					array(
-						'label' => __( 'Open Tasks', 'yoohw-customer-intelligence' ),
+						'label' => __( 'Open tasks', 'yoohw-customer-intelligence' ),
 						'url'   => admin_url( 'admin.php?page=yoohw-customer-intelligence-tasks' ),
 						'class' => 'button',
 					),
@@ -367,10 +372,10 @@ final class YoOhw_COS_Admin_Menu {
 			__( 'YoOhw Customer Intelligence for WooCommerce', 'yoohw-customer-intelligence' ),
 			__( 'Customers', 'yoohw-customer-intelligence' ),
 			'manage_woocommerce',
-			'yoohw-customer-intelligence-overview',
+			self::MENU_SLUG,
 			array( __CLASS__, 'render_overview_page' ),
 			'dashicons-groups',
-			56
+			55.6
 		);
 
 		add_submenu_page(
@@ -437,6 +442,123 @@ final class YoOhw_COS_Admin_Menu {
 		);
 	}
 
+	public static function move_menu_before_products(): void {
+		global $menu;
+
+		if ( ! is_array( $menu ) ) {
+			return;
+		}
+
+		$customers_key   = self::find_top_level_menu_key( self::MENU_SLUG );
+		$woocommerce_key = self::find_top_level_menu_key( self::WOOCOMMERCE_MENU_SLUG );
+		$products_key    = self::find_top_level_menu_key( self::PRODUCTS_MENU_SLUG );
+
+		if ( null === $customers_key || null === $products_key ) {
+			return;
+		}
+
+		$customers_item = $menu[ $customers_key ];
+		unset( $menu[ $customers_key ] );
+
+		$menu_position = null === $woocommerce_key
+			? self::get_menu_position_before( $products_key, $menu )
+			: self::get_menu_position_between( $woocommerce_key, $products_key, $menu );
+
+		$menu[ $menu_position ] = $customers_item;
+
+		ksort( $menu );
+	}
+
+	public static function order_menu_before_products( array $menu_order ): array {
+		$customers_index = array_search( self::MENU_SLUG, $menu_order, true );
+		$products_index  = array_search( self::PRODUCTS_MENU_SLUG, $menu_order, true );
+
+		if ( false === $customers_index || false === $products_index ) {
+			return $menu_order;
+		}
+
+		unset( $menu_order[ $customers_index ] );
+		$menu_order = array_values( $menu_order );
+
+		$products_index    = array_search( self::PRODUCTS_MENU_SLUG, $menu_order, true );
+		$woocommerce_index = array_search( self::WOOCOMMERCE_MENU_SLUG, $menu_order, true );
+
+		if ( false === $products_index ) {
+			return $menu_order;
+		}
+
+		$insert_index = $products_index;
+
+		if ( false !== $woocommerce_index && $insert_index <= $woocommerce_index ) {
+			$insert_index = $woocommerce_index + 1;
+		}
+
+		array_splice( $menu_order, $insert_index, 0, self::MENU_SLUG );
+
+		return array_values( $menu_order );
+	}
+
+	private static function find_top_level_menu_key( string $menu_slug ): ?string {
+		global $menu;
+
+		if ( ! is_array( $menu ) ) {
+			return null;
+		}
+
+		foreach ( $menu as $position => $item ) {
+			if ( isset( $item[2] ) && $menu_slug === $item[2] ) {
+				return (string) $position;
+			}
+		}
+
+		return null;
+	}
+
+	private static function get_menu_position_between( string $after_position, string $before_position, array $current_menu ): string {
+		$after  = (float) $after_position;
+		$before = (float) $before_position;
+
+		if ( $before <= $after ) {
+			return self::get_menu_position_before( $before_position, $current_menu );
+		}
+
+		$position = $before - 0.001;
+
+		if ( $position <= $after ) {
+			$position = ( $after + $before ) / 2;
+		}
+
+		for ( $i = 0; $i < 100; $i++ ) {
+			$formatted_position = self::format_menu_position( $position );
+
+			if ( ! isset( $current_menu[ $formatted_position ] ) && $position > $after && $position < $before ) {
+				return $formatted_position;
+			}
+
+			$position = ( $after + $position ) / 2;
+		}
+
+		return self::format_menu_position( ( $after + $before ) / 2 );
+	}
+
+	private static function get_menu_position_before( string $target_position, array $current_menu ): string {
+		$position = (float) $target_position - 0.001;
+
+		do {
+			$formatted_position = self::format_menu_position( $position );
+
+			if ( ! isset( $current_menu[ $formatted_position ] ) ) {
+				return $formatted_position;
+			}
+
+			$position -= 0.001;
+		} while ( true );
+	}
+
+	private static function format_menu_position( float $position ): string {
+		return rtrim( rtrim( number_format( $position, 6, '.', '' ), '0' ), '.' );
+	}
+
 	private static function is_post_request(): bool {
 		$request_method = isset( $_SERVER['REQUEST_METHOD'] )
 			? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ) )
@@ -474,7 +596,7 @@ final class YoOhw_COS_Admin_Menu {
 		if ( empty( $sync_state['last_run_at'] ) && empty( $stats['total_customers'] ) ) {
 			echo '<div class="notice notice-warning inline yoohw-cos-overview-sync-notice"><p>';
 			echo esc_html__( 'No synced customer data found yet. Sync existing orders to populate the dashboard.', 'yoohw-customer-intelligence' );
-			echo ' <a href="' . esc_url( admin_url( 'admin.php?page=yoohw-customer-intelligence-settings#yoohw-cos-sync-center' ) ) . '">' . esc_html__( 'Open Sync Center', 'yoohw-customer-intelligence' ) . '</a>';
+			echo ' <a href="' . esc_url( admin_url( 'admin.php?page=yoohw-customer-intelligence-settings#yoohw-cos-sync-center' ) ) . '">' . esc_html__( 'Open sync center', 'yoohw-customer-intelligence' ) . '</a>';
 			echo '</p></div>';
 		}
 
@@ -486,7 +608,7 @@ final class YoOhw_COS_Admin_Menu {
 		self::render_stat_card( __( 'Orders', 'yoohw-customer-intelligence' ), number_format_i18n( absint( $stats['total_orders'] ) ) );
 		self::render_stat_card( __( 'Revenue', 'yoohw-customer-intelligence' ), $revenue );
 		self::render_stat_card( __( 'VIP', 'yoohw-customer-intelligence' ), number_format_i18n( $vip_total ) );
-		self::render_stat_card( __( 'At Risk', 'yoohw-customer-intelligence' ), number_format_i18n( absint( $status_counts['at_risk'] ?? 0 ) ) );
+		self::render_stat_card( __( 'At risk', 'yoohw-customer-intelligence' ), number_format_i18n( absint( $status_counts['at_risk'] ?? 0 ) ) );
 		self::render_stat_card( __( 'Inactive', 'yoohw-customer-intelligence' ), number_format_i18n( absint( $status_counts['inactive'] ?? 0 ) ) );
 		echo '</div>';
 		echo '</div>';
@@ -578,7 +700,7 @@ final class YoOhw_COS_Admin_Menu {
 				'missing_tag'     => __( 'Please select a tag before applying this bulk action.', 'yoohw-customer-intelligence' ),
 				'missing_segment' => __( 'Please select a segment before applying this bulk action.', 'yoohw-customer-intelligence' ),
 				'missing_task'    => __( 'Please enter a follow-up task title before applying this bulk action.', 'yoohw-customer-intelligence' ),
-				'invalid_assignee' => __( 'Please select a valid assignee. Tasks can only be assigned to Administrators or Shop managers.', 'yoohw-customer-intelligence' ),
+				'invalid_assignee' => __( 'Please select a valid assignee. Tasks can only be assigned to administrators or shop managers.', 'yoohw-customer-intelligence' ),
 				'invalid_due_date' => __( 'Please enter a valid task due date or leave it empty.', 'yoohw-customer-intelligence' ),
 				'no_changes'      => __( 'Bulk action completed, but no customer records were changed.', 'yoohw-customer-intelligence' ),
 			);
@@ -1137,7 +1259,7 @@ final class YoOhw_COS_Admin_Menu {
 		echo '<p>' . esc_html__( 'Track follow-ups for customers and orders.', 'yoohw-customer-intelligence' ) . '</p>';
 		echo '</div>';
 		echo '</div>';
-		echo '<a class="button button-primary" href="#yoohw-cos-task-form">' . esc_html__( 'Add Task', 'yoohw-customer-intelligence' ) . '</a>';
+		echo '<a class="button button-primary" href="#yoohw-cos-task-form">' . esc_html__( 'Add task', 'yoohw-customer-intelligence' ) . '</a>';
 		echo '</div>';
 
 		self::render_tasks_notices();
@@ -1309,7 +1431,7 @@ final class YoOhw_COS_Admin_Menu {
 			$messages = array(
 				'missing_customer' => __( 'Please select a valid customer.', 'yoohw-customer-intelligence' ),
 				'missing_title'    => __( 'Please enter a task title.', 'yoohw-customer-intelligence' ),
-				'invalid_assignee' => __( 'Please assign tasks only to an Administrator or Shop Manager.', 'yoohw-customer-intelligence' ),
+				'invalid_assignee' => __( 'Please assign tasks only to an administrator or shop manager.', 'yoohw-customer-intelligence' ),
 				'invalid_task'     => __( 'Task could not be found.', 'yoohw-customer-intelligence' ),
 				'save_failed'      => __( 'Task could not be saved.', 'yoohw-customer-intelligence' ),
 			);
@@ -1365,8 +1487,8 @@ final class YoOhw_COS_Admin_Menu {
 		echo '<div id="yoohw-cos-task-form" class="postbox yoohw-cos-task-form-wrap">';
 		echo '<div class="postbox-header"><h2 class="hndle">';
 		echo $is_editing
-			? esc_html__( 'Edit Task', 'yoohw-customer-intelligence' )
-			: esc_html__( 'Add New Task', 'yoohw-customer-intelligence' );
+			? esc_html__( 'Edit task', 'yoohw-customer-intelligence' )
+			: esc_html__( 'Add new task', 'yoohw-customer-intelligence' );
 		echo '</h2></div>';
 		echo '<div class="inside">';
 
@@ -1384,7 +1506,7 @@ final class YoOhw_COS_Admin_Menu {
 		echo '<div class="form-field form-required">';
 		echo '<label for="yoohw_cos_task_customer_id">' . esc_html__( 'Customer', 'yoohw-customer-intelligence' ) . '</label>';
 		self::render_task_customer_select( $selected_id );
-		echo '<p>' . esc_html__( 'Tasks are stored against Customer Intelligence profiles.', 'yoohw-customer-intelligence' ) . '</p>';
+		echo '<p>' . esc_html__( 'Tasks are stored against customer profiles.', 'yoohw-customer-intelligence' ) . '</p>';
 		echo '</div>';
 
 		echo '<div class="form-field form-required">';
@@ -1440,8 +1562,8 @@ final class YoOhw_COS_Admin_Menu {
 		echo '<div class="yoohw-cos-task-form-actions">';
 		submit_button(
 			$is_editing
-				? __( 'Update Task', 'yoohw-customer-intelligence' )
-				: __( 'Add Task', 'yoohw-customer-intelligence' ),
+				? __( 'Update task', 'yoohw-customer-intelligence' )
+				: __( 'Add task', 'yoohw-customer-intelligence' ),
 			'primary',
 			'submit',
 			false
@@ -1700,7 +1822,7 @@ final class YoOhw_COS_Admin_Menu {
 				esc_html( number_format_i18n( $count ) )
 			);
 			echo ' <a class="button button-small button-link-delete" href="' . esc_url( $force_url ) . '" data-yoohw-cos-confirm="' . esc_attr__( 'This will remove the tag from all assigned customers. Continue?', 'yoohw-customer-intelligence' ) . '">';
-			echo esc_html__( 'Force Delete Tag', 'yoohw-customer-intelligence' );
+			echo esc_html__( 'Force delete tag', 'yoohw-customer-intelligence' );
 			echo '</a>';
 			echo '</p></div>';
 		}
@@ -1800,8 +1922,8 @@ final class YoOhw_COS_Admin_Menu {
 		echo '<h2>';
 
 		echo $is_editing
-			? esc_html__( 'Edit Tag', 'yoohw-customer-intelligence' )
-			: esc_html__( 'Add New Tag', 'yoohw-customer-intelligence' );
+			? esc_html__( 'Edit tag', 'yoohw-customer-intelligence' )
+			: esc_html__( 'Add new tag', 'yoohw-customer-intelligence' );
 
 		echo '</h2>';
 
@@ -1818,7 +1940,7 @@ final class YoOhw_COS_Admin_Menu {
 
 		echo '<div class="form-field form-required term-name-wrap">';
 		echo '<label for="yoohw_cos_tag_name">' . esc_html__( 'Name', 'yoohw-customer-intelligence' ) . '</label>';
-		echo '<input type="text" id="yoohw_cos_tag_name" name="tag_name" value="' . esc_attr( $tag['name'] ?? '' ) . '" placeholder="' . esc_attr__( 'VIP, High Risk, Needs Follow-up...', 'yoohw-customer-intelligence' ) . '" required />';
+		echo '<input type="text" id="yoohw_cos_tag_name" name="tag_name" value="' . esc_attr( $tag['name'] ?? '' ) . '" placeholder="' . esc_attr__( 'VIP, high risk, needs follow-up...', 'yoohw-customer-intelligence' ) . '" required />';
 		echo '<p>' . esc_html__( 'The name is how the tag appears on customer profiles and customer lists.', 'yoohw-customer-intelligence' ) . '</p>';
 		echo '</div>';
 
@@ -1835,8 +1957,8 @@ final class YoOhw_COS_Admin_Menu {
 
 		submit_button(
 			$is_editing
-				? __( 'Update Tag', 'yoohw-customer-intelligence' )
-				: __( 'Add New Tag', 'yoohw-customer-intelligence' ),
+				? __( 'Update tag', 'yoohw-customer-intelligence' )
+				: __( 'Add new tag', 'yoohw-customer-intelligence' ),
 			'primary',
 			'submit',
 			false
@@ -1957,7 +2079,7 @@ final class YoOhw_COS_Admin_Menu {
 				esc_html( number_format_i18n( $count ) )
 			);
 			echo ' <a class="button button-small button-link-delete" href="' . esc_url( $force_url ) . '" data-yoohw-cos-confirm="' . esc_attr__( 'This will remove the segment from all assigned customers. Continue?', 'yoohw-customer-intelligence' ) . '">';
-			echo esc_html__( 'Force Delete Segment', 'yoohw-customer-intelligence' );
+			echo esc_html__( 'Force delete segment', 'yoohw-customer-intelligence' );
 			echo '</a>';
 			echo '</p></div>';
 		}
@@ -2076,8 +2198,8 @@ final class YoOhw_COS_Admin_Menu {
 		echo '<div class="form-wrap">';
 		echo '<h2>';
 		echo $is_editing
-			? esc_html__( 'Edit Segment', 'yoohw-customer-intelligence' )
-			: esc_html__( 'Add New Segment', 'yoohw-customer-intelligence' );
+			? esc_html__( 'Edit segment', 'yoohw-customer-intelligence' )
+			: esc_html__( 'Add new segment', 'yoohw-customer-intelligence' );
 		echo '</h2>';
 
 		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
@@ -2093,7 +2215,7 @@ final class YoOhw_COS_Admin_Menu {
 
 		echo '<div class="form-field form-required term-name-wrap">';
 		echo '<label for="yoohw_cos_segment_name">' . esc_html__( 'Name', 'yoohw-customer-intelligence' ) . '</label>';
-		echo '<input type="text" id="yoohw_cos_segment_name" name="segment_name" value="' . esc_attr( $segment['name'] ?? '' ) . '" placeholder="' . esc_attr__( 'VIP Recovery, Wholesale, Repeat Buyers...', 'yoohw-customer-intelligence' ) . '" required />';
+		echo '<input type="text" id="yoohw_cos_segment_name" name="segment_name" value="' . esc_attr( $segment['name'] ?? '' ) . '" placeholder="' . esc_attr__( 'VIP recovery, wholesale, repeat buyers...', 'yoohw-customer-intelligence' ) . '" required />';
 		echo '<p>' . esc_html__( 'The name is how the segment appears on customer profiles and customer lists.', 'yoohw-customer-intelligence' ) . '</p>';
 		echo '</div>';
 
@@ -2105,8 +2227,8 @@ final class YoOhw_COS_Admin_Menu {
 
 		submit_button(
 			$is_editing
-				? __( 'Update Segment', 'yoohw-customer-intelligence' )
-				: __( 'Add New Segment', 'yoohw-customer-intelligence' ),
+				? __( 'Update segment', 'yoohw-customer-intelligence' )
+				: __( 'Add new segment', 'yoohw-customer-intelligence' ),
 			'primary',
 			'submit',
 			false
@@ -2185,7 +2307,7 @@ final class YoOhw_COS_Admin_Menu {
 
 		if ( ! empty( $_GET['yoohw_cos_reset'] ) ) {
 			echo '<div class="notice notice-warning is-dismissible"><p>';
-			echo esc_html__( 'Customer Intelligence data has been reset.', 'yoohw-customer-intelligence' );
+			echo esc_html__( 'Customer data has been reset.', 'yoohw-customer-intelligence' );
 			echo '</p></div>';
 		}
 
@@ -2232,7 +2354,7 @@ final class YoOhw_COS_Admin_Menu {
 		echo '<div class="inside">';
 		echo '<div id="yoohw-cos-sync-center" class="yoohw-cos-operation yoohw-cos-operation--primary" data-yoohw-cos-sync-center>';
 		echo '<div class="yoohw-cos-operation__body">';
-		echo '<h3>' . esc_html__( 'Sync Center', 'yoohw-customer-intelligence' ) . '</h3>';
+		echo '<h3>' . esc_html__( 'Sync center', 'yoohw-customer-intelligence' ) . '</h3>';
 
 		$query_next_page = isset( $_GET['yoohw_cos_next_page'] ) ? absint( wp_unslash( $_GET['yoohw_cos_next_page'] ) ) : 1;
 		$query_has_more  = ! empty( $_GET['yoohw_cos_has_more'] );
@@ -2258,8 +2380,8 @@ final class YoOhw_COS_Admin_Menu {
 
 		submit_button(
 			$has_more
-				? __( 'Continue Sync', 'yoohw-customer-intelligence' )
-				: __( 'Sync Existing Orders', 'yoohw-customer-intelligence' ),
+				? __( 'Continue sync', 'yoohw-customer-intelligence' )
+				: __( 'Sync existing orders', 'yoohw-customer-intelligence' ),
 			'primary',
 			'submit',
 			false
@@ -2280,7 +2402,7 @@ final class YoOhw_COS_Admin_Menu {
 
 		echo '<div class="yoohw-cos-operation-row">';
 		echo '<div class="yoohw-cos-operation-row__content">';
-		echo '<h4>' . esc_html__( 'Recalculate Intelligence', 'yoohw-customer-intelligence' ) . '</h4>';
+		echo '<h4>' . esc_html__( 'Recalculate intelligence', 'yoohw-customer-intelligence' ) . '</h4>';
 		echo '<p>' . esc_html__( 'Refresh customer status, lifecycle, VIP, risk, and trust scores for existing profiles.', 'yoohw-customer-intelligence' ) . '</p>';
 		echo '</div>';
 		echo '<form class="yoohw-cos-recalculate-form yoohw-cos-operation-form" method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '"' . ( $recalculate_auto_submit ? ' data-yoohw-cos-auto-submit="1"' : '' ) . '>';
@@ -2291,8 +2413,8 @@ final class YoOhw_COS_Admin_Menu {
 
 		submit_button(
 			$recalculate_more
-				? __( 'Continue Recalculation', 'yoohw-customer-intelligence' )
-				: __( 'Recalculate Intelligence', 'yoohw-customer-intelligence' ),
+				? __( 'Continue recalculation', 'yoohw-customer-intelligence' )
+				: __( 'Recalculate intelligence', 'yoohw-customer-intelligence' ),
 			'secondary',
 			'submit',
 			false
@@ -2307,7 +2429,7 @@ final class YoOhw_COS_Admin_Menu {
 
 		echo '<div class="yoohw-cos-operation-row">';
 		echo '<div class="yoohw-cos-operation-row__content">';
-		echo '<h4>' . esc_html__( 'Backfill First Order Data', 'yoohw-customer-intelligence' ) . '</h4>';
+		echo '<h4>' . esc_html__( 'Backfill first order data', 'yoohw-customer-intelligence' ) . '</h4>';
 		echo '<p>' . esc_html__( 'Populate first order ID and first order date for customer profiles that are missing acquisition data.', 'yoohw-customer-intelligence' ) . '</p>';
 		echo '</div>';
 		echo '<form class="yoohw-cos-backfill-form yoohw-cos-operation-form" method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '"' . ( $backfill_auto_submit ? ' data-yoohw-cos-auto-submit="1"' : '' ) . '>';
@@ -2318,8 +2440,8 @@ final class YoOhw_COS_Admin_Menu {
 
 		submit_button(
 			$backfill_more
-				? __( 'Continue Backfill', 'yoohw-customer-intelligence' )
-				: __( 'Backfill First Order Data', 'yoohw-customer-intelligence' ),
+				? __( 'Continue backfill', 'yoohw-customer-intelligence' )
+				: __( 'Backfill first order data', 'yoohw-customer-intelligence' ),
 			'secondary',
 			'submit',
 			false
@@ -2330,15 +2452,15 @@ final class YoOhw_COS_Admin_Menu {
 
 		echo '<div class="yoohw-cos-operation-row yoohw-cos-operation-row--danger">';
 		echo '<div class="yoohw-cos-operation-row__content">';
-		echo '<h4>' . esc_html__( 'Reset Customer Intelligence Data', 'yoohw-customer-intelligence' ) . '</h4>';
-		echo '<p>' . esc_html__( 'Clear normalized Customer Intelligence data. WooCommerce orders and WordPress users are not deleted.', 'yoohw-customer-intelligence' ) . '</p>';
+		echo '<h4>' . esc_html__( 'Reset customer data', 'yoohw-customer-intelligence' ) . '</h4>';
+		echo '<p>' . esc_html__( 'Clear normalized customer data. WooCommerce orders and WordPress users are not deleted.', 'yoohw-customer-intelligence' ) . '</p>';
 		echo '</div>';
-		echo '<form class="yoohw-cos-operation-form" method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" data-yoohw-cos-confirm="' . esc_attr__( 'Are you sure you want to reset Customer Intelligence data?', 'yoohw-customer-intelligence' ) . '">';
+		echo '<form class="yoohw-cos-operation-form" method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" data-yoohw-cos-confirm="' . esc_attr__( 'Are you sure you want to reset customer data?', 'yoohw-customer-intelligence' ) . '">';
 		echo '<input type="hidden" name="action" value="yoohw_cos_reset_data" />';
 		wp_nonce_field( 'yoohw_cos_reset_data' );
 
 		submit_button(
-			__( 'Reset Data', 'yoohw-customer-intelligence' ),
+			__( 'Reset data', 'yoohw-customer-intelligence' ),
 			'delete',
 			'submit',
 			false
@@ -2522,20 +2644,20 @@ final class YoOhw_COS_Admin_Menu {
 		$sync_status = $readiness['sync'];
 		$cta_url     = '#yoohw-cos-sync-center';
 		$cta_label   = ! empty( $sync_state['has_more'] )
-			? __( 'Continue Sync', 'yoohw-customer-intelligence' )
-			: __( 'Sync Existing Orders', 'yoohw-customer-intelligence' );
+			? __( 'Continue sync', 'yoohw-customer-intelligence' )
+			: __( 'Sync existing orders', 'yoohw-customer-intelligence' );
 
 		if ( 'completed' === $sync_state['status'] && empty( $sync_state['has_more'] ) ) {
 			$cta_url   = admin_url( 'admin.php?page=yoohw-customer-intelligence' );
-			$cta_label = __( 'View Customers', 'yoohw-customer-intelligence' );
+			$cta_label = __( 'View customers', 'yoohw-customer-intelligence' );
 		}
 
 		echo '<div class="postbox yoohw-cos-setup-panel">';
-		echo '<div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Store Setup', 'yoohw-customer-intelligence' ) . '</h2></div>';
+		echo '<div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Store setup', 'yoohw-customer-intelligence' ) . '</h2></div>';
 		echo '<div class="inside">';
 		echo '<div class="yoohw-cos-setup-panel__header">';
 		echo '<div>';
-		echo '<p class="yoohw-cos-setup-panel__lead">' . esc_html__( 'Confirm the store is ready, then sync existing WooCommerce orders into Customer Intelligence.', 'yoohw-customer-intelligence' ) . '</p>';
+		echo '<p class="yoohw-cos-setup-panel__lead">' . esc_html__( 'Confirm the store is ready, then sync existing WooCommerce orders into customer profiles.', 'yoohw-customer-intelligence' ) . '</p>';
 		echo '</div>';
 		echo '<a class="button button-primary" href="' . esc_url( $cta_url ) . '">' . esc_html( $cta_label ) . '</a>';
 		echo '</div>';
@@ -2544,12 +2666,12 @@ final class YoOhw_COS_Admin_Menu {
 		self::render_readiness_item( __( 'WooCommerce', 'yoohw-customer-intelligence' ), $readiness['woocommerce'] );
 		self::render_readiness_item( __( 'HPOS', 'yoohw-customer-intelligence' ), $readiness['hpos'] );
 		self::render_readiness_item( __( 'Database', 'yoohw-customer-intelligence' ), $readiness['database'] );
-		self::render_readiness_item( __( 'Order Sync', 'yoohw-customer-intelligence' ), $sync_status );
+		self::render_readiness_item( __( 'Order sync', 'yoohw-customer-intelligence' ), $sync_status );
 		echo '</div>';
 
 		if ( empty( $sync_state['last_run_at'] ) && empty( $stats['total_customers'] ) ) {
 			echo '<div class="notice notice-warning inline"><p>';
-			echo esc_html__( 'No synced customer data found yet. Run the order sync to build the initial Customer Intelligence workspace.', 'yoohw-customer-intelligence' );
+			echo esc_html__( 'No synced customer data found yet. Run the order sync to build the initial customer workspace.', 'yoohw-customer-intelligence' );
 			echo '</p></div>';
 		} elseif ( ! empty( $sync_state['has_more'] ) ) {
 			echo '<div class="notice notice-warning inline"><p>';
@@ -2658,7 +2780,7 @@ final class YoOhw_COS_Admin_Menu {
 
 	private static function render_customer_health_panel( array $lifecycle_counts, array $risk_counts ): void {
 		echo '<div class="postbox yoohw-cos-overview-panel yoohw-cos-overview-panel--health">';
-		echo '<div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Customer Health', 'yoohw-customer-intelligence' ) . '</h2></div>';
+		echo '<div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Customer health', 'yoohw-customer-intelligence' ) . '</h2></div>';
 		echo '<div class="inside">';
 		echo '<div class="yoohw-cos-health-grid">';
 
@@ -2681,10 +2803,10 @@ final class YoOhw_COS_Admin_Menu {
 		self::render_distribution_list(
 			$risk_counts,
 			array(
-				'none'   => __( 'No Risk', 'yoohw-customer-intelligence' ),
-				'low'    => __( 'Low Risk', 'yoohw-customer-intelligence' ),
-				'medium' => __( 'Medium Risk', 'yoohw-customer-intelligence' ),
-				'high'   => __( 'High Risk', 'yoohw-customer-intelligence' ),
+				'none'   => __( 'No risk', 'yoohw-customer-intelligence' ),
+				'low'    => __( 'Low risk', 'yoohw-customer-intelligence' ),
+				'medium' => __( 'Medium risk', 'yoohw-customer-intelligence' ),
+				'high'   => __( 'High risk', 'yoohw-customer-intelligence' ),
 			)
 		);
 		echo '</div>';
@@ -2754,7 +2876,7 @@ final class YoOhw_COS_Admin_Menu {
 		if ( empty( $task_counts['total'] ) ) {
 			YoOhw_COS_Admin_UI::render_empty_state(
 				__( 'No tasks yet.', 'yoohw-customer-intelligence' ),
-				__( 'Create follow-up tasks from a customer profile or the Tasks page.', 'yoohw-customer-intelligence' ),
+				__( 'Create follow-up tasks from a customer profile or the tasks page.', 'yoohw-customer-intelligence' ),
 				array(),
 				'compact'
 			);
@@ -2766,7 +2888,7 @@ final class YoOhw_COS_Admin_Menu {
 
 	private static function render_recent_activity_panel( array $events ): void {
 		echo '<div class="postbox yoohw-cos-overview-panel yoohw-cos-overview-panel--activity">';
-		echo '<div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Recent Activity', 'yoohw-customer-intelligence' ) . '</h2></div>';
+		echo '<div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Recent activity', 'yoohw-customer-intelligence' ) . '</h2></div>';
 		echo '<div class="inside">';
 
 		if ( empty( $events ) ) {
@@ -2922,17 +3044,17 @@ final class YoOhw_COS_Admin_Menu {
 		}
 
 		$labels = array(
-			'bulk_customer_action' => __( 'Bulk Action', 'yoohw-customer-intelligence' ),
-			'note_added'           => __( 'Note Added', 'yoohw-customer-intelligence' ),
-			'note_deleted'         => __( 'Note Deleted', 'yoohw-customer-intelligence' ),
-			'note_updated'         => __( 'Note Updated', 'yoohw-customer-intelligence' ),
-			'order_synced'         => __( 'Order Synced', 'yoohw-customer-intelligence' ),
-			'segment_assigned'     => __( 'Segment Added', 'yoohw-customer-intelligence' ),
-			'segment_removed'      => __( 'Segment Removed', 'yoohw-customer-intelligence' ),
-			'task_completed'       => __( 'Task Completed', 'yoohw-customer-intelligence' ),
-			'task_created'         => __( 'Task Created', 'yoohw-customer-intelligence' ),
-			'tag_assigned'         => __( 'Tag Added', 'yoohw-customer-intelligence' ),
-			'tag_removed'          => __( 'Tag Removed', 'yoohw-customer-intelligence' ),
+			'bulk_customer_action' => __( 'Bulk action', 'yoohw-customer-intelligence' ),
+			'note_added'           => __( 'Note added', 'yoohw-customer-intelligence' ),
+			'note_deleted'         => __( 'Note deleted', 'yoohw-customer-intelligence' ),
+			'note_updated'         => __( 'Note updated', 'yoohw-customer-intelligence' ),
+			'order_synced'         => __( 'Order synced', 'yoohw-customer-intelligence' ),
+			'segment_assigned'     => __( 'Segment added', 'yoohw-customer-intelligence' ),
+			'segment_removed'      => __( 'Segment removed', 'yoohw-customer-intelligence' ),
+			'task_completed'       => __( 'Task completed', 'yoohw-customer-intelligence' ),
+			'task_created'         => __( 'Task created', 'yoohw-customer-intelligence' ),
+			'tag_assigned'         => __( 'Tag added', 'yoohw-customer-intelligence' ),
+			'tag_removed'          => __( 'Tag removed', 'yoohw-customer-intelligence' ),
 		);
 
 		if ( isset( $labels[ $event_type ] ) ) {

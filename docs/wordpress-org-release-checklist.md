@@ -12,8 +12,8 @@ Use this checklist before packaging YoOhw Customer Intelligence for WooCommerce 
 
 ## Current Baseline
 
-- Plugin version: `1.1.0`
-- Stable tag: `1.1.0`
+- Plugin version: `1.1.1`
+- Stable tag: `1.1.1`
 - Contributors: `yoohw`
 - Requires at least: `6.9`
 - Tested up to: `7.0`
@@ -38,11 +38,11 @@ Use this checklist before packaging YoOhw Customer Intelligence for WooCommerce 
 - JavaScript syntax check: pass for `assets/js/admin.js`
 - Plugin Check error-only: pass with `No errors found`
 - Plugin Check full run: `419` warnings, `0` errors
-- Fresh table creation: pass using a temporary `$wpdb->prefix` smoke test; all eight Customer Intelligence tables were created and temporary tables were cleaned up.
+- Fresh table creation: pass using a temporary `$wpdb->prefix` smoke test; all eight customer tables were created and temporary tables were cleaned up.
 - Existing install/upgrade path: pass for DB version `0.1.5`; stored DB version matches the constant and all eight expected tables exist.
 - HPOS-enabled order sync: pass on the Local test site, with HPOS reported as enabled.
 - Customer data smoke flow: pass for customer create/update, tags, static segments, notes, and WooCommerce order sync.
-- Release ZIP: `/private/tmp/yoohw-customer-intelligence-1.1.0.zip`
+- Release ZIP: `/private/tmp/yoohw-customer-intelligence-1.1.1.zip`
 - Release ZIP size: `112K`
 - Release ZIP SHA-256: `8461d6cb24a4f1b4cb199797c2bcd91ebf8dff33d59c4082c191b5643b691a5b`
 
@@ -91,7 +91,7 @@ Exclude from the WordPress.org release package unless intentionally needed:
 - JavaScript syntax check passes for `assets/js/admin.js`.
 - Admin visual smoke checklist passes.
 - Fresh install creates all eight custom tables.
-- Upgrade install preserves existing Customer Intelligence data.
+- Upgrade install preserves existing customer data.
 - WooCommerce inactive state shows a notice and does not fatal.
 - HPOS-enabled order sync works.
 - Reset wording matches actual reset behavior.

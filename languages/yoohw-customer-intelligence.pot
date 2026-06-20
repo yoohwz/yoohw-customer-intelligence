@@ -2,7 +2,7 @@
 # This file is distributed under the GPLv2 or later.
 msgid ""
 msgstr ""
-"Project-Id-Version: YoOhw Customer Intelligence for WooCommerce 1.1.0\n"
+"Project-Id-Version: YoOhw Customer Intelligence for WooCommerce 1.1.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/yoohw-customer-intelligence\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -155,7 +155,7 @@ msgstr ""
 
 #: admin/class-yoohw-cos-activity-list.php:294
 #: admin/class-yoohw-cos-customer-profile.php:181
-msgid "Customer Intelligence"
+msgid "Customer"
 msgstr ""
 
 #: admin/class-yoohw-cos-activity-list.php:299
@@ -188,6 +188,11 @@ msgstr ""
 #: admin/class-yoohw-cos-customers-list.php:120
 #: admin/class-yoohw-cos-tasks-list.php:391
 msgid "(No name)"
+msgstr ""
+
+#. translators: %s: customer display name.
+#: admin/class-yoohw-cos-customers-list.php:126
+msgid "Open customer profile: %s"
 msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:53
@@ -528,7 +533,7 @@ msgid "Add New Task"
 msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:1013
-msgid "Tasks are stored against Customer Intelligence profiles."
+msgid "Tasks are stored against customer profiles."
 msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:1017
@@ -666,12 +671,12 @@ msgid "Search tags"
 msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:1429
-msgid "Edit Tag"
+msgid "Edit tag"
 msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:1430
 #: admin/class-yoohw-cos-admin-menu.php:1465
-msgid "Add New Tag"
+msgid "Add new tag"
 msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:1446
@@ -682,7 +687,7 @@ msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:1447
 #: admin/class-yoohw-cos-customer-profile.php:714
-msgid "VIP, High Risk, Needs Follow-up..."
+msgid "VIP, high risk, needs follow-up..."
 msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:1448
@@ -784,7 +789,7 @@ msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:1706
 #: admin/class-yoohw-cos-admin-menu.php:1735
-msgid "Add New Segment"
+msgid "Add new segment"
 msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:1722
@@ -821,7 +826,7 @@ msgid "No more orders found. Customer sync appears to be complete."
 msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:1814
-msgid "Customer Intelligence data has been reset."
+msgid "Customer data has been reset."
 msgstr ""
 
 #. translators: %s: number of customers updated by intelligence recalculation.
@@ -892,15 +897,15 @@ msgid "Continue Backfill"
 msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:1959
-msgid "Reset Customer Intelligence Data"
+msgid "Reset customer data"
 msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:1960
-msgid "Clear normalized Customer Intelligence data. WooCommerce orders and WordPress users are not deleted."
+msgid "Clear normalized customer data. WooCommerce orders and WordPress users are not deleted."
 msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:1962
-msgid "Are you sure you want to reset Customer Intelligence data?"
+msgid "Are you sure you want to reset customer data?"
 msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:1967
@@ -993,7 +998,7 @@ msgid "Store Setup"
 msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:2164
-msgid "Confirm the store is ready, then sync existing WooCommerce orders into Customer Intelligence."
+msgid "Confirm the store is ready, then sync existing WooCommerce orders into customer profiles."
 msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:2171
@@ -1009,7 +1014,7 @@ msgid "Order Sync"
 msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:2178
-msgid "No synced customer data found yet. Run the order sync to build the initial Customer Intelligence workspace."
+msgid "No synced customer data found yet. Run the order sync to build the initial customer workspace."
 msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:2182
@@ -1385,7 +1390,7 @@ msgid "Identity"
 msgstr ""
 
 #: admin/class-yoohw-cos-customer-profile.php:290
-msgid "Customer Intelligence ID"
+msgid "Customer ID"
 msgstr ""
 
 #: admin/class-yoohw-cos-customer-profile.php:295
@@ -1528,24 +1533,34 @@ msgstr ""
 msgid "Tag removed successfully."
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:668
-msgid "No tags assigned."
-msgstr ""
-
-#: admin/class-yoohw-cos-customer-profile.php:669
-msgid "Use tags for quick internal labels."
-msgstr ""
-
 #: admin/class-yoohw-cos-customer-profile.php:694
 msgid "Remove this tag?"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:710
-msgid "Add Tag"
+#. translators: %s: term name.
+#: admin/class-yoohw-cos-customer-profile.php:785
+msgid "Remove term: %s"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:771
+msgid "Add tag"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:828
+msgid "Add or remove tags"
 msgstr ""
 
 #: admin/class-yoohw-cos-customer-profile.php:718
-msgid "Assign Tag"
+#: admin/class-yoohw-cos-customer-profile.php:720
+msgid "Add"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:832
+msgid "Choose from existing tags"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:783
+msgid "Separate tags with commas"
 msgstr ""
 
 #: admin/class-yoohw-cos-customer-profile.php:737
@@ -1556,28 +1571,24 @@ msgstr ""
 msgid "Segment removed successfully."
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:749
-msgid "No segments assigned."
-msgstr ""
-
-#: admin/class-yoohw-cos-customer-profile.php:750
-msgid "Use segments to group this customer for filtering and operations."
-msgstr ""
-
 #: admin/class-yoohw-cos-customer-profile.php:774
 msgid "Remove this segment?"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:790
-msgid "Add Segment"
+#: admin/class-yoohw-cos-customer-profile.php:859
+msgid "Add segment"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:794
-msgid "Wholesale, VIP Recovery, B2B..."
+#: admin/class-yoohw-cos-customer-profile.php:881
+msgid "Add or remove segments"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:798
-msgid "Assign Segment"
+#: admin/class-yoohw-cos-customer-profile.php:885
+msgid "Choose from existing segments"
+msgstr ""
+
+#: admin/class-yoohw-cos-customer-profile.php:871
+msgid "Separate segments with commas"
 msgstr ""
 
 #: admin/class-yoohw-cos-customer-profile.php:861

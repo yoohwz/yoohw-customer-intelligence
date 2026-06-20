@@ -58,7 +58,7 @@ The remaining warnings are triaged as read-only admin filter nonce recommendatio
 - Escaped scalar count output in translated notices.
 - Added translators comments for placeholder strings.
 - Sanitized request-method checks through a shared helper.
-- Reworked many custom table queries to use `$wpdb->prepare()` with `%i` identifier placeholders for Customer Intelligence table names.
+- Reworked many custom table queries to use `$wpdb->prepare()` with `%i` identifier placeholders for customer table names.
 - Moved preserved customer-list redirect filters out of the redirect helper and sanitizes them only after the verified bulk-action nonce.
 - Reworked migration DDL statements to use `%i` placeholders for table identifiers.
 - Replaced dynamic `ALTER TABLE` index fragments with a whitelist of known customer table indexes.

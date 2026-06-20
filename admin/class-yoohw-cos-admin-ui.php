@@ -74,6 +74,47 @@ final class YoOhw_COS_Admin_UI {
 		return false;
 	}
 
+	public static function get_readable_chip_style( string $background_color ): string {
+		$background_color = sanitize_hex_color( $background_color ) ?: '#f0f0f1';
+		$text_color       = self::get_readable_text_color( $background_color );
+
+		return sprintf(
+			'background:%1$s;color:%2$s;border-color:%1$s;',
+			$background_color,
+			$text_color
+		);
+	}
+
+	private static function get_readable_text_color( string $background_color ): string {
+		$hex = ltrim( sanitize_hex_color( $background_color ) ?: '#f0f0f1', '#' );
+
+		if ( 3 === strlen( $hex ) ) {
+			$hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
+		}
+
+		if ( 6 !== strlen( $hex ) ) {
+			return '#1d2327';
+		}
+
+		$red   = self::normalize_color_channel( hexdec( substr( $hex, 0, 2 ) ) );
+		$green = self::normalize_color_channel( hexdec( substr( $hex, 2, 2 ) ) );
+		$blue  = self::normalize_color_channel( hexdec( substr( $hex, 4, 2 ) ) );
+
+		$luminance      = ( 0.2126 * $red ) + ( 0.7152 * $green ) + ( 0.0722 * $blue );
+		$black_contrast = ( $luminance + 0.05 ) / 0.05;
+		$white_contrast = 1.05 / ( $luminance + 0.05 );
+
+		return $white_contrast > $black_contrast ? '#ffffff' : '#1d2327';
+	}
+
+	private static function normalize_color_channel( int $channel ): float {
+		$value = max( 0, min( 255, $channel ) ) / 255;
+
+		return $value <= 0.03928
+			? $value / 12.92
+			: pow( ( $value + 0.055 ) / 1.055, 2.4 );
+	}
+
 	private static function sanitize_class_list( string $class_list ): string {
 		$classes = preg_split( '/\s+/', $class_list );
 

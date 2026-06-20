@@ -52,7 +52,7 @@ final class YoOhw_COS_Customer_Profile {
 
 		echo '<div class="yoohw-cos-profile-heading">';
 		echo '<h1 class="wp-heading-inline">' . esc_html( $name ) . '</h1>';
-		echo ' <a class="page-title-action" href="' . esc_url( $list_url ) . '">' . esc_html__( 'Back to Customers', 'yoohw-customer-intelligence' ) . '</a>';
+		echo ' <a class="page-title-action" href="' . esc_url( $list_url ) . '">' . esc_html__( 'Back to customers', 'yoohw-customer-intelligence' ) . '</a>';
 		echo '<hr class="wp-header-end">';
 
 		echo '<div class="yoohw-cos-profile-toolbar">';
@@ -70,7 +70,7 @@ final class YoOhw_COS_Customer_Profile {
 			$user_url = get_edit_user_link( absint( $customer['wp_user_id'] ) );
 
 			if ( $user_url ) {
-				echo '<span><span class="dashicons dashicons-admin-users"></span><a href="' . esc_url( $user_url ) . '">' . esc_html__( 'Edit WP User', 'yoohw-customer-intelligence' ) . '</a></span>';
+				echo '<span><span class="dashicons dashicons-admin-users"></span><a href="' . esc_url( $user_url ) . '">' . esc_html__( 'Edit WP user', 'yoohw-customer-intelligence' ) . '</a></span>';
 			}
 		}
 
@@ -109,12 +109,12 @@ final class YoOhw_COS_Customer_Profile {
 
 	private static function render_summary_cards( array $customer ): void {
 		echo '<div class="postbox yoohw-cos-profile-summary">';
-		echo '<div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Customer Summary', 'yoohw-customer-intelligence' ) . '</h2></div>';
+		echo '<div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Customer summary', 'yoohw-customer-intelligence' ) . '</h2></div>';
 		echo '<div class="inside">';
 		echo '<div class="yoohw-cos-summary-cards">';
 
 		self::render_card(
-			__( 'Total Spent', 'yoohw-customer-intelligence' ),
+			__( 'Total spent', 'yoohw-customer-intelligence' ),
 			function_exists( 'wc_price' ) ? wc_price( (float) $customer['total_spent'] ) : esc_html( $customer['total_spent'] )
 		);
 
@@ -124,17 +124,17 @@ final class YoOhw_COS_Customer_Profile {
 		);
 
 		self::render_card(
-			__( 'Average Order Value', 'yoohw-customer-intelligence' ),
+			__( 'Average order value', 'yoohw-customer-intelligence' ),
 			function_exists( 'wc_price' ) ? wc_price( (float) $customer['average_order_value'] ) : esc_html( $customer['average_order_value'] )
 		);
 
 		self::render_card(
-			__( 'Risk Score', 'yoohw-customer-intelligence' ),
+			__( 'Risk score', 'yoohw-customer-intelligence' ),
 			number_format_i18n( (float) $customer['risk_score'], 2 )
 		);
 
 		self::render_card(
-			__( 'Trust Score', 'yoohw-customer-intelligence' ),
+			__( 'Trust score', 'yoohw-customer-intelligence' ),
 			number_format_i18n( (float) $customer['trust_score'], 2 )
 		);
 
@@ -190,7 +190,7 @@ final class YoOhw_COS_Customer_Profile {
 		echo '</div>';
 		echo '</div>';
 
-		self::render_profile_section_header( __( 'Customer Intelligence', 'yoohw-customer-intelligence' ) );
+		self::render_profile_section_header( __( 'Customer', 'yoohw-customer-intelligence' ) );
 		echo '<div class="yoohw-cos-profile-section-grid yoohw-cos-profile-section-grid--intelligence">';
 		self::render_risk_panel( $customer, $risk_factors );
 		self::render_trust_panel( $customer, $trust_factors );
@@ -211,7 +211,7 @@ final class YoOhw_COS_Customer_Profile {
 
 	private static function render_commerce_summary( array $customer ): void {
 		echo '<div class="postbox">';
-		echo '<div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Commerce Summary', 'yoohw-customer-intelligence' ) . '</h2></div>';
+		echo '<div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Commerce summary', 'yoohw-customer-intelligence' ) . '</h2></div>';
 		echo '<div class="inside">';
 
 		echo '<table class="widefat striped">';
@@ -223,7 +223,7 @@ final class YoOhw_COS_Customer_Profile {
 		);
 
 		self::render_detail_row(
-			__( 'Lifecycle Stage', 'yoohw-customer-intelligence' ),
+			__( 'Lifecycle stage', 'yoohw-customer-intelligence' ),
 			self::render_lifecycle_badge( $customer['lifecycle_stage'] ?? 'new' ),
 			true
 		);
@@ -234,12 +234,12 @@ final class YoOhw_COS_Customer_Profile {
 		);
 
 		self::render_detail_row(
-			__( 'Total Orders', 'yoohw-customer-intelligence' ),
+			__( 'Total orders', 'yoohw-customer-intelligence' ),
 			number_format_i18n( (int) ( $customer['total_orders'] ?? 0 ) )
 		);
 
 		self::render_detail_row(
-			__( 'Total Spent', 'yoohw-customer-intelligence' ),
+			__( 'Total spent', 'yoohw-customer-intelligence' ),
 			function_exists( 'wc_price' )
 				? wc_price( (float) ( $customer['total_spent'] ?? 0 ) )
 				: number_format_i18n( (float) ( $customer['total_spent'] ?? 0 ), 2 ),
@@ -247,7 +247,7 @@ final class YoOhw_COS_Customer_Profile {
 		);
 
 		self::render_detail_row(
-			__( 'Average Order Value', 'yoohw-customer-intelligence' ),
+			__( 'Average order value', 'yoohw-customer-intelligence' ),
 			function_exists( 'wc_price' )
 				? wc_price( (float) ( $customer['average_order_value'] ?? 0 ) )
 				: number_format_i18n( (float) ( $customer['average_order_value'] ?? 0 ), 2 ),
@@ -255,18 +255,18 @@ final class YoOhw_COS_Customer_Profile {
 		);
 
 		self::render_detail_row(
-			__( 'Last Order', 'yoohw-customer-intelligence' ),
+			__( 'Last order', 'yoohw-customer-intelligence' ),
 			self::render_order_link( absint( $customer['last_order_id'] ?? 0 ) ),
 			true
 		);
 
 		self::render_detail_row(
-			__( 'Last Order Date', 'yoohw-customer-intelligence' ),
+			__( 'Last order date', 'yoohw-customer-intelligence' ),
 			self::format_date( $customer['last_order_date'] ?? '' )
 		);
 
 		self::render_detail_row(
-			__( 'Last Activity', 'yoohw-customer-intelligence' ),
+			__( 'Last activity', 'yoohw-customer-intelligence' ),
 			self::format_date( $customer['last_activity_date'] ?? '' )
 		);
 
@@ -282,13 +282,35 @@ final class YoOhw_COS_Customer_Profile {
 		echo '<td>';
 
 		if ( $allow_html ) {
-			echo wp_kses_post( $value ?: '—' );
+			echo wp_kses( $value ?: '—', self::get_detail_row_allowed_html() );
 		} else {
 			echo esc_html( $value ?: '—' );
 		}
 
 		echo '</td>';
 		echo '</tr>';
+	}
+
+	private static function get_detail_row_allowed_html(): array {
+		$allowed = wp_kses_allowed_html( 'post' );
+
+		$allowed['button'] = array(
+			'aria-label' => true,
+			'class'      => true,
+			'data-copy'  => true,
+			'title'      => true,
+			'type'       => true,
+		);
+
+		$allowed['span'] = array_merge(
+			$allowed['span'] ?? array(),
+			array(
+				'aria-hidden' => true,
+				'class'       => true,
+			)
+		);
+
+		return $allowed;
 	}
 
 	private static function render_identity_panel( array $customer ): void {
@@ -299,7 +321,7 @@ final class YoOhw_COS_Customer_Profile {
 		echo '<table class="widefat striped">';
 
 		self::render_detail_row(
-			__( 'Customer Intelligence ID', 'yoohw-customer-intelligence' ),
+			__( 'Customer ID', 'yoohw-customer-intelligence' ),
 			'#' . absint( $customer['id'] ?? 0 )
 		);
 
@@ -310,12 +332,20 @@ final class YoOhw_COS_Customer_Profile {
 
 		self::render_detail_row(
 			__( 'Email', 'yoohw-customer-intelligence' ),
-			$customer['email'] ?? ''
+			self::format_identity_copyable_value(
+				sanitize_email( (string) ( $customer['email'] ?? '' ) ),
+				__( 'Copy email', 'yoohw-customer-intelligence' )
+			),
+			true
 		);
 
 		self::render_detail_row(
 			__( 'Phone', 'yoohw-customer-intelligence' ),
-			$customer['phone'] ?? ''
+			self::format_identity_copyable_value(
+				sanitize_text_field( (string) ( $customer['phone'] ?? '' ) ),
+				__( 'Copy phone', 'yoohw-customer-intelligence' )
+			),
+			true
 		);
 
 		self::render_detail_row(
@@ -334,28 +364,35 @@ final class YoOhw_COS_Customer_Profile {
 
 		if ( ! empty( $customer['email'] ) ) {
 			echo '<a class="button" href="mailto:' . esc_attr( $customer['email'] ) . '">';
-			echo esc_html__( 'Email Customer', 'yoohw-customer-intelligence' );
+			echo esc_html__( 'Email customer', 'yoohw-customer-intelligence' );
 			echo '</a>';
-
-			echo '<button type="button" class="button yoohw-cos-copy" data-copy="' . esc_attr( $customer['email'] ) . '">';
-			echo esc_html__( 'Copy Email', 'yoohw-customer-intelligence' );
-			echo '</button>';
 		}
 
 		if ( ! empty( $customer['phone'] ) ) {
 			echo '<a class="button" href="tel:' . esc_attr( $customer['phone'] ) . '">';
-			echo esc_html__( 'Call Customer', 'yoohw-customer-intelligence' );
+			echo esc_html__( 'Call customer', 'yoohw-customer-intelligence' );
 			echo '</a>';
-
-			echo '<button type="button" class="button yoohw-cos-copy" data-copy="' . esc_attr( $customer['phone'] ) . '">';
-			echo esc_html__( 'Copy Phone', 'yoohw-customer-intelligence' );
-			echo '</button>';
 		}
 
 		echo '</p>';
 
 		echo '</div>';
 		echo '</div>';
+	}
+
+	private static function format_identity_copyable_value( string $value, string $copy_label ): string {
+		$value = trim( $value );
+
+		if ( '' === $value ) {
+			return '';
+		}
+
+		return sprintf(
+			'<span class="yoohw-cos-identity-copyable"><span class="yoohw-cos-identity-value">%1$s</span><button type="button" class="yoohw-cos-copy yoohw-cos-copy-icon" data-copy="%2$s" aria-label="%3$s" title="%3$s"><span class="dashicons dashicons-admin-page" aria-hidden="true"></span></button></span>',
+			esc_html( $value ),
+			esc_attr( $value ),
+			esc_attr( $copy_label )
+		);
 	}
 
 	private static function render_address_panel( array $customer ): void {
@@ -389,12 +426,12 @@ final class YoOhw_COS_Customer_Profile {
 		echo '<div class="yoohw-cos-address-grid">';
 
 		self::render_address_card(
-			__( 'Billing Address', 'yoohw-customer-intelligence' ),
+			__( 'Billing address', 'yoohw-customer-intelligence' ),
 			$order->get_formatted_billing_address()
 		);
 
 		self::render_address_card(
-			__( 'Shipping Address', 'yoohw-customer-intelligence' ),
+			__( 'Shipping address', 'yoohw-customer-intelligence' ),
 			$order->get_formatted_shipping_address()
 		);
 
@@ -433,23 +470,23 @@ final class YoOhw_COS_Customer_Profile {
 		echo '<table class="widefat striped">';
 
 		self::render_detail_row(
-			__( 'First Seen', 'yoohw-customer-intelligence' ),
+			__( 'First seen', 'yoohw-customer-intelligence' ),
 			self::format_date( $customer['created_at'] ?? '' )
 		);
 
 		self::render_detail_row(
-			__( 'First Order', 'yoohw-customer-intelligence' ),
+			__( 'First order', 'yoohw-customer-intelligence' ),
 			self::render_order_link( absint( $customer['first_order_id'] ?? 0 ) ),
 			true
 		);
 
 		self::render_detail_row(
-			__( 'First Order Date', 'yoohw-customer-intelligence' ),
+			__( 'First order date', 'yoohw-customer-intelligence' ),
 			self::format_date( $customer['first_order_date'] ?? '' )
 		);
 
 		self::render_detail_row(
-			__( 'Latest Order', 'yoohw-customer-intelligence' ),
+			__( 'Latest order', 'yoohw-customer-intelligence' ),
 			self::render_order_link( absint( $customer['last_order_id'] ?? 0 ) ),
 			true
 		);
@@ -524,7 +561,7 @@ final class YoOhw_COS_Customer_Profile {
 		$shown_orders = 0;
 
 		echo '<div class="postbox">';
-		echo '<div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Recent Orders', 'yoohw-customer-intelligence' ) . '</h2></div>';
+		echo '<div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Recent orders', 'yoohw-customer-intelligence' ) . '</h2></div>';
 		echo '<div class="inside">';
 
 		if ( empty( $orders ) ) {
@@ -658,7 +695,134 @@ final class YoOhw_COS_Customer_Profile {
 		return YoOhw_COS_DB::format_admin_date( $date, '—' );
 	}
 
+	private static function render_term_assignment_box( int $customer_id, array $assigned_terms, array $available_terms, array $args ): void {
+		$box_id      = sanitize_html_class( (string) $args['box_id'] );
+		$input_id    = sanitize_html_class( 'new-tag-' . $box_id );
+		$textarea_id = sanitize_html_class( 'tax-input-' . $box_id );
+		$help_id     = sanitize_html_class( $input_id . '-desc' );
+		$cloud_id    = sanitize_html_class( $box_id . '-tagcloud' );
+		$field_name  = sanitize_key( (string) $args['field_name'] );
+		$nojs_name   = sanitize_key( (string) $args['nojs_field_name'] );
+		$term_names  = array();
+
+		foreach ( $available_terms as $term ) {
+			$name = sanitize_text_field( (string) ( $term['name'] ?? '' ) );
+
+			if ( '' !== $name ) {
+				$term_names[] = $name;
+			}
+		}
+
+		echo '<form class="yoohw-cos-term-box-form" method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+		echo '<input type="hidden" name="action" value="' . esc_attr( $args['assign_action'] ) . '" />';
+		echo '<input type="hidden" name="customer_id" value="' . esc_attr( $customer_id ) . '" />';
+		wp_nonce_field( (string) $args['assign_nonce'] );
+
+		echo '<div class="tagsdiv yoohw-cos-term-add-form" id="' . esc_attr( $box_id ) . '">';
+		echo '<div class="jaxtag">';
+		echo '<div class="nojs-tags hide-if-js">';
+		echo '<label for="' . esc_attr( $textarea_id ) . '">' . esc_html( $args['add_or_remove_label'] ) . '</label>';
+		echo '<p><textarea name="' . esc_attr( $nojs_name ) . '" rows="3" cols="20" class="the-tags" id="' . esc_attr( $textarea_id ) . '" aria-describedby="' . esc_attr( $help_id ) . '"></textarea></p>';
+		echo '</div>';
+		echo '<div class="ajaxtag hide-if-no-js">';
+		echo '<label class="screen-reader-text" for="' . esc_attr( $input_id ) . '">' . esc_html( $args['add_label'] ) . '</label>';
+		echo '<input type="text" id="' . esc_attr( $input_id ) . '" name="' . esc_attr( $field_name ) . '" class="newtag form-input-tip" size="16" autocomplete="off" aria-describedby="' . esc_attr( $help_id ) . '" value="" data-yoohw-cos-term-suggest="1" data-yoohw-cos-term-source="' . esc_attr( wp_json_encode( $term_names ) ) . '" />';
+		echo '<input type="submit" class="button tagadd" value="' . esc_attr__( 'Add', 'yoohw-customer-intelligence' ) . '" />';
+		echo '</div>';
+		echo '<p class="howto" id="' . esc_attr( $help_id ) . '">' . esc_html( $args['separate_label'] ) . '</p>';
+		echo '</div>';
+		echo '<ul class="tagchecklist" role="list">';
+
+		foreach ( $assigned_terms as $term ) {
+			self::render_term_checklist_item( $customer_id, $term, $args );
+		}
+
+		echo '</ul>';
+		echo '</div>';
+		echo '</form>';
+
+		if ( empty( $available_terms ) ) {
+			return;
+		}
+
+		echo '<p class="hide-if-no-js"><button type="button" class="button-link tagcloud-link" id="link-' . esc_attr( $box_id ) . '" aria-expanded="false" data-yoohw-cos-term-cloud-toggle data-yoohw-cos-term-cloud-target="' . esc_attr( $cloud_id ) . '">';
+		echo esc_html( $args['choose_label'] );
+		echo '</button></p>';
+		echo '<div class="the-tagcloud yoohw-cos-term-cloud" id="' . esc_attr( $cloud_id ) . '" hidden>';
+		echo '<ul>';
+
+		foreach ( $term_names as $name ) {
+			echo '<li><a href="#" data-yoohw-cos-term-name="' . esc_attr( $name ) . '" data-yoohw-cos-term-input="' . esc_attr( $input_id ) . '">' . esc_html( $name ) . '</a></li>';
+		}
+
+		echo '</ul>';
+		echo '</div>';
+	}
+
+	private static function render_term_checklist_item( int $customer_id, array $term, array $args ): void {
+		$term_id = absint( $term['id'] ?? 0 );
+		$name    = sanitize_text_field( (string) ( $term['name'] ?? '' ) );
+
+		if ( $term_id <= 0 || '' === $name ) {
+			return;
+		}
+
+		$remove_url = wp_nonce_url(
+			add_query_arg(
+				array(
+					'action'                  => $args['remove_action'],
+					'customer_id'             => $customer_id,
+					$args['remove_id_param']  => $term_id,
+				),
+				admin_url( 'admin-post.php' )
+			),
+			(string) $args['remove_nonce']
+		);
+
+		echo '<li>';
+		$chip_classes = 'yoohw-cos-chip yoohw-cos-term-chip';
+		$chip_style   = '';
+
+		if ( ! empty( $args['chip_class'] ) ) {
+			$chip_classes .= ' ' . sanitize_html_class( (string) $args['chip_class'] );
+		}
+
+		if ( array_key_exists( 'color', $term ) ) {
+			$color = ! empty( $term['color'] ) ? sanitize_hex_color( (string) $term['color'] ) : '#f0f0f1';
+
+			if ( $color ) {
+				$chip_style = YoOhw_COS_Admin_UI::get_readable_chip_style( $color );
+			}
+		}
+
+		echo '<span class="' . esc_attr( $chip_classes ) . '"' . ( $chip_style ? ' style="' . esc_attr( $chip_style ) . '"' : '' ) . '>';
+		echo '<a class="ntdelbutton" href="' . esc_url( $remove_url ) . '" role="button" data-yoohw-cos-confirm="' . esc_attr( $args['remove_confirm'] ) . '">';
+		echo '<span class="remove-tag-icon" aria-hidden="true"></span>';
+		echo '<span class="screen-reader-text">';
+		printf(
+			/* translators: %s: term name. */
+			esc_html__( 'Remove term: %s', 'yoohw-customer-intelligence' ),
+			esc_html( $name )
+		);
+		echo '</span>';
+		echo '</a>';
+		echo esc_html( $name );
+		echo '</span>';
+		echo '</li>';
+	}
+
 	private static function render_customer_tags( int $customer_id, array $tags ): void {
+		$all_tags         = YoOhw_COS_Tags::get_all_tags();
+		$assigned_tag_ids = array_map( 'absint', wp_list_pluck( $tags, 'id' ) );
+		$available_tags   = array_values(
+			array_filter(
+				$all_tags,
+				static function ( array $tag ) use ( $assigned_tag_ids ): bool {
+					return ! in_array( absint( $tag['id'] ?? 0 ), $assigned_tag_ids, true );
+				}
+			)
+		);
+
 		echo '<div class="postbox" id="yoohw-cos-add-tag">';
 		echo '<div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Tags', 'yoohw-customer-intelligence' ) . '</h2></div>';
 		echo '<div class="inside">';
@@ -675,71 +839,44 @@ final class YoOhw_COS_Customer_Profile {
 			echo '</p></div>';
 		}
 
-		if ( empty( $tags ) ) {
-			YoOhw_COS_Admin_UI::render_empty_state(
-				__( 'No tags assigned.', 'yoohw-customer-intelligence' ),
-				__( 'Use tags for quick internal labels.', 'yoohw-customer-intelligence' ),
-				array(),
-				'compact'
-			);
-		} else {
-			echo '<p>';
-
-			foreach ( $tags as $tag ) {
-				$color = ! empty( $tag['color'] ) ? sanitize_hex_color( $tag['color'] ) : '#f0f0f1';
-
-				echo '<span class="yoohw-cos-chip" style="background:' . esc_attr( $color ) . ';">';
-				echo esc_html( $tag['name'] );
-
-				$remove_url = wp_nonce_url(
-					add_query_arg(
-						array(
-							'action'      => 'yoohw_cos_remove_customer_tag',
-							'customer_id' => $customer_id,
-							'tag_id'      => absint( $tag['id'] ),
-						),
-						admin_url( 'admin-post.php' )
-					),
-					'yoohw_cos_remove_customer_tag'
-				);
-
-				echo ' <a class="yoohw-cos-chip__remove" href="' . esc_url( $remove_url ) . '" data-yoohw-cos-confirm="' . esc_attr__( 'Remove this tag?', 'yoohw-customer-intelligence' ) . '">×</a>';
-
-				echo '</span>';
-			}
-
-			echo '</p>';
-		}
-
-		echo '<hr />';
-
-		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
-		echo '<input type="hidden" name="action" value="yoohw_cos_assign_customer_tag" />';
-		echo '<input type="hidden" name="customer_id" value="' . esc_attr( $customer_id ) . '" />';
-		wp_nonce_field( 'yoohw_cos_assign_customer_tag' );
-
-		echo '<p>';
-		echo '<label for="yoohw_cos_tag_name"><strong>' . esc_html__( 'Add Tag', 'yoohw-customer-intelligence' ) . '</strong></label>';
-		echo '</p>';
-
-		echo '<p>';
-		echo '<input type="text" id="yoohw_cos_tag_name" name="tag_name" class="regular-text" placeholder="' . esc_attr__( 'VIP, High Risk, Needs Follow-up...', 'yoohw-customer-intelligence' ) . '" />';
-		echo '</p>';
-
-		submit_button(
-			__( 'Assign Tag', 'yoohw-customer-intelligence' ),
-			'secondary',
-			'submit',
-			false
+		self::render_term_assignment_box(
+			$customer_id,
+			$tags,
+			$available_tags,
+			array(
+				'add_label'           => __( 'Add tag', 'yoohw-customer-intelligence' ),
+				'add_or_remove_label' => __( 'Add or remove tags', 'yoohw-customer-intelligence' ),
+				'assign_action'       => 'yoohw_cos_assign_customer_tag',
+				'assign_nonce'        => 'yoohw_cos_assign_customer_tag',
+				'box_id'              => 'yoohw-cos-profile-tags',
+				'chip_class'          => 'yoohw-cos-term-chip--tag',
+				'choose_label'        => __( 'Choose from existing tags', 'yoohw-customer-intelligence' ),
+				'field_name'          => 'tag_name',
+				'nojs_field_name'     => 'tag_name_nojs',
+				'remove_action'       => 'yoohw_cos_remove_customer_tag',
+				'remove_confirm'      => __( 'Remove this tag?', 'yoohw-customer-intelligence' ),
+				'remove_id_param'     => 'tag_id',
+				'remove_nonce'        => 'yoohw_cos_remove_customer_tag',
+				'separate_label'      => __( 'Separate tags with commas', 'yoohw-customer-intelligence' ),
+			)
 		);
-
-		echo '</form>';
 
 		echo '</div>';
 		echo '</div>';
 	}
 
 	private static function render_customer_segments( int $customer_id, array $segments ): void {
+		$all_segments         = YoOhw_COS_Segments::get_all_segments();
+		$assigned_segment_ids = array_map( 'absint', wp_list_pluck( $segments, 'id' ) );
+		$available_segments   = array_values(
+			array_filter(
+				$all_segments,
+				static function ( array $segment ) use ( $assigned_segment_ids ): bool {
+					return ! in_array( absint( $segment['id'] ?? 0 ), $assigned_segment_ids, true );
+				}
+			)
+		);
+
 		echo '<div class="postbox" id="yoohw-cos-add-segment">';
 		echo '<div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Segments', 'yoohw-customer-intelligence' ) . '</h2></div>';
 		echo '<div class="inside">';
@@ -756,64 +893,27 @@ final class YoOhw_COS_Customer_Profile {
 			echo '</p></div>';
 		}
 
-		if ( empty( $segments ) ) {
-			YoOhw_COS_Admin_UI::render_empty_state(
-				__( 'No segments assigned.', 'yoohw-customer-intelligence' ),
-				__( 'Use segments to group this customer for filtering and operations.', 'yoohw-customer-intelligence' ),
-				array(),
-				'compact'
-			);
-		} else {
-			echo '<p>';
-
-			foreach ( $segments as $segment ) {
-				$remove_url = wp_nonce_url(
-					add_query_arg(
-						array(
-							'action'      => 'yoohw_cos_remove_customer_segment',
-							'customer_id' => $customer_id,
-							'segment_id'  => absint( $segment['id'] ),
-						),
-						admin_url( 'admin-post.php' )
-					),
-					'yoohw_cos_remove_customer_segment'
-				);
-
-				echo '<span class="yoohw-cos-chip yoohw-cos-chip--segment">';
-
-				echo esc_html( $segment['name'] );
-
-				echo ' <a class="yoohw-cos-chip__remove" href="' . esc_url( $remove_url ) . '" data-yoohw-cos-confirm="' . esc_attr__( 'Remove this segment?', 'yoohw-customer-intelligence' ) . '">×</a>';
-
-				echo '</span>';
-			}
-
-			echo '</p>';
-		}
-
-		echo '<hr />';
-
-		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
-		echo '<input type="hidden" name="action" value="yoohw_cos_assign_customer_segment" />';
-		echo '<input type="hidden" name="customer_id" value="' . esc_attr( $customer_id ) . '" />';
-		wp_nonce_field( 'yoohw_cos_assign_customer_segment' );
-
-		echo '<p>';
-		echo '<label for="yoohw_cos_segment_name"><strong>' . esc_html__( 'Add Segment', 'yoohw-customer-intelligence' ) . '</strong></label>';
-		echo '</p>';
-
-		echo '<p>';
-		echo '<input type="text" id="yoohw_cos_segment_name" name="segment_name" class="regular-text" placeholder="' . esc_attr__( 'Wholesale, VIP Recovery, B2B...', 'yoohw-customer-intelligence' ) . '" />';
-		echo '</p>';
-
-		submit_button(
-			__( 'Assign Segment', 'yoohw-customer-intelligence' ),
-			'secondary',
-			'submit',
-			false
+		self::render_term_assignment_box(
+			$customer_id,
+			$segments,
+			$available_segments,
+			array(
+				'add_label'           => __( 'Add segment', 'yoohw-customer-intelligence' ),
+				'add_or_remove_label' => __( 'Add or remove segments', 'yoohw-customer-intelligence' ),
+				'assign_action'       => 'yoohw_cos_assign_customer_segment',
+				'assign_nonce'        => 'yoohw_cos_assign_customer_segment',
+				'box_id'              => 'yoohw-cos-profile-segments',
+				'chip_class'          => 'yoohw-cos-chip--segment',
+				'choose_label'        => __( 'Choose from existing segments', 'yoohw-customer-intelligence' ),
+				'field_name'          => 'segment_name',
+				'nojs_field_name'     => 'segment_name_nojs',
+				'remove_action'       => 'yoohw_cos_remove_customer_segment',
+				'remove_confirm'      => __( 'Remove this segment?', 'yoohw-customer-intelligence' ),
+				'remove_id_param'     => 'segment_id',
+				'remove_nonce'        => 'yoohw_cos_remove_customer_segment',
+				'separate_label'      => __( 'Separate segments with commas', 'yoohw-customer-intelligence' ),
+			)
 		);
-
-		echo '</form>';
 
 		echo '</div>';
 		echo '</div>';
@@ -866,7 +966,7 @@ final class YoOhw_COS_Customer_Profile {
 		wp_nonce_field( 'yoohw_cos_create_task' );
 
 		echo '<p>';
-		echo '<label for="yoohw_cos_profile_task_title"><strong>' . esc_html__( 'Add Task', 'yoohw-customer-intelligence' ) . '</strong></label>';
+		echo '<label for="yoohw_cos_profile_task_title"><strong>' . esc_html__( 'Add task', 'yoohw-customer-intelligence' ) . '</strong></label>';
 		echo '</p>';
 
 		echo '<p>';
@@ -901,7 +1001,7 @@ final class YoOhw_COS_Customer_Profile {
 		echo '</p>';
 
 		submit_button(
-			__( 'Add Task', 'yoohw-customer-intelligence' ),
+			__( 'Add task', 'yoohw-customer-intelligence' ),
 			'secondary',
 			'submit',
 			false
@@ -1005,7 +1105,7 @@ final class YoOhw_COS_Customer_Profile {
 		$total_notes = YoOhw_COS_Notes::get_customer_note_count( $customer_id );
 
 		echo '<div class="postbox" id="yoohw-cos-add-note">';
-		echo '<div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Internal Notes', 'yoohw-customer-intelligence' ) . '</h2></div>';
+		echo '<div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Internal notes', 'yoohw-customer-intelligence' ) . '</h2></div>';
 		echo '<div class="inside">';
 
 		if ( ! empty( $_GET['note_added'] ) ) {
@@ -1036,7 +1136,7 @@ final class YoOhw_COS_Customer_Profile {
 		echo '</p>';
 
 		submit_button(
-			__( 'Add Note', 'yoohw-customer-intelligence' ),
+			__( 'Add note', 'yoohw-customer-intelligence' ),
 			'secondary',
 			'submit',
 			false
@@ -1124,7 +1224,7 @@ final class YoOhw_COS_Customer_Profile {
 				echo '<textarea name="customer_note" rows="4" class="large-text yoohw-cos-textarea-spaced">' . esc_textarea( $note['note_content'] ?? '' ) . '</textarea>';
 
 				submit_button(
-					__( 'Save Note', 'yoohw-customer-intelligence' ),
+					__( 'Save note', 'yoohw-customer-intelligence' ),
 					'primary small',
 					'submit',
 					false
@@ -1150,7 +1250,7 @@ final class YoOhw_COS_Customer_Profile {
 		$labels = array(
 			'new'      => __( 'New', 'yoohw-customer-intelligence' ),
 			'active'   => __( 'Active', 'yoohw-customer-intelligence' ),
-			'at_risk'  => __( 'At Risk', 'yoohw-customer-intelligence' ),
+			'at_risk'  => __( 'At risk', 'yoohw-customer-intelligence' ),
 			'inactive' => __( 'Inactive', 'yoohw-customer-intelligence' ),
 			'vip'      => __( 'VIP', 'yoohw-customer-intelligence' ),
 		);
@@ -1162,7 +1262,7 @@ final class YoOhw_COS_Customer_Profile {
 		$labels = array(
 			'new'      => __( 'New', 'yoohw-customer-intelligence' ),
 			'active'   => __( 'Active', 'yoohw-customer-intelligence' ),
-			'at_risk'  => __( 'At Risk', 'yoohw-customer-intelligence' ),
+			'at_risk'  => __( 'At risk', 'yoohw-customer-intelligence' ),
 			'inactive' => __( 'Inactive', 'yoohw-customer-intelligence' ),
 			'vip'      => __( 'VIP', 'yoohw-customer-intelligence' ),
 		);
@@ -1176,10 +1276,10 @@ final class YoOhw_COS_Customer_Profile {
 		$level = YoOhw_COS_Intelligence::calculate_risk_level( $risk_score );
 
 		$labels = array(
-			'none'   => __( 'No Risk', 'yoohw-customer-intelligence' ),
-			'low'    => __( 'Low Risk', 'yoohw-customer-intelligence' ),
-			'medium' => __( 'Medium Risk', 'yoohw-customer-intelligence' ),
-			'high'   => __( 'High Risk', 'yoohw-customer-intelligence' ),
+			'none'   => __( 'No risk', 'yoohw-customer-intelligence' ),
+			'low'    => __( 'Low risk', 'yoohw-customer-intelligence' ),
+			'medium' => __( 'Medium risk', 'yoohw-customer-intelligence' ),
+			'high'   => __( 'High risk', 'yoohw-customer-intelligence' ),
 		);
 
 		return '<span class="yoohw-cos-badge yoohw-cos-badge--risk-' . esc_attr( sanitize_html_class( $level ) ) . '">' . esc_html( $labels[ $level ] ?? $level ) . ' · ' . esc_html( number_format_i18n( $risk_score, 0 ) ) . '</span>';
@@ -1189,7 +1289,7 @@ final class YoOhw_COS_Customer_Profile {
 		$risk_score = (float) ( $customer['risk_score'] ?? 0 );
 
 		echo '<div class="postbox">';
-		echo '<div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Risk Score', 'yoohw-customer-intelligence' ) . '</h2></div>';
+		echo '<div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Risk score', 'yoohw-customer-intelligence' ) . '</h2></div>';
 		echo '<div class="inside">';
 
 		echo '<p>';
@@ -1234,16 +1334,16 @@ final class YoOhw_COS_Customer_Profile {
 	private static function render_trust_badge( float $trust_score ): string {
 		if ( $trust_score >= 80 ) {
 			$level = 'high';
-			$label = __( 'High Trust', 'yoohw-customer-intelligence' );
+			$label = __( 'High trust', 'yoohw-customer-intelligence' );
 		} elseif ( $trust_score >= 60 ) {
 			$level = 'medium';
-			$label = __( 'Medium Trust', 'yoohw-customer-intelligence' );
+			$label = __( 'Medium trust', 'yoohw-customer-intelligence' );
 		} elseif ( $trust_score >= 40 ) {
 			$level = 'low';
-			$label = __( 'Low Trust', 'yoohw-customer-intelligence' );
+			$label = __( 'Low trust', 'yoohw-customer-intelligence' );
 		} else {
 			$level = 'limited';
-			$label = __( 'Limited Trust', 'yoohw-customer-intelligence' );
+			$label = __( 'Limited trust', 'yoohw-customer-intelligence' );
 		}
 
 		return '<span class="yoohw-cos-badge yoohw-cos-badge--trust-' . esc_attr( sanitize_html_class( $level ) ) . '">' . esc_html( $label ) . ' · ' . esc_html( number_format_i18n( $trust_score, 0 ) ) . '</span>';
@@ -1253,7 +1353,7 @@ final class YoOhw_COS_Customer_Profile {
 		$trust_score = (float) ( $customer['trust_score'] ?? 0 );
 
 		echo '<div class="postbox">';
-		echo '<div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Trust Score', 'yoohw-customer-intelligence' ) . '</h2></div>';
+		echo '<div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Trust score', 'yoohw-customer-intelligence' ) . '</h2></div>';
 		echo '<div class="inside">';
 
 		echo '<p>';
