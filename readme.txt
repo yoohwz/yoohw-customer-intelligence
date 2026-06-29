@@ -11,13 +11,13 @@ Stable tag: 1.1.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-WooCommerce CRM for customer profiles, notes, tasks, tags, segments, order sync, CSV export, and HPOS-ready insights.
+WooCommerce CRM for customer profiles, notes, follow-up tasks, task email notifications, tags, segments, order sync, and HPOS-ready insights.
 
 == Description ==
 
-Customer Intelligence for WooCommerce is a lightweight WooCommerce CRM and customer management workspace inside WordPress admin. It turns WooCommerce order history into customer profiles for notes, follow-up tasks, tags, segments, activity history, and order insights.
+Customer Intelligence for WooCommerce is a lightweight WooCommerce CRM and customer management workspace inside WordPress admin. It turns WooCommerce order history into customer profiles for notes, follow-up tasks, task email notifications, tags, segments, activity history, and order insights.
 
-Use it to search WooCommerce customers, track customer status, lifecycle, VIP level, risk, and trust, create internal notes, schedule customer follow-ups, segment customers, export filtered customer data, and connect customer profiles back to WooCommerce orders.
+Use it to search WooCommerce customers, track customer status, lifecycle, VIP level, risk, and trust, create internal notes, schedule customer follow-ups, send task reminders, segment customers, export filtered customer data, and connect customer profiles back to WooCommerce orders.
 
 It stores customer data in dedicated custom database tables. It does not use `wp_usermeta` as the primary CRM data store.
 
@@ -28,6 +28,8 @@ It stores customer data in dedicated custom database tables. It does not use `wp
 * Customer profiles with identity, commerce summary, addresses, recent orders, notes, follow-up tasks, tags, segments, and activity timeline.
 * Internal customer notes with create, edit, and delete actions.
 * Follow-up tasks with due date, priority, status, assignee, customer/order context, complete/reopen/edit/delete actions, reminders, and a WordPress Dashboard widget.
+* CRM task email notifications for task assignment, reassignment, due soon reminders, overdue digests, escalation, completed tasks, reopened tasks, and daily follow-up summaries.
+* WooCommerce email settings integration with a CRM email group, editable email subjects/headings, and WooCommerce-style email templates.
 * Customer tags and static segments with WordPress taxonomy-style management, autocomplete assignment, existing-term selection, and colored tag chips.
 * Bulk actions for tags, segments, follow-up tasks, archive, and restore.
 * WooCommerce order list filtering and order edit integration with customer profile selection and a customer task metabox.
@@ -52,6 +54,12 @@ Each profile combines WooCommerce order data with operational context:
 Tasks are built for day-to-day store operations. Create a task from the Tasks screen, a customer profile, the customer list bulk action, or the WooCommerce order edit screen.
 
 Tasks can be assigned to Administrators and Shop Managers. They support priority, due date, open/completed status, customer context, optional order context, and timeline events.
+
+Task email notifications help teams respond faster to customer follow-ups. Assignees can receive emails when tasks are assigned, reassigned, due soon, reopened, or included in daily follow-up summaries. Overdue tasks can be grouped into daily digests to reduce inbox noise, and escalation emails can notify configured manager/admin recipients after a task stays overdue for a defined number of days.
+
+= WooCommerce email notifications =
+
+CRM task emails use the WooCommerce email system, including WooCommerce email templates, sender settings, content type settings, and email styling. Store managers can review and configure these emails from Customers > Emails or WooCommerce > Settings > Emails > CRM.
 
 = Tags and segments =
 
@@ -84,7 +92,8 @@ Customer data is stored in custom tables for customers, events, notes, tasks, ta
 4. Open Customers in WordPress admin.
 5. Go to Customers > Settings.
 6. Run Sync Existing Orders to import existing WooCommerce customer data.
-7. Review Overview, Customers, Tasks, Tags, Segments, Activity, and Settings.
+7. Go to Customers > Emails to review CRM task email notifications.
+8. Review Overview, Customers, Tasks, Tags, Segments, Activity, and Settings.
 
 == Frequently Asked Questions ==
 
@@ -119,6 +128,10 @@ Yes. You can create tasks from the Tasks screen, customer profiles, customer lis
 = Who can be assigned to tasks? =
 
 Tasks can be assigned to Administrators and Shop Managers.
+
+= Does it send WooCommerce task email notifications? =
+
+Yes. CRM task emails can notify assignees about new assignments, reassigned tasks, due soon tasks, reopened tasks, overdue task digests, overdue escalations, completed tasks, and daily follow-up summaries. These emails are managed through WooCommerce email settings under the CRM group.
 
 = Can I export customers? =
 
