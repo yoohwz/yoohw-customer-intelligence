@@ -45,5 +45,6 @@ add_action(
 require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-loader.php';
 
 register_activation_hook( __FILE__, array( 'YoOhw_COS_Loader', 'activate' ) );
+register_deactivation_hook( __FILE__, array( 'YoOhw_COS_Loader', 'deactivate' ) );
 
 add_action( 'plugins_loaded', array( 'YoOhw_COS_Loader', 'init' ) );

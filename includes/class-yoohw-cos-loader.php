@@ -5,7 +5,14 @@ final class YoOhw_COS_Loader {
 
 	public static function activate(): void {
 		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-install.php';
+		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-email-notifications.php';
 		YoOhw_COS_Install::install();
+		YoOhw_COS_Email_Notifications::activate();
+	}
+
+	public static function deactivate(): void {
+		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-email-notifications.php';
+		YoOhw_COS_Email_Notifications::deactivate();
 	}
 
 	public static function init(): void {
@@ -26,6 +33,7 @@ final class YoOhw_COS_Loader {
 		YoOhw_COS_Tags::init();
 		YoOhw_COS_Notes::init();
 		YoOhw_COS_Tasks::init();
+		YoOhw_COS_Email_Notifications::init();
 		YoOhw_COS_Intelligence::init();
 		YoOhw_COS_Segments::init();
 
@@ -45,6 +53,7 @@ final class YoOhw_COS_Loader {
 		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-tags.php';
 		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-notes.php';
 		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-tasks.php';
+		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-email-notifications.php';
 		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-intelligence.php';
 		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-segments.php';
 

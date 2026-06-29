@@ -5,6 +5,8 @@ final class YoOhw_COS_Admin_Menu {
 
 	private const DASHBOARD_TASKS_WIDGET_ID = 'yoohw_cos_dashboard_followup_tasks';
 	private const MENU_SLUG = 'yoohw-customer-intelligence-overview';
+	private const EMAIL_SETTINGS_SLUG = 'yoohw-customer-intelligence-email-settings';
+	private const CRM_EMAIL_GROUP = 'crm';
 	private const WOOCOMMERCE_MENU_SLUG = 'woocommerce';
 	private const PRODUCTS_MENU_SLUG = 'edit.php?post_type=product';
 
@@ -399,7 +401,7 @@ final class YoOhw_COS_Admin_Menu {
 		add_submenu_page(
 			'yoohw-customer-intelligence-overview',
 			__( 'Tasks', 'yoohw-customer-intelligence' ),
-			__( 'Tasks', 'yoohw-customer-intelligence' ),
+			self::get_tasks_menu_title(),
 			'manage_woocommerce',
 			'yoohw-customer-intelligence-tasks',
 			array( __CLASS__, 'render_tasks_page' )
@@ -434,11 +436,69 @@ final class YoOhw_COS_Admin_Menu {
 
 		add_submenu_page(
 			'yoohw-customer-intelligence-overview',
+			__( 'Emails', 'yoohw-customer-intelligence' ),
+			__( 'Emails', 'yoohw-customer-intelligence' ),
+			'manage_woocommerce',
+			self::EMAIL_SETTINGS_SLUG,
+			array( __CLASS__, 'redirect_to_email_settings_page' )
+		);
+
+		add_submenu_page(
+			'yoohw-customer-intelligence-overview',
 			__( 'Settings', 'yoohw-customer-intelligence' ),
 			__( 'Settings', 'yoohw-customer-intelligence' ),
 			'manage_woocommerce',
 			'yoohw-customer-intelligence-settings',
 			array( __CLASS__, 'render_settings_page' )
+		);
+	}
+
+	public static function redirect_to_email_settings_page(): void {
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			wp_die( esc_html__( 'You do not have permission to access this page.', 'yoohw-customer-intelligence' ) );
+		}
+
+		wp_safe_redirect( self::get_crm_email_settings_url() );
+		exit;
+	}
+
+	private static function get_crm_email_settings_url(): string {
+		return add_query_arg(
+			array(
+				'page'        => 'wc-settings',
+				'tab'         => 'email',
+				'email_group' => self::CRM_EMAIL_GROUP,
+			),
+			admin_url( 'admin.php' )
+		);
+	}
+
+	private static function get_tasks_menu_title(): string {
+		$label = esc_html__( 'Tasks', 'yoohw-customer-intelligence' );
+
+		if ( ! current_user_can( 'manage_woocommerce' ) || ! self::table_exists( YoOhw_COS_DB::tasks_table() ) ) {
+			return $label;
+		}
+
+		$counts        = YoOhw_COS_Tasks::get_counts();
+		$overdue_count = absint( $counts['overdue'] ?? 0 );
+
+		if ( $overdue_count <= 0 ) {
+			return $label;
+		}
+
+		$count_label = number_format_i18n( $overdue_count );
+		$screen_text = sprintf(
+			/* translators: %s: overdue task count. */
+			_n( '%s overdue task', '%s overdue tasks', $overdue_count, 'yoohw-customer-intelligence' ),
+			$count_label
+		);
+
+		return $label . sprintf(
+			' <span class="menu-counter count-%1$d"><span class="processing-count" aria-hidden="true">%2$s</span><span class="screen-reader-text">%3$s</span></span>',
+			$overdue_count,
+			esc_html( $count_label ),
+			esc_html( $screen_text )
 		);
 	}
 

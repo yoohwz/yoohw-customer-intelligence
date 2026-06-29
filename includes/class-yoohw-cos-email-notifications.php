@@ -1,0 +1,815 @@
+<?php
+defined( 'ABSPATH' ) || exit;
+
+final class YoOhw_COS_Email_Notifications {
+
+	private const GROUP = 'crm';
+	private const CRON_DUE_SOON = 'yoohw_cos_crm_email_due_soon';
+	private const CRON_DAILY = 'yoohw_cos_crm_email_daily';
+
+	private static $email_classes = array(
+		'YoOhw_COS_Email_Task_Assigned',
+		'YoOhw_COS_Email_Task_Reassigned',
+		'YoOhw_COS_Email_Task_Due_Soon',
+		'YoOhw_COS_Email_Task_Overdue',
+		'YoOhw_COS_Email_Task_Overdue_Escalation',
+		'YoOhw_COS_Email_Task_Completed',
+		'YoOhw_COS_Email_Task_Reopened',
+		'YoOhw_COS_Email_Daily_Followup_Summary',
+	);
+
+	public static function init(): void {
+		add_filter( 'woocommerce_email_classes', array( __CLASS__, 'register_email_classes' ) );
+		add_filter( 'woocommerce_email_groups', array( __CLASS__, 'register_email_group' ) );
+		add_filter( 'woocommerce_email_settings', array( __CLASS__, 'replace_email_notifications_field' ), 20 );
+		add_action( 'woocommerce_admin_field_yoohw_cos_grouped_email_notification', array( __CLASS__, 'render_grouped_email_notifications' ) );
+
+		add_action( 'yoohw_cos_task_created', array( __CLASS__, 'handle_task_created' ), 10, 2 );
+		add_action( 'yoohw_cos_task_reassigned', array( __CLASS__, 'handle_task_reassigned' ), 10, 3 );
+		add_action( 'yoohw_cos_task_completed', array( __CLASS__, 'handle_task_completed' ), 10, 3 );
+		add_action( 'yoohw_cos_task_reopened', array( __CLASS__, 'handle_task_reopened' ), 10, 3 );
+
+		add_action( self::CRON_DUE_SOON, array( __CLASS__, 'run_due_soon_notifications' ) );
+		add_action( self::CRON_DAILY, array( __CLASS__, 'run_daily_notifications' ) );
+
+		self::maybe_schedule_events();
+		self::maybe_register_with_initialized_mailer();
+	}
+
+	public static function activate(): void {
+		self::maybe_schedule_events();
+	}
+
+	public static function deactivate(): void {
+		wp_clear_scheduled_hook( self::CRON_DUE_SOON );
+		wp_clear_scheduled_hook( self::CRON_DAILY );
+	}
+
+	public static function register_email_classes( array $emails ): array {
+		self::include_email_classes();
+
+		foreach ( self::$email_classes as $class_name ) {
+			if ( ! isset( $emails[ $class_name ] ) && class_exists( $class_name ) ) {
+				$emails[ $class_name ] = new $class_name();
+			}
+		}
+
+		return $emails;
+	}
+
+	public static function register_email_group( array $groups ): array {
+		$groups[ self::GROUP ] = __( 'CRM', 'yoohw-customer-intelligence' );
+
+		return $groups;
+	}
+
+	public static function replace_email_notifications_field( array $settings ): array {
+		$replace_types = array(
+			'email_notification',
+			'email_notification_block_emails',
+			'yowcl_grouped_email_notification',
+		);
+
+		foreach ( $settings as $index => $setting ) {
+			if ( empty( $setting['type'] ) || ! in_array( $setting['type'], $replace_types, true ) ) {
+				continue;
+			}
+
+			$settings[ $index ]['type'] = 'yoohw_cos_grouped_email_notification';
+		}
+
+		return $settings;
+	}
+
+	public static function render_grouped_email_notifications(): void {
+		$mailer          = WC()->mailer();
+		$email_templates = $mailer ? $mailer->get_emails() : array();
+		$current_group   = self::get_current_email_group( $email_templates );
+		$columns         = apply_filters(
+			'woocommerce_email_setting_columns',
+			array(
+				'status'     => '',
+				'name'       => __( 'Email', 'woocommerce' ),
+				'email_type' => __( 'Content type', 'woocommerce' ),
+				'recipient'  => __( 'Recipient(s)', 'woocommerce' ),
+				'actions'    => '',
+			)
+		);
+		$filtered_templates = self::filter_email_templates_by_group( $email_templates, $current_group );
+		?>
+		<tr valign="top">
+			<td class="wc_emails_wrapper" colspan="2">
+				<?php self::render_group_styles(); ?>
+				<?php self::render_group_navigation( $email_templates, $current_group ); ?>
+				<table class="wc_emails widefat" cellspacing="0">
+					<thead>
+						<tr>
+							<?php foreach ( $columns as $key => $column ) : ?>
+								<th class="wc-email-settings-table-<?php echo esc_attr( $key ); ?>"><?php echo esc_html( $column ); ?></th>
+							<?php endforeach; ?>
+						</tr>
+					</thead>
+					<tbody>
+						<?php if ( empty( $filtered_templates ) ) : ?>
+							<tr>
+								<td colspan="<?php echo esc_attr( count( $columns ) ); ?>">
+									<?php esc_html_e( 'No email notifications found in this group.', 'yoohw-customer-intelligence' ); ?>
+								</td>
+							</tr>
+						<?php endif; ?>
+
+						<?php foreach ( $filtered_templates as $email_key => $email ) : ?>
+							<tr>
+								<?php foreach ( $columns as $key => $column ) : ?>
+									<?php self::render_email_column( $key, $email_key, $email ); ?>
+								<?php endforeach; ?>
+							</tr>
+						<?php endforeach; ?>
+					</tbody>
+				</table>
+			</td>
+		</tr>
+		<?php
+	}
+
+	public static function handle_task_created( int $task_id, array $task ): void {
+		$task = self::get_task_for_email( $task_id );
+
+		if ( empty( $task ) || YoOhw_COS_Tasks::STATUS_COMPLETED === (string) ( $task['status'] ?? '' ) ) {
+			return;
+		}
+
+		$assigned_user_id = absint( $task['assigned_user_id'] ?? 0 );
+
+		if ( $assigned_user_id <= 0 ) {
+			return;
+		}
+
+		self::trigger_email( 'YoOhw_COS_Email_Task_Assigned', $task, $assigned_user_id );
+	}
+
+	public static function handle_task_reassigned( int $task_id, array $old_task, array $new_task ): void {
+		$task = self::get_task_for_email( $task_id );
+
+		if ( empty( $task ) || YoOhw_COS_Tasks::STATUS_COMPLETED === (string) ( $task['status'] ?? '' ) ) {
+			return;
+		}
+
+		$new_assignee_id = absint( $new_task['assigned_user_id'] ?? 0 );
+		$old_assignee_id = absint( $old_task['assigned_user_id'] ?? 0 );
+
+		if ( $new_assignee_id > 0 ) {
+			self::trigger_email(
+				'YoOhw_COS_Email_Task_Reassigned',
+				$task,
+				$new_assignee_id,
+				array(
+					'old_task'        => $old_task,
+					'old_assignee_id' => $old_assignee_id,
+				)
+			);
+		}
+
+		$email = self::get_crm_email( 'YoOhw_COS_Email_Task_Reassigned' );
+
+		if (
+			$email instanceof YoOhw_COS_Email_Task_Reassigned
+			&& $email->should_notify_previous_assignee()
+			&& $old_assignee_id > 0
+			&& $old_assignee_id !== $new_assignee_id
+		) {
+			self::trigger_email(
+				'YoOhw_COS_Email_Task_Reassigned',
+				$task,
+				$old_assignee_id,
+				array(
+					'old_task'        => $old_task,
+					'old_assignee_id' => $old_assignee_id,
+					'previous_notice' => true,
+				)
+			);
+		}
+	}
+
+	public static function handle_task_completed( int $task_id, array $old_task, array $new_task ): void {
+		$task      = self::get_task_for_email( $task_id );
+		$actor_id  = absint( $new_task['completed_by'] ?? get_current_user_id() );
+		$user_ids  = array();
+		$creator   = absint( $task['created_by'] ?? $old_task['created_by'] ?? 0 );
+		$assignee  = absint( $task['assigned_user_id'] ?? $old_task['assigned_user_id'] ?? 0 );
+		$user_ids  = self::add_recipient_user_id( $user_ids, $creator, $actor_id );
+		$user_ids  = self::add_recipient_user_id( $user_ids, $assignee, $actor_id );
+
+		foreach ( $user_ids as $user_id ) {
+			self::trigger_email(
+				'YoOhw_COS_Email_Task_Completed',
+				$task,
+				$user_id,
+				array(
+					'old_task' => $old_task,
+					'actor_id' => $actor_id,
+				)
+			);
+		}
+	}
+
+	public static function handle_task_reopened( int $task_id, array $old_task, array $new_task ): void {
+		$task     = self::get_task_for_email( $task_id );
+		$actor_id = get_current_user_id();
+		$user_ids = array();
+		$user_ids = self::add_recipient_user_id( $user_ids, absint( $task['assigned_user_id'] ?? $new_task['assigned_user_id'] ?? 0 ), $actor_id );
+		$user_ids = self::add_recipient_user_id( $user_ids, absint( $task['created_by'] ?? $new_task['created_by'] ?? 0 ), $actor_id );
+
+		foreach ( $user_ids as $user_id ) {
+			self::trigger_email(
+				'YoOhw_COS_Email_Task_Reopened',
+				$task,
+				$user_id,
+				array(
+					'old_task' => $old_task,
+					'actor_id' => $actor_id,
+				)
+			);
+		}
+	}
+
+	public static function run_due_soon_notifications(): void {
+		$email = self::get_crm_email( 'YoOhw_COS_Email_Task_Due_Soon' );
+
+		if ( ! $email || ! $email->is_enabled() ) {
+			return;
+		}
+
+		$lead_hours = $email instanceof YoOhw_COS_Email_Task_Due_Soon ? $email->get_lead_time_hours() : 24;
+		$tasks      = self::get_open_tasks_due_soon( $lead_hours );
+
+		foreach ( $tasks as $task ) {
+			$assignee_id = absint( $task['assigned_user_id'] ?? 0 );
+
+			if ( $assignee_id <= 0 || self::notification_marker_exists( 'task_due_soon', $task ) ) {
+				continue;
+			}
+
+			if ( self::trigger_email( 'YoOhw_COS_Email_Task_Due_Soon', $task, $assignee_id ) ) {
+				self::mark_notification_sent( 'task_due_soon', $task );
+			}
+		}
+	}
+
+	public static function run_daily_notifications(): void {
+		self::run_overdue_digest_notifications();
+		self::run_overdue_escalation_notifications();
+		self::run_daily_summary_notifications();
+	}
+
+	private static function run_overdue_digest_notifications(): void {
+		$email = self::get_crm_email( 'YoOhw_COS_Email_Task_Overdue' );
+
+		if ( ! $email || ! $email->is_enabled() ) {
+			return;
+		}
+
+		foreach ( self::group_tasks_by_assignee( self::get_open_overdue_tasks() ) as $user_id => $tasks ) {
+			$marker = 'overdue_digest_' . gmdate( 'Ymd' ) . '_' . absint( $user_id );
+
+			if ( self::notification_marker_exists( $marker ) ) {
+				continue;
+			}
+
+			if ( self::trigger_digest_email( 'YoOhw_COS_Email_Task_Overdue', $tasks, absint( $user_id ) ) ) {
+				self::mark_notification_sent( $marker );
+			}
+		}
+	}
+
+	private static function run_overdue_escalation_notifications(): void {
+		$email = self::get_crm_email( 'YoOhw_COS_Email_Task_Overdue_Escalation' );
+
+		if ( ! $email || ! $email->is_enabled() ) {
+			return;
+		}
+
+		$days_overdue = $email instanceof YoOhw_COS_Email_Task_Overdue_Escalation ? $email->get_days_overdue() : 3;
+
+		foreach ( self::group_tasks_by_assignee( self::get_open_overdue_tasks( $days_overdue ) ) as $user_id => $tasks ) {
+			$marker = 'overdue_escalation_' . gmdate( 'Ymd' ) . '_' . absint( $user_id ) . '_' . absint( $days_overdue );
+
+			if ( self::notification_marker_exists( $marker ) ) {
+				continue;
+			}
+
+			if ( self::trigger_digest_email( 'YoOhw_COS_Email_Task_Overdue_Escalation', $tasks, absint( $user_id ) ) ) {
+				self::mark_notification_sent( $marker );
+			}
+		}
+	}
+
+	private static function run_daily_summary_notifications(): void {
+		$email = self::get_crm_email( 'YoOhw_COS_Email_Daily_Followup_Summary' );
+
+		if ( ! $email || ! $email->is_enabled() ) {
+			return;
+		}
+
+		foreach ( self::group_tasks_by_assignee( self::get_daily_summary_tasks() ) as $user_id => $tasks ) {
+			$marker = 'daily_summary_' . gmdate( 'Ymd' ) . '_' . absint( $user_id );
+
+			if ( self::notification_marker_exists( $marker ) ) {
+				continue;
+			}
+
+			if ( self::trigger_digest_email( 'YoOhw_COS_Email_Daily_Followup_Summary', $tasks, absint( $user_id ) ) ) {
+				self::mark_notification_sent( $marker );
+			}
+		}
+	}
+
+	public static function get_task_for_email( int $task_id ): array {
+		global $wpdb;
+
+		$task_id = absint( $task_id );
+
+		if ( $task_id <= 0 ) {
+			return array();
+		}
+
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT
+					t.*,
+					c.display_name AS customer_name,
+					c.email AS customer_email,
+					c.phone AS customer_phone,
+					assignee.display_name AS assignee_name,
+					assignee.user_email AS assignee_email,
+					creator.display_name AS creator_name,
+					creator.user_email AS creator_email,
+					completer.display_name AS completed_by_name,
+					completer.user_email AS completed_by_email
+				FROM %i t
+				LEFT JOIN %i c ON c.id = t.customer_id
+				LEFT JOIN %i assignee ON assignee.ID = t.assigned_user_id
+				LEFT JOIN %i creator ON creator.ID = t.created_by
+				LEFT JOIN %i completer ON completer.ID = t.completed_by
+				WHERE t.id = %d
+				LIMIT 1",
+				YoOhw_COS_DB::tasks_table(),
+				YoOhw_COS_DB::customers_table(),
+				$wpdb->users,
+				$wpdb->users,
+				$wpdb->users,
+				$task_id
+			),
+			ARRAY_A
+		);
+
+		return is_array( $row ) ? $row : array();
+	}
+
+	private static function get_open_tasks_due_soon( int $lead_hours ): array {
+		$now       = current_time( 'timestamp' );
+		$end       = $now + ( max( 1, $lead_hours ) * HOUR_IN_SECONDS );
+		$start_sql = wp_date( 'Y-m-d H:i:s', $now );
+		$end_sql   = wp_date( 'Y-m-d H:i:s', $end );
+
+		return self::get_open_tasks_by_date_window( $start_sql, $end_sql );
+	}
+
+	private static function get_open_overdue_tasks( int $minimum_days_overdue = 0 ): array {
+		global $wpdb;
+
+		$now_timestamp = current_time( 'timestamp' );
+		$cutoff        = $minimum_days_overdue > 0
+			? wp_date( 'Y-m-d H:i:s', $now_timestamp - ( $minimum_days_overdue * DAY_IN_SECONDS ) )
+			: wp_date( 'Y-m-d H:i:s', $now_timestamp );
+
+		$tasks = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT
+					t.*,
+					c.display_name AS customer_name,
+					c.email AS customer_email,
+					c.phone AS customer_phone,
+					assignee.display_name AS assignee_name,
+					assignee.user_email AS assignee_email,
+					creator.display_name AS creator_name,
+					creator.user_email AS creator_email
+				FROM %i t
+				LEFT JOIN %i c ON c.id = t.customer_id
+				LEFT JOIN %i assignee ON assignee.ID = t.assigned_user_id
+				LEFT JOIN %i creator ON creator.ID = t.created_by
+				WHERE t.status <> %s
+					AND t.assigned_user_id IS NOT NULL
+					AND t.assigned_user_id > 0
+					AND t.due_date IS NOT NULL
+					AND t.due_date < %s
+				ORDER BY t.assigned_user_id ASC, t.due_date ASC, t.id DESC",
+				YoOhw_COS_DB::tasks_table(),
+				YoOhw_COS_DB::customers_table(),
+				$wpdb->users,
+				$wpdb->users,
+				YoOhw_COS_Tasks::STATUS_COMPLETED,
+				$cutoff
+			),
+			ARRAY_A
+		);
+
+		return is_array( $tasks ) ? $tasks : array();
+	}
+
+	private static function get_daily_summary_tasks(): array {
+		global $wpdb;
+
+		$now          = current_time( 'timestamp' );
+		$today_start  = wp_date( 'Y-m-d 00:00:00', $now );
+		$today_end    = wp_date( 'Y-m-d 23:59:59', $now );
+		$current_time = wp_date( 'Y-m-d H:i:s', $now );
+
+		$tasks = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT
+					t.*,
+					c.display_name AS customer_name,
+					c.email AS customer_email,
+					c.phone AS customer_phone,
+					assignee.display_name AS assignee_name,
+					assignee.user_email AS assignee_email,
+					creator.display_name AS creator_name,
+					creator.user_email AS creator_email
+				FROM %i t
+				LEFT JOIN %i c ON c.id = t.customer_id
+				LEFT JOIN %i assignee ON assignee.ID = t.assigned_user_id
+				LEFT JOIN %i creator ON creator.ID = t.created_by
+				WHERE t.status <> %s
+					AND t.assigned_user_id IS NOT NULL
+					AND t.assigned_user_id > 0
+					AND (
+						(t.due_date IS NOT NULL AND t.due_date < %s)
+						OR (t.due_date IS NOT NULL AND t.due_date BETWEEN %s AND %s)
+						OR t.priority IN ('high', 'urgent')
+					)
+				ORDER BY t.assigned_user_id ASC,
+					CASE WHEN t.due_date IS NULL THEN 1 ELSE 0 END ASC,
+					t.due_date ASC,
+					t.priority DESC,
+					t.id DESC",
+				YoOhw_COS_DB::tasks_table(),
+				YoOhw_COS_DB::customers_table(),
+				$wpdb->users,
+				$wpdb->users,
+				YoOhw_COS_Tasks::STATUS_COMPLETED,
+				$current_time,
+				$today_start,
+				$today_end
+			),
+			ARRAY_A
+		);
+
+		return is_array( $tasks ) ? $tasks : array();
+	}
+
+	private static function get_open_tasks_by_date_window( string $start, string $end ): array {
+		global $wpdb;
+
+		$tasks = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT
+					t.*,
+					c.display_name AS customer_name,
+					c.email AS customer_email,
+					c.phone AS customer_phone,
+					assignee.display_name AS assignee_name,
+					assignee.user_email AS assignee_email,
+					creator.display_name AS creator_name,
+					creator.user_email AS creator_email
+				FROM %i t
+				LEFT JOIN %i c ON c.id = t.customer_id
+				LEFT JOIN %i assignee ON assignee.ID = t.assigned_user_id
+				LEFT JOIN %i creator ON creator.ID = t.created_by
+				WHERE t.status <> %s
+					AND t.assigned_user_id IS NOT NULL
+					AND t.assigned_user_id > 0
+					AND t.due_date IS NOT NULL
+					AND t.due_date BETWEEN %s AND %s
+				ORDER BY t.assigned_user_id ASC, t.due_date ASC, t.id DESC",
+				YoOhw_COS_DB::tasks_table(),
+				YoOhw_COS_DB::customers_table(),
+				$wpdb->users,
+				$wpdb->users,
+				YoOhw_COS_Tasks::STATUS_COMPLETED,
+				$start,
+				$end
+			),
+			ARRAY_A
+		);
+
+		return is_array( $tasks ) ? $tasks : array();
+	}
+
+	private static function trigger_email( string $class_name, array $task, int $recipient_user_id, array $context = array() ): bool {
+		$email = self::get_crm_email( $class_name );
+
+		if ( ! $email || ! method_exists( $email, 'trigger' ) ) {
+			return false;
+		}
+
+		return (bool) $email->trigger( $task, $recipient_user_id, $context );
+	}
+
+	private static function trigger_digest_email( string $class_name, array $tasks, int $recipient_user_id, array $context = array() ): bool {
+		$email = self::get_crm_email( $class_name );
+
+		if ( ! $email || ! method_exists( $email, 'trigger' ) ) {
+			return false;
+		}
+
+		return (bool) $email->trigger( $tasks, $recipient_user_id, $context );
+	}
+
+	private static function get_crm_email( string $class_name ) {
+		if ( ! function_exists( 'WC' ) ) {
+			return null;
+		}
+
+		$mailer = WC()->mailer();
+
+		if ( ! $mailer ) {
+			return null;
+		}
+
+		$emails = $mailer->get_emails();
+
+		return isset( $emails[ $class_name ] ) ? $emails[ $class_name ] : null;
+	}
+
+	private static function include_email_classes(): void {
+		if ( ! class_exists( 'WC_Email' ) ) {
+			return;
+		}
+
+		require_once YOOHW_COS_PATH . 'includes/emails/class-yoohw-cos-email-crm-base.php';
+		require_once YOOHW_COS_PATH . 'includes/emails/class-yoohw-cos-email-task-events.php';
+		require_once YOOHW_COS_PATH . 'includes/emails/class-yoohw-cos-email-task-digests.php';
+	}
+
+	private static function maybe_register_with_initialized_mailer(): void {
+		if ( ! did_action( 'woocommerce_email' ) || ! function_exists( 'WC' ) ) {
+			return;
+		}
+
+		$mailer = WC()->mailer();
+
+		if ( ! $mailer || ! isset( $mailer->emails ) || ! is_array( $mailer->emails ) ) {
+			return;
+		}
+
+		$mailer->emails = self::register_email_classes( $mailer->emails );
+	}
+
+	private static function maybe_schedule_events(): void {
+		if ( ! wp_next_scheduled( self::CRON_DUE_SOON ) ) {
+			wp_schedule_event( time() + HOUR_IN_SECONDS, 'hourly', self::CRON_DUE_SOON );
+		}
+
+		if ( ! wp_next_scheduled( self::CRON_DAILY ) ) {
+			wp_schedule_event( self::get_next_daily_run_timestamp(), 'daily', self::CRON_DAILY );
+		}
+	}
+
+	private static function get_next_daily_run_timestamp(): int {
+		$timezone  = function_exists( 'wp_timezone' ) ? wp_timezone() : new DateTimeZone( 'UTC' );
+		$now        = new DateTimeImmutable( 'now', $timezone );
+		$today_run  = $now->setTime( 8, 0, 0 );
+		$target_run = $today_run > $now ? $today_run : $today_run->modify( '+1 day' );
+
+		return $target_run->getTimestamp();
+	}
+
+	private static function group_tasks_by_assignee( array $tasks ): array {
+		$grouped = array();
+
+		foreach ( $tasks as $task ) {
+			$user_id = absint( $task['assigned_user_id'] ?? 0 );
+
+			if ( $user_id <= 0 ) {
+				continue;
+			}
+
+			if ( ! isset( $grouped[ $user_id ] ) ) {
+				$grouped[ $user_id ] = array();
+			}
+
+			$grouped[ $user_id ][] = $task;
+		}
+
+		return $grouped;
+	}
+
+	private static function add_recipient_user_id( array $user_ids, int $user_id, int $excluded_user_id = 0 ): array {
+		$user_id = absint( $user_id );
+
+		if ( $user_id <= 0 || ( $excluded_user_id > 0 && $user_id === absint( $excluded_user_id ) ) ) {
+			return $user_ids;
+		}
+
+		if ( ! in_array( $user_id, $user_ids, true ) ) {
+			$user_ids[] = $user_id;
+		}
+
+		return $user_ids;
+	}
+
+	private static function notification_marker_exists( string $event, array $task = array() ): bool {
+		return (bool) get_option( self::get_notification_marker_key( $event, $task ), false );
+	}
+
+	private static function mark_notification_sent( string $event, array $task = array() ): void {
+		update_option( self::get_notification_marker_key( $event, $task ), time(), false );
+	}
+
+	private static function get_notification_marker_key( string $event, array $task = array() ): string {
+		$task_id = absint( $task['id'] ?? 0 );
+		$basis   = $event . '|' . $task_id . '|' . (string) ( $task['due_date'] ?? '' ) . '|' . (string) ( $task['updated_at'] ?? '' );
+
+		return 'yoohw_cos_email_' . md5( $basis );
+	}
+
+	private static function get_current_email_group( array $email_templates ): string {
+		$group  = isset( $_GET['email_group'] ) ? sanitize_key( wp_unslash( $_GET['email_group'] ) ) : 'general';
+		$groups = self::get_email_group_labels( $email_templates );
+
+		return isset( $groups[ $group ] ) ? $group : 'general';
+	}
+
+	private static function get_email_group( $email ): string {
+		$group = isset( $email->email_group ) ? sanitize_key( (string) $email->email_group ) : '';
+
+		if ( self::GROUP === $group || 'loyalty' === $group ) {
+			return $group;
+		}
+
+		return 'general';
+	}
+
+	private static function get_email_group_labels( array $email_templates ): array {
+		$labels = array(
+			'general' => __( 'General', 'yoohw-customer-intelligence' ),
+		);
+
+		foreach ( $email_templates as $email ) {
+			$group = self::get_email_group( $email );
+
+			if ( isset( $labels[ $group ] ) ) {
+				continue;
+			}
+
+			if ( self::GROUP === $group ) {
+				$labels[ $group ] = __( 'CRM', 'yoohw-customer-intelligence' );
+			} elseif ( 'loyalty' === $group ) {
+				$labels[ $group ] = __( 'Loyalty', 'yoohw-customer-intelligence' );
+			}
+		}
+
+		$labels[ self::GROUP ] = __( 'CRM', 'yoohw-customer-intelligence' );
+
+		return $labels;
+	}
+
+	private static function filter_email_templates_by_group( array $email_templates, string $group ): array {
+		return array_filter(
+			$email_templates,
+			static function( $email ) use ( $group ): bool {
+				return self::get_email_group( $email ) === $group;
+			}
+		);
+	}
+
+	private static function render_group_navigation( array $email_templates, string $current_group ): void {
+		$groups = self::get_email_group_labels( $email_templates );
+		$counts = array_fill_keys( array_keys( $groups ), 0 );
+
+		foreach ( $email_templates as $email ) {
+			$group = self::get_email_group( $email );
+
+			if ( ! isset( $counts[ $group ] ) ) {
+				$counts[ $group ] = 0;
+			}
+
+			++$counts[ $group ];
+		}
+
+		echo '<div class="yoohw-cos-email-group-tabs"><ul class="subsubsub yoohw-cos-email-groups">';
+
+		$group_index = 0;
+		$group_count = count( $groups );
+
+		foreach ( $groups as $group => $label ) {
+			++$group_index;
+			$url       = admin_url( 'admin.php?page=wc-settings&tab=email&email_group=' . $group );
+			$class     = $current_group === $group ? 'current' : '';
+			$separator = $group_index < $group_count ? ' | ' : '';
+
+			printf(
+				'<li><a href="%1$s" class="%2$s">%3$s <span class="count">(%4$d)</span></a>%5$s</li>',
+				esc_url( $url ),
+				esc_attr( $class ),
+				esc_html( $label ),
+				absint( $counts[ $group ] ?? 0 ),
+				esc_html( $separator )
+			);
+		}
+
+		echo '</ul></div>';
+	}
+
+	private static function render_group_styles(): void {
+		static $rendered = false;
+
+		if ( $rendered ) {
+			return;
+		}
+
+		$rendered = true;
+		?>
+		<style>
+			.yoohw-cos-email-group-tabs {
+				margin: 16px 0 12px;
+			}
+
+			.yoohw-cos-email-group-tabs .subsubsub {
+				float: none;
+				margin: 0;
+				padding: 0 0 2px;
+			}
+
+			.yoohw-cos-email-group-tabs .subsubsub li {
+				margin: 0 8px 0 0;
+				padding: 0;
+			}
+
+			.yoohw-cos-email-group-tabs .subsubsub a {
+				font-size: 14px;
+				font-weight: 600;
+				line-height: 1.8;
+				text-decoration: none;
+			}
+
+			.yoohw-cos-email-group-tabs .subsubsub .count {
+				font-weight: 400;
+			}
+		</style>
+		<?php
+	}
+
+	private static function render_email_column( string $key, string $email_key, $email ): void {
+		if ( ! in_array( $key, array( 'name', 'recipient', 'status', 'email_type', 'actions' ), true ) ) {
+			do_action( 'woocommerce_email_setting_column_' . $key, $email );
+			return;
+		}
+
+		echo '<td class="wc-email-settings-table-' . esc_attr( $key ) . '">';
+
+		switch ( $key ) {
+			case 'name':
+				echo '<a href="' . esc_url( self::get_email_manage_url( $email_key, $email ) ) . '">' . esc_html( $email->get_title() ) . '</a> ';
+				echo wc_help_tip( $email->get_description() ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+				break;
+			case 'recipient':
+				if ( method_exists( $email, 'get_recipient_label' ) ) {
+					echo esc_html( $email->get_recipient_label() );
+				} else {
+					echo esc_html( $email->is_customer_email() ? __( 'Customer', 'woocommerce' ) : $email->get_recipient() );
+				}
+				break;
+			case 'status':
+				if ( $email->is_manual() ) {
+					echo '<span class="status-manual tips" data-tip="' . esc_attr__( 'Manually sent', 'woocommerce' ) . '">' . esc_html__( 'Manual', 'woocommerce' ) . '</span>';
+				} elseif ( $email->is_enabled() ) {
+					echo '<span class="status-enabled tips" data-tip="' . esc_attr__( 'Enabled', 'woocommerce' ) . '">' . esc_html__( 'Yes', 'woocommerce' ) . '</span>';
+				} else {
+					echo '<span class="status-disabled tips" data-tip="' . esc_attr__( 'Disabled', 'woocommerce' ) . '">-</span>';
+				}
+				break;
+			case 'email_type':
+				echo esc_html( $email->get_content_type() );
+				break;
+			case 'actions':
+				echo '<a class="button alignright" href="' . esc_url( self::get_email_manage_url( $email_key, $email ) ) . '">' . esc_html__( 'Manage', 'woocommerce' ) . '</a>';
+				break;
+		}
+
+		echo '</td>';
+	}
+
+	private static function get_email_manage_url( string $email_key, $email ): string {
+		return add_query_arg(
+			array(
+				'page'        => 'wc-settings',
+				'tab'         => 'email',
+				'section'     => strtolower( $email_key ),
+				'email_group' => self::get_email_group( $email ),
+			),
+			admin_url( 'admin.php' )
+		);
+	}
+}

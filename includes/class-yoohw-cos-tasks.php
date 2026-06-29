@@ -119,6 +119,8 @@ final class YoOhw_COS_Tasks {
 			self::record_task_event( $task_id, 'task_completed' );
 		}
 
+		do_action( 'yoohw_cos_task_created', $task_id, self::get_task( $task_id ) );
+
 		return $task_id;
 	}
 
@@ -181,8 +183,17 @@ final class YoOhw_COS_Tasks {
 			return false;
 		}
 
+		$updated_task = self::get_task( $task_id );
+
+		if ( absint( $task['assigned_user_id'] ?? 0 ) !== absint( $updated_task['assigned_user_id'] ?? 0 ) ) {
+			do_action( 'yoohw_cos_task_reassigned', $task_id, $task, $updated_task );
+		}
+
 		if ( $will_close ) {
 			self::record_task_event( $task_id, 'task_completed' );
+			do_action( 'yoohw_cos_task_completed', $task_id, $task, $updated_task );
+		} elseif ( self::STATUS_COMPLETED === (string) ( $task['status'] ?? '' ) && self::STATUS_COMPLETED !== $status ) {
+			do_action( 'yoohw_cos_task_reopened', $task_id, $task, $updated_task );
 		}
 
 		return true;
@@ -229,8 +240,13 @@ final class YoOhw_COS_Tasks {
 			return false;
 		}
 
+		$updated_task = self::get_task( $task_id );
+
 		if ( $will_close ) {
 			self::record_task_event( $task_id, 'task_completed' );
+			do_action( 'yoohw_cos_task_completed', $task_id, $task, $updated_task );
+		} elseif ( ! $was_open && self::STATUS_COMPLETED !== $status ) {
+			do_action( 'yoohw_cos_task_reopened', $task_id, $task, $updated_task );
 		}
 
 		return true;

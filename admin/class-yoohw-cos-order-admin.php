@@ -447,7 +447,7 @@ final class YoOhw_COS_Order_Admin {
 
 		echo '<p class="yoohw-cos-order-task-summary">';
 		printf(
-			/* translators: 1: number of tasks currently shown, 2: total number of open order tasks. */
+			/* translators: 1: number of tasks currently shown, 2: total number of open tasks. */
 			esc_html__( 'Showing %1$s of %2$s open tasks.', 'yoohw-customer-intelligence' ),
 			esc_html( number_format_i18n( count( $tasks ) ) ),
 			esc_html( number_format_i18n( $total_open ) )
