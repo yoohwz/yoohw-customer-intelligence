@@ -7,7 +7,7 @@ Requires PHP: 7.4
 Requires Plugins: woocommerce
 WC requires at least: 8.2
 WC tested up to: 10.8
-Stable tag: 1.1.1
+Stable tag: 1.1.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -152,6 +152,13 @@ Yes. Use customer tags and static segments for manually maintained customer grou
 
 == Changelog ==
 
+= 1.1.2 (Jun 29, 2026) =
+
+* Added CRM task email notifications for assignment, reassignment, due soon, overdue digest, escalation, completion, reopened tasks, and daily follow-up summaries.
+* Added a CRM email group inside WooCommerce email settings and a Customers > Emails shortcut.
+* Improved WooCommerce-style email templates for CRM task notifications and task digests.
+* Added overdue task count badges to the Customers > Tasks submenu.
+
 = 1.1.1 (Jun 19, 2026) =
 
 * Improved profile tags and segments with Product tags-style autocomplete, existing-term selection, colored chips, readable contrast, and scroll-preserving add/remove actions.
@@ -171,6 +178,10 @@ Yes. Use customer tags and static segments for manually maintained customer grou
 * Initial release with overview dashboard, customer profiles, customer list filters/export, notes, tasks, tags, segments, WooCommerce order integration, Sync Center, HPOS compatibility, and custom database tables.
 
 == Upgrade Notice ==
+
+= 1.1.2 =
+
+Adds CRM task email notifications, WooCommerce email settings integration, task digest templates, and overdue task badges.
 
 = 1.1.1 =
 

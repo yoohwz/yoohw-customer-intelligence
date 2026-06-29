@@ -12,8 +12,8 @@ Use this checklist before packaging YoOhw Customer Intelligence for WooCommerce 
 
 ## Current Baseline
 
-- Plugin version: `1.1.1`
-- Stable tag: `1.1.1`
+- Plugin version: `1.1.2`
+- Stable tag: `1.1.2`
 - Contributors: `yoohw`
 - Requires at least: `6.9`
 - Tested up to: `7.0`
