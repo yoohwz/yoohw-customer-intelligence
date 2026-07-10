@@ -377,7 +377,7 @@ final class YoOhw_COS_Blacklist_Manager_Integration {
 
 	private static function append_order_number( string $description, WC_Order $order ): string {
 		return sprintf(
-			/* translators: %s: order number. */
+			/* translators: 1: description, 2: order number. */
 			__( '%1$s Order #%2$s.', 'yoohw-customer-intelligence' ),
 			$description,
 			$order->get_order_number()
