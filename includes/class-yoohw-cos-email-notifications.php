@@ -84,6 +84,7 @@ final class YoOhw_COS_Email_Notifications {
 	public static function render_grouped_email_notifications(): void {
 		$mailer          = WC()->mailer();
 		$email_templates = $mailer ? $mailer->get_emails() : array();
+		$email_templates = self::filter_visible_email_templates( $email_templates );
 		$current_group   = self::get_current_email_group( $email_templates );
 		$columns         = apply_filters(
 			'woocommerce_email_setting_columns',
@@ -651,6 +652,19 @@ final class YoOhw_COS_Email_Notifications {
 		return 'general';
 	}
 
+	private static function filter_visible_email_templates( array $email_templates ): array {
+		if ( self::is_loyalty_integration_active() ) {
+			return $email_templates;
+		}
+
+		return array_filter(
+			$email_templates,
+			static function( $email ): bool {
+				return 'loyalty' !== self::get_email_group( $email );
+			}
+		);
+	}
+
 	private static function get_email_group_labels( array $email_templates ): array {
 		$labels = array(
 			'general' => __( 'General', 'yoohw-customer-intelligence' ),
@@ -720,6 +734,12 @@ final class YoOhw_COS_Email_Notifications {
 		}
 
 		echo '</ul></div>';
+	}
+
+	private static function is_loyalty_integration_active(): bool {
+		return class_exists( 'YoOhw_COS_Loyalty_Integration' )
+			&& is_callable( array( 'YoOhw_COS_Loyalty_Integration', 'is_loyalty_plugin_active' ) )
+			&& YoOhw_COS_Loyalty_Integration::is_loyalty_plugin_active();
 	}
 
 	private static function render_group_styles(): void {

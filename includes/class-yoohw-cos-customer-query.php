@@ -4,8 +4,9 @@ defined( 'ABSPATH' ) || exit;
 final class YoOhw_COS_Customer_Query {
 
 	public static function sanitize_args( array $source ): array {
-		$orderby = self::sanitize_orderby( self::get_scalar( $source, 'orderby', 'last_activity_date' ) );
-		$order   = strtoupper( sanitize_key( self::get_scalar( $source, 'order', 'DESC' ) ) );
+		$loyalty_active = self::is_loyalty_integration_active();
+		$orderby        = self::sanitize_orderby( self::get_scalar( $source, 'orderby', 'last_activity_date' ) );
+		$order          = strtoupper( sanitize_key( self::get_scalar( $source, 'order', 'DESC' ) ) );
 
 		if ( ! in_array( $order, array( 'ASC', 'DESC' ), true ) ) {
 			$order = 'DESC';
@@ -18,6 +19,8 @@ final class YoOhw_COS_Customer_Query {
 			'customer_status'  => self::sanitize_customer_status( self::get_scalar( $source, 'customer_status' ) ),
 			'vip_status'       => self::sanitize_vip_status( self::get_scalar( $source, 'vip_status' ) ),
 			'risk_level'       => self::sanitize_risk_level( self::get_scalar( $source, 'risk_level' ) ),
+			'loyalty_level'    => $loyalty_active ? self::sanitize_loyalty_level( self::get_scalar( $source, 'loyalty_level' ) ) : '',
+			'loyalty_score'    => $loyalty_active ? self::sanitize_loyalty_score_range( self::get_scalar( $source, 'loyalty_score' ) ) : '',
 			'lifecycle_stage'  => self::sanitize_lifecycle_stage( self::get_scalar( $source, 'lifecycle_stage' ) ),
 			'customer_view'    => self::sanitize_customer_view( self::get_scalar( $source, 'customer_view' ) ),
 			'orderby'          => $orderby,
@@ -178,6 +181,27 @@ final class YoOhw_COS_Customer_Query {
 			}
 		}
 
+		if ( '' !== $args['loyalty_level'] ) {
+			if ( 'none' === $args['loyalty_level'] ) {
+				$where .= " AND (loyalty_level = '' OR loyalty_level IS NULL)";
+			} else {
+				$where   .= ' AND loyalty_level = %s';
+				$params[] = $args['loyalty_level'];
+			}
+		}
+
+		if ( '' !== $args['loyalty_score'] ) {
+			if ( 'high' === $args['loyalty_score'] ) {
+				$where .= ' AND loyalty_score >= 80';
+			} elseif ( 'medium' === $args['loyalty_score'] ) {
+				$where .= ' AND loyalty_score >= 40 AND loyalty_score < 80';
+			} elseif ( 'low' === $args['loyalty_score'] ) {
+				$where .= ' AND loyalty_score > 0 AND loyalty_score < 40';
+			} elseif ( 'none' === $args['loyalty_score'] ) {
+				$where .= ' AND loyalty_score <= 0';
+			}
+		}
+
 		if ( '' !== $args['lifecycle_stage'] ) {
 			$where   .= ' AND lifecycle_stage = %s';
 			$params[] = $args['lifecycle_stage'];
@@ -232,8 +256,21 @@ final class YoOhw_COS_Customer_Query {
 			'average_order_value',
 			'risk_score',
 			'trust_score',
+			'loyalty_score',
+			'loyalty_level',
+			'available_points',
+			'earned_points',
 			'last_activity_date',
 		);
+
+		if ( ! self::is_loyalty_integration_active() ) {
+			$allowed_orderby = array_values(
+				array_diff(
+					$allowed_orderby,
+					array( 'loyalty_score', 'loyalty_level', 'available_points', 'earned_points' )
+				)
+			);
+		}
 
 		return in_array( $orderby, $allowed_orderby, true ) ? $orderby : 'last_activity_date';
 	}
@@ -266,6 +303,18 @@ final class YoOhw_COS_Customer_Query {
 		return in_array( $risk_level, array( 'none', 'low', 'medium', 'high' ), true ) ? $risk_level : '';
 	}
 
+	private static function sanitize_loyalty_score_range( string $range ): string {
+		$range = sanitize_key( $range );
+
+		return in_array( $range, array( 'none', 'low', 'medium', 'high' ), true ) ? $range : '';
+	}
+
+	private static function sanitize_loyalty_level( string $level ): string {
+		$level = sanitize_key( $level );
+
+		return substr( $level, 0, 100 );
+	}
+
 	private static function sanitize_lifecycle_stage( string $stage ): string {
 		$stage = sanitize_key( $stage );
 
@@ -276,5 +325,11 @@ final class YoOhw_COS_Customer_Query {
 		$view = sanitize_key( $view );
 
 		return 'archived' === $view ? 'archived' : '';
+	}
+
+	private static function is_loyalty_integration_active(): bool {
+		return class_exists( 'YoOhw_COS_Loyalty_Integration' )
+			&& is_callable( array( 'YoOhw_COS_Loyalty_Integration', 'is_loyalty_plugin_active' ) )
+			&& YoOhw_COS_Loyalty_Integration::is_loyalty_plugin_active();
 	}
 }

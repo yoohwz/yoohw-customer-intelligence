@@ -35,7 +35,10 @@ final class YoOhw_COS_Loader {
 		YoOhw_COS_Tasks::init();
 		YoOhw_COS_Email_Notifications::init();
 		YoOhw_COS_Intelligence::init();
+		YoOhw_COS_Blacklist_Manager_Integration::init();
+		YoOhw_COS_Blacklist_Manager_Premium_Integration::init();
 		YoOhw_COS_Segments::init();
+		YoOhw_COS_Loyalty_Integration::init();
 
 		if ( is_admin() ) {
 			YoOhw_COS_Admin_Menu::init();
@@ -55,7 +58,10 @@ final class YoOhw_COS_Loader {
 		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-tasks.php';
 		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-email-notifications.php';
 		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-intelligence.php';
+		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-blacklist-manager-integration.php';
+		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-blacklist-manager-premium-integration.php';
 		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-segments.php';
+		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-loyalty-integration.php';
 
 		require_once YOOHW_COS_PATH . 'admin/class-yoohw-cos-admin-ui.php';
 		require_once YOOHW_COS_PATH . 'admin/class-yoohw-cos-customers-list.php';

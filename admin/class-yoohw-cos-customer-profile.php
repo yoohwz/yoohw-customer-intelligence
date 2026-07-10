@@ -96,9 +96,14 @@ final class YoOhw_COS_Customer_Profile {
 
 		echo wp_kses_post( self::render_risk_badge( (float) ( $customer['risk_score'] ?? 0 ) ) );
 		echo wp_kses_post( self::render_trust_badge( (float) ( $customer['trust_score'] ?? 0 ) ) );
+		echo wp_kses_post( self::render_blacklist_status_badge( $customer ) );
 
 		if ( $has_vip_tier ) {
 			echo wp_kses_post( self::render_vip_badge( $vip_status ) );
+		}
+
+		if ( self::is_loyalty_integration_active() ) {
+			echo wp_kses( self::render_loyalty_level_badge( $customer ), self::get_detail_row_allowed_html() );
 		}
 
 		echo '</div>';
@@ -165,8 +170,14 @@ final class YoOhw_COS_Customer_Profile {
 		echo '<div class="yoohw-cos-profile-sections">';
 
 		self::render_profile_section_header( __( 'Overview', 'yoohw-customer-intelligence' ) );
-		echo '<div class="yoohw-cos-profile-section-grid yoohw-cos-profile-section-grid--overview">';
+		$loyalty_active = self::is_loyalty_integration_active();
+		echo '<div class="yoohw-cos-profile-section-grid yoohw-cos-profile-section-grid--overview ' . esc_attr( $loyalty_active ? 'yoohw-cos-profile-section-grid--overview-with-loyalty' : 'yoohw-cos-profile-section-grid--overview-without-loyalty' ) . '">';
 		self::render_commerce_summary( $customer );
+
+		if ( $loyalty_active ) {
+			self::render_loyalty_panel( $customer );
+		}
+
 		self::render_identity_panel( $customer );
 		echo '</div>';
 
@@ -196,6 +207,11 @@ final class YoOhw_COS_Customer_Profile {
 		self::render_trust_panel( $customer, $trust_factors );
 		self::render_lifecycle_panel( $customer, $lifecycle_factors );
 		echo '</div>';
+
+		if ( self::is_blacklist_manager_premium_integration_active() ) {
+			self::render_profile_section_header( __( 'Security', 'yoohw-customer-intelligence' ) );
+			self::render_security_signals_panel( (int) $customer['id'] );
+		}
 
 		self::render_profile_section_header( __( 'Activity', 'yoohw-customer-intelligence' ) );
 		self::render_timeline( (int) $customer['id'], $events );
@@ -229,8 +245,8 @@ final class YoOhw_COS_Customer_Profile {
 		);
 
 		self::render_detail_row(
-			__( 'VIP Status', 'yoohw-customer-intelligence' ),
-			ucfirst( $customer['vip_status'] ?? 'none' )
+			__( 'Value tier', 'yoohw-customer-intelligence' ),
+			YoOhw_COS_Intelligence::get_value_tier_label( (string) ( $customer['vip_status'] ?? 'none' ) )
 		);
 
 		self::render_detail_row(
@@ -276,6 +292,53 @@ final class YoOhw_COS_Customer_Profile {
 		echo '</div>';
 	}
 
+	private static function render_loyalty_panel( array $customer ): void {
+		$loyalty_data     = self::get_loyalty_display_data( $customer );
+		$level            = sanitize_key( (string) ( $loyalty_data['loyalty_level'] ?? '' ) );
+		$available_points = (int) ( $loyalty_data['available_points'] ?? 0 );
+		$earned_points    = (int) ( $loyalty_data['earned_points'] ?? 0 );
+		$has_loyalty_data = '' !== $level || 0 !== $available_points || 0 !== $earned_points;
+
+		echo '<div class="postbox">';
+		echo '<div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Loyalty', 'yoohw-customer-intelligence' ) . '</h2></div>';
+		echo '<div class="inside">';
+
+		if ( ! $has_loyalty_data ) {
+			YoOhw_COS_Admin_UI::render_empty_state(
+				__( 'No loyalty data yet.', 'yoohw-customer-intelligence' ),
+				__( 'Loyalty level and points will appear after this profile is linked to a registered loyalty user.', 'yoohw-customer-intelligence' ),
+				array(),
+				'compact'
+			);
+			echo '</div>';
+			echo '</div>';
+			return;
+		}
+
+		echo '<table class="widefat striped">';
+
+		self::render_detail_row(
+			__( 'Level', 'yoohw-customer-intelligence' ),
+			self::render_loyalty_level_badge( $loyalty_data ),
+			true
+		);
+
+		self::render_detail_row(
+			__( 'Available points', 'yoohw-customer-intelligence' ),
+			number_format_i18n( $available_points )
+		);
+
+		self::render_detail_row(
+			__( 'Earned points', 'yoohw-customer-intelligence' ),
+			number_format_i18n( $earned_points )
+		);
+
+		echo '</table>';
+
+		echo '</div>';
+		echo '</div>';
+	}
+
 	private static function render_detail_row( string $label, string $value, bool $allow_html = false ): void {
 		echo '<tr>';
 		echo '<th class="yoohw-cos-detail-label">' . esc_html( $label ) . '</th>';
@@ -307,6 +370,7 @@ final class YoOhw_COS_Customer_Profile {
 			array(
 				'aria-hidden' => true,
 				'class'       => true,
+				'style'       => true,
 			)
 		);
 
@@ -631,6 +695,186 @@ final class YoOhw_COS_Customer_Profile {
 		echo '</div>';
 	}
 
+	private static function render_security_signals_panel( int $customer_id ): void {
+		if ( ! self::is_blacklist_manager_premium_integration_active() ) {
+			return;
+		}
+
+		$summary = array();
+
+		if (
+			class_exists( 'YoOhw_COS_Blacklist_Manager_Premium_Integration' )
+			&& is_callable( array( 'YoOhw_COS_Blacklist_Manager_Premium_Integration', 'get_customer_security_summary' ) )
+		) {
+			$summary = YoOhw_COS_Blacklist_Manager_Premium_Integration::get_customer_security_summary( $customer_id );
+		}
+
+		echo '<div class="postbox">';
+		echo '<div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Security signals', 'yoohw-customer-intelligence' ) . '</h2></div>';
+		echo '<div class="inside">';
+
+		if ( empty( $summary ) ) {
+			YoOhw_COS_Admin_UI::render_empty_state(
+				__( 'No premium security signals yet.', 'yoohw-customer-intelligence' ),
+				__( 'Premium order risk, anti-bot, payment, and device signals will appear here when matched to this customer.', 'yoohw-customer-intelligence' ),
+				array(),
+				'compact'
+			);
+			echo '</div>';
+			echo '</div>';
+			return;
+		}
+
+		echo '<table class="widefat striped">';
+
+		self::render_detail_row(
+			__( 'Latest premium order risk', 'yoohw-customer-intelligence' ),
+			self::format_security_order_risk( (array) ( $summary['latest_order_risk'] ?? array() ) ),
+			true
+		);
+
+		self::render_detail_row(
+			__( 'Highest risk order', 'yoohw-customer-intelligence' ),
+			self::format_security_order_risk( (array) ( $summary['highest_order_risk'] ?? array() ) ),
+			true
+		);
+
+		self::render_detail_row(
+			__( 'Matched premium rules', 'yoohw-customer-intelligence' ),
+			self::format_security_rule_list( (array) ( $summary['matched_rules'] ?? array() ) ),
+			true
+		);
+
+		self::render_detail_row(
+			__( 'Recent anti-bot/payment/device events', 'yoohw-customer-intelligence' ),
+			self::format_security_event_list( (array) ( $summary['recent_events'] ?? array() ) ),
+			true
+		);
+
+		echo '</table>';
+		echo '</div>';
+		echo '</div>';
+	}
+
+	private static function format_security_order_risk( array $item ): string {
+		$order_id = absint( $item['order_id'] ?? 0 );
+
+		if ( $order_id <= 0 && empty( $item['risk_score'] ) ) {
+			return '—';
+		}
+
+		$parts = array();
+
+		if ( $order_id > 0 ) {
+			$parts[] = self::render_order_link( $order_id );
+		}
+
+		$parts[] = sprintf(
+			/* translators: %d: risk score. */
+			esc_html__( 'Risk %d', 'yoohw-customer-intelligence' ),
+			max( 0, (int) ( $item['risk_score'] ?? 0 ) )
+		);
+
+		if ( ! empty( $item['created_at'] ) ) {
+			$parts[] = esc_html( self::format_date( (string) $item['created_at'] ) );
+		}
+
+		return implode( ' · ', $parts );
+	}
+
+	private static function format_security_rule_list( array $rules ): string {
+		if ( empty( $rules ) ) {
+			return '—';
+		}
+
+		$html = '<ul class="yoohw-cos-factor-list yoohw-cos-factor-list--compact">';
+
+		foreach ( array_slice( $rules, 0, 8 ) as $rule ) {
+			$label = sanitize_text_field( (string) ( $rule['label'] ?? '' ) );
+
+			if ( '' === $label ) {
+				continue;
+			}
+
+			$html .= '<li>';
+			$html .= '<div class="yoohw-cos-factor-list__row">';
+			$html .= '<strong>' . esc_html( $label ) . '</strong>';
+			$html .= '<span class="yoohw-cos-factor-impact yoohw-cos-factor-impact--negative">+' . esc_html( number_format_i18n( max( 0, (int) ( $rule['score'] ?? 0 ) ) ) ) . '</span>';
+			$html .= '</div>';
+
+			if ( ! empty( $rule['category'] ) ) {
+				$html .= '<div class="yoohw-cos-factor-description">' . esc_html( ucwords( str_replace( '_', ' ', sanitize_key( (string) $rule['category'] ) ) ) ) . '</div>';
+			}
+
+			$html .= '</li>';
+		}
+
+		$html .= '</ul>';
+
+		return $html;
+	}
+
+	private static function format_security_event_list( array $events ): string {
+		if ( empty( $events ) ) {
+			return '—';
+		}
+
+		$html = '<ul class="yoohw-cos-factor-list yoohw-cos-factor-list--compact">';
+
+		foreach ( $events as $event ) {
+			$label       = sanitize_text_field( (string) ( $event['label'] ?? self::format_event_type_label( (string) ( $event['event_type'] ?? '' ) ) ) );
+			$description = wp_kses_post( (string) ( $event['description'] ?? '' ) );
+			$metadata    = is_array( $event['metadata'] ?? null ) ? $event['metadata'] : array();
+			$details     = array();
+
+			if ( isset( $metadata['score'] ) ) {
+				$details[] = sprintf(
+					/* translators: %d: score. */
+					__( 'Score %d', 'yoohw-customer-intelligence' ),
+					(int) $metadata['score']
+				);
+			}
+
+			if ( isset( $metadata['threshold'] ) ) {
+				$details[] = sprintf(
+					/* translators: %d: threshold. */
+					__( 'Threshold %d', 'yoohw-customer-intelligence' ),
+					(int) $metadata['threshold']
+				);
+			}
+
+			if ( ! empty( $metadata['reasons'] ) && is_array( $metadata['reasons'] ) ) {
+				$details[] = implode( ', ', array_slice( array_map( 'sanitize_key', $metadata['reasons'] ), 0, 3 ) );
+			}
+
+			$html .= '<li>';
+			$html .= '<div class="yoohw-cos-factor-list__row">';
+			$html .= '<strong>' . esc_html( $label ) . '</strong>';
+			$html .= '<span class="yoohw-cos-badge yoohw-cos-badge--severity-' . esc_attr( sanitize_html_class( (string) ( $event['severity'] ?? 'info' ) ) ) . '">' . esc_html( ucfirst( sanitize_key( (string) ( $event['severity'] ?? 'info' ) ) ) ) . '</span>';
+			$html .= '</div>';
+
+			if ( '' !== $description ) {
+				$html .= '<div class="yoohw-cos-factor-description">' . $description . '</div>';
+			}
+
+			if ( ! empty( $details ) || ! empty( $event['created_at'] ) ) {
+				$tail = $details;
+
+				if ( ! empty( $event['created_at'] ) ) {
+					$tail[] = self::format_date( (string) $event['created_at'] );
+				}
+
+				$html .= '<div class="yoohw-cos-factor-description">' . esc_html( implode( ' · ', $tail ) ) . '</div>';
+			}
+
+			$html .= '</li>';
+		}
+
+		$html .= '</ul>';
+
+		return $html;
+	}
+
 	private static function render_timeline( int $customer_id, array $events ): void {
 		$total_events = YoOhw_COS_Events::get_customer_event_count( $customer_id );
 		$activity_url = add_query_arg(
@@ -669,8 +913,20 @@ final class YoOhw_COS_Customer_Profile {
 		echo '<ol class="yoohw-cos-timeline">';
 
 		foreach ( $events as $event ) {
+			$event_type   = sanitize_key( (string) ( $event['event_type'] ?? '' ) );
+			$event_source = sanitize_key( (string) ( $event['event_source'] ?? '' ) );
+
 			echo '<li>';
-			echo '<strong>' . esc_html( $event['event_type'] ?? '' ) . '</strong>';
+			echo '<div class="yoohw-cos-timeline__heading">';
+			echo '<strong>' . esc_html( self::format_event_type_label( $event_type ) ) . '</strong>';
+
+			if ( 'wc_blacklist_manager' === $event_source && self::is_blacklist_manager_integration_active() ) {
+				echo '<span class="yoohw-cos-badge yoohw-cos-badge--blacklist-source">' . esc_html__( 'Blacklist Manager', 'yoohw-customer-intelligence' ) . '</span>';
+			} elseif ( 'wc_blacklist_manager_premium' === $event_source && self::is_blacklist_manager_premium_integration_active() ) {
+				echo '<span class="yoohw-cos-badge yoohw-cos-badge--blacklist-premium-source">' . esc_html__( 'Blacklist Manager Premium', 'yoohw-customer-intelligence' ) . '</span>';
+			}
+
+			echo '</div>';
 			echo '<div>' . wp_kses_post( $event['description'] ?? '' ) . '</div>';
 			echo '<small>' . esc_html( self::format_date( $event['created_at'] ?? '' ) ) . '</small>';
 			echo '</li>';
@@ -689,6 +945,41 @@ final class YoOhw_COS_Customer_Profile {
 		$name = trim( ( $customer['first_name'] ?? '' ) . ' ' . ( $customer['last_name'] ?? '' ) );
 
 		return $name ?: __( '(No name)', 'yoohw-customer-intelligence' );
+	}
+
+	private static function format_event_type_label( string $event_type ): string {
+		$event_type = sanitize_key( $event_type );
+
+		$labels = array(
+			'blacklist_blocked'        => __( 'Blacklist blocked', 'yoohw-customer-intelligence' ),
+			'blacklist_match_detected' => __( 'Blacklist match', 'yoohw-customer-intelligence' ),
+			'blacklist_removed'        => __( 'Blacklist cleared', 'yoohw-customer-intelligence' ),
+			'blacklist_suspect'        => __( 'Blacklist suspect', 'yoohw-customer-intelligence' ),
+			'bulk_customer_action'     => __( 'Bulk action', 'yoohw-customer-intelligence' ),
+			'premium_order_risk_scored' => __( 'Premium order risk scored', 'yoohw-customer-intelligence' ),
+			'premium_risk_rule_matched' => __( 'Premium risk rule matched', 'yoohw-customer-intelligence' ),
+			'premium_antibot_blocked' => __( 'Premium anti-bot blocked', 'yoohw-customer-intelligence' ),
+			'premium_antibot_would_block' => __( 'Premium anti-bot challenge', 'yoohw-customer-intelligence' ),
+			'premium_payment_abuse_detected' => __( 'Premium payment abuse', 'yoohw-customer-intelligence' ),
+			'premium_device_signal_detected' => __( 'Premium device signal', 'yoohw-customer-intelligence' ),
+			'premium_gateway_fraud_signal' => __( 'Premium gateway fraud signal', 'yoohw-customer-intelligence' ),
+			'note_added'               => __( 'Note added', 'yoohw-customer-intelligence' ),
+			'note_deleted'             => __( 'Note deleted', 'yoohw-customer-intelligence' ),
+			'note_updated'             => __( 'Note updated', 'yoohw-customer-intelligence' ),
+			'order_synced'             => __( 'Order synced', 'yoohw-customer-intelligence' ),
+			'segment_assigned'         => __( 'Segment added', 'yoohw-customer-intelligence' ),
+			'segment_removed'          => __( 'Segment removed', 'yoohw-customer-intelligence' ),
+			'task_completed'           => __( 'Task completed', 'yoohw-customer-intelligence' ),
+			'task_created'             => __( 'Task created', 'yoohw-customer-intelligence' ),
+			'tag_assigned'             => __( 'Tag added', 'yoohw-customer-intelligence' ),
+			'tag_removed'              => __( 'Tag removed', 'yoohw-customer-intelligence' ),
+		);
+
+		if ( isset( $labels[ $event_type ] ) ) {
+			return $labels[ $event_type ];
+		}
+
+		return '' !== $event_type ? ucwords( str_replace( '_', ' ', $event_type ) ) : __( 'Activity', 'yoohw-customer-intelligence' );
 	}
 
 	private static function format_date( ?string $date ): string {
@@ -1272,6 +1563,109 @@ final class YoOhw_COS_Customer_Profile {
 		return '<span class="yoohw-cos-badge yoohw-cos-badge--status-' . esc_attr( sanitize_html_class( $status ) ) . '">' . esc_html( $label ) . '</span>';
 	}
 
+	private static function render_loyalty_level_badge( array $customer ): string {
+		if ( ! self::is_loyalty_integration_active() ) {
+			return '';
+		}
+
+		$loyalty_data = self::get_loyalty_display_data( $customer );
+		$level        = sanitize_key( (string) ( $loyalty_data['loyalty_level'] ?? '' ) );
+
+		if ( '' === $level ) {
+			return '';
+		}
+
+		$style      = self::get_loyalty_level_badge_style( $level );
+		$style_attr = '' !== $style ? ' style="' . esc_attr( $style ) . '"' : '';
+
+		return '<span class="yoohw-cos-badge yoohw-cos-badge--loyalty-level yoohw-cos-badge--loyalty-level-' . esc_attr( sanitize_html_class( $level ) ) . '"' . $style_attr . '>' . esc_html( self::format_loyalty_level_label( $level ) ) . '</span>';
+	}
+
+	private static function get_loyalty_level_badge_style( string $level ): string {
+		if (
+			class_exists( 'YoOhw_COS_Loyalty_Integration' )
+			&& is_callable( array( 'YoOhw_COS_Loyalty_Integration', 'is_loyalty_plugin_active' ) )
+			&& YoOhw_COS_Loyalty_Integration::is_loyalty_plugin_active()
+			&& is_callable( array( 'YoOhw_COS_Loyalty_Integration', 'get_loyalty_level_badge_style' ) )
+		) {
+			return YoOhw_COS_Loyalty_Integration::get_loyalty_level_badge_style( $level );
+		}
+
+		return '';
+	}
+
+	private static function get_loyalty_display_data( array $customer ): array {
+		if ( ! self::is_loyalty_integration_active() ) {
+			return array(
+				'loyalty_level'    => '',
+				'available_points' => 0,
+				'earned_points'    => 0,
+			);
+		}
+
+		$user_id = absint( $customer['wp_user_id'] ?? 0 );
+
+		if (
+			$user_id <= 0
+			|| ! class_exists( 'YoOhw_COS_Loyalty_Integration' )
+			|| ! is_callable( array( 'YoOhw_COS_Loyalty_Integration', 'get_user_loyalty_customer_data' ) )
+		) {
+			return $customer;
+		}
+
+		$loyalty_data = YoOhw_COS_Loyalty_Integration::get_user_loyalty_customer_data( $user_id );
+
+		return array_merge(
+			$customer,
+			array(
+				'loyalty_level'    => sanitize_key( (string) ( $loyalty_data['loyalty_level'] ?? $customer['loyalty_level'] ?? '' ) ),
+				'available_points' => (int) ( $loyalty_data['available_points'] ?? $customer['available_points'] ?? 0 ),
+				'earned_points'    => (int) ( $loyalty_data['earned_points'] ?? $customer['earned_points'] ?? 0 ),
+			)
+		);
+	}
+
+	private static function is_loyalty_integration_active(): bool {
+		return class_exists( 'YoOhw_COS_Loyalty_Integration' )
+			&& is_callable( array( 'YoOhw_COS_Loyalty_Integration', 'is_loyalty_plugin_active' ) )
+			&& YoOhw_COS_Loyalty_Integration::is_loyalty_plugin_active();
+	}
+
+	private static function is_blacklist_manager_integration_active(): bool {
+		return class_exists( 'YoOhw_COS_Blacklist_Manager_Integration' )
+			&& is_callable( array( 'YoOhw_COS_Blacklist_Manager_Integration', 'is_active' ) )
+			&& YoOhw_COS_Blacklist_Manager_Integration::is_active();
+	}
+
+	private static function is_blacklist_manager_premium_integration_active(): bool {
+		return self::is_blacklist_manager_integration_active()
+			&& class_exists( 'YoOhw_COS_Blacklist_Manager_Premium_Integration' )
+			&& is_callable( array( 'YoOhw_COS_Blacklist_Manager_Premium_Integration', 'is_active' ) )
+			&& YoOhw_COS_Blacklist_Manager_Premium_Integration::is_active();
+	}
+
+	private static function format_loyalty_level_label( string $level ): string {
+		$level = sanitize_key( $level );
+
+		if ( class_exists( 'YoOhw_COS_Loyalty_Integration' ) && is_callable( array( 'YoOhw_COS_Loyalty_Integration', 'format_role_label' ) ) ) {
+			return YoOhw_COS_Loyalty_Integration::format_role_label( $level );
+		}
+
+		if ( '' === $level || 'none' === $level ) {
+			return __( 'No loyalty level', 'yoohw-customer-intelligence' );
+		}
+
+		if ( function_exists( 'wp_roles' ) ) {
+			$wp_roles = wp_roles();
+
+			if ( isset( $wp_roles->roles[ $level ]['name'] ) ) {
+				return translate_user_role( $wp_roles->roles[ $level ]['name'] );
+			}
+		}
+
+		return ucwords( str_replace( array( '_', '-' ), ' ', $level ) );
+	}
+
 	private static function render_risk_badge( float $risk_score ): string {
 		$level = YoOhw_COS_Intelligence::calculate_risk_level( $risk_score );
 
@@ -1283,6 +1677,27 @@ final class YoOhw_COS_Customer_Profile {
 		);
 
 		return '<span class="yoohw-cos-badge yoohw-cos-badge--risk-' . esc_attr( sanitize_html_class( $level ) ) . '">' . esc_html( $labels[ $level ] ?? $level ) . ' · ' . esc_html( number_format_i18n( $risk_score, 0 ) ) . '</span>';
+	}
+
+	private static function render_blacklist_status_badge( array $customer ): string {
+		$customer_id = absint( $customer['id'] ?? 0 );
+
+		if (
+			$customer_id <= 0
+			|| ! self::is_blacklist_manager_integration_active()
+			|| ! class_exists( 'YoOhw_COS_Blacklist_Manager_Integration' )
+			|| ! is_callable( array( 'YoOhw_COS_Blacklist_Manager_Integration', 'get_customer_blacklist_status' ) )
+		) {
+			return '';
+		}
+
+		$status = YoOhw_COS_Blacklist_Manager_Integration::get_customer_blacklist_status( $customer_id );
+
+		if ( empty( $status['status'] ) || empty( $status['label'] ) ) {
+			return '';
+		}
+
+		return '<span class="yoohw-cos-badge yoohw-cos-badge--blacklist-' . esc_attr( sanitize_html_class( (string) $status['status'] ) ) . '">' . esc_html( (string) $status['label'] ) . '</span>';
 	}
 
 	private static function render_risk_panel( array $customer, array $risk_factors ): void {
@@ -1410,15 +1825,10 @@ final class YoOhw_COS_Customer_Profile {
 	}
 
 	private static function render_vip_badge( string $vip_status ): string {
-		$labels = array(
-			'silver'   => __( 'Silver VIP', 'yoohw-customer-intelligence' ),
-			'gold'     => __( 'Gold VIP', 'yoohw-customer-intelligence' ),
-			'platinum' => __( 'Platinum VIP', 'yoohw-customer-intelligence' ),
-		);
+		$label = YoOhw_COS_Intelligence::get_value_tier_label( $vip_status );
+		$class = YoOhw_COS_Intelligence::get_value_tier_badge_class( $vip_status );
 
-		$label = $labels[ $vip_status ] ?? ucfirst( $vip_status );
-
-		return '<span class="yoohw-cos-badge yoohw-cos-badge--vip-' . esc_attr( sanitize_html_class( $vip_status ) ) . '">' . esc_html( $label ) . '</span>';
+		return '<span class="yoohw-cos-badge yoohw-cos-badge--value-tier-' . esc_attr( $class ) . '">' . esc_html( $label ) . '</span>';
 	}
 
 	private static function format_lifecycle_label( string $stage ): string {

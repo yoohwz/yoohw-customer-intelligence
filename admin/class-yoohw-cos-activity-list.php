@@ -267,32 +267,65 @@ final class YoOhw_COS_Activity_List extends WP_List_Table {
 
 		echo '<div class="alignleft actions">';
 
+		$event_type_options = array(
+			''                => __( 'All event types', 'yoohw-customer-intelligence' ),
+			'order_synced'    => __( 'Order synced', 'yoohw-customer-intelligence' ),
+			'tag_assigned'    => __( 'Tag assigned', 'yoohw-customer-intelligence' ),
+			'tag_removed'     => __( 'Tag removed', 'yoohw-customer-intelligence' ),
+			'note_added'      => __( 'Note added', 'yoohw-customer-intelligence' ),
+			'note_updated'    => __( 'Note updated', 'yoohw-customer-intelligence' ),
+			'note_deleted'    => __( 'Note deleted', 'yoohw-customer-intelligence' ),
+			'task_created'    => __( 'Task created', 'yoohw-customer-intelligence' ),
+			'task_completed'  => __( 'Task completed', 'yoohw-customer-intelligence' ),
+			'bulk_customer_action' => __( 'Bulk customer action', 'yoohw-customer-intelligence' ),
+		);
+
+		if ( self::is_blacklist_manager_integration_active() ) {
+			$event_type_options += array(
+				'blacklist_blocked'        => __( 'Blacklist blocked', 'yoohw-customer-intelligence' ),
+				'blacklist_match_detected' => __( 'Blacklist match', 'yoohw-customer-intelligence' ),
+				'blacklist_removed'        => __( 'Blacklist cleared', 'yoohw-customer-intelligence' ),
+				'blacklist_suspect'        => __( 'Blacklist suspect', 'yoohw-customer-intelligence' ),
+			);
+		}
+
+		if ( self::is_blacklist_manager_premium_integration_active() ) {
+			$event_type_options += array(
+				'premium_order_risk_scored' => __( 'Premium order risk scored', 'yoohw-customer-intelligence' ),
+				'premium_risk_rule_matched' => __( 'Premium risk rule matched', 'yoohw-customer-intelligence' ),
+				'premium_antibot_blocked' => __( 'Premium anti-bot blocked', 'yoohw-customer-intelligence' ),
+				'premium_antibot_would_block' => __( 'Premium anti-bot challenge', 'yoohw-customer-intelligence' ),
+				'premium_payment_abuse_detected' => __( 'Premium payment abuse', 'yoohw-customer-intelligence' ),
+				'premium_device_signal_detected' => __( 'Premium device signal', 'yoohw-customer-intelligence' ),
+				'premium_gateway_fraud_signal' => __( 'Premium gateway fraud signal', 'yoohw-customer-intelligence' ),
+			);
+		}
+
 		$this->render_select(
 			'event_type',
 			$current_type,
-			array(
-				''                => __( 'All event types', 'yoohw-customer-intelligence' ),
-				'order_synced'    => __( 'Order synced', 'yoohw-customer-intelligence' ),
-				'tag_assigned'    => __( 'Tag assigned', 'yoohw-customer-intelligence' ),
-				'tag_removed'     => __( 'Tag removed', 'yoohw-customer-intelligence' ),
-				'note_added'      => __( 'Note added', 'yoohw-customer-intelligence' ),
-				'note_updated'    => __( 'Note updated', 'yoohw-customer-intelligence' ),
-				'note_deleted'    => __( 'Note deleted', 'yoohw-customer-intelligence' ),
-				'task_created'    => __( 'Task created', 'yoohw-customer-intelligence' ),
-				'task_completed'  => __( 'Task completed', 'yoohw-customer-intelligence' ),
-				'bulk_customer_action' => __( 'Bulk customer action', 'yoohw-customer-intelligence' ),
-			)
+			$event_type_options
 		);
+
+		$source_options = array(
+			''            => __( 'All sources', 'yoohw-customer-intelligence' ),
+			'system'      => __( 'System', 'yoohw-customer-intelligence' ),
+			'woocommerce' => __( 'WooCommerce', 'yoohw-customer-intelligence' ),
+			'customer_os' => __( 'Customer', 'yoohw-customer-intelligence' ),
+		);
+
+		if ( self::is_blacklist_manager_integration_active() ) {
+			$source_options['wc_blacklist_manager'] = __( 'Blacklist Manager', 'yoohw-customer-intelligence' );
+		}
+
+		if ( self::is_blacklist_manager_premium_integration_active() ) {
+			$source_options['wc_blacklist_manager_premium'] = __( 'Blacklist Manager Premium', 'yoohw-customer-intelligence' );
+		}
 
 		$this->render_select(
 			'event_source',
 			$current_source,
-			array(
-				''            => __( 'All sources', 'yoohw-customer-intelligence' ),
-				'system'      => __( 'System', 'yoohw-customer-intelligence' ),
-				'woocommerce' => __( 'WooCommerce', 'yoohw-customer-intelligence' ),
-				'customer_os' => __( 'Customer', 'yoohw-customer-intelligence' ),
-			)
+			$source_options
 		);
 
 		submit_button(
@@ -332,7 +365,7 @@ final class YoOhw_COS_Activity_List extends WP_List_Table {
 				return wp_kses_post( $item['description'] ?? '' );
 
 			case 'event_source':
-				return esc_html( $item['event_source'] ?? '' );
+				return esc_html( $this->format_event_source_label( (string) ( $item['event_source'] ?? '' ) ) );
 
 			case 'severity':
 				return $this->format_severity( $item['severity'] ?? 'info' );
@@ -398,6 +431,33 @@ final class YoOhw_COS_Activity_List extends WP_List_Table {
 		}
 
 		return esc_html( $item['object_type'] . ':' . $item['object_id'] );
+	}
+
+	private function format_event_source_label( string $source ): string {
+		$source = sanitize_key( $source );
+
+		$labels = array(
+			'customer_os'                  => __( 'Customer', 'yoohw-customer-intelligence' ),
+			'system'                       => __( 'System', 'yoohw-customer-intelligence' ),
+			'woocommerce'                  => __( 'WooCommerce', 'yoohw-customer-intelligence' ),
+			'wc_blacklist_manager'         => __( 'Blacklist Manager', 'yoohw-customer-intelligence' ),
+			'wc_blacklist_manager_premium' => __( 'Blacklist Manager Premium', 'yoohw-customer-intelligence' ),
+		);
+
+		return $labels[ $source ] ?? ( '' !== $source ? ucwords( str_replace( '_', ' ', $source ) ) : '—' );
+	}
+
+	private static function is_blacklist_manager_integration_active(): bool {
+		return class_exists( 'YoOhw_COS_Blacklist_Manager_Integration' )
+			&& is_callable( array( 'YoOhw_COS_Blacklist_Manager_Integration', 'is_active' ) )
+			&& YoOhw_COS_Blacklist_Manager_Integration::is_active();
+	}
+
+	private static function is_blacklist_manager_premium_integration_active(): bool {
+		return self::is_blacklist_manager_integration_active()
+			&& class_exists( 'YoOhw_COS_Blacklist_Manager_Premium_Integration' )
+			&& is_callable( array( 'YoOhw_COS_Blacklist_Manager_Premium_Integration', 'is_active' ) )
+			&& YoOhw_COS_Blacklist_Manager_Premium_Integration::is_active();
 	}
 
 	private function format_date( ?string $date ): string {

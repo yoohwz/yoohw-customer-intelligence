@@ -77,9 +77,18 @@ final class YoOhw_COS_Tasks {
 
 		$customer_id = absint( $data['customer_id'] ?? 0 );
 		$title       = sanitize_text_field( (string) ( $data['title'] ?? '' ) );
+		$source_key  = self::normalize_source_key( (string) ( $data['source_key'] ?? '' ) );
 
 		if ( $customer_id <= 0 || '' === $title || ! YoOhw_COS_Customers::customer_exists( $customer_id ) ) {
 			return 0;
+		}
+
+		if ( null !== $source_key ) {
+			$existing = self::get_task_by_source_key( $source_key );
+
+			if ( ! empty( $existing['id'] ) ) {
+				return absint( $existing['id'] );
+			}
 		}
 
 		$created_by = absint( $data['created_by'] ?? get_current_user_id() );
@@ -96,6 +105,7 @@ final class YoOhw_COS_Tasks {
 				'created_by'        => $created_by > 0 ? $created_by : null,
 				'title'             => $title,
 				'description'       => sanitize_textarea_field( (string) ( $data['description'] ?? '' ) ),
+				'source_key'        => $source_key,
 				'status'            => $status,
 				'priority'          => self::normalize_priority( (string) ( $data['priority'] ?? 'normal' ) ),
 				'due_date'          => self::normalize_due_date( (string) ( $data['due_date'] ?? '' ) ),
@@ -104,10 +114,18 @@ final class YoOhw_COS_Tasks {
 				'created_at'        => $now,
 				'updated_at'        => $now,
 			),
-			array( '%d', '%d', '%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s' )
+			array( '%d', '%d', '%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s' )
 		);
 
 		if ( ! $inserted ) {
+			if ( null !== $source_key ) {
+				$existing = self::get_task_by_source_key( $source_key );
+
+				if ( ! empty( $existing['id'] ) ) {
+					return absint( $existing['id'] );
+				}
+			}
+
 			return 0;
 		}
 
@@ -122,6 +140,24 @@ final class YoOhw_COS_Tasks {
 		do_action( 'yoohw_cos_task_created', $task_id, self::get_task( $task_id ) );
 
 		return $task_id;
+	}
+
+	public static function create_idempotent_task( string $source_key, array $data ): int {
+		$source_key = self::normalize_source_key( $source_key );
+
+		if ( null === $source_key ) {
+			return 0;
+		}
+
+		$existing = self::get_task_by_source_key( $source_key );
+
+		if ( ! empty( $existing['id'] ) ) {
+			return absint( $existing['id'] );
+		}
+
+		$data['source_key'] = $source_key;
+
+		return self::create_task( $data );
 	}
 
 	public static function update_task( int $task_id, array $data ): bool {
@@ -276,6 +312,27 @@ final class YoOhw_COS_Tasks {
 				'SELECT * FROM %i WHERE id = %d LIMIT 1',
 				YoOhw_COS_DB::tasks_table(),
 				absint( $task_id )
+			),
+			ARRAY_A
+		);
+
+		return is_array( $task ) ? $task : array();
+	}
+
+	public static function get_task_by_source_key( string $source_key ): array {
+		global $wpdb;
+
+		$source_key = self::normalize_source_key( $source_key );
+
+		if ( null === $source_key ) {
+			return array();
+		}
+
+		$task = $wpdb->get_row(
+			$wpdb->prepare(
+				'SELECT * FROM %i WHERE source_key = %s LIMIT 1',
+				YoOhw_COS_DB::tasks_table(),
+				$source_key
 			),
 			ARRAY_A
 		);
@@ -673,6 +730,16 @@ final class YoOhw_COS_Tasks {
 		return $user_id;
 	}
 
+	private static function normalize_source_key( string $source_key ): ?string {
+		$source_key = trim( sanitize_text_field( $source_key ) );
+
+		if ( '' === $source_key ) {
+			return null;
+		}
+
+		return substr( $source_key, 0, 191 );
+	}
+
 	public static function normalize_due_date( string $date ): ?string {
 		$date = trim( sanitize_text_field( $date ) );
 
@@ -730,10 +797,11 @@ final class YoOhw_COS_Tasks {
 				'object_id'    => $task_id,
 				'description'  => $description,
 				'metadata'     => array(
-					'task_id'  => $task_id,
-					'title'    => $title,
-					'priority' => $task['priority'] ?? '',
-					'status'   => $task['status'] ?? '',
+					'task_id'    => $task_id,
+					'title'      => $title,
+					'priority'   => $task['priority'] ?? '',
+					'status'     => $task['status'] ?? '',
+					'source_key' => $task['source_key'] ?? '',
 				),
 			)
 		);

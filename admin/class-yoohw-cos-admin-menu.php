@@ -667,7 +667,7 @@ final class YoOhw_COS_Admin_Menu {
 		self::render_stat_card( __( 'Customers', 'yoohw-customer-intelligence' ), number_format_i18n( absint( $stats['total_customers'] ) ) );
 		self::render_stat_card( __( 'Orders', 'yoohw-customer-intelligence' ), number_format_i18n( absint( $stats['total_orders'] ) ) );
 		self::render_stat_card( __( 'Revenue', 'yoohw-customer-intelligence' ), $revenue );
-		self::render_stat_card( __( 'VIP', 'yoohw-customer-intelligence' ), number_format_i18n( $vip_total ) );
+		self::render_stat_card( __( 'High-value customers', 'yoohw-customer-intelligence' ), number_format_i18n( $vip_total ) );
 		self::render_stat_card( __( 'At risk', 'yoohw-customer-intelligence' ), number_format_i18n( absint( $status_counts['at_risk'] ?? 0 ) ) );
 		self::render_stat_card( __( 'Inactive', 'yoohw-customer-intelligence' ), number_format_i18n( absint( $status_counts['inactive'] ?? 0 ) ) );
 		echo '</div>';
@@ -712,6 +712,7 @@ final class YoOhw_COS_Admin_Menu {
 			&& empty( $_GET['customer_status'] )
 			&& empty( $_GET['vip_status'] )
 			&& empty( $_GET['risk_level'] )
+			&& ( ! self::is_loyalty_integration_active() || empty( $_GET['loyalty_level'] ) )
 			&& empty( $_GET['customer_tag'] )
 		) {
 			$matched_customer_id = YoOhw_COS_Customers::find_customer_id_by_search(
@@ -1275,6 +1276,10 @@ final class YoOhw_COS_Admin_Menu {
 			'orderby',
 			'order',
 		);
+
+		if ( self::is_loyalty_integration_active() ) {
+			$preserve_keys[] = 'loyalty_level';
+		}
 
 		foreach ( $preserve_keys as $key ) {
 			if ( ! isset( $_REQUEST[ $key ] ) || is_array( $_REQUEST[ $key ] ) ) {
@@ -2000,7 +2005,7 @@ final class YoOhw_COS_Admin_Menu {
 
 		echo '<div class="form-field form-required term-name-wrap">';
 		echo '<label for="yoohw_cos_tag_name">' . esc_html__( 'Name', 'yoohw-customer-intelligence' ) . '</label>';
-		echo '<input type="text" id="yoohw_cos_tag_name" name="tag_name" value="' . esc_attr( $tag['name'] ?? '' ) . '" placeholder="' . esc_attr__( 'VIP, high risk, needs follow-up...', 'yoohw-customer-intelligence' ) . '" required />';
+		echo '<input type="text" id="yoohw_cos_tag_name" name="tag_name" value="' . esc_attr( $tag['name'] ?? '' ) . '" placeholder="' . esc_attr__( 'High value, high risk, needs follow-up...', 'yoohw-customer-intelligence' ) . '" required />';
 		echo '<p>' . esc_html__( 'The name is how the tag appears on customer profiles and customer lists.', 'yoohw-customer-intelligence' ) . '</p>';
 		echo '</div>';
 
@@ -2275,7 +2280,7 @@ final class YoOhw_COS_Admin_Menu {
 
 		echo '<div class="form-field form-required term-name-wrap">';
 		echo '<label for="yoohw_cos_segment_name">' . esc_html__( 'Name', 'yoohw-customer-intelligence' ) . '</label>';
-		echo '<input type="text" id="yoohw_cos_segment_name" name="segment_name" value="' . esc_attr( $segment['name'] ?? '' ) . '" placeholder="' . esc_attr__( 'VIP recovery, wholesale, repeat buyers...', 'yoohw-customer-intelligence' ) . '" required />';
+		echo '<input type="text" id="yoohw_cos_segment_name" name="segment_name" value="' . esc_attr( $segment['name'] ?? '' ) . '" placeholder="' . esc_attr__( 'High-value recovery, wholesale, repeat buyers...', 'yoohw-customer-intelligence' ) . '" required />';
 		echo '<p>' . esc_html__( 'The name is how the segment appears on customer profiles and customer lists.', 'yoohw-customer-intelligence' ) . '</p>';
 		echo '</div>';
 
@@ -2409,6 +2414,47 @@ final class YoOhw_COS_Admin_Menu {
 			}
 		}
 
+		$blacklist_core_active    = self::is_blacklist_manager_integration_active();
+		$blacklist_premium_active = self::is_blacklist_manager_premium_integration_active();
+
+		if ( $blacklist_core_active && isset( $_GET['yoohw_cos_blacklist_synced'] ) ) {
+			$created = absint( wp_unslash( $_GET['yoohw_cos_blacklist_synced'] ) );
+			$scanned = isset( $_GET['yoohw_cos_blacklist_scanned'] ) ? absint( wp_unslash( $_GET['yoohw_cos_blacklist_scanned'] ) ) : 0;
+			$skipped = isset( $_GET['yoohw_cos_blacklist_skipped'] ) ? absint( wp_unslash( $_GET['yoohw_cos_blacklist_skipped'] ) ) : 0;
+			$stage   = isset( $_GET['yoohw_cos_blacklist_batch_stage'] ) ? sanitize_key( wp_unslash( $_GET['yoohw_cos_blacklist_batch_stage'] ) ) : 'core';
+			$more    = ! empty( $_GET['yoohw_cos_blacklist_sync_more'] );
+
+			echo '<div class="notice notice-success is-dismissible"><p>';
+			printf(
+				/* translators: 1: created event count, 2: scanned source row count, 3: skipped source row count, 4: current backfill stage. */
+				esc_html__( 'Blacklist Manager signals synced. %1$s events created from %2$s scanned rows; %3$s rows skipped or already synced. Stage: %4$s.', 'yoohw-customer-intelligence' ),
+				esc_html( number_format_i18n( $created ) ),
+				esc_html( number_format_i18n( $scanned ) ),
+				esc_html( number_format_i18n( $skipped ) ),
+				esc_html( self::format_blacklist_sync_stage_label( $stage ) )
+			);
+			echo '</p></div>';
+
+			if ( ! $more ) {
+				echo '<div class="notice notice-info is-dismissible"><p>';
+				echo esc_html__( 'No more Blacklist Manager rows found. Signal sync appears to be complete.', 'yoohw-customer-intelligence' );
+				echo '</p></div>';
+			}
+		}
+
+		if ( ! empty( $_GET['yoohw_cos_scoring_settings_saved'] ) ) {
+			echo '<div class="notice notice-success is-dismissible"><p>';
+			echo esc_html__( 'Customer scoring settings saved.', 'yoohw-customer-intelligence' );
+			echo ' <a href="' . esc_url( admin_url( 'admin.php?page=yoohw-customer-intelligence-settings#yoohw-cos-recalculate-intelligence' ) ) . '">' . esc_html__( 'Recalculate intelligence', 'yoohw-customer-intelligence' ) . '</a>';
+			echo '</p></div>';
+		}
+
+		if ( self::is_loyalty_integration_active() && ! empty( $_GET['yoohw_cos_loyalty_task_automation_saved'] ) ) {
+			echo '<div class="notice notice-success is-dismissible"><p>';
+			echo esc_html__( 'Loyalty task automation settings saved.', 'yoohw-customer-intelligence' );
+			echo '</p></div>';
+		}
+
 		echo '<div class="postbox yoohw-cos-operations-panel">';
 		echo '<div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Operations', 'yoohw-customer-intelligence' ) . '</h2></div>';
 		echo '<div class="inside">';
@@ -2431,7 +2477,7 @@ final class YoOhw_COS_Admin_Menu {
 
 		self::render_sync_center_status( $sync_state, $has_more, $next_page, $sync_percent );
 
-		echo '<form class="yoohw-cos-sync-form yoohw-cos-operation-form" method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" data-yoohw-cos-ajax-sync="1"' . ( $sync_auto_submit ? ' data-yoohw-cos-auto-submit="1"' : '' ) . '>';
+		echo '<form class="yoohw-cos-sync-form yoohw-cos-operation-form" method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" data-yoohw-cos-ajax-sync="1" data-yoohw-cos-ajax-action="yoohw_cos_ajax_sync_customers" data-yoohw-cos-sync-page-field="sync_page" data-yoohw-cos-sync-running-text="' . esc_attr__( 'Syncing orders...', 'yoohw-customer-intelligence' ) . '" data-yoohw-cos-sync-complete-text="' . esc_attr__( 'Sync complete.', 'yoohw-customer-intelligence' ) . '"' . ( $sync_auto_submit ? ' data-yoohw-cos-auto-submit="1"' : '' ) . '>';
 		echo '<input type="hidden" name="action" value="yoohw_cos_sync_customers" />';
 		echo '<input type="hidden" name="sync_page" value="' . esc_attr( $has_more ? $next_page : 1 ) . '" />';
 		echo '<input type="hidden" name="auto_sync" value="1" />';
@@ -2460,12 +2506,13 @@ final class YoOhw_COS_Admin_Menu {
 		$recalculate_more = ! empty( $_GET['yoohw_cos_recalculate_more'] );
 		$recalculate_auto_submit = $recalculate_more && ( ! empty( $_GET['yoohw_cos_recalculate_auto'] ) || isset( $_GET['yoohw_cos_recalculated'] ) );
 
-		echo '<div class="yoohw-cos-operation-row">';
+		echo '<div id="yoohw-cos-recalculate-intelligence" class="yoohw-cos-operation-row" data-yoohw-cos-sync-container>';
 		echo '<div class="yoohw-cos-operation-row__content">';
 		echo '<h4>' . esc_html__( 'Recalculate intelligence', 'yoohw-customer-intelligence' ) . '</h4>';
-		echo '<p>' . esc_html__( 'Refresh customer status, lifecycle, VIP, risk, and trust scores for existing profiles.', 'yoohw-customer-intelligence' ) . '</p>';
+		echo '<p>' . esc_html__( 'Refresh customer status, lifecycle, value tier, risk, and trust scores for existing profiles.', 'yoohw-customer-intelligence' ) . '</p>';
+		self::render_operation_progress( __( 'Ready to recalculate.', 'yoohw-customer-intelligence' ) );
 		echo '</div>';
-		echo '<form class="yoohw-cos-recalculate-form yoohw-cos-operation-form" method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '"' . ( $recalculate_auto_submit ? ' data-yoohw-cos-auto-submit="1"' : '' ) . '>';
+		echo '<form class="yoohw-cos-recalculate-form yoohw-cos-operation-form" method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" data-yoohw-cos-ajax-sync="1" data-yoohw-cos-ajax-action="yoohw_cos_ajax_recalculate_intelligence" data-yoohw-cos-sync-page-field="recalculate_page" data-yoohw-cos-sync-running-text="' . esc_attr__( 'Recalculating intelligence...', 'yoohw-customer-intelligence' ) . '" data-yoohw-cos-sync-complete-text="' . esc_attr__( 'Recalculation complete.', 'yoohw-customer-intelligence' ) . '"' . ( $recalculate_auto_submit ? ' data-yoohw-cos-auto-submit="1"' : '' ) . '>';
 		echo '<input type="hidden" name="action" value="yoohw_cos_recalculate_intelligence" />';
 		echo '<input type="hidden" name="recalculate_page" value="' . esc_attr( $recalculate_more ? $recalculate_next : 1 ) . '" />';
 		echo '<input type="hidden" name="auto_recalculate" value="1" />';
@@ -2479,20 +2526,58 @@ final class YoOhw_COS_Admin_Menu {
 			'submit',
 			false
 		);
+		echo '<span class="spinner" data-yoohw-cos-sync-spinner></span>';
 
 		echo '</form>';
 		echo '</div>';
+
+		if ( $blacklist_core_active ) {
+			$blacklist_next = isset( $_GET['yoohw_cos_blacklist_sync_next'] ) ? absint( wp_unslash( $_GET['yoohw_cos_blacklist_sync_next'] ) ) : 1;
+			$blacklist_more = ! empty( $_GET['yoohw_cos_blacklist_sync_more'] );
+			$blacklist_stage = isset( $_GET['yoohw_cos_blacklist_sync_stage'] ) ? sanitize_key( wp_unslash( $_GET['yoohw_cos_blacklist_sync_stage'] ) ) : 'core';
+			$blacklist_auto_submit = $blacklist_more && ( ! empty( $_GET['yoohw_cos_blacklist_sync_auto'] ) || isset( $_GET['yoohw_cos_blacklist_synced'] ) );
+			$blacklist_description = $blacklist_premium_active
+				? __( 'Backfill core blacklist signals, then premium risk signals from the active Premium license.', 'yoohw-customer-intelligence' )
+				: __( 'Backfill core Blacklist Manager signals.', 'yoohw-customer-intelligence' );
+
+			echo '<div class="yoohw-cos-operation-row" data-yoohw-cos-sync-container>';
+			echo '<div class="yoohw-cos-operation-row__content">';
+			echo '<h4>' . esc_html__( 'Sync Blacklist Manager signals', 'yoohw-customer-intelligence' ) . '</h4>';
+			echo '<p>' . esc_html( $blacklist_description ) . '</p>';
+			self::render_operation_progress( __( 'Ready to sync signals.', 'yoohw-customer-intelligence' ) );
+			echo '</div>';
+			echo '<form class="yoohw-cos-blacklist-sync-form yoohw-cos-operation-form" method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" data-yoohw-cos-ajax-sync="1" data-yoohw-cos-ajax-action="yoohw_cos_ajax_sync_blacklist_signals" data-yoohw-cos-sync-page-field="blacklist_sync_page" data-yoohw-cos-sync-stage-field="blacklist_sync_stage" data-yoohw-cos-sync-running-text="' . esc_attr__( 'Syncing Blacklist Manager signals...', 'yoohw-customer-intelligence' ) . '" data-yoohw-cos-sync-complete-text="' . esc_attr__( 'Signal sync complete.', 'yoohw-customer-intelligence' ) . '"' . ( $blacklist_auto_submit ? ' data-yoohw-cos-auto-submit="1"' : '' ) . '>';
+			echo '<input type="hidden" name="action" value="yoohw_cos_sync_blacklist_signals" />';
+			echo '<input type="hidden" name="blacklist_sync_page" value="' . esc_attr( $blacklist_more ? $blacklist_next : 1 ) . '" />';
+			echo '<input type="hidden" name="blacklist_sync_stage" value="' . esc_attr( $blacklist_more ? $blacklist_stage : 'core' ) . '" />';
+			echo '<input type="hidden" name="auto_blacklist_sync" value="1" />';
+			wp_nonce_field( 'yoohw_cos_sync_blacklist_signals' );
+
+			submit_button(
+				$blacklist_more
+					? __( 'Continue signal sync', 'yoohw-customer-intelligence' )
+					: __( 'Sync Blacklist signals', 'yoohw-customer-intelligence' ),
+				'secondary',
+				'submit',
+				false
+			);
+			echo '<span class="spinner" data-yoohw-cos-sync-spinner></span>';
+
+			echo '</form>';
+			echo '</div>';
+		}
 
 		$backfill_next = isset( $_GET['yoohw_cos_backfill_next'] ) ? absint( wp_unslash( $_GET['yoohw_cos_backfill_next'] ) ) : 1;
 		$backfill_more = ! empty( $_GET['yoohw_cos_backfill_more'] );
 		$backfill_auto_submit = $backfill_more && ( ! empty( $_GET['yoohw_cos_backfill_auto'] ) || isset( $_GET['yoohw_cos_backfilled'] ) );
 
-		echo '<div class="yoohw-cos-operation-row">';
+		echo '<div class="yoohw-cos-operation-row" data-yoohw-cos-sync-container>';
 		echo '<div class="yoohw-cos-operation-row__content">';
 		echo '<h4>' . esc_html__( 'Backfill first order data', 'yoohw-customer-intelligence' ) . '</h4>';
 		echo '<p>' . esc_html__( 'Populate first order ID and first order date for customer profiles that are missing acquisition data.', 'yoohw-customer-intelligence' ) . '</p>';
+		self::render_operation_progress( __( 'Ready to backfill.', 'yoohw-customer-intelligence' ) );
 		echo '</div>';
-		echo '<form class="yoohw-cos-backfill-form yoohw-cos-operation-form" method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '"' . ( $backfill_auto_submit ? ' data-yoohw-cos-auto-submit="1"' : '' ) . '>';
+		echo '<form class="yoohw-cos-backfill-form yoohw-cos-operation-form" method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" data-yoohw-cos-ajax-sync="1" data-yoohw-cos-ajax-action="yoohw_cos_ajax_backfill_first_orders" data-yoohw-cos-sync-page-field="backfill_page" data-yoohw-cos-sync-running-text="' . esc_attr__( 'Backfilling first order data...', 'yoohw-customer-intelligence' ) . '" data-yoohw-cos-sync-complete-text="' . esc_attr__( 'First order backfill complete.', 'yoohw-customer-intelligence' ) . '"' . ( $backfill_auto_submit ? ' data-yoohw-cos-auto-submit="1"' : '' ) . '>';
 		echo '<input type="hidden" name="action" value="yoohw_cos_backfill_first_orders" />';
 		echo '<input type="hidden" name="backfill_page" value="' . esc_attr( $backfill_more ? $backfill_next : 1 ) . '" />';
 		echo '<input type="hidden" name="auto_backfill" value="1" />';
@@ -2506,6 +2591,7 @@ final class YoOhw_COS_Admin_Menu {
 			'submit',
 			false
 		);
+		echo '<span class="spinner" data-yoohw-cos-sync-spinner></span>';
 
 		echo '</form>';
 		echo '</div>';
@@ -2531,8 +2617,267 @@ final class YoOhw_COS_Admin_Menu {
 		echo '</div>';
 		echo '</div>';
 		echo '</div>';
+		echo '</div>';
+
+		self::render_customer_scoring_settings_panel();
+		self::render_loyalty_task_automation_panel();
 
 		echo '</div>';
+	}
+
+	private static function render_customer_scoring_settings_panel(): void {
+		if (
+			! class_exists( 'YoOhw_COS_Intelligence' )
+			|| ! is_callable( array( 'YoOhw_COS_Intelligence', 'get_scoring_settings' ) )
+		) {
+			return;
+		}
+
+		$settings = YoOhw_COS_Intelligence::get_scoring_settings();
+		$tiers    = $settings['value_tiers'];
+		$lifecycle = $settings['lifecycle'];
+		$status   = $settings['customer_status'];
+
+		echo '<div class="postbox yoohw-cos-settings-panel yoohw-cos-scoring-settings-panel">';
+		echo '<div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Customer scoring', 'yoohw-customer-intelligence' ) . '</h2></div>';
+		echo '<div class="inside">';
+		echo '<p>' . esc_html__( 'Configure the thresholds used to classify customer status, value tier, and lifecycle stage.', 'yoohw-customer-intelligence' ) . '</p>';
+		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+		echo '<input type="hidden" name="action" value="yoohw_cos_save_scoring_settings" />';
+
+		wp_nonce_field( 'yoohw_cos_save_scoring_settings' );
+
+		echo '<h3>' . esc_html__( 'Value tiers', 'yoohw-customer-intelligence' ) . '</h3>';
+		echo '<table class="widefat striped yoohw-cos-scoring-table"><thead><tr>';
+		echo '<th>' . esc_html__( 'Tier', 'yoohw-customer-intelligence' ) . '</th>';
+		echo '<th>' . esc_html__( 'Minimum spent', 'yoohw-customer-intelligence' ) . '</th>';
+		echo '<th>' . esc_html__( 'Minimum orders', 'yoohw-customer-intelligence' ) . '</th>';
+		echo '</tr></thead><tbody>';
+		self::render_scoring_threshold_row(
+			__( 'High value', 'yoohw-customer-intelligence' ),
+			self::render_scoring_input( 'value_tiers', 'high_value_spent', $tiers['high_value_spent'], '0.01' ),
+			self::render_scoring_input( 'value_tiers', 'high_value_orders', $tiers['high_value_orders'] )
+		);
+		self::render_scoring_threshold_row(
+			__( 'Very high value', 'yoohw-customer-intelligence' ),
+			self::render_scoring_input( 'value_tiers', 'very_high_value_spent', $tiers['very_high_value_spent'], '0.01' ),
+			self::render_scoring_input( 'value_tiers', 'very_high_value_orders', $tiers['very_high_value_orders'] )
+		);
+		self::render_scoring_threshold_row(
+			__( 'Top customer', 'yoohw-customer-intelligence' ),
+			self::render_scoring_input( 'value_tiers', 'top_customer_spent', $tiers['top_customer_spent'], '0.01' ),
+			self::render_scoring_input( 'value_tiers', 'top_customer_orders', $tiers['top_customer_orders'] )
+		);
+		echo '</tbody></table>';
+
+		echo '<h3>' . esc_html__( 'Lifecycle stage', 'yoohw-customer-intelligence' ) . '</h3>';
+		echo '<table class="form-table yoohw-cos-scoring-form-table" role="presentation"><tbody>';
+		self::render_scoring_setting_row( __( 'Repeat customer orders', 'yoohw-customer-intelligence' ), self::render_scoring_input( 'lifecycle', 'repeat_orders', $lifecycle['repeat_orders'] ) );
+		self::render_scoring_setting_row( __( 'Loyal customer spent', 'yoohw-customer-intelligence' ), self::render_scoring_input( 'lifecycle', 'loyal_spent', $lifecycle['loyal_spent'], '0.01' ) );
+		self::render_scoring_setting_row( __( 'Loyal customer orders', 'yoohw-customer-intelligence' ), self::render_scoring_input( 'lifecycle', 'loyal_orders', $lifecycle['loyal_orders'] ) );
+		self::render_scoring_setting_row( __( 'Top lifecycle spent', 'yoohw-customer-intelligence' ), self::render_scoring_input( 'lifecycle', 'top_customer_spent', $lifecycle['top_customer_spent'], '0.01' ) );
+		self::render_scoring_setting_row( __( 'Top lifecycle orders', 'yoohw-customer-intelligence' ), self::render_scoring_input( 'lifecycle', 'top_customer_orders', $lifecycle['top_customer_orders'] ) );
+		self::render_scoring_setting_row( __( 'Dormant after days', 'yoohw-customer-intelligence' ), self::render_scoring_input( 'lifecycle', 'dormant_days', $lifecycle['dormant_days'] ) );
+		echo '</tbody></table>';
+
+		echo '<h3>' . esc_html__( 'Customer status', 'yoohw-customer-intelligence' ) . '</h3>';
+		echo '<table class="form-table yoohw-cos-scoring-form-table" role="presentation"><tbody>';
+		self::render_scoring_setting_row( __( 'New through order count', 'yoohw-customer-intelligence' ), self::render_scoring_input( 'customer_status', 'new_max_orders', $status['new_max_orders'], '1', '0' ) );
+		self::render_scoring_setting_row( __( 'VIP spent threshold', 'yoohw-customer-intelligence' ), self::render_scoring_input( 'customer_status', 'vip_spent', $status['vip_spent'], '0.01' ) );
+		self::render_scoring_setting_row( __( 'VIP order threshold', 'yoohw-customer-intelligence' ), self::render_scoring_input( 'customer_status', 'vip_orders', $status['vip_orders'] ) );
+		self::render_scoring_setting_row( __( 'At risk after days', 'yoohw-customer-intelligence' ), self::render_scoring_input( 'customer_status', 'at_risk_days', $status['at_risk_days'] ) );
+		self::render_scoring_setting_row( __( 'Inactive after days', 'yoohw-customer-intelligence' ), self::render_scoring_input( 'customer_status', 'inactive_days', $status['inactive_days'] ) );
+		echo '</tbody></table>';
+
+		echo '<p class="description">' . esc_html__( 'After changing thresholds, run Recalculate intelligence so existing customer profiles use the new scoring rules.', 'yoohw-customer-intelligence' ) . '</p>';
+
+		submit_button( __( 'Save scoring settings', 'yoohw-customer-intelligence' ) );
+
+		echo '</form>';
+		echo '</div>';
+		echo '</div>';
+	}
+
+	private static function render_scoring_threshold_row( string $label, string $spent_input, string $orders_input ): void {
+		echo '<tr>';
+		echo '<th scope="row">' . esc_html( $label ) . '</th>';
+		echo '<td>' . $spent_input . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Inputs are built by render_scoring_input().
+		echo '<td>' . $orders_input . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Inputs are built by render_scoring_input().
+		echo '</tr>';
+	}
+
+	private static function render_scoring_setting_row( string $label, string $input ): void {
+		echo '<tr>';
+		echo '<th scope="row">' . esc_html( $label ) . '</th>';
+		echo '<td>' . $input . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Inputs are built by render_scoring_input().
+		echo '</tr>';
+	}
+
+	private static function render_scoring_input( string $group, string $key, $value, string $step = '1', string $min = '1' ): string {
+		$is_decimal = false !== strpos( $step, '.' );
+		$min        = $is_decimal && '1' === $min ? '0' : $min;
+		$value_attr = $is_decimal
+			? self::format_scoring_amount_input_value( (float) $value )
+			: (string) absint( $value );
+
+		return sprintf(
+			'<input class="small-text yoohw-cos-scoring-input" type="number" min="%1$s" step="%2$s" name="scoring[%3$s][%4$s]" value="%5$s" />',
+			esc_attr( $min ),
+			esc_attr( $step ),
+			esc_attr( $group ),
+			esc_attr( $key ),
+			esc_attr( $value_attr )
+		);
+	}
+
+	private static function format_scoring_amount_input_value( float $value ): string {
+		$formatted = rtrim( rtrim( number_format( $value, 2, '.', '' ), '0' ), '.' );
+
+		return '' === $formatted ? '0' : $formatted;
+	}
+
+	private static function render_loyalty_task_automation_panel(): void {
+		if (
+			! class_exists( 'YoOhw_COS_Loyalty_Integration' )
+			|| ! is_callable( array( 'YoOhw_COS_Loyalty_Integration', 'is_loyalty_plugin_active' ) )
+			|| ! YoOhw_COS_Loyalty_Integration::is_loyalty_plugin_active()
+			|| ! is_callable( array( 'YoOhw_COS_Loyalty_Integration', 'get_task_automation_settings' ) )
+			|| ! is_callable( array( 'YoOhw_COS_Loyalty_Integration', 'get_configured_loyalty_roles' ) )
+		) {
+			return;
+		}
+
+		$settings = YoOhw_COS_Loyalty_Integration::get_task_automation_settings();
+		$roles    = YoOhw_COS_Loyalty_Integration::get_configured_loyalty_roles();
+		$assignees = class_exists( 'YoOhw_COS_Tasks' ) && is_callable( array( 'YoOhw_COS_Tasks', 'get_assignable_users' ) )
+			? YoOhw_COS_Tasks::get_assignable_users()
+			: array();
+
+		echo '<div class="postbox yoohw-cos-settings-panel yoohw-cos-loyalty-task-automation-panel">';
+		echo '<div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Loyalty task automation', 'yoohw-customer-intelligence' ) . '</h2></div>';
+		echo '<div class="inside">';
+		echo '<p>' . esc_html__( 'Create follow-up tasks from loyalty signals such as high-value level changes, large redemptions, and negative balances.', 'yoohw-customer-intelligence' ) . '</p>';
+		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+		echo '<input type="hidden" name="action" value="yoohw_cos_save_loyalty_task_automation" />';
+
+		wp_nonce_field( 'yoohw_cos_save_loyalty_task_automation' );
+
+		echo '<table class="form-table" role="presentation"><tbody>';
+		echo '<tr>';
+		echo '<th scope="row">' . esc_html__( 'Automation', 'yoohw-customer-intelligence' ) . '</th>';
+		echo '<td><label><input type="checkbox" name="enabled" value="yes" ' . checked( 'yes', $settings['enabled'] ?? 'no', false ) . ' /> ' . esc_html__( 'Enable loyalty task automation', 'yoohw-customer-intelligence' ) . '</label></td>';
+		echo '</tr>';
+
+		echo '<tr>';
+		echo '<th scope="row">' . esc_html__( 'Value tier level-up', 'yoohw-customer-intelligence' ) . '</th>';
+		echo '<td>';
+		echo '<label><input type="checkbox" name="vip_level_up_enabled" value="yes" ' . checked( 'yes', $settings['vip_level_up_enabled'] ?? 'no', false ) . ' /> ' . esc_html__( 'Create a high-priority task when a customer reaches selected loyalty levels', 'yoohw-customer-intelligence' ) . '</label>';
+		self::render_loyalty_task_level_select( $roles, (array) ( $settings['vip_levels'] ?? array() ) );
+		echo '</td>';
+		echo '</tr>';
+
+		echo '<tr>';
+		echo '<th scope="row">' . esc_html__( 'Downgrade or reset', 'yoohw-customer-intelligence' ) . '</th>';
+		echo '<td><label><input type="checkbox" name="downgrade_enabled" value="yes" ' . checked( 'yes', $settings['downgrade_enabled'] ?? 'no', false ) . ' /> ' . esc_html__( 'Create a task when a loyalty level moves down or is reset', 'yoohw-customer-intelligence' ) . '</label></td>';
+		echo '</tr>';
+
+		echo '<tr>';
+		echo '<th scope="row">' . esc_html__( 'Large redemption', 'yoohw-customer-intelligence' ) . '</th>';
+		echo '<td>';
+		echo '<label><input type="checkbox" name="large_redemption_enabled" value="yes" ' . checked( 'yes', $settings['large_redemption_enabled'] ?? 'no', false ) . ' /> ' . esc_html__( 'Create a task when redeemed points reach this threshold', 'yoohw-customer-intelligence' ) . '</label>';
+		echo '<br /><input class="small-text" type="number" min="1" step="1" name="large_redemption_points" value="' . esc_attr( absint( $settings['large_redemption_points'] ?? 500 ) ) . '" /> ';
+		echo esc_html__( 'points', 'yoohw-customer-intelligence' );
+		echo '</td>';
+		echo '</tr>';
+
+		echo '<tr>';
+		echo '<th scope="row">' . esc_html__( 'Negative balance', 'yoohw-customer-intelligence' ) . '</th>';
+		echo '<td><label><input type="checkbox" name="negative_balance_enabled" value="yes" ' . checked( 'yes', $settings['negative_balance_enabled'] ?? 'no', false ) . ' /> ' . esc_html__( 'Create an urgent task when available points become negative', 'yoohw-customer-intelligence' ) . '</label></td>';
+		echo '</tr>';
+
+		echo '<tr>';
+		echo '<th scope="row">' . esc_html__( 'Dormant with points', 'yoohw-customer-intelligence' ) . '</th>';
+		echo '<td>';
+		echo '<label><input type="checkbox" name="dormant_points_enabled" value="yes" ' . checked( 'yes', $settings['dormant_points_enabled'] ?? 'no', false ) . ' /> ' . esc_html__( 'Create a task when recalculation finds a dormant registered customer above this points threshold', 'yoohw-customer-intelligence' ) . '</label>';
+		echo '<br /><input class="small-text" type="number" min="1" step="1" name="dormant_points_threshold" value="' . esc_attr( absint( $settings['dormant_points_threshold'] ?? 500 ) ) . '" /> ';
+		echo esc_html__( 'available points', 'yoohw-customer-intelligence' );
+		echo '</td>';
+		echo '</tr>';
+
+		echo '<tr>';
+		echo '<th scope="row">' . esc_html__( 'Reconciliation issues', 'yoohw-customer-intelligence' ) . '</th>';
+		echo '<td>';
+		echo '<label><input type="checkbox" name="reconciliation_enabled" value="yes" ' . checked( 'yes', $settings['reconciliation_enabled'] ?? 'no', false ) . ' /> ' . esc_html__( 'Create idempotent tasks when Loyalty points reconciliation finds user-level issues', 'yoohw-customer-intelligence' ) . '</label>';
+		echo '<p class="description">' . esc_html__( 'Disabled by default because large scans can surface many affected users.', 'yoohw-customer-intelligence' ) . '</p>';
+		echo '</td>';
+		echo '</tr>';
+
+		echo '<tr>';
+		echo '<th scope="row">' . esc_html__( 'Default assignee', 'yoohw-customer-intelligence' ) . '</th>';
+		echo '<td>';
+		echo '<select name="assigned_user_id" class="wc-enhanced-select" style="min-width: 260px;">';
+		echo '<option value="0">' . esc_html__( 'Unassigned', 'yoohw-customer-intelligence' ) . '</option>';
+
+		foreach ( $assignees as $assignee ) {
+			$user_id = absint( $assignee->ID ?? 0 );
+
+			if ( $user_id <= 0 ) {
+				continue;
+			}
+
+			echo '<option value="' . esc_attr( $user_id ) . '" ' . selected( $user_id, absint( $settings['assigned_user_id'] ?? 0 ), false ) . '>' . esc_html( $assignee->display_name ?: sprintf(
+				/* translators: %d: user ID. */
+				__( 'User #%d', 'yoohw-customer-intelligence' ),
+				$user_id
+			) ) . '</option>';
+		}
+
+		echo '</select>';
+		echo '</td>';
+		echo '</tr>';
+
+		echo '<tr>';
+		echo '<th scope="row">' . esc_html__( 'Due date', 'yoohw-customer-intelligence' ) . '</th>';
+		echo '<td><input class="small-text" type="number" min="0" max="30" step="1" name="due_days" value="' . esc_attr( absint( $settings['due_days'] ?? 1 ) ) . '" /> ';
+		echo esc_html__( 'days after the signal', 'yoohw-customer-intelligence' );
+		echo '</td>';
+		echo '</tr>';
+		echo '</tbody></table>';
+
+		submit_button( __( 'Save loyalty automation', 'yoohw-customer-intelligence' ) );
+
+		echo '</form>';
+		echo '</div>';
+		echo '</div>';
+	}
+
+	private static function render_loyalty_task_level_select( array $roles, array $selected_roles ): void {
+		$roles          = array_values( array_filter( array_map( 'sanitize_key', $roles ) ) );
+		$selected_roles = array_values( array_filter( array_map( 'sanitize_key', $selected_roles ) ) );
+
+		if ( empty( $roles ) ) {
+			echo '<p class="description">' . esc_html__( 'No loyalty levels are configured yet.', 'yoohw-customer-intelligence' ) . '</p>';
+			return;
+		}
+
+		echo '<p>';
+		echo '<select name="vip_levels[]" class="wc-enhanced-select" multiple="multiple" style="min-width: 320px;">';
+
+		foreach ( $roles as $role ) {
+			echo '<option value="' . esc_attr( $role ) . '" ' . selected( in_array( $role, $selected_roles, true ), true, false ) . '>';
+
+			if ( is_callable( array( 'YoOhw_COS_Loyalty_Integration', 'format_role_label' ) ) ) {
+				echo esc_html( YoOhw_COS_Loyalty_Integration::format_role_label( $role ) );
+			} else {
+				echo esc_html( ucwords( str_replace( array( '-', '_' ), ' ', $role ) ) );
+			}
+
+			echo '</option>';
+		}
+
+		echo '</select>';
+		echo '</p>';
+		echo '<p class="description">' . esc_html__( 'Use this only for meaningful high-value tiers, not every loyalty level.', 'yoohw-customer-intelligence' ) . '</p>';
 	}
 
 	private static function get_sync_state(): array {
@@ -2804,6 +3149,25 @@ final class YoOhw_COS_Admin_Menu {
 		self::render_status_table_row( __( 'Resume page', 'yoohw-customer-intelligence' ), '<span class="yoohw-cos-sync-resume-page">' . ( $has_more ? esc_html( number_format_i18n( $next_page ) ) : '&mdash;' ) . '</span>' );
 		self::render_status_table_row( __( 'Last sync run', 'yoohw-customer-intelligence' ), YoOhw_COS_DB::format_admin_date( $sync_state['last_run_at'], '&mdash;' ) );
 		echo '</tbody></table>';
+	}
+
+	private static function render_operation_progress( string $message ): void {
+		echo '<div class="yoohw-cos-sync-progress yoohw-cos-sync-progress--inline" data-yoohw-cos-sync-progress hidden aria-live="polite">';
+		echo '<div class="yoohw-cos-progress-header">';
+		echo '<span data-yoohw-cos-sync-message>' . esc_html( $message ) . '</span>';
+		echo '<strong data-yoohw-cos-sync-percent>0%</strong>';
+		echo '</div>';
+		echo '<div class="yoohw-cos-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" data-yoohw-cos-progress-track>';
+		echo '<span class="yoohw-cos-progress-bar" data-yoohw-cos-progress-bar style="width:0%;"></span>';
+		echo '</div>';
+		echo '<div class="yoohw-cos-progress-counts">';
+		echo '<span>' . esc_html__( 'Scanned:', 'yoohw-customer-intelligence' ) . ' <strong class="yoohw-cos-sync-total-scanned">0</strong></span>';
+		echo '<span>' . esc_html__( 'Processed:', 'yoohw-customer-intelligence' ) . ' <strong class="yoohw-cos-sync-total-processed">0</strong></span>';
+		echo '<span>' . esc_html__( 'Skipped:', 'yoohw-customer-intelligence' ) . ' <strong class="yoohw-cos-sync-total-skipped">0</strong></span>';
+		echo '<span>' . esc_html__( 'Total:', 'yoohw-customer-intelligence' ) . ' <strong class="yoohw-cos-sync-total-items">&mdash;</strong></span>';
+		echo '<span>' . esc_html__( 'Stage:', 'yoohw-customer-intelligence' ) . ' <strong class="yoohw-cos-sync-stage">&mdash;</strong></span>';
+		echo '</div>';
+		echo '</div>';
 	}
 
 	private static function render_status_table_row( string $label, string $value ): void {
@@ -3105,6 +3469,17 @@ final class YoOhw_COS_Admin_Menu {
 
 		$labels = array(
 			'bulk_customer_action' => __( 'Bulk action', 'yoohw-customer-intelligence' ),
+			'blacklist_blocked'    => __( 'Blacklist blocked', 'yoohw-customer-intelligence' ),
+			'blacklist_match_detected' => __( 'Blacklist match', 'yoohw-customer-intelligence' ),
+			'blacklist_removed'    => __( 'Blacklist cleared', 'yoohw-customer-intelligence' ),
+			'blacklist_suspect'    => __( 'Blacklist suspect', 'yoohw-customer-intelligence' ),
+			'premium_order_risk_scored' => __( 'Premium order risk scored', 'yoohw-customer-intelligence' ),
+			'premium_risk_rule_matched' => __( 'Premium risk rule matched', 'yoohw-customer-intelligence' ),
+			'premium_antibot_blocked' => __( 'Premium anti-bot blocked', 'yoohw-customer-intelligence' ),
+			'premium_antibot_would_block' => __( 'Premium anti-bot challenge', 'yoohw-customer-intelligence' ),
+			'premium_payment_abuse_detected' => __( 'Premium payment abuse', 'yoohw-customer-intelligence' ),
+			'premium_device_signal_detected' => __( 'Premium device signal', 'yoohw-customer-intelligence' ),
+			'premium_gateway_fraud_signal' => __( 'Premium gateway fraud signal', 'yoohw-customer-intelligence' ),
 			'note_added'           => __( 'Note added', 'yoohw-customer-intelligence' ),
 			'note_deleted'         => __( 'Note deleted', 'yoohw-customer-intelligence' ),
 			'note_updated'         => __( 'Note updated', 'yoohw-customer-intelligence' ),
@@ -3122,6 +3497,22 @@ final class YoOhw_COS_Admin_Menu {
 		}
 
 		return ucwords( str_replace( '_', ' ', $event_type ) );
+	}
+
+	private static function format_blacklist_sync_stage_label( string $stage ): string {
+		$stage = sanitize_key( $stage );
+
+		$labels = array(
+			'complete'              => __( 'Complete', 'yoohw-customer-intelligence' ),
+			'core'                  => __( 'Core blacklist', 'yoohw-customer-intelligence' ),
+			'core_unavailable'      => __( 'Core unavailable', 'yoohw-customer-intelligence' ),
+			'detection_log'         => __( 'Premium detection log', 'yoohw-customer-intelligence' ),
+			'orders'                => __( 'Premium order risk', 'yoohw-customer-intelligence' ),
+			'payment_abuse'         => __( 'Premium payment abuse', 'yoohw-customer-intelligence' ),
+			'premium_unavailable'   => __( 'Premium unavailable', 'yoohw-customer-intelligence' ),
+		);
+
+		return $labels[ $stage ] ?? ucwords( str_replace( '_', ' ', $stage ) );
 	}
 
 	private static function get_event_severity_type( string $severity ): string {
@@ -3195,6 +3586,10 @@ final class YoOhw_COS_Admin_Menu {
 			'order',
 		);
 
+		if ( self::is_loyalty_integration_active() ) {
+			$preserve_keys[] = 'loyalty_level';
+		}
+
 		foreach ( $preserve_keys as $key ) {
 			if ( ! isset( $source[ $key ] ) || '' === $source[ $key ] ) {
 				continue;
@@ -3212,5 +3607,24 @@ final class YoOhw_COS_Admin_Menu {
 		}
 
 		return $args;
+	}
+
+	private static function is_loyalty_integration_active(): bool {
+		return class_exists( 'YoOhw_COS_Loyalty_Integration' )
+			&& is_callable( array( 'YoOhw_COS_Loyalty_Integration', 'is_loyalty_plugin_active' ) )
+			&& YoOhw_COS_Loyalty_Integration::is_loyalty_plugin_active();
+	}
+
+	private static function is_blacklist_manager_integration_active(): bool {
+		return class_exists( 'YoOhw_COS_Blacklist_Manager_Integration' )
+			&& is_callable( array( 'YoOhw_COS_Blacklist_Manager_Integration', 'is_active' ) )
+			&& YoOhw_COS_Blacklist_Manager_Integration::is_active();
+	}
+
+	private static function is_blacklist_manager_premium_integration_active(): bool {
+		return self::is_blacklist_manager_integration_active()
+			&& class_exists( 'YoOhw_COS_Blacklist_Manager_Premium_Integration' )
+			&& is_callable( array( 'YoOhw_COS_Blacklist_Manager_Premium_Integration', 'is_active' ) )
+			&& YoOhw_COS_Blacklist_Manager_Premium_Integration::is_active();
 	}
 }

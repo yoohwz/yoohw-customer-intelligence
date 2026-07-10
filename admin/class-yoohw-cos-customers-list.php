@@ -24,7 +24,7 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 	}
 
 	public function get_columns(): array {
-		return array(
+		$columns = array(
 			'cb'                 => '<input type="checkbox" />',
 			'customer'           => __( 'Customer', 'yoohw-customer-intelligence' ),
 			'contact'            => __( 'Contact', 'yoohw-customer-intelligence' ),
@@ -33,6 +33,17 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 			'health'             => __( 'Health', 'yoohw-customer-intelligence' ),
 			'last_activity_date' => __( 'Last active', 'yoohw-customer-intelligence' ),
 		);
+
+		if ( self::is_loyalty_integration_active() ) {
+			$columns = self::insert_column_before(
+				$columns,
+				'last_activity_date',
+				'loyalty_level',
+				__( 'Loyalty', 'yoohw-customer-intelligence' )
+			);
+		}
+
+		return $columns;
 	}
 
 	public function column_cb( $item ): string {
@@ -59,11 +70,17 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 	}
 
 	protected function get_sortable_columns(): array {
-		return array(
+		$columns = array(
 			'commerce'           => array( 'total_spent', false ),
 			'health'             => array( 'risk_score', false ),
 			'last_activity_date' => array( 'last_activity_date', true ),
 		);
+
+		if ( self::is_loyalty_integration_active() ) {
+			$columns['loyalty_level'] = array( 'loyalty_level', false );
+		}
+
+		return $columns;
 	}
 
 	public function prepare_items(): void {
@@ -107,6 +124,9 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 
 			case 'health':
 				return $this->format_health( $item );
+
+			case 'loyalty_level':
+				return $this->format_loyalty_level_badge( $item );
 
 			case 'last_activity_date':
 				return $this->format_date( $item[ $column_name ] ?? '' );
@@ -173,7 +193,13 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 			return;
 		}
 
-		if ( YoOhw_COS_Admin_UI::has_request_filters( array( 's', 'customer_status', 'customer_tag', 'customer_segment', 'vip_status', 'risk_level', 'lifecycle_stage' ) ) ) {
+		$filter_keys = array( 's', 'customer_status', 'customer_tag', 'customer_segment', 'vip_status', 'risk_level', 'lifecycle_stage' );
+
+		if ( self::is_loyalty_integration_active() ) {
+			$filter_keys[] = 'loyalty_level';
+		}
+
+		if ( YoOhw_COS_Admin_UI::has_request_filters( $filter_keys ) ) {
 			YoOhw_COS_Admin_UI::render_empty_state(
 				__( 'No customers match the current filters.', 'yoohw-customer-intelligence' ),
 				__( 'Adjust the filters or clear the search to broaden the list.', 'yoohw-customer-intelligence' )
@@ -466,12 +492,9 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 
 		$current_vip = isset( $_GET['vip_status'] ) ? sanitize_key( wp_unslash( $_GET['vip_status'] ) ) : '';
 
-		$vip_statuses = array(
-			''         => __( 'All VIP levels', 'yoohw-customer-intelligence' ),
-			'none'     => __( 'No VIP', 'yoohw-customer-intelligence' ),
-			'silver'   => __( 'Silver', 'yoohw-customer-intelligence' ),
-			'gold'     => __( 'Gold', 'yoohw-customer-intelligence' ),
-			'platinum' => __( 'Platinum', 'yoohw-customer-intelligence' ),
+		$vip_statuses = array_merge(
+			array( '' => __( 'All value tiers', 'yoohw-customer-intelligence' ) ),
+			YoOhw_COS_Intelligence::get_value_tier_labels()
 		);
 
 		echo '<select name="vip_status">';
@@ -499,6 +522,19 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 			echo '</option>';
 		}
 		echo '</select>';
+
+		if ( self::is_loyalty_integration_active() ) {
+			$current_loyalty_level = isset( $_GET['loyalty_level'] ) ? sanitize_key( wp_unslash( $_GET['loyalty_level'] ) ) : '';
+			$loyalty_levels        = $this->get_loyalty_level_filter_options( $current_loyalty_level );
+
+			echo '<select name="loyalty_level">';
+			foreach ( $loyalty_levels as $level_key => $level_label ) {
+				echo '<option value="' . esc_attr( $level_key ) . '" ' . selected( $current_loyalty_level, $level_key, false ) . '>';
+				echo esc_html( $level_label );
+				echo '</option>';
+			}
+			echo '</select>';
+		}
 
 		$current_lifecycle = isset( $_GET['lifecycle_stage'] ) ? sanitize_key( wp_unslash( $_GET['lifecycle_stage'] ) ) : '';
 
@@ -655,16 +691,10 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 	}
 
 	private function format_vip_badge( string $vip_status ): string {
-		$labels = array(
-			'none'     => __( 'None', 'yoohw-customer-intelligence' ),
-			'silver'   => __( 'Silver', 'yoohw-customer-intelligence' ),
-			'gold'     => __( 'Gold', 'yoohw-customer-intelligence' ),
-			'platinum' => __( 'Platinum', 'yoohw-customer-intelligence' ),
-		);
+		$label = YoOhw_COS_Intelligence::get_value_tier_label( $vip_status );
+		$class = YoOhw_COS_Intelligence::get_value_tier_badge_class( $vip_status );
 
-		$label = $labels[ $vip_status ] ?? ucfirst( $vip_status );
-
-		return '<span class="yoohw-cos-badge yoohw-cos-badge--vip-' . esc_attr( sanitize_html_class( $vip_status ) ) . '">' . esc_html( $label ) . '</span>';
+		return '<span class="yoohw-cos-badge yoohw-cos-badge--value-tier-' . esc_attr( $class ) . '">' . esc_html( $label ) . '</span>';
 	}
 
 	private function format_risk_badge( float $risk_score ): string {
@@ -678,6 +708,146 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 		);
 
 		return '<span class="yoohw-cos-badge yoohw-cos-badge--risk-' . esc_attr( sanitize_html_class( $level ) ) . '">' . esc_html( $labels[ $level ] ?? $level ) . ' · ' . esc_html( number_format_i18n( $risk_score, 0 ) ) . '</span>';
+	}
+
+	private function format_loyalty_level_badge( array $item ): string {
+		$level = $this->get_loyalty_level_for_display( $item );
+
+		if ( '' === $level ) {
+			return '&mdash;';
+		}
+
+		$style      = $this->get_loyalty_level_badge_style( $level );
+		$style_attr = '' !== $style ? ' style="' . esc_attr( $style ) . '"' : '';
+
+		return '<span class="yoohw-cos-badge yoohw-cos-badge--loyalty-level yoohw-cos-badge--loyalty-level-' . esc_attr( sanitize_html_class( $level ) ) . '"' . $style_attr . '>' . esc_html( $this->format_loyalty_level_label( $level ) ) . '</span>';
+	}
+
+	private function get_loyalty_level_badge_style( string $level ): string {
+		if (
+			class_exists( 'YoOhw_COS_Loyalty_Integration' )
+			&& is_callable( array( 'YoOhw_COS_Loyalty_Integration', 'is_loyalty_plugin_active' ) )
+			&& YoOhw_COS_Loyalty_Integration::is_loyalty_plugin_active()
+			&& is_callable( array( 'YoOhw_COS_Loyalty_Integration', 'get_loyalty_level_badge_style' ) )
+		) {
+			return YoOhw_COS_Loyalty_Integration::get_loyalty_level_badge_style( $level );
+		}
+
+		return '';
+	}
+
+	private function get_loyalty_level_for_display( array $item ): string {
+		if ( ! self::is_loyalty_integration_active() ) {
+			return '';
+		}
+
+		$level   = sanitize_key( (string) ( $item['loyalty_level'] ?? '' ) );
+		$user_id = absint( $item['wp_user_id'] ?? 0 );
+
+		if (
+			$user_id > 0
+			&& class_exists( 'YoOhw_COS_Loyalty_Integration' )
+			&& is_callable( array( 'YoOhw_COS_Loyalty_Integration', 'get_user_loyalty_customer_data' ) )
+		) {
+			$loyalty_data = YoOhw_COS_Loyalty_Integration::get_user_loyalty_customer_data( $user_id );
+			$live_level   = sanitize_key( (string) ( $loyalty_data['loyalty_level'] ?? '' ) );
+
+			if ( '' !== $live_level ) {
+				$level = $live_level;
+			}
+		}
+
+		return $level;
+	}
+
+	private function get_loyalty_level_filter_options( string $current_level = '' ): array {
+		global $wpdb;
+
+		if ( ! self::is_loyalty_integration_active() ) {
+			return array();
+		}
+
+		$options = array(
+			''     => __( 'All loyalty levels', 'yoohw-customer-intelligence' ),
+			'none' => __( 'No loyalty level', 'yoohw-customer-intelligence' ),
+		);
+		$levels  = array();
+
+		if ( class_exists( 'YOWCL_Helper_Roles' ) && is_callable( array( 'YOWCL_Helper_Roles', 'get_configured_loyalty_roles' ) ) ) {
+			$levels = array_merge( $levels, (array) YOWCL_Helper_Roles::get_configured_loyalty_roles() );
+		}
+
+		$rules = maybe_unserialize( get_option( 'loyalty_levels_rules', array() ) );
+		if ( is_array( $rules ) ) {
+			$levels = array_merge( $levels, array_keys( $rules ) );
+		}
+
+		$stored_levels = $wpdb->get_col(
+			$wpdb->prepare(
+				"SELECT DISTINCT loyalty_level
+				FROM %i
+				WHERE loyalty_level <> ''
+				ORDER BY loyalty_level ASC",
+				YoOhw_COS_DB::customers_table()
+			)
+		);
+		$levels = array_merge( $levels, (array) $stored_levels );
+
+		if ( '' !== $current_level && 'none' !== $current_level ) {
+			$levels[] = $current_level;
+		}
+
+		foreach ( array_values( array_unique( array_filter( array_map( 'sanitize_key', $levels ) ) ) ) as $level ) {
+			$options[ $level ] = $this->format_loyalty_level_label( $level );
+		}
+
+		return $options;
+	}
+
+	private function format_loyalty_level_label( string $level ): string {
+		$level = sanitize_key( $level );
+
+		if ( class_exists( 'YoOhw_COS_Loyalty_Integration' ) && is_callable( array( 'YoOhw_COS_Loyalty_Integration', 'format_role_label' ) ) ) {
+			return YoOhw_COS_Loyalty_Integration::format_role_label( $level );
+		}
+
+		if ( '' === $level || 'none' === $level ) {
+			return __( 'No loyalty level', 'yoohw-customer-intelligence' );
+		}
+
+		if ( function_exists( 'wp_roles' ) ) {
+			$wp_roles = wp_roles();
+
+			if ( isset( $wp_roles->roles[ $level ]['name'] ) ) {
+				return translate_user_role( $wp_roles->roles[ $level ]['name'] );
+			}
+		}
+
+		return ucwords( str_replace( array( '_', '-' ), ' ', $level ) );
+	}
+
+	private static function is_loyalty_integration_active(): bool {
+		return class_exists( 'YoOhw_COS_Loyalty_Integration' )
+			&& is_callable( array( 'YoOhw_COS_Loyalty_Integration', 'is_loyalty_plugin_active' ) )
+			&& YoOhw_COS_Loyalty_Integration::is_loyalty_plugin_active();
+	}
+
+	private static function insert_column_before( array $columns, string $before_key, string $new_key, string $new_label ): array {
+		$ordered = array();
+
+		foreach ( $columns as $key => $label ) {
+			if ( $before_key === $key ) {
+				$ordered[ $new_key ] = $new_label;
+			}
+
+			$ordered[ $key ] = $label;
+		}
+
+		if ( ! isset( $ordered[ $new_key ] ) ) {
+			$ordered[ $new_key ] = $new_label;
+		}
+
+		return $ordered;
 	}
 
 	private function format_lifecycle_badge( string $stage ): string {

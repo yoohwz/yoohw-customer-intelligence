@@ -5,6 +5,9 @@ final class YoOhw_COS_Admin_Tools {
 
 	public static function init(): void {
 		add_action( 'wp_ajax_yoohw_cos_ajax_sync_customers', array( __CLASS__, 'handle_ajax_sync_customers' ) );
+		add_action( 'wp_ajax_yoohw_cos_ajax_recalculate_intelligence', array( __CLASS__, 'handle_ajax_recalculate_intelligence' ) );
+		add_action( 'wp_ajax_yoohw_cos_ajax_backfill_first_orders', array( __CLASS__, 'handle_ajax_backfill_first_orders' ) );
+		add_action( 'wp_ajax_yoohw_cos_ajax_sync_blacklist_signals', array( __CLASS__, 'handle_ajax_sync_blacklist_signals' ) );
 		add_action( 'admin_post_yoohw_cos_sync_customers', array( __CLASS__, 'handle_sync_customers' ) );
 		add_action( 'admin_post_yoohw_cos_reset_data', array( __CLASS__, 'handle_reset_data' ) );
 		add_action( 'admin_post_yoohw_cos_assign_customer_tag', array( __CLASS__, 'handle_assign_customer_tag' ) );
@@ -14,6 +17,9 @@ final class YoOhw_COS_Admin_Tools {
 		add_action( 'admin_post_yoohw_cos_delete_customer_note', array( __CLASS__, 'handle_delete_customer_note' ) );
 		add_action( 'admin_post_yoohw_cos_recalculate_intelligence', array( __CLASS__, 'handle_recalculate_intelligence' ) );
 		add_action( 'admin_post_yoohw_cos_backfill_first_orders', array( __CLASS__, 'handle_backfill_first_orders' ) );
+		add_action( 'admin_post_yoohw_cos_sync_blacklist_signals', array( __CLASS__, 'handle_sync_blacklist_signals' ) );
+		add_action( 'admin_post_yoohw_cos_save_scoring_settings', array( __CLASS__, 'handle_save_scoring_settings' ) );
+		add_action( 'admin_post_yoohw_cos_save_loyalty_task_automation', array( __CLASS__, 'handle_save_loyalty_task_automation' ) );
 		add_action( 'admin_post_yoohw_cos_assign_customer_segment', array( __CLASS__, 'handle_assign_customer_segment' ) );
 		add_action( 'admin_post_yoohw_cos_remove_customer_segment', array( __CLASS__, 'handle_remove_customer_segment' ) );
 		add_action( 'admin_post_yoohw_cos_create_tag', array( __CLASS__, 'handle_create_tag' ) );
@@ -87,6 +93,144 @@ final class YoOhw_COS_Admin_Tools {
 				'state'     => self::format_sync_state_for_response( $state ),
 			)
 		);
+	}
+
+	public static function handle_ajax_recalculate_intelligence(): void {
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			self::send_operation_error( __( 'You do not have permission to perform this action.', 'yoohw-customer-intelligence' ), 403 );
+		}
+
+		check_ajax_referer( 'yoohw_cos_recalculate_intelligence', 'nonce' );
+
+		$page  = isset( $_POST['recalculate_page'] ) ? absint( wp_unslash( $_POST['recalculate_page'] ) ) : 1;
+		$page  = max( 1, $page );
+		$limit = 500;
+
+		$result = YoOhw_COS_Customers::recalculate_intelligence( $limit, $page );
+		$result = self::normalize_customer_operation_result( $result );
+		$state  = self::update_operation_sync_state(
+			'recalculate_intelligence',
+			$page,
+			$limit,
+			$result,
+			self::count_customer_rows(),
+			$page <= 1
+		);
+
+		self::send_operation_success( $result, $state );
+	}
+
+	public static function handle_ajax_backfill_first_orders(): void {
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			self::send_operation_error( __( 'You do not have permission to perform this action.', 'yoohw-customer-intelligence' ), 403 );
+		}
+
+		check_ajax_referer( 'yoohw_cos_backfill_first_orders', 'nonce' );
+
+		$page  = isset( $_POST['backfill_page'] ) ? absint( wp_unslash( $_POST['backfill_page'] ) ) : 1;
+		$page  = max( 1, $page );
+		$limit = 500;
+
+		$result = YoOhw_COS_Customers::backfill_first_order_data( $limit, $page );
+		$result = self::normalize_customer_operation_result( $result );
+		$state  = self::update_operation_sync_state(
+			'backfill_first_orders',
+			$page,
+			$limit,
+			$result,
+			self::count_customer_rows(),
+			$page <= 1
+		);
+
+		self::send_operation_success( $result, $state );
+	}
+
+	public static function handle_ajax_sync_blacklist_signals(): void {
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			self::send_operation_error( __( 'You do not have permission to perform this action.', 'yoohw-customer-intelligence' ), 403 );
+		}
+
+		check_ajax_referer( 'yoohw_cos_sync_blacklist_signals', 'nonce' );
+
+		if ( ! self::is_blacklist_manager_sync_available() ) {
+			self::send_operation_error( __( 'Blacklist Manager integration is not active.', 'yoohw-customer-intelligence' ), 403 );
+		}
+
+		$page  = isset( $_POST['blacklist_sync_page'] ) ? absint( wp_unslash( $_POST['blacklist_sync_page'] ) ) : 1;
+		$page  = max( 1, $page );
+		$stage = isset( $_POST['blacklist_sync_stage'] ) ? sanitize_key( wp_unslash( $_POST['blacklist_sync_stage'] ) ) : 'core';
+		$limit = 300;
+
+		$batch = self::run_blacklist_signal_sync_batch( $limit, $page, $stage );
+		$result = $batch['result'];
+		$state  = self::update_operation_sync_state(
+			'blacklist_signals',
+			$page,
+			$limit,
+			$result,
+			self::count_blacklist_sync_rows(),
+			'core' === $stage && $page <= 1
+		);
+
+		self::send_operation_success( $result, $state, $batch['next_stage'] );
+	}
+
+	public static function handle_save_loyalty_task_automation(): void {
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			wp_die( esc_html__( 'You do not have permission to perform this action.', 'yoohw-customer-intelligence' ) );
+		}
+
+		check_admin_referer( 'yoohw_cos_save_loyalty_task_automation' );
+
+		$saved = false;
+
+		if (
+			class_exists( 'YoOhw_COS_Loyalty_Integration' )
+			&& is_callable( array( 'YoOhw_COS_Loyalty_Integration', 'is_loyalty_plugin_active' ) )
+			&& YoOhw_COS_Loyalty_Integration::is_loyalty_plugin_active()
+			&& is_callable( array( 'YoOhw_COS_Loyalty_Integration', 'update_task_automation_settings' ) )
+		) {
+			YoOhw_COS_Loyalty_Integration::update_task_automation_settings( wp_unslash( $_POST ) );
+			$saved = true;
+		}
+
+		wp_safe_redirect(
+			add_query_arg(
+				array_filter(
+					array(
+						'page'                                     => 'yoohw-customer-intelligence-settings',
+						'yoohw_cos_loyalty_task_automation_saved'  => $saved ? 1 : 0,
+					)
+				),
+				admin_url( 'admin.php' )
+			)
+		);
+		exit;
+	}
+
+	public static function handle_save_scoring_settings(): void {
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			wp_die( esc_html__( 'You do not have permission to perform this action.', 'yoohw-customer-intelligence' ) );
+		}
+
+		check_admin_referer( 'yoohw_cos_save_scoring_settings' );
+
+		$source = isset( $_POST['scoring'] ) && is_array( $_POST['scoring'] )
+			? wp_unslash( $_POST['scoring'] )
+			: array();
+
+		YoOhw_COS_Intelligence::update_scoring_settings( $source );
+
+		wp_safe_redirect(
+			add_query_arg(
+				array(
+					'page'                              => 'yoohw-customer-intelligence-settings',
+					'yoohw_cos_scoring_settings_saved'  => 1,
+				),
+				admin_url( 'admin.php' )
+			)
+		);
+		exit;
 	}
 
 	private static function normalize_sync_page( int $page ): int {
@@ -177,12 +321,157 @@ final class YoOhw_COS_Admin_Tools {
 			'totalProcessed'  => absint( $state['total_processed'] ?? 0 ),
 			'totalScanned'    => absint( $state['total_scanned'] ?? 0 ),
 			'totalOrders'     => absint( $state['total_orders'] ?? 0 ),
+			'totalItems'      => absint( $state['total_orders'] ?? 0 ),
+			'totalSkipped'    => 0,
 			'percent'         => absint( $state['percent'] ?? 0 ),
 			'hasMore'         => ! empty( $state['has_more'] ),
 			'nextPage'        => absint( $state['next_page'] ?? 1 ),
 			'lastRunAt'       => isset( $state['last_run_at'] ) ? sanitize_text_field( (string) $state['last_run_at'] ) : '',
 			'completedAt'     => isset( $state['completed_at'] ) ? sanitize_text_field( (string) $state['completed_at'] ) : '',
 		);
+	}
+
+	private static function normalize_customer_operation_result( array $result ): array {
+		$updated = absint( $result['updated'] ?? 0 );
+		$scanned = absint( $result['scanned'] ?? $updated );
+
+		$result['processed'] = $updated;
+		$result['scanned']   = $scanned;
+		$result['skipped']   = max( 0, $scanned - $updated );
+
+		return $result;
+	}
+
+	private static function update_operation_sync_state( string $operation, int $page, int $limit, array $result, int $total_items, bool $reset ): array {
+		$operation = sanitize_key( $operation );
+		$now       = YoOhw_COS_DB::now();
+		$option    = self::operation_sync_state_option( $operation );
+		$state     = get_option( $option, array() );
+
+		if ( ! is_array( $state ) || empty( $state ) || $reset ) {
+			$state = array(
+				'operation'       => $operation,
+				'started_at'      => $now,
+				'total_processed' => 0,
+				'total_scanned'   => 0,
+				'total_skipped'   => 0,
+				'total_items'     => absint( $total_items ),
+			);
+		}
+
+		$last_processed = absint( $result['processed'] ?? 0 );
+		$last_scanned   = absint( $result['scanned'] ?? $last_processed );
+		$last_skipped   = absint( $result['skipped'] ?? max( 0, $last_scanned - $last_processed ) );
+		$total_items    = absint( $total_items );
+
+		if ( $total_items <= 0 ) {
+			$total_items = absint( $state['total_items'] ?? 0 );
+		}
+
+		$total_processed = absint( $state['total_processed'] ?? 0 ) + $last_processed;
+		$total_scanned   = absint( $state['total_scanned'] ?? 0 ) + $last_scanned;
+		$total_skipped   = absint( $state['total_skipped'] ?? 0 ) + $last_skipped;
+		$has_more        = ! empty( $result['has_more'] );
+		$percent         = $total_items > 0
+			? min( 100, (int) round( ( $total_scanned / $total_items ) * 100 ) )
+			: ( $has_more ? 0 : 100 );
+
+		$state = array_merge(
+			$state,
+			array(
+				'operation'       => $operation,
+				'status'          => $has_more ? 'in_progress' : 'completed',
+				'batch_size'      => $limit,
+				'last_page'       => $page,
+				'next_page'       => absint( $result['next_page'] ?? $page ),
+				'last_processed'  => $last_processed,
+				'last_scanned'    => $last_scanned,
+				'last_skipped'    => $last_skipped,
+				'total_processed' => $total_processed,
+				'total_scanned'   => $total_scanned,
+				'total_skipped'   => $total_skipped,
+				'total_items'     => $total_items,
+				'percent'         => $percent,
+				'has_more'        => $has_more ? 1 : 0,
+				'stage'           => sanitize_key( (string) ( $result['stage'] ?? '' ) ),
+				'last_run_at'     => $now,
+				'completed_at'    => $has_more ? '' : $now,
+			)
+		);
+
+		update_option( $option, $state, false );
+
+		return $state;
+	}
+
+	private static function format_operation_state_for_response( array $state ): array {
+		$stage = isset( $state['stage'] ) ? sanitize_key( (string) $state['stage'] ) : '';
+
+		return array(
+			'operation'       => isset( $state['operation'] ) ? sanitize_key( (string) $state['operation'] ) : '',
+			'status'          => isset( $state['status'] ) ? sanitize_key( (string) $state['status'] ) : 'not_started',
+			'batchSize'       => absint( $state['batch_size'] ?? 0 ),
+			'lastProcessed'   => absint( $state['last_processed'] ?? 0 ),
+			'lastScanned'     => absint( $state['last_scanned'] ?? 0 ),
+			'lastSkipped'     => absint( $state['last_skipped'] ?? 0 ),
+			'totalProcessed'  => absint( $state['total_processed'] ?? 0 ),
+			'totalScanned'    => absint( $state['total_scanned'] ?? 0 ),
+			'totalSkipped'    => absint( $state['total_skipped'] ?? 0 ),
+			'totalItems'      => absint( $state['total_items'] ?? 0 ),
+			'totalOrders'     => absint( $state['total_items'] ?? 0 ),
+			'percent'         => absint( $state['percent'] ?? 0 ),
+			'hasMore'         => ! empty( $state['has_more'] ),
+			'nextPage'        => absint( $state['next_page'] ?? 1 ),
+			'stage'           => $stage,
+			'stageLabel'      => self::format_operation_stage_label( $stage ),
+			'lastRunAt'       => isset( $state['last_run_at'] ) ? sanitize_text_field( (string) $state['last_run_at'] ) : '',
+			'completedAt'     => isset( $state['completed_at'] ) ? sanitize_text_field( (string) $state['completed_at'] ) : '',
+		);
+	}
+
+	private static function send_operation_success( array $result, array $state, string $next_stage = '' ): void {
+		wp_send_json_success(
+			array(
+				'processed'  => absint( $result['processed'] ?? 0 ),
+				'scanned'    => absint( $result['scanned'] ?? 0 ),
+				'skipped'    => absint( $result['skipped'] ?? 0 ),
+				'hasMore'    => ! empty( $result['has_more'] ),
+				'nextPage'   => absint( $result['next_page'] ?? 1 ),
+				'stage'      => sanitize_key( (string) ( $result['stage'] ?? '' ) ),
+				'nextStage'  => sanitize_key( $next_stage ),
+				'state'      => self::format_operation_state_for_response( $state ),
+			)
+		);
+	}
+
+	private static function send_operation_error( string $message, int $status_code = 400 ): void {
+		wp_send_json_error(
+			array(
+				'message' => $message,
+			),
+			$status_code
+		);
+	}
+
+	private static function operation_sync_state_option( string $operation ): string {
+		return 'yoohw_cos_operation_sync_state_' . sanitize_key( $operation );
+	}
+
+	private static function format_operation_stage_label( string $stage ): string {
+		$stage = sanitize_key( $stage );
+
+		$labels = array(
+			''                    => __( 'Current batch', 'yoohw-customer-intelligence' ),
+			'complete'            => __( 'Complete', 'yoohw-customer-intelligence' ),
+			'core'                => __( 'Core blacklist', 'yoohw-customer-intelligence' ),
+			'core_unavailable'    => __( 'Core unavailable', 'yoohw-customer-intelligence' ),
+			'detection_log'       => __( 'Premium detection log', 'yoohw-customer-intelligence' ),
+			'orders'              => __( 'Premium order risk', 'yoohw-customer-intelligence' ),
+			'payment_abuse'       => __( 'Premium payment abuse', 'yoohw-customer-intelligence' ),
+			'premium_unavailable' => __( 'Premium unavailable', 'yoohw-customer-intelligence' ),
+		);
+
+		return $labels[ $stage ] ?? ucwords( str_replace( '_', ' ', $stage ) );
 	}
 
 	public static function handle_reset_data(): void {
@@ -462,6 +751,259 @@ final class YoOhw_COS_Admin_Tools {
 			)
 		);
 		exit;
+	}
+
+	public static function handle_sync_blacklist_signals(): void {
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			wp_die( esc_html__( 'You do not have permission to perform this action.', 'yoohw-customer-intelligence' ) );
+		}
+
+		check_admin_referer( 'yoohw_cos_sync_blacklist_signals' );
+
+		if ( ! self::is_blacklist_manager_sync_available() ) {
+			wp_die( esc_html__( 'Blacklist Manager integration is not active.', 'yoohw-customer-intelligence' ) );
+		}
+
+		$page  = isset( $_POST['blacklist_sync_page'] ) ? absint( wp_unslash( $_POST['blacklist_sync_page'] ) ) : 1;
+		$stage = isset( $_POST['blacklist_sync_stage'] ) ? sanitize_key( wp_unslash( $_POST['blacklist_sync_stage'] ) ) : 'core';
+		$limit = 300;
+		$batch = self::run_blacklist_signal_sync_batch( $limit, $page, $stage );
+		$result = $batch['result'];
+		$next_stage = $batch['next_stage'];
+
+		wp_safe_redirect(
+			add_query_arg(
+				array(
+					'page'                              => 'yoohw-customer-intelligence-settings',
+					'yoohw_cos_blacklist_synced'        => absint( $result['processed'] ?? 0 ),
+					'yoohw_cos_blacklist_scanned'       => absint( $result['scanned'] ?? 0 ),
+					'yoohw_cos_blacklist_skipped'       => absint( $result['skipped'] ?? 0 ),
+					'yoohw_cos_blacklist_batch_stage'   => sanitize_key( (string) ( $result['stage'] ?? $stage ) ),
+					'yoohw_cos_blacklist_sync_stage'    => sanitize_key( $next_stage ),
+					'yoohw_cos_blacklist_sync_next'     => absint( $result['next_page'] ?? $page ),
+					'yoohw_cos_blacklist_sync_more'     => ! empty( $result['has_more'] ) ? 1 : 0,
+					'yoohw_cos_blacklist_sync_auto'     => ! empty( $_POST['auto_blacklist_sync'] ) ? 1 : 0,
+				),
+				admin_url( 'admin.php' )
+			)
+		);
+		exit;
+	}
+
+	private static function run_blacklist_signal_sync_batch( int $limit, int $page, string $stage ): array {
+		$page  = max( 1, absint( $page ) );
+		$stage = sanitize_key( $stage );
+
+		$result = array(
+			'scanned'   => 0,
+			'processed' => 0,
+			'skipped'   => 0,
+			'has_more'  => false,
+			'next_page' => $page,
+			'stage'     => $stage,
+		);
+		$next_stage = $stage;
+
+		if ( ! self::is_blacklist_manager_sync_available() ) {
+			$result['stage'] = 'core_unavailable';
+
+			return array(
+				'result'     => $result,
+				'next_stage' => 'complete',
+			);
+		}
+
+		if ( 'premium' === $stage ) {
+			if ( self::is_premium_risk_sync_available() ) {
+				$result = YoOhw_COS_Blacklist_Manager_Premium_Integration::backfill_legacy_signals( $limit, $page );
+				$next_stage = ! empty( $result['has_more'] ) ? 'premium' : 'complete';
+			} else {
+				$result['stage'] = 'premium_unavailable';
+				$next_stage = 'complete';
+			}
+
+			return array(
+				'result'     => $result,
+				'next_stage' => $next_stage,
+			);
+		}
+
+		$stage = 'core';
+
+		if (
+			class_exists( 'YoOhw_COS_Blacklist_Manager_Integration' )
+			&& is_callable( array( 'YoOhw_COS_Blacklist_Manager_Integration', 'backfill_legacy_signals' ) )
+		) {
+			$result = YoOhw_COS_Blacklist_Manager_Integration::backfill_legacy_signals( $limit, $page );
+		}
+
+		$result['stage'] = 'core';
+		$next_stage = ! empty( $result['has_more'] ) ? 'core' : 'complete';
+
+		if ( empty( $result['has_more'] ) && self::is_premium_risk_sync_available() ) {
+			$result['has_more'] = true;
+			$result['next_page'] = 1;
+			$next_stage = 'premium';
+		}
+
+		return array(
+			'result'     => $result,
+			'next_stage' => $next_stage,
+		);
+	}
+
+	private static function is_blacklist_manager_sync_available(): bool {
+		return class_exists( 'YoOhw_COS_Blacklist_Manager_Integration' )
+			&& is_callable( array( 'YoOhw_COS_Blacklist_Manager_Integration', 'is_active' ) )
+			&& YoOhw_COS_Blacklist_Manager_Integration::is_active();
+	}
+
+	private static function is_premium_risk_sync_available(): bool {
+		return self::is_blacklist_manager_sync_available()
+			&& class_exists( 'YoOhw_COS_Blacklist_Manager_Premium_Integration' )
+			&& is_callable( array( 'YoOhw_COS_Blacklist_Manager_Premium_Integration', 'is_active' ) )
+			&& YoOhw_COS_Blacklist_Manager_Premium_Integration::is_active()
+			&& is_callable( array( 'YoOhw_COS_Blacklist_Manager_Premium_Integration', 'backfill_legacy_signals' ) );
+	}
+
+	private static function count_customer_rows(): int {
+		global $wpdb;
+
+		return (int) $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT COUNT(*) FROM %i',
+				YoOhw_COS_DB::customers_table()
+			)
+		);
+	}
+
+	private static function count_blacklist_sync_rows(): int {
+		$total = self::count_core_blacklist_rows();
+
+		if ( self::is_premium_risk_sync_available() ) {
+			$total += self::count_premium_blacklist_rows();
+		}
+
+		return $total;
+	}
+
+	private static function count_core_blacklist_rows(): int {
+		global $wpdb;
+
+		if ( ! self::is_blacklist_manager_sync_available() ) {
+			return 0;
+		}
+
+		$blacklist_table = $wpdb->prefix . 'wc_blacklist';
+		$log_table       = $wpdb->prefix . 'wc_blacklist_detection_log';
+
+		return self::count_table_rows( $blacklist_table )
+			+ self::count_detection_log_rows_like_source( $log_table, 'woo_order_%' );
+	}
+
+	private static function count_premium_blacklist_rows(): int {
+		global $wpdb;
+
+		return self::count_premium_risk_orders()
+			+ self::count_premium_detection_log_rows()
+			+ self::count_table_rows( $wpdb->prefix . 'wc_blacklist_payment_abuse_events' );
+	}
+
+	private static function count_premium_risk_orders(): int {
+		if ( ! function_exists( 'wc_get_orders' ) ) {
+			return 0;
+		}
+
+		$query = wc_get_orders(
+			array(
+				'type'       => 'shop_order',
+				'limit'      => 1,
+				'page'       => 1,
+				'paginate'   => true,
+				'orderby'    => 'ID',
+				'order'      => 'ASC',
+				'return'     => 'ids',
+				'status'     => function_exists( 'wc_get_order_statuses' ) ? array_keys( wc_get_order_statuses() ) : 'any',
+				'meta_query' => array(
+					array(
+						'key'     => '_risk_score',
+						'value'   => 0,
+						'compare' => '>',
+						'type'    => 'NUMERIC',
+					),
+				),
+			)
+		);
+
+		if ( is_object( $query ) && isset( $query->total ) ) {
+			return absint( $query->total );
+		}
+
+		return is_array( $query ) ? count( $query ) : 0;
+	}
+
+	private static function count_premium_detection_log_rows(): int {
+		global $wpdb;
+
+		$table = $wpdb->prefix . 'wc_blacklist_detection_log';
+
+		if ( ! self::table_exists( $table ) ) {
+			return 0;
+		}
+
+		return (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*)
+				FROM %i
+				WHERE (source LIKE %s AND details LIKE %s)
+				OR source IN ('woo_checkout', 'woo_api_checkout', 'paypal_payments_create_order')",
+				$table,
+				'woo_order_%',
+				'%risk_score%'
+			)
+		);
+	}
+
+	private static function count_detection_log_rows_like_source( string $table, string $source_like ): int {
+		global $wpdb;
+
+		if ( ! self::table_exists( $table ) ) {
+			return 0;
+		}
+
+		return (int) $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT COUNT(*) FROM %i WHERE source LIKE %s',
+				$table,
+				$source_like
+			)
+		);
+	}
+
+	private static function count_table_rows( string $table ): int {
+		global $wpdb;
+
+		if ( ! self::table_exists( $table ) ) {
+			return 0;
+		}
+
+		return (int) $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT COUNT(*) FROM %i',
+				$table
+			)
+		);
+	}
+
+	private static function table_exists( string $table ): bool {
+		global $wpdb;
+
+		return $table === $wpdb->get_var(
+			$wpdb->prepare(
+				'SHOW TABLES LIKE %s',
+				$table
+			)
+		);
 	}
 
 	public static function handle_assign_customer_segment(): void {

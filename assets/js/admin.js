@@ -158,6 +158,10 @@
 	}
 
 	function setSyncText(container, selector, value) {
+		if (!container) {
+			return;
+		}
+
 		var targets = container.querySelectorAll(selector);
 
 		if (!targets.length) {
@@ -170,6 +174,10 @@
 	}
 
 	function setSyncProgress(container, percent) {
+		if (!container) {
+			return;
+		}
+
 		var safePercent = Math.max(0, Math.min(100, parseInt(percent, 10) || 0));
 		var bar = container.querySelector('[data-yoohw-cos-progress-bar]');
 		var track = container.querySelector('[data-yoohw-cos-progress-track]');
@@ -189,6 +197,10 @@
 	}
 
 	function setSyncStatus(container, state, message) {
+		if (!container) {
+			return;
+		}
+
 		var statusValue = container.querySelector('.yoohw-cos-sync-status-value');
 		var statusType = state && state.hasMore ? 'warning' : 'good';
 		var statusText = message;
@@ -209,14 +221,17 @@
 		setSyncText(container, '.yoohw-cos-sync-last-scanned', formatNumber(state.lastScanned));
 		setSyncText(container, '.yoohw-cos-sync-total-scanned', formatNumber(state.totalScanned));
 		setSyncText(container, '.yoohw-cos-sync-total-processed', formatNumber(state.totalProcessed));
+		setSyncText(container, '.yoohw-cos-sync-total-skipped', formatNumber(state.totalSkipped));
 		setSyncText(container, '.yoohw-cos-sync-total-orders', state.totalOrders > 0 ? formatNumber(state.totalOrders) : '—');
+		setSyncText(container, '.yoohw-cos-sync-total-items', state.totalItems > 0 ? formatNumber(state.totalItems) : '—');
 		setSyncText(container, '.yoohw-cos-sync-resume-page', state.hasMore ? formatNumber(state.nextPage) : '—');
+		setSyncText(container, '.yoohw-cos-sync-stage', state.stageLabel || state.stage || '—');
 	}
 
 	function runAjaxSync(form) {
 		var admin = window.yoohwCosAdmin || {};
 
-		if (!window.fetch || !window.FormData || !admin.ajaxUrl || !admin.syncNonce) {
+		if (!window.fetch || !window.FormData || !admin.ajaxUrl) {
 			return false;
 		}
 
@@ -224,11 +239,21 @@
 			return true;
 		}
 
-		var container = form.closest('[data-yoohw-cos-sync-center]');
-		var pageInput = form.querySelector('input[name="sync_page"]');
+		var container = form.closest('[data-yoohw-cos-sync-container]') || form.closest('[data-yoohw-cos-sync-center]') || form.closest('.yoohw-cos-operation-row');
+		var ajaxAction = form.getAttribute('data-yoohw-cos-ajax-action') || 'yoohw_cos_ajax_sync_customers';
+		var pageField = form.getAttribute('data-yoohw-cos-sync-page-field') || 'sync_page';
+		var stageField = form.getAttribute('data-yoohw-cos-sync-stage-field') || '';
+		var pageInput = form.querySelector('input[name="' + pageField + '"]');
+		var stageInput = stageField ? form.querySelector('input[name="' + stageField + '"]') : null;
+		var nonceInput = form.querySelector('input[name="_wpnonce"]');
 		var submit = form.querySelector('input[type="submit"], button[type="submit"]');
 		var spinner = form.querySelector('[data-yoohw-cos-sync-spinner]');
+		var progress = container ? container.querySelector('[data-yoohw-cos-sync-progress]') : null;
 		var startPage = pageInput ? parseInt(pageInput.value, 10) || 1 : 1;
+		var runningText = form.getAttribute('data-yoohw-cos-sync-running-text') || admin.syncRunningText || 'Syncing...';
+		var completeText = form.getAttribute('data-yoohw-cos-sync-complete-text') || admin.syncCompleteText || 'Sync complete.';
+		var errorText = form.getAttribute('data-yoohw-cos-sync-error-text') || admin.syncErrorText || 'Sync could not be completed.';
+		var nonce = nonceInput ? nonceInput.value : admin.syncNonce;
 
 		form.setAttribute('data-yoohw-cos-syncing', '1');
 
@@ -240,13 +265,18 @@
 			spinner.classList.add('is-active');
 		}
 
-		setSyncText(container, '[data-yoohw-cos-sync-message]', admin.syncRunningText || 'Syncing orders...');
+		if (progress) {
+			progress.hidden = false;
+			progress.classList.add('is-active');
+		}
+
+		setSyncText(container, '[data-yoohw-cos-sync-message]', runningText);
 
 		function runPage(page) {
-			var data = new FormData();
-			data.append('action', 'yoohw_cos_ajax_sync_customers');
-			data.append('nonce', admin.syncNonce);
-			data.append('sync_page', page);
+			var data = new FormData(form);
+			data.set('action', ajaxAction);
+			data.set('nonce', nonce);
+			data.set(pageField, page);
 
 			return fetch(admin.ajaxUrl, {
 				method: 'POST',
@@ -254,20 +284,27 @@
 				body: data
 			})
 				.then(function(response) {
-					return response.json();
+					return response.json()
+						.catch(function() {
+							throw new Error(errorText);
+						});
 				})
 				.then(function(response) {
 					if (!response || !response.success || !response.data) {
-						throw new Error(admin.syncErrorText || 'Sync could not be completed.');
+						throw new Error(response && response.data && response.data.message ? response.data.message : errorText);
 					}
 
 					var result = response.data;
 					var state = result.state || {};
 					var nextPage = parseInt(result.nextPage, 10) || page + 1;
-					var message = result.hasMore ? (admin.syncRunningText || 'Syncing orders...') : (admin.syncCompleteText || 'Sync complete.');
+					var message = result.hasMore ? runningText : completeText;
 
 					if (pageInput) {
 						pageInput.value = result.hasMore ? nextPage : 1;
+					}
+
+					if (stageInput) {
+						stageInput.value = result.hasMore ? (result.nextStage || state.stage || stageInput.value) : 'core';
 					}
 
 					updateSyncCenter(container, state, message);
@@ -282,7 +319,7 @@
 
 		runPage(startPage)
 			.catch(function(error) {
-				setSyncText(container, '[data-yoohw-cos-sync-message]', error.message || admin.syncErrorText || 'Sync could not be completed.');
+				setSyncText(container, '[data-yoohw-cos-sync-message]', error.message || errorText);
 			})
 			.finally(function() {
 				form.removeAttribute('data-yoohw-cos-syncing');
@@ -293,6 +330,10 @@
 
 				if (spinner) {
 					spinner.classList.remove('is-active');
+				}
+
+				if (progress) {
+					progress.classList.remove('is-active');
 				}
 			});
 
@@ -563,7 +604,19 @@
 
 		document.querySelectorAll('[data-yoohw-cos-auto-submit="1"]').forEach(function(form) {
 			setTimeout(function() {
-				form.submit();
+				if (typeof form.requestSubmit === 'function') {
+					form.requestSubmit();
+					return;
+				}
+
+				var event = new Event('submit', {
+					bubbles: true,
+					cancelable: true
+				});
+
+				if (form.dispatchEvent(event)) {
+					form.submit();
+				}
 			}, 800);
 		});
 

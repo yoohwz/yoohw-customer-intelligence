@@ -3,6 +3,8 @@ defined( 'ABSPATH' ) || exit;
 
 final class YoOhw_COS_Intelligence {
 
+	private const SCORING_SETTINGS_OPTION = 'yoohw_cos_scoring_settings';
+
 	public static function init(): void {
 		// Reserved for future hooks.
 	}
@@ -11,20 +13,22 @@ final class YoOhw_COS_Intelligence {
 		$total_orders = absint( $customer['total_orders'] ?? 0 );
 		$total_spent  = (float) ( $customer['total_spent'] ?? 0 );
 		$last_active  = $customer['last_activity_date'] ?? '';
+		$settings     = self::get_scoring_settings();
+		$status       = $settings['customer_status'];
 
-		if ( $total_orders <= 1 ) {
+		if ( $total_orders <= absint( $status['new_max_orders'] ?? 1 ) ) {
 			return 'new';
 		}
 
-		if ( $total_spent >= 1000 || $total_orders >= 10 ) {
+		if ( $total_spent >= (float) $status['vip_spent'] || $total_orders >= absint( $status['vip_orders'] ) ) {
 			return 'vip';
 		}
 
-		if ( self::days_since( $last_active ) >= 90 ) {
+		if ( self::days_since( $last_active ) >= absint( $status['inactive_days'] ) ) {
 			return 'inactive';
 		}
 
-		if ( self::days_since( $last_active ) >= 45 ) {
+		if ( self::days_since( $last_active ) >= absint( $status['at_risk_days'] ) ) {
 			return 'at_risk';
 		}
 
@@ -34,20 +38,150 @@ final class YoOhw_COS_Intelligence {
 	public static function calculate_vip_status( array $customer ): string {
 		$total_orders = absint( $customer['total_orders'] ?? 0 );
 		$total_spent  = (float) ( $customer['total_spent'] ?? 0 );
+		$settings     = self::get_scoring_settings();
+		$tiers        = $settings['value_tiers'];
 
-		if ( $total_spent >= 5000 || $total_orders >= 50 ) {
+		if ( $total_spent >= (float) $tiers['top_customer_spent'] || $total_orders >= absint( $tiers['top_customer_orders'] ) ) {
 			return 'platinum';
 		}
 
-		if ( $total_spent >= 2500 || $total_orders >= 25 ) {
+		if ( $total_spent >= (float) $tiers['very_high_value_spent'] || $total_orders >= absint( $tiers['very_high_value_orders'] ) ) {
 			return 'gold';
 		}
 
-		if ( $total_spent >= 1000 || $total_orders >= 10 ) {
+		if ( $total_spent >= (float) $tiers['high_value_spent'] || $total_orders >= absint( $tiers['high_value_orders'] ) ) {
 			return 'silver';
 		}
 
 		return 'none';
+	}
+
+	public static function get_scoring_settings(): array {
+		$saved = get_option( self::SCORING_SETTINGS_OPTION, array() );
+		$saved = is_array( $saved ) ? $saved : array();
+
+		return self::sanitize_scoring_settings( array_replace_recursive( self::get_scoring_settings_defaults(), $saved ) );
+	}
+
+	public static function update_scoring_settings( array $source ): array {
+		$settings = self::sanitize_scoring_settings( $source );
+
+		update_option( self::SCORING_SETTINGS_OPTION, $settings, false );
+
+		return $settings;
+	}
+
+	public static function get_scoring_settings_defaults(): array {
+		return array(
+			'value_tiers'     => array(
+				'high_value_spent'        => 1000.0,
+				'high_value_orders'       => 10,
+				'very_high_value_spent'   => 2500.0,
+				'very_high_value_orders'  => 25,
+				'top_customer_spent'      => 5000.0,
+				'top_customer_orders'     => 50,
+			),
+			'lifecycle'       => array(
+				'repeat_orders'       => 2,
+				'loyal_spent'         => 1000.0,
+				'loyal_orders'        => 10,
+				'top_customer_spent'  => 5000.0,
+				'top_customer_orders' => 50,
+				'dormant_days'        => 180,
+			),
+			'customer_status' => array(
+				'new_max_orders' => 1,
+				'vip_spent'      => 1000.0,
+				'vip_orders'     => 10,
+				'at_risk_days'   => 45,
+				'inactive_days'  => 90,
+			),
+		);
+	}
+
+	private static function sanitize_scoring_settings( array $source ): array {
+		$defaults = self::get_scoring_settings_defaults();
+		$source   = array(
+			'value_tiers'     => isset( $source['value_tiers'] ) && is_array( $source['value_tiers'] ) ? $source['value_tiers'] : array(),
+			'lifecycle'       => isset( $source['lifecycle'] ) && is_array( $source['lifecycle'] ) ? $source['lifecycle'] : array(),
+			'customer_status' => isset( $source['customer_status'] ) && is_array( $source['customer_status'] ) ? $source['customer_status'] : array(),
+		);
+		$source   = array_replace_recursive( $defaults, $source );
+
+		$settings = array(
+			'value_tiers'     => array(
+				'high_value_spent'        => self::sanitize_scoring_amount( $source['value_tiers']['high_value_spent'] ?? $defaults['value_tiers']['high_value_spent'] ),
+				'high_value_orders'       => max( 1, absint( $source['value_tiers']['high_value_orders'] ?? $defaults['value_tiers']['high_value_orders'] ) ),
+				'very_high_value_spent'   => self::sanitize_scoring_amount( $source['value_tiers']['very_high_value_spent'] ?? $defaults['value_tiers']['very_high_value_spent'] ),
+				'very_high_value_orders'  => max( 1, absint( $source['value_tiers']['very_high_value_orders'] ?? $defaults['value_tiers']['very_high_value_orders'] ) ),
+				'top_customer_spent'      => self::sanitize_scoring_amount( $source['value_tiers']['top_customer_spent'] ?? $defaults['value_tiers']['top_customer_spent'] ),
+				'top_customer_orders'     => max( 1, absint( $source['value_tiers']['top_customer_orders'] ?? $defaults['value_tiers']['top_customer_orders'] ) ),
+			),
+			'lifecycle'       => array(
+				'repeat_orders'       => max( 1, absint( $source['lifecycle']['repeat_orders'] ?? $defaults['lifecycle']['repeat_orders'] ) ),
+				'loyal_spent'         => self::sanitize_scoring_amount( $source['lifecycle']['loyal_spent'] ?? $defaults['lifecycle']['loyal_spent'] ),
+				'loyal_orders'        => max( 1, absint( $source['lifecycle']['loyal_orders'] ?? $defaults['lifecycle']['loyal_orders'] ) ),
+				'top_customer_spent'  => self::sanitize_scoring_amount( $source['lifecycle']['top_customer_spent'] ?? $defaults['lifecycle']['top_customer_spent'] ),
+				'top_customer_orders' => max( 1, absint( $source['lifecycle']['top_customer_orders'] ?? $defaults['lifecycle']['top_customer_orders'] ) ),
+				'dormant_days'        => max( 1, absint( $source['lifecycle']['dormant_days'] ?? $defaults['lifecycle']['dormant_days'] ) ),
+			),
+			'customer_status' => array(
+				'new_max_orders' => max( 0, absint( $source['customer_status']['new_max_orders'] ?? $defaults['customer_status']['new_max_orders'] ) ),
+				'vip_spent'      => self::sanitize_scoring_amount( $source['customer_status']['vip_spent'] ?? $defaults['customer_status']['vip_spent'] ),
+				'vip_orders'     => max( 1, absint( $source['customer_status']['vip_orders'] ?? $defaults['customer_status']['vip_orders'] ) ),
+				'at_risk_days'   => max( 1, absint( $source['customer_status']['at_risk_days'] ?? $defaults['customer_status']['at_risk_days'] ) ),
+				'inactive_days'  => max( 1, absint( $source['customer_status']['inactive_days'] ?? $defaults['customer_status']['inactive_days'] ) ),
+			),
+		);
+
+		$settings['value_tiers']['very_high_value_spent']  = max( $settings['value_tiers']['high_value_spent'], $settings['value_tiers']['very_high_value_spent'] );
+		$settings['value_tiers']['top_customer_spent']     = max( $settings['value_tiers']['very_high_value_spent'], $settings['value_tiers']['top_customer_spent'] );
+		$settings['value_tiers']['very_high_value_orders'] = max( $settings['value_tiers']['high_value_orders'], $settings['value_tiers']['very_high_value_orders'] );
+		$settings['value_tiers']['top_customer_orders']    = max( $settings['value_tiers']['very_high_value_orders'], $settings['value_tiers']['top_customer_orders'] );
+
+		$settings['lifecycle']['loyal_orders']        = max( $settings['lifecycle']['repeat_orders'], $settings['lifecycle']['loyal_orders'] );
+		$settings['lifecycle']['top_customer_orders'] = max( $settings['lifecycle']['loyal_orders'], $settings['lifecycle']['top_customer_orders'] );
+		$settings['lifecycle']['top_customer_spent']  = max( $settings['lifecycle']['loyal_spent'], $settings['lifecycle']['top_customer_spent'] );
+
+		$settings['customer_status']['inactive_days'] = max( $settings['customer_status']['at_risk_days'], $settings['customer_status']['inactive_days'] );
+
+		return $settings;
+	}
+
+	private static function sanitize_scoring_amount( $value ): float {
+		$value      = sanitize_text_field( (string) $value );
+		$normalized = str_replace( ',', '', $value );
+
+		return max( 0.0, round( (float) $normalized, 2 ) );
+	}
+
+	public static function get_value_tier_labels(): array {
+		return array(
+			'none'     => __( 'Standard', 'yoohw-customer-intelligence' ),
+			'silver'   => __( 'High value', 'yoohw-customer-intelligence' ),
+			'gold'     => __( 'Very high value', 'yoohw-customer-intelligence' ),
+			'platinum' => __( 'Top customer', 'yoohw-customer-intelligence' ),
+		);
+	}
+
+	public static function get_value_tier_label( string $tier ): string {
+		$tier   = sanitize_key( $tier );
+		$labels = self::get_value_tier_labels();
+
+		return $labels[ $tier ] ?? ucwords( str_replace( array( '_', '-' ), ' ', $tier ) );
+	}
+
+	public static function get_value_tier_badge_class( string $tier ): string {
+		$tier = sanitize_key( $tier );
+
+		$classes = array(
+			'none'     => 'standard',
+			'silver'   => 'high-value',
+			'gold'     => 'very-high-value',
+			'platinum' => 'top-customer',
+		);
+
+		return $classes[ $tier ] ?? sanitize_html_class( $tier );
 	}
 
 	public static function calculate_trust_score( array $customer ): float {
@@ -118,6 +252,8 @@ final class YoOhw_COS_Intelligence {
 			$score += 10;
 		}
 
+		$score = (float) apply_filters( 'yoohw_cos_customer_risk_score', $score, $customer );
+
 		return min( 100, max( 0, $score ) );
 	}
 
@@ -185,6 +321,9 @@ final class YoOhw_COS_Intelligence {
 				'description' => __( 'This customer has not had recent recorded activity.', 'yoohw-customer-intelligence' ),
 			);
 		}
+
+		$factors = apply_filters( 'yoohw_cos_customer_risk_factors', $factors, $customer );
+		$factors = is_array( $factors ) ? $factors : array();
 
 		if ( empty( $factors ) ) {
 			$factors[] = array(
@@ -276,20 +415,22 @@ final class YoOhw_COS_Intelligence {
 		$total_orders = absint( $customer['total_orders'] ?? 0 );
 		$total_spent  = (float) ( $customer['total_spent'] ?? 0 );
 		$last_active  = $customer['last_activity_date'] ?? '';
+		$settings     = self::get_scoring_settings();
+		$lifecycle    = $settings['lifecycle'];
 
-		if ( self::days_since( $last_active ) >= 180 ) {
+		if ( self::days_since( $last_active ) >= absint( $lifecycle['dormant_days'] ) ) {
 			return 'dormant';
 		}
 
-		if ( $total_spent >= 5000 || $total_orders >= 50 ) {
+		if ( $total_spent >= (float) $lifecycle['top_customer_spent'] || $total_orders >= absint( $lifecycle['top_customer_orders'] ) ) {
 			return 'vip';
 		}
 
-		if ( $total_orders >= 10 || $total_spent >= 1000 ) {
+		if ( $total_orders >= absint( $lifecycle['loyal_orders'] ) || $total_spent >= (float) $lifecycle['loyal_spent'] ) {
 			return 'loyal';
 		}
 
-		if ( $total_orders >= 2 ) {
+		if ( $total_orders >= absint( $lifecycle['repeat_orders'] ) ) {
 			return 'repeat';
 		}
 
@@ -301,13 +442,19 @@ final class YoOhw_COS_Intelligence {
 		$total_orders = absint( $customer['total_orders'] ?? 0 );
 		$total_spent  = (float) ( $customer['total_spent'] ?? 0 );
 		$last_active  = $customer['last_activity_date'] ?? '';
+		$settings     = self::get_scoring_settings();
+		$lifecycle    = $settings['lifecycle'];
 
 		$factors = array();
 
 		if ( 'dormant' === $stage ) {
 			$factors[] = array(
 				'label'       => __( 'Dormant customer', 'yoohw-customer-intelligence' ),
-				'description' => __( 'This customer has not had recorded activity for at least 180 days.', 'yoohw-customer-intelligence' ),
+				'description' => sprintf(
+					/* translators: %s: dormant threshold in days. */
+					__( 'This customer has not had recorded activity for at least %s days.', 'yoohw-customer-intelligence' ),
+					number_format_i18n( absint( $lifecycle['dormant_days'] ?? 180 ) )
+				),
 			);
 		} elseif ( 'vip' === $stage ) {
 			$factors[] = array(

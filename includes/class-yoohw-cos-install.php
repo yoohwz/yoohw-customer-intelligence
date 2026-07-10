@@ -6,6 +6,7 @@ final class YoOhw_COS_Install {
 	public static function install(): void {
 		self::create_tables();
 		self::ensure_customer_schema();
+		self::ensure_task_schema();
 
 		update_option( 'yoohw_cos_version', YOOHW_COS_VERSION );
 		update_option( 'yoohw_cos_db_version', self::db_version() );
@@ -58,6 +59,9 @@ final class YoOhw_COS_Install {
 			risk_score DECIMAL(5,2) NOT NULL DEFAULT 0.00,
 			trust_score DECIMAL(5,2) NOT NULL DEFAULT 0.00,
 			loyalty_score DECIMAL(5,2) NOT NULL DEFAULT 0.00,
+			loyalty_level VARCHAR(100) NOT NULL DEFAULT '',
+			available_points BIGINT NOT NULL DEFAULT 0,
+			earned_points BIGINT NOT NULL DEFAULT 0,
 			customer_status VARCHAR(50) NOT NULL DEFAULT 'active',
 			vip_status VARCHAR(50) NOT NULL DEFAULT 'none',
 			first_order_id BIGINT UNSIGNED NULL,
@@ -81,6 +85,8 @@ final class YoOhw_COS_Install {
 			KEY first_order_date (first_order_date),
 			KEY risk_score (risk_score),
 			KEY trust_score (trust_score),
+			KEY loyalty_score (loyalty_score),
+			KEY loyalty_level (loyalty_level),
 			KEY last_order_date (last_order_date),
 			KEY last_activity_date (last_activity_date),
 			KEY lifecycle_stage (lifecycle_stage),
@@ -136,6 +142,7 @@ final class YoOhw_COS_Install {
 			created_by BIGINT UNSIGNED NULL,
 			title VARCHAR(191) NOT NULL,
 			description LONGTEXT NULL,
+			source_key VARCHAR(191) NULL,
 			status VARCHAR(30) NOT NULL DEFAULT 'open',
 			priority VARCHAR(30) NOT NULL DEFAULT 'normal',
 			due_date DATETIME NULL,
@@ -148,6 +155,7 @@ final class YoOhw_COS_Install {
 			KEY order_id (order_id),
 			KEY assigned_user_id (assigned_user_id),
 			KEY created_by (created_by),
+			UNIQUE KEY source_key (source_key),
 			KEY status (status),
 			KEY priority (priority),
 			KEY due_date (due_date),
@@ -222,6 +230,7 @@ final class YoOhw_COS_Install {
 		if ( version_compare( $current_db_version, self::db_version(), '<' ) ) {
 			self::create_tables();
 			self::ensure_customer_schema();
+			self::ensure_task_schema();
 			update_option( 'yoohw_cos_db_version', self::db_version() );
 		}
 	}
@@ -358,6 +367,65 @@ final class YoOhw_COS_Install {
 		self::maybe_add_index( $table, 'archived_at', 'archived_at' );
 	}
 
+	private static function add_loyalty_columns(): void {
+		global $wpdb;
+
+		$table = $wpdb->prefix . 'yoohw_cos_customers';
+
+		$loyalty_level_exists = $wpdb->get_var(
+			$wpdb->prepare(
+				'SHOW COLUMNS FROM %i LIKE %s',
+				$table,
+				'loyalty_level'
+			)
+		);
+
+		if ( empty( $loyalty_level_exists ) && self::table_exists( $table ) ) {
+			$wpdb->query(
+				$wpdb->prepare(
+					"ALTER TABLE %i ADD loyalty_level VARCHAR(100) NOT NULL DEFAULT '' AFTER loyalty_score",
+					$table
+				)
+			);
+		}
+
+		$available_points_exists = $wpdb->get_var(
+			$wpdb->prepare(
+				'SHOW COLUMNS FROM %i LIKE %s',
+				$table,
+				'available_points'
+			)
+		);
+
+		if ( empty( $available_points_exists ) && self::table_exists( $table ) ) {
+			$wpdb->query(
+				$wpdb->prepare(
+					'ALTER TABLE %i ADD available_points BIGINT NOT NULL DEFAULT 0 AFTER loyalty_level',
+					$table
+				)
+			);
+		}
+
+		$earned_points_exists = $wpdb->get_var(
+			$wpdb->prepare(
+				'SHOW COLUMNS FROM %i LIKE %s',
+				$table,
+				'earned_points'
+			)
+		);
+
+		if ( empty( $earned_points_exists ) && self::table_exists( $table ) ) {
+			$wpdb->query(
+				$wpdb->prepare(
+					'ALTER TABLE %i ADD earned_points BIGINT NOT NULL DEFAULT 0 AFTER available_points',
+					$table
+				)
+			);
+		}
+
+		self::maybe_add_index( $table, 'loyalty_level', 'loyalty_level' );
+	}
+
 	private static function ensure_customer_schema(): void {
 		global $wpdb;
 
@@ -370,10 +438,42 @@ final class YoOhw_COS_Install {
 		self::add_first_order_columns();
 		self::add_lifecycle_stage_column();
 		self::add_archive_columns();
+		self::add_loyalty_columns();
 
 		self::maybe_add_index( $table, 'last_activity_date', 'last_activity_date' );
 		self::maybe_add_index( $table, 'lifecycle_stage', 'lifecycle_stage' );
+		self::maybe_add_index( $table, 'loyalty_score', 'loyalty_score' );
+		self::maybe_add_index( $table, 'loyalty_level', 'loyalty_level' );
 		self::maybe_add_index( $table, 'archived_at', 'archived_at' );
+	}
+
+	private static function ensure_task_schema(): void {
+		global $wpdb;
+
+		$table = $wpdb->prefix . 'yoohw_cos_tasks';
+
+		if ( ! self::table_exists( $table ) ) {
+			return;
+		}
+
+		$source_key_exists = $wpdb->get_var(
+			$wpdb->prepare(
+				'SHOW COLUMNS FROM %i LIKE %s',
+				$table,
+				'source_key'
+			)
+		);
+
+		if ( empty( $source_key_exists ) ) {
+			$wpdb->query(
+				$wpdb->prepare(
+					'ALTER TABLE %i ADD source_key VARCHAR(191) NULL AFTER description',
+					$table
+				)
+			);
+		}
+
+		self::maybe_add_unique_index( $table, 'source_key', 'source_key' );
 	}
 
 	private static function table_exists( string $table ): bool {
@@ -401,6 +501,8 @@ final class YoOhw_COS_Install {
 			'first_order_date'   => 'first_order_date',
 			'last_activity_date' => 'last_activity_date',
 			'lifecycle_stage'    => 'lifecycle_stage',
+			'loyalty_score'      => 'loyalty_score',
+			'loyalty_level'      => 'loyalty_level',
 			'archived_at'        => 'archived_at',
 		);
 
@@ -420,6 +522,37 @@ final class YoOhw_COS_Install {
 			$wpdb->query(
 				$wpdb->prepare(
 					'ALTER TABLE %i ADD KEY %i (%i)',
+					$table,
+					$index_name,
+					$column_name
+				)
+			);
+		}
+	}
+
+	private static function maybe_add_unique_index( string $table, string $index_name, string $column_name ): void {
+		global $wpdb;
+
+		if ( ! self::table_exists( $table ) ) {
+			return;
+		}
+
+		if ( 'source_key' !== $index_name || 'source_key' !== $column_name ) {
+			return;
+		}
+
+		$exists = $wpdb->get_var(
+			$wpdb->prepare(
+				'SHOW INDEX FROM %i WHERE Key_name = %s',
+				$table,
+				$index_name
+			)
+		);
+
+		if ( empty( $exists ) ) {
+			$wpdb->query(
+				$wpdb->prepare(
+					'ALTER TABLE %i ADD UNIQUE KEY %i (%i)',
 					$table,
 					$index_name,
 					$column_name

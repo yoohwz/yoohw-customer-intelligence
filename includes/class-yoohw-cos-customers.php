@@ -65,16 +65,36 @@ final class YoOhw_COS_Customers {
 			$data['average_order_value'] = (float) $data['total_spent'] / (int) $data['total_orders'];
 		}
 
+		$data = apply_filters( 'yoohw_cos_customer_sync_data', $data, $order, $customer_id );
+
 		$intelligence_data = array_merge(
-			is_array( $data ) ? $data : array(),
 			array(
-				'risk_score'      => 0,
-				'trust_score'     => 0,
-				'loyalty_score'   => 0,
-				'customer_status' => 'active',
-				'vip_status'      => 'none',
-			)
+				'risk_score'       => 0,
+				'trust_score'      => 0,
+				'customer_status'  => 'active',
+				'vip_status'       => 'none',
+			),
+			is_array( $data ) ? $data : array()
 		);
+
+		$intelligence_data = apply_filters( 'yoohw_cos_customer_intelligence_data', $intelligence_data, $order, $customer_id, $data );
+
+		if ( isset( $intelligence_data['loyalty_score'] ) ) {
+			$data['loyalty_score']              = self::normalize_score( $intelligence_data['loyalty_score'] );
+			$intelligence_data['loyalty_score'] = $data['loyalty_score'];
+		}
+
+		if ( array_key_exists( 'loyalty_level', $intelligence_data ) ) {
+			$data['loyalty_level'] = sanitize_key( (string) ( $intelligence_data['loyalty_level'] ?? '' ) );
+		}
+
+		if ( array_key_exists( 'available_points', $intelligence_data ) ) {
+			$data['available_points'] = (int) ( $intelligence_data['available_points'] ?? 0 );
+		}
+
+		if ( array_key_exists( 'earned_points', $intelligence_data ) ) {
+			$data['earned_points'] = (int) ( $intelligence_data['earned_points'] ?? 0 );
+		}
 
 		$data['customer_status'] = YoOhw_COS_Intelligence::calculate_customer_status( $intelligence_data );
 		$data['lifecycle_stage'] = YoOhw_COS_Intelligence::calculate_lifecycle_stage( $intelligence_data );
@@ -328,6 +348,9 @@ final class YoOhw_COS_Customers {
 			'risk_score'          => '%f',
 			'trust_score'         => '%f',
 			'loyalty_score'       => '%f',
+			'loyalty_level'       => '%s',
+			'available_points'    => '%d',
+			'earned_points'       => '%d',
 			'customer_status'     => '%s',
 			'vip_status'          => '%s',
 			'first_order_id'      => '%d',
@@ -342,6 +365,10 @@ final class YoOhw_COS_Customers {
 			'created_at'          => '%s',
 			'updated_at'          => '%s',
 		);
+	}
+
+	private static function normalize_score( $score ): float {
+		return max( 0.0, min( 100.0, (float) $score ) );
 	}
 
 	public static function archive_customer( int $customer_id, int $archived_by = 0, string $reason = '' ): bool {
@@ -649,6 +676,9 @@ final class YoOhw_COS_Customers {
 		delete_option( 'yoohw_cos_last_sync_page' );
 		delete_option( 'yoohw_cos_last_sync_at' );
 		delete_option( 'yoohw_cos_sync_state' );
+		delete_option( 'yoohw_cos_operation_sync_state_recalculate_intelligence' );
+		delete_option( 'yoohw_cos_operation_sync_state_backfill_first_orders' );
+		delete_option( 'yoohw_cos_operation_sync_state_blacklist_signals' );
 	}
 
 	public static function recalculate_intelligence( int $limit = 500, int $page = 1 ): array {
@@ -675,6 +705,7 @@ final class YoOhw_COS_Customers {
 		if ( empty( $customers ) ) {
 			return array(
 				'updated'   => 0,
+				'scanned'   => 0,
 				'has_more'  => false,
 				'next_page' => $page,
 			);
@@ -684,31 +715,48 @@ final class YoOhw_COS_Customers {
 
 		foreach ( $customers as $customer ) {
 			$customer_id = absint( $customer['id'] );
+			$previous_customer = $customer;
+			$customer    = apply_filters( 'yoohw_cos_customer_recalculate_intelligence_data', $customer, $customer_id );
+			$customer    = apply_filters( 'yoohw_cos_customer_intelligence_data', $customer, null, $customer_id, $customer );
 
-			$new_status = YoOhw_COS_Intelligence::calculate_customer_status( $customer );
+			$new_status    = YoOhw_COS_Intelligence::calculate_customer_status( $customer );
 			$new_lifecycle = YoOhw_COS_Intelligence::calculate_lifecycle_stage( $customer );
-			$new_vip    = YoOhw_COS_Intelligence::calculate_vip_status( $customer );
-			$new_trust  = YoOhw_COS_Intelligence::calculate_trust_score( $customer );
-			$new_risk   = YoOhw_COS_Intelligence::calculate_risk_score( $customer );
+			$new_vip       = YoOhw_COS_Intelligence::calculate_vip_status( $customer );
+			$new_trust     = YoOhw_COS_Intelligence::calculate_trust_score( $customer );
+			$new_risk      = YoOhw_COS_Intelligence::calculate_risk_score( $customer );
+			$new_loyalty   = self::normalize_score( $customer['loyalty_score'] ?? 0 );
+			$loyalty_level = sanitize_key( (string) ( $customer['loyalty_level'] ?? '' ) );
 
-			$updated = self::update_customer(
-				$customer_id,
-				array(
-					'customer_status' => $new_status,
-					'lifecycle_stage' => $new_lifecycle,
-					'vip_status'      => $new_vip,
-					'trust_score'     => $new_trust,
-					'risk_score'      => $new_risk,
-				)
+			$recalculated_data = array(
+				'customer_status' => $new_status,
+				'lifecycle_stage' => $new_lifecycle,
+				'vip_status'      => $new_vip,
+				'trust_score'     => $new_trust,
+				'risk_score'      => $new_risk,
+				'loyalty_score'    => $new_loyalty,
+				'loyalty_level'    => $loyalty_level,
+				'available_points' => (int) ( $customer['available_points'] ?? 0 ),
+				'earned_points'    => (int) ( $customer['earned_points'] ?? 0 ),
 			);
+
+			$updated = self::update_customer( $customer_id, $recalculated_data );
 
 			if ( $updated ) {
 				$updated_count++;
 			}
+
+			do_action(
+				'yoohw_cos_customer_intelligence_recalculated',
+				$customer_id,
+				array_merge( $customer, $recalculated_data ),
+				$previous_customer,
+				(bool) $updated
+			);
 		}
 
 		return array(
 			'updated'   => $updated_count,
+			'scanned'   => count( $customers ),
 			'has_more'  => count( $customers ) >= $limit,
 			'next_page' => $page + 1,
 		);
@@ -1056,6 +1104,7 @@ final class YoOhw_COS_Customers {
 		if ( empty( $customers ) ) {
 			return array(
 				'updated'   => 0,
+				'scanned'   => 0,
 				'has_more'  => false,
 				'next_page' => $page,
 			);
@@ -1084,6 +1133,7 @@ final class YoOhw_COS_Customers {
 
 		return array(
 			'updated'   => $updated_count,
+			'scanned'   => count( $customers ),
 			'has_more'  => count( $customers ) >= $limit,
 			'next_page' => $page + 1,
 		);

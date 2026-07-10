@@ -1,0 +1,41 @@
+=== Customer Intelligence for WooCommerce Changelog ===
+
+= 1.2.0 (In development) =
+
+* Added configurable customer scoring thresholds for value tier, lifecycle stage, and customer status so stores can tune High value, Very high value, Top customer, dormant, at-risk, inactive, and loyal classifications.
+* Added optional WooCommerce Loyalty integration that syncs registered-customer loyalty level and points into Customer Intelligence profiles when the Loyalty plugin is active and licensed.
+* Added Loyalty-aware customer list/profile display with Loyalty level badges, available points, earned points, and badge text colors from the Loyalty plugin customization settings.
+* Added Loyalty event ingestion and configurable task automation for level changes, large redemptions, abnormal downgrades/resets, dormant high-points customers, and reconciliation issues.
+* Added optional Blacklist Manager integration that records suspect, blocked, cleared, and match signals into customer activity and customer risk scoring when the core plugin is active.
+* Added optional Blacklist Manager Premium integration for premium order risk, matched rules, anti-bot, payment abuse, device, and gateway fraud signals when Premium is active and licensed.
+* Added Blacklist Manager status badges, activity source labels, risk factors, and Premium security signals on customer profiles.
+* Added a unified Maintenance tool to sync legacy Blacklist Manager signals, including Premium risk signals when Premium is available.
+* Improved Loyalty integration guards so Loyalty-specific settings, columns, filters, panels, and profile data are hidden when the Loyalty plugin is inactive or its license is not active.
+* Improved Blacklist Manager integration guards so core and Premium-specific UI only appears when the corresponding plugin and license state is available.
+* Improved Customer profile overview layout so Commerce summary and Identity fill the section cleanly when optional Loyalty data is not available.
+* Improved Maintenance operations with AJAX batch progress feedback for long-running sync, recalculation, and backfill tasks.
+
+= 1.1.2 (Jun 29, 2026) =
+
+* Added CRM task email notifications for assignment, reassignment, due soon, overdue digest, escalation, completion, reopened tasks, and daily follow-up summaries.
+* Added a CRM email group inside WooCommerce email settings and a Customers > Emails shortcut.
+* Improved WooCommerce-style email templates for CRM task notifications and task digests.
+* Added overdue task count badges to the Customers > Tasks submenu.
+
+= 1.1.1 (Jun 19, 2026) =
+
+* Improved profile tags and segments with Product tags-style autocomplete, existing-term selection, colored chips, readable contrast, and scroll-preserving add/remove actions.
+* Added clickable Customers list rows with keyboard support while preserving form controls, links, buttons, and bulk actions.
+* Replaced the WooCommerce registered-customer order filter with Customer profile filtering, better phone search normalization, and "Filter by Customer" wording.
+* Refined SelectWoo fields, task form alignment, priority/status spacing, and order customer selector styling.
+* Moved email and phone copy actions inline in the Identity metabox using icon buttons.
+* Simplified customer wording, including "Customer ID", sentence-case labels, and the Customers menu position before WooCommerce Products.
+
+= 1.1.0 (Jun 15, 2026) =
+
+* Updated the WordPress Dashboard follow-up tasks widget to appear at the top of the Dashboard.
+* Refreshed the Tasks admin page with a task-specific header, summary cards, clearer form/list panels, and responsive layout improvements while staying familiar to WordPress admin.
+
+= 1.0.0 =
+
+* Initial release with overview dashboard, customer profiles, customer list filters/export, notes, tasks, tags, segments, WooCommerce order integration, Sync Center, HPOS compatibility, and custom database tables.

@@ -94,7 +94,7 @@ final class YoOhw_COS_Customer_Exporter {
 				__( 'AOV', 'yoohw-customer-intelligence' ),
 				__( 'Risk score', 'yoohw-customer-intelligence' ),
 				__( 'Trust score', 'yoohw-customer-intelligence' ),
-				__( 'VIP', 'yoohw-customer-intelligence' ),
+				__( 'Value tier', 'yoohw-customer-intelligence' ),
 				__( 'Lifecycle', 'yoohw-customer-intelligence' ),
 				__( 'Tags', 'yoohw-customer-intelligence' ),
 				__( 'Segments', 'yoohw-customer-intelligence' ),
@@ -220,16 +220,7 @@ final class YoOhw_COS_Customer_Exporter {
 	}
 
 	private static function get_vip_label( string $vip_status ): string {
-		$vip_status = sanitize_key( $vip_status );
-
-		$labels = array(
-			'none'     => __( 'None', 'yoohw-customer-intelligence' ),
-			'silver'   => __( 'Silver', 'yoohw-customer-intelligence' ),
-			'gold'     => __( 'Gold', 'yoohw-customer-intelligence' ),
-			'platinum' => __( 'Platinum', 'yoohw-customer-intelligence' ),
-		);
-
-		return $labels[ $vip_status ] ?? ucfirst( $vip_status );
+		return YoOhw_COS_Intelligence::get_value_tier_label( $vip_status );
 	}
 
 	private static function get_lifecycle_label( string $stage ): string {

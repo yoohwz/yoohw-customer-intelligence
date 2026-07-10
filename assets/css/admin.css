@@ -143,9 +143,55 @@
 	width: 210px;
 }
 
+.yoohw-cos-settings-panel,
 .yoohw-cos-operations-panel {
 	margin-top: 16px;
 	max-width: 980px;
+}
+
+.yoohw-cos-loyalty-task-automation-panel .inside > p {
+	color: var(--yoohw-cos-muted);
+	margin-top: 0;
+}
+
+.yoohw-cos-loyalty-task-automation-panel .form-table {
+	margin-top: 8px;
+}
+
+.yoohw-cos-loyalty-task-automation-panel .form-table th {
+	width: 190px;
+}
+
+.yoohw-cos-scoring-settings-panel .inside > p {
+	color: var(--yoohw-cos-muted);
+	margin-top: 0;
+}
+
+.yoohw-cos-scoring-settings-panel h3 {
+	font-size: 15px;
+	margin: 18px 0 8px;
+}
+
+.yoohw-cos-scoring-table {
+	margin-bottom: 8px;
+	max-width: 760px;
+}
+
+.yoohw-cos-scoring-table th,
+.yoohw-cos-scoring-table td {
+	vertical-align: middle;
+}
+
+.yoohw-cos-scoring-form-table {
+	margin-top: 0;
+}
+
+.yoohw-cos-scoring-form-table th {
+	width: 220px;
+}
+
+.yoohw-cos-scoring-input.small-text {
+	width: 110px;
 }
 
 .yoohw-cos-operation {
@@ -170,6 +216,15 @@
 	border-radius: 4px;
 	margin: 14px 0 12px;
 	padding: 12px;
+}
+
+.yoohw-cos-sync-progress[hidden] {
+	display: none;
+}
+
+.yoohw-cos-sync-progress--inline {
+	margin: 10px 0 0;
+	padding: 10px;
 }
 
 .yoohw-cos-progress-header,
@@ -229,6 +284,14 @@
 	margin: 0;
 }
 
+.yoohw-cos-operation-form .spinner:not(.is-active) {
+	display: none;
+}
+
+.yoohw-cos-operation-form .spinner.is-active {
+	display: inline-block;
+}
+
 .yoohw-cos-operation-group {
 	margin-top: 4px;
 }
@@ -238,7 +301,7 @@
 }
 
 .yoohw-cos-operation-row {
-	align-items: center;
+	align-items: start;
 	background: var(--yoohw-cos-bg);
 	border-bottom: 1px solid var(--yoohw-cos-border-soft);
 	display: grid;
@@ -743,7 +806,7 @@
 .yoohw-cos-badge--status-at_risk,
 .yoohw-cos-badge--lifecycle-loyal,
 .yoohw-cos-badge--risk-medium,
-.yoohw-cos-badge--vip-gold,
+.yoohw-cos-badge--value-tier-very-high-value,
 .yoohw-cos-badge--trust-low {
 	background: var(--yoohw-cos-yellow-bg);
 	border-color: var(--yoohw-cos-yellow-border);
@@ -751,8 +814,8 @@
 
 .yoohw-cos-badge--status-inactive,
 .yoohw-cos-badge--lifecycle-dormant,
-.yoohw-cos-badge--vip-none,
-.yoohw-cos-badge--vip-silver,
+.yoohw-cos-badge--value-tier-standard,
+.yoohw-cos-badge--value-tier-high-value,
 .yoohw-cos-badge--trust-limited {
 	background: var(--yoohw-cos-bg-soft);
 	border-color: var(--yoohw-cos-border);
@@ -760,9 +823,14 @@
 
 .yoohw-cos-badge--status-vip,
 .yoohw-cos-badge--lifecycle-vip,
-.yoohw-cos-badge--vip-platinum {
+.yoohw-cos-badge--value-tier-top-customer {
 	background: var(--yoohw-cos-purple-bg);
 	border-color: var(--yoohw-cos-purple-border);
+}
+
+.yoohw-cos-badge--loyalty-level {
+	background: var(--yoohw-cos-bg-soft);
+	border-color: var(--yoohw-cos-border);
 }
 
 .yoohw-cos-badge--risk-high,
@@ -782,6 +850,27 @@
 }
 
 .yoohw-cos-badge--severity-success {
+	background: var(--yoohw-cos-green-bg);
+	border-color: var(--yoohw-cos-green-border);
+}
+
+.yoohw-cos-badge--blacklist-blocked {
+	background: var(--yoohw-cos-red-bg);
+	border-color: var(--yoohw-cos-red-border);
+}
+
+.yoohw-cos-badge--blacklist-suspect,
+.yoohw-cos-badge--blacklist-source {
+	background: var(--yoohw-cos-yellow-bg);
+	border-color: var(--yoohw-cos-yellow-border);
+}
+
+.yoohw-cos-badge--blacklist-premium-source {
+	background: var(--yoohw-cos-blue-bg);
+	border-color: var(--yoohw-cos-blue-border);
+}
+
+.yoohw-cos-badge--blacklist-cleared {
 	background: var(--yoohw-cos-green-bg);
 	border-color: var(--yoohw-cos-green-border);
 }
@@ -1010,6 +1099,10 @@
 
 .yoohw-cos-profile-section-grid--overview {
 	grid-template-columns: minmax(420px, 1.2fr) minmax(320px, .8fr);
+}
+
+.yoohw-cos-profile-section-grid--overview-with-loyalty {
+	grid-template-columns: minmax(320px, 1fr) minmax(260px, .8fr) minmax(280px, .9fr);
 }
 
 .yoohw-cos-profile-section-grid--commerce,
@@ -1250,6 +1343,14 @@
 	margin-bottom: 14px;
 }
 
+.yoohw-cos-timeline__heading {
+	align-items: center;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-bottom: 4px;
+}
+
 .yoohw-cos-timeline small {
 	color: var(--yoohw-cos-muted);
 }
@@ -1370,11 +1471,19 @@
 	margin-left: 0;
 }
 
+.yoohw-cos-factor-list--compact {
+	margin: 0;
+}
+
 .yoohw-cos-factor-list li {
 	border-bottom: 1px solid var(--yoohw-cos-border-soft);
 	list-style: none;
 	margin: 0;
 	padding: 10px 0;
+}
+
+.yoohw-cos-factor-list--compact li {
+	padding: 8px 0;
 }
 
 .yoohw-cos-factor-list__row {
