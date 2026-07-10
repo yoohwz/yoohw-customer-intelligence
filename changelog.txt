@@ -1,6 +1,6 @@
 === Customer Intelligence for WooCommerce Changelog ===
 
-= 1.2.0 (In development) =
+= 1.2.0 (Jul 10, 2026) =
 
 * Added configurable customer scoring thresholds for value tier, lifecycle stage, and customer status so stores can tune High value, Very high value, Top customer, dormant, at-risk, inactive, and loyal classifications.
 * Added optional WooCommerce Loyalty integration that syncs registered-customer loyalty level and points into Customer Intelligence profiles when the Loyalty plugin is active and licensed.
