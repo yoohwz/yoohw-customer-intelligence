@@ -189,6 +189,10 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 		$this->assertGreaterThan( 0, $customer_id );
 		$this->assertSame( 'sync-check@example.test', $customer['email'] );
 		$this->assertSame( absint( $order->get_id() ), absint( $customer['last_order_id'] ) );
+		$this->assertSame(
+			$order->get_date_created()->date( 'Y-m-d H:i:s' ),
+			$customer['last_activity_date']
+		);
 	}
 
 	public function test_existing_order_sync_processes_oldest_orders_first(): void {
@@ -231,6 +235,7 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 		$this->assertGreaterThan( 0, $customer_id );
 		$this->assertSame( absint( $old_order->get_id() ), absint( $customer['first_order_id'] ) );
 		$this->assertSame( absint( $new_order->get_id() ), absint( $customer['last_order_id'] ) );
+		$this->assertSame( '2024-02-01 00:00:00', $customer['last_activity_date'] );
 
 		$synced_order_ids = $wpdb->get_col(
 			$wpdb->prepare(
@@ -256,15 +261,79 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 		);
 	}
 
+	public function test_inactive_status_takes_priority_over_value_tier(): void {
+		$customer = array(
+			'total_orders'       => 20,
+			'total_spent'        => 5000,
+			'last_order_date'    => date_i18n( 'Y-m-d H:i:s', current_time( 'timestamp' ) - ( 120 * DAY_IN_SECONDS ) ),
+			'last_activity_date' => '',
+		);
+
+		$this->assertSame( 'inactive', YoOhw_COS_Intelligence::calculate_customer_status( $customer ) );
+		$this->assertSame( 'platinum', YoOhw_COS_Intelligence::calculate_vip_status( $customer ) );
+	}
+
+	public function test_overview_summary_and_action_filters_use_existing_customer_data(): void {
+		$repeat_id = YoOhw_COS_Customers::create_customer(
+			array(
+				'email'             => 'repeat-overview@example.test',
+				'phone'             => '555-0110',
+				'display_name'      => 'Repeat overview',
+				'total_orders'      => 3,
+				'total_spent'       => 300,
+				'customer_status'   => 'active',
+				'vip_status'        => 'silver',
+				'lifecycle_stage'   => 'repeat',
+				'last_activity_date' => YoOhw_COS_DB::now(),
+			)
+		);
+		$missing_id = YoOhw_COS_Customers::create_customer(
+			array(
+				'email'             => 'missing-overview@example.test',
+				'display_name'      => 'Missing overview',
+				'total_orders'      => 1,
+				'total_spent'       => 50,
+				'customer_status'   => 'new',
+				'vip_status'        => 'none',
+				'lifecycle_stage'   => 'new',
+				'last_activity_date' => YoOhw_COS_DB::now(),
+			)
+		);
+
+		$this->assertGreaterThan( 0, $repeat_id );
+		$this->assertGreaterThan( 0, $missing_id );
+
+		$summary = YoOhw_COS_Overview::get_summary();
+		$repeat  = YoOhw_COS_Customer_Query::query(
+			array(
+				'customer_cohort' => 'repeat',
+				'per_page'        => 20,
+			)
+		);
+		$missing = YoOhw_COS_Customer_Query::query(
+			array(
+				'customer_attention' => 'missing_contact',
+				'per_page'           => 20,
+			)
+		);
+
+		$this->assertSame( 2, absint( $summary['total_customers'] ) );
+		$this->assertSame( 1, absint( $summary['repeat_customers'] ) );
+		$this->assertSame( 50.0, (float) $summary['repeat_rate'] );
+		$this->assertSame( 1, absint( $summary['high_value_customers'] ) );
+		$this->assertSame( 1, absint( $repeat['total_items'] ) );
+		$this->assertSame( 1, absint( $missing['total_items'] ) );
+	}
+
 	private function load_plugin_classes(): void {
 		$root = dirname( __DIR__, 2 );
 
 		if ( ! defined( 'YOOHW_COS_VERSION' ) ) {
-			define( 'YOOHW_COS_VERSION', '1.1.1' );
+			define( 'YOOHW_COS_VERSION', '1.2.1' );
 		}
 
 		if ( ! defined( 'YOOHW_COS_DB_VERSION' ) ) {
-			define( 'YOOHW_COS_DB_VERSION', '0.1.6' );
+			define( 'YOOHW_COS_DB_VERSION', '0.1.10' );
 		}
 
 		if ( ! defined( 'YOOHW_COS_PATH' ) ) {
@@ -279,6 +348,8 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 			'includes/class-yoohw-cos-customers.php',
 			'includes/class-yoohw-cos-tags.php',
 			'includes/class-yoohw-cos-notes.php',
+			'includes/class-yoohw-cos-tasks.php',
+			'includes/class-yoohw-cos-overview.php',
 			'includes/class-yoohw-cos-intelligence.php',
 			'includes/class-yoohw-cos-segments.php',
 		);

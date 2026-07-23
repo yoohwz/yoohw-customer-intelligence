@@ -4,6 +4,7 @@ defined( 'ABSPATH' ) || exit;
 final class YoOhw_COS_Admin_Tools {
 
 	public static function init(): void {
+		add_action( 'wp_ajax_yoohw_cos_send_customer_email', array( __CLASS__, 'handle_send_customer_email' ) );
 		add_action( 'wp_ajax_yoohw_cos_ajax_sync_customers', array( __CLASS__, 'handle_ajax_sync_customers' ) );
 		add_action( 'wp_ajax_yoohw_cos_ajax_recalculate_intelligence', array( __CLASS__, 'handle_ajax_recalculate_intelligence' ) );
 		add_action( 'wp_ajax_yoohw_cos_ajax_backfill_first_orders', array( __CLASS__, 'handle_ajax_backfill_first_orders' ) );
@@ -33,6 +34,104 @@ final class YoOhw_COS_Admin_Tools {
 		add_action( 'admin_post_yoohw_cos_complete_task', array( __CLASS__, 'handle_complete_task' ) );
 		add_action( 'admin_post_yoohw_cos_reopen_task', array( __CLASS__, 'handle_reopen_task' ) );
 		add_action( 'admin_post_yoohw_cos_delete_task', array( __CLASS__, 'handle_delete_task' ) );
+	}
+
+	public static function handle_send_customer_email(): void {
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			wp_send_json_error(
+				array(
+					'message' => __( 'You do not have permission to send customer emails.', 'yoohw-customer-intelligence' ),
+				),
+				403
+			);
+		}
+
+		check_ajax_referer( 'yoohw_cos_send_customer_email', 'security' );
+
+		$customer_id = isset( $_POST['customer_id'] ) ? absint( wp_unslash( $_POST['customer_id'] ) ) : 0;
+		$subject     = isset( $_POST['email_subject'] ) ? sanitize_text_field( wp_unslash( $_POST['email_subject'] ) ) : '';
+		$message     = isset( $_POST['email_message'] ) ? sanitize_textarea_field( wp_unslash( $_POST['email_message'] ) ) : '';
+		$customer    = $customer_id > 0 ? YoOhw_COS_Customers::get_customer( $customer_id ) : array();
+
+		if ( empty( $customer ) ) {
+			wp_send_json_error(
+				array(
+					'message' => __( 'The requested customer profile does not exist.', 'yoohw-customer-intelligence' ),
+				),
+				404
+			);
+		}
+
+		$recipient = sanitize_email( (string) ( $customer['email'] ?? '' ) );
+
+		if ( ! is_email( $recipient ) ) {
+			wp_send_json_error(
+				array(
+					'message' => __( 'This customer profile does not have a valid email address.', 'yoohw-customer-intelligence' ),
+				),
+				400
+			);
+		}
+
+		if ( '' === trim( $subject ) ) {
+			wp_send_json_error(
+				array(
+					'message' => __( 'Enter an email subject.', 'yoohw-customer-intelligence' ),
+				),
+				400
+			);
+		}
+
+		if ( '' === trim( $message ) ) {
+			wp_send_json_error(
+				array(
+					'message' => __( 'Enter an email message.', 'yoohw-customer-intelligence' ),
+				),
+				400
+			);
+		}
+
+		$result = YoOhw_COS_Email_Notifications::send_customer_message( $customer, $subject, $message );
+
+		if ( is_wp_error( $result ) ) {
+			wp_send_json_error(
+				array(
+					'message' => $result->get_error_message(),
+				),
+				500
+			);
+		}
+
+		YoOhw_COS_Events::record(
+			array(
+				'customer_id'  => $customer_id,
+				'event_type'   => 'customer_email_sent',
+				'event_source' => 'customer_os',
+				'object_type'  => 'customer',
+				'object_id'    => $customer_id,
+				'description'  => sprintf(
+					/* translators: 1: customer email address, 2: email subject. */
+					__( 'Email sent to %1$s with subject “%2$s”.', 'yoohw-customer-intelligence' ),
+					$recipient,
+					$subject
+				),
+				'metadata'     => array(
+					'recipient'       => $recipient,
+					'subject'         => $subject,
+					'sent_by_user_id' => get_current_user_id(),
+				),
+			)
+		);
+
+		wp_send_json_success(
+			array(
+				'message' => sprintf(
+					/* translators: %s: customer email address. */
+					__( 'Email sent to %s.', 'yoohw-customer-intelligence' ),
+					$recipient
+				),
+			)
+		);
 	}
 
 	public static function handle_sync_customers(): void {

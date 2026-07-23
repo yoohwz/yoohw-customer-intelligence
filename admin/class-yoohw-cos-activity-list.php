@@ -277,6 +277,7 @@ final class YoOhw_COS_Activity_List extends WP_List_Table {
 			'note_deleted'    => __( 'Note deleted', 'yoohw-customer-intelligence' ),
 			'task_created'    => __( 'Task created', 'yoohw-customer-intelligence' ),
 			'task_completed'  => __( 'Task completed', 'yoohw-customer-intelligence' ),
+			'customer_email_sent' => __( 'Customer email sent', 'yoohw-customer-intelligence' ),
 			'bulk_customer_action' => __( 'Bulk customer action', 'yoohw-customer-intelligence' ),
 		);
 

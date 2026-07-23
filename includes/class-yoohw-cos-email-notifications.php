@@ -8,6 +8,7 @@ final class YoOhw_COS_Email_Notifications {
 	private const CRON_DAILY = 'yoohw_cos_crm_email_daily';
 
 	private static $email_classes = array(
+		'YoOhw_COS_Email_Customer_Message',
 		'YoOhw_COS_Email_Task_Assigned',
 		'YoOhw_COS_Email_Task_Reassigned',
 		'YoOhw_COS_Email_Task_Due_Soon',
@@ -61,6 +62,47 @@ final class YoOhw_COS_Email_Notifications {
 		$groups[ self::GROUP ] = __( 'CRM', 'yoohw-customer-intelligence' );
 
 		return $groups;
+	}
+
+	public static function get_customer_message_default_subject( array $customer ): string {
+		$email = self::get_crm_email( 'YoOhw_COS_Email_Customer_Message' );
+
+		if ( $email instanceof YoOhw_COS_Email_Customer_Message ) {
+			return $email->get_composer_subject( $customer );
+		}
+
+		return sprintf(
+			/* translators: %s: store name. */
+			__( 'A message from %s', 'yoohw-customer-intelligence' ),
+			wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES )
+		);
+	}
+
+	public static function send_customer_message( array $customer, string $subject, string $message ) {
+		$email = self::get_crm_email( 'YoOhw_COS_Email_Customer_Message' );
+
+		if ( ! $email instanceof YoOhw_COS_Email_Customer_Message ) {
+			return new WP_Error(
+				'customer_email_unavailable',
+				__( 'The WooCommerce customer email template is unavailable.', 'yoohw-customer-intelligence' )
+			);
+		}
+
+		if ( ! $email->is_enabled() ) {
+			return new WP_Error(
+				'customer_email_disabled',
+				__( 'Customer messages are disabled in WooCommerce email settings.', 'yoohw-customer-intelligence' )
+			);
+		}
+
+		if ( ! $email->trigger( $customer, $subject, $message ) ) {
+			return new WP_Error(
+				'customer_email_send_failed',
+				__( 'WooCommerce could not send the email. Please check the store email configuration and try again.', 'yoohw-customer-intelligence' )
+			);
+		}
+
+		return true;
 	}
 
 	public static function replace_email_notifications_field( array $settings ): array {
@@ -549,6 +591,7 @@ final class YoOhw_COS_Email_Notifications {
 		}
 
 		require_once YOOHW_COS_PATH . 'includes/emails/class-yoohw-cos-email-crm-base.php';
+		require_once YOOHW_COS_PATH . 'includes/emails/class-yoohw-cos-email-customer-message.php';
 		require_once YOOHW_COS_PATH . 'includes/emails/class-yoohw-cos-email-task-events.php';
 		require_once YOOHW_COS_PATH . 'includes/emails/class-yoohw-cos-email-task-digests.php';
 	}

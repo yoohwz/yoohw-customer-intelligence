@@ -12,17 +12,9 @@ final class YoOhw_COS_Intelligence {
 	public static function calculate_customer_status( array $customer ): string {
 		$total_orders = absint( $customer['total_orders'] ?? 0 );
 		$total_spent  = (float) ( $customer['total_spent'] ?? 0 );
-		$last_active  = $customer['last_activity_date'] ?? '';
+		$last_active  = self::get_last_activity_date( $customer );
 		$settings     = self::get_scoring_settings();
 		$status       = $settings['customer_status'];
-
-		if ( $total_orders <= absint( $status['new_max_orders'] ?? 1 ) ) {
-			return 'new';
-		}
-
-		if ( $total_spent >= (float) $status['vip_spent'] || $total_orders >= absint( $status['vip_orders'] ) ) {
-			return 'vip';
-		}
 
 		if ( self::days_since( $last_active ) >= absint( $status['inactive_days'] ) ) {
 			return 'inactive';
@@ -30,6 +22,14 @@ final class YoOhw_COS_Intelligence {
 
 		if ( self::days_since( $last_active ) >= absint( $status['at_risk_days'] ) ) {
 			return 'at_risk';
+		}
+
+		if ( $total_orders <= absint( $status['new_max_orders'] ?? 1 ) ) {
+			return 'new';
+		}
+
+		if ( $total_spent >= (float) $status['vip_spent'] || $total_orders >= absint( $status['vip_orders'] ) ) {
+			return 'vip';
 		}
 
 		return 'active';
@@ -226,7 +226,7 @@ final class YoOhw_COS_Intelligence {
 	public static function calculate_risk_score( array $customer ): float {
 		$total_orders = absint( $customer['total_orders'] ?? 0 );
 		$total_spent  = (float) ( $customer['total_spent'] ?? 0 );
-		$last_active  = $customer['last_activity_date'] ?? '';
+		$last_active  = self::get_last_activity_date( $customer );
 		$email        = sanitize_email( $customer['email'] ?? '' );
 		$phone        = sanitize_text_field( $customer['phone'] ?? '' );
 
@@ -278,7 +278,7 @@ final class YoOhw_COS_Intelligence {
 
 		$total_orders = absint( $customer['total_orders'] ?? 0 );
 		$total_spent  = (float) ( $customer['total_spent'] ?? 0 );
-		$last_active  = $customer['last_activity_date'] ?? '';
+		$last_active  = self::get_last_activity_date( $customer );
 		$email        = sanitize_email( $customer['email'] ?? '' );
 		$phone        = sanitize_text_field( $customer['phone'] ?? '' );
 
@@ -414,7 +414,7 @@ final class YoOhw_COS_Intelligence {
 	public static function calculate_lifecycle_stage( array $customer ): string {
 		$total_orders = absint( $customer['total_orders'] ?? 0 );
 		$total_spent  = (float) ( $customer['total_spent'] ?? 0 );
-		$last_active  = $customer['last_activity_date'] ?? '';
+		$last_active  = self::get_last_activity_date( $customer );
 		$settings     = self::get_scoring_settings();
 		$lifecycle    = $settings['lifecycle'];
 
@@ -441,7 +441,7 @@ final class YoOhw_COS_Intelligence {
 		$stage        = self::calculate_lifecycle_stage( $customer );
 		$total_orders = absint( $customer['total_orders'] ?? 0 );
 		$total_spent  = (float) ( $customer['total_spent'] ?? 0 );
-		$last_active  = $customer['last_activity_date'] ?? '';
+		$last_active  = self::get_last_activity_date( $customer );
 		$settings     = self::get_scoring_settings();
 		$lifecycle    = $settings['lifecycle'];
 
@@ -506,5 +506,15 @@ final class YoOhw_COS_Intelligence {
 		);
 
 		return $factors;
+	}
+
+	private static function get_last_activity_date( array $customer ): string {
+		$last_activity = sanitize_text_field( (string) ( $customer['last_activity_date'] ?? '' ) );
+
+		if ( '' !== $last_activity ) {
+			return $last_activity;
+		}
+
+		return sanitize_text_field( (string) ( $customer['last_order_date'] ?? '' ) );
 	}
 }

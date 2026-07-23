@@ -1,5 +1,11 @@
 === Customer Intelligence for WooCommerce Changelog ===
 
+= 1.2.1 (Jul 23, 2026) =
+
+* Added a direct customer email composer to the Identity panel, with WooCommerce email branding, sender settings, configurable template content, secure AJAX delivery, and customer activity logging.
+* Redesigned Overview as an action dashboard with data freshness, linked lifetime KPIs, attention queues, priority customers, due-soon tasks, and drill-down customer distributions.
+* Corrected customer activity semantics so historical order sync uses meaningful order or loyalty activity dates, then refreshes status, lifecycle, and risk classifications in background batches.
+
 = 1.2.0 (Jul 10, 2026) =
 
 * Added configurable customer scoring thresholds for value tier, lifecycle stage, and customer status so stores can tune High value, Very high value, Top customer, dormant, at-risk, inactive, and loyal classifications.

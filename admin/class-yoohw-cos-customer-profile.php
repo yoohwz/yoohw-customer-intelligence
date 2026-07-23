@@ -378,6 +378,8 @@ final class YoOhw_COS_Customer_Profile {
 	}
 
 	private static function render_identity_panel( array $customer ): void {
+		$customer_email = sanitize_email( (string) ( $customer['email'] ?? '' ) );
+
 		echo '<div class="postbox">';
 		echo '<div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Identity', 'yoohw-customer-intelligence' ) . '</h2></div>';
 		echo '<div class="inside">';
@@ -426,10 +428,10 @@ final class YoOhw_COS_Customer_Profile {
 
 		echo '<p class="yoohw-cos-action-row">';
 
-		if ( ! empty( $customer['email'] ) ) {
-			echo '<a class="button" href="mailto:' . esc_attr( $customer['email'] ) . '">';
+		if ( is_email( $customer_email ) ) {
+			echo '<button type="button" class="button yoohw-cos-email-composer-open" data-yoohw-cos-email-open aria-haspopup="dialog" aria-controls="yoohw-cos-email-composer">';
 			echo esc_html__( 'Email customer', 'yoohw-customer-intelligence' );
-			echo '</a>';
+			echo '</button>';
 		}
 
 		if ( ! empty( $customer['phone'] ) ) {
@@ -440,6 +442,87 @@ final class YoOhw_COS_Customer_Profile {
 
 		echo '</p>';
 
+		if ( is_email( $customer_email ) ) {
+			self::render_customer_email_composer( $customer, $customer_email );
+		}
+
+		echo '</div>';
+		echo '</div>';
+	}
+
+	private static function render_customer_email_composer( array $customer, string $customer_email ): void {
+		$customer_id     = absint( $customer['id'] ?? 0 );
+		$customer_name   = sanitize_text_field( (string) ( $customer['display_name'] ?? '' ) );
+		$default_subject = YoOhw_COS_Email_Notifications::get_customer_message_default_subject( $customer );
+		$settings_url    = add_query_arg(
+			array(
+				'page'        => 'wc-settings',
+				'tab'         => 'email',
+				'section'     => 'yoohw_cos_email_customer_message',
+				'email_group' => 'crm',
+			),
+			admin_url( 'admin.php' )
+		);
+
+		if ( '' === $customer_name ) {
+			$customer_name = trim(
+				sanitize_text_field( (string) ( $customer['first_name'] ?? '' ) ) . ' ' .
+				sanitize_text_field( (string) ( $customer['last_name'] ?? '' ) )
+			);
+		}
+
+		if ( '' === $customer_name ) {
+			$customer_name = $customer_email;
+		}
+
+		echo '<div id="yoohw-cos-email-composer" class="yoohw-cos-email-composer" role="dialog" aria-modal="true" aria-labelledby="yoohw-cos-email-composer-title" aria-describedby="yoohw-cos-email-composer-description" hidden>';
+		echo '<div class="yoohw-cos-email-composer__backdrop" data-yoohw-cos-email-close></div>';
+		echo '<div class="yoohw-cos-email-composer__panel" role="document">';
+		echo '<div class="yoohw-cos-email-composer__header">';
+		echo '<h2 id="yoohw-cos-email-composer-title">' . esc_html__( 'Email customer', 'yoohw-customer-intelligence' ) . '</h2>';
+		echo '<button type="button" class="yoohw-cos-email-composer__close" data-yoohw-cos-email-close aria-label="' . esc_attr__( 'Close email composer', 'yoohw-customer-intelligence' ) . '"><span class="dashicons dashicons-no-alt" aria-hidden="true"></span></button>';
+		echo '</div>';
+
+		echo '<form class="yoohw-cos-email-composer__form" data-yoohw-cos-email-form>';
+		echo '<input type="hidden" name="action" value="yoohw_cos_send_customer_email" />';
+		echo '<input type="hidden" name="customer_id" value="' . esc_attr( $customer_id ) . '" />';
+		wp_nonce_field( 'yoohw_cos_send_customer_email', 'security', false );
+
+		echo '<div class="yoohw-cos-email-composer__body">';
+		echo '<p id="yoohw-cos-email-composer-description" class="description">';
+		printf(
+			/* translators: %s: customer name. */
+			esc_html__( 'Compose a direct email to %s. The message will use your WooCommerce email branding and sender settings.', 'yoohw-customer-intelligence' ),
+			esc_html( $customer_name )
+		);
+		echo '</p>';
+
+		echo '<p class="yoohw-cos-email-composer__field">';
+		echo '<label for="yoohw-cos-email-recipient">' . esc_html__( 'To', 'yoohw-customer-intelligence' ) . '</label>';
+		echo '<input id="yoohw-cos-email-recipient" type="email" class="large-text" value="' . esc_attr( $customer_email ) . '" readonly />';
+		echo '</p>';
+
+		echo '<p class="yoohw-cos-email-composer__field">';
+		echo '<label for="yoohw-cos-email-subject">' . esc_html__( 'Subject', 'yoohw-customer-intelligence' ) . '</label>';
+		echo '<input id="yoohw-cos-email-subject" name="email_subject" type="text" class="large-text" value="' . esc_attr( $default_subject ) . '" maxlength="200" required />';
+		echo '</p>';
+
+		echo '<p class="yoohw-cos-email-composer__field">';
+		echo '<label for="yoohw-cos-email-message">' . esc_html__( 'Message', 'yoohw-customer-intelligence' ) . '</label>';
+		echo '<textarea id="yoohw-cos-email-message" name="email_message" class="large-text" rows="10" required></textarea>';
+		echo '</p>';
+
+		echo '<div class="yoohw-cos-email-composer__status" data-yoohw-cos-email-status role="status" aria-live="polite"></div>';
+		echo '</div>';
+
+		echo '<div class="yoohw-cos-email-composer__footer">';
+		echo '<a href="' . esc_url( $settings_url ) . '" target="_blank" rel="noopener noreferrer">' . esc_html__( 'WooCommerce email settings', 'yoohw-customer-intelligence' ) . '</a>';
+		echo '<div class="yoohw-cos-email-composer__actions">';
+		echo '<button type="button" class="button" data-yoohw-cos-email-close>' . esc_html__( 'Cancel', 'yoohw-customer-intelligence' ) . '</button>';
+		echo '<button type="submit" class="button button-primary" data-yoohw-cos-email-submit data-sending-text="' . esc_attr__( 'Sending…', 'yoohw-customer-intelligence' ) . '">' . esc_html__( 'Send email', 'yoohw-customer-intelligence' ) . '</button>';
+		echo '</div>';
+		echo '</div>';
+		echo '</form>';
 		echo '</div>';
 		echo '</div>';
 	}
@@ -956,6 +1039,7 @@ final class YoOhw_COS_Customer_Profile {
 			'blacklist_removed'        => __( 'Blacklist cleared', 'yoohw-customer-intelligence' ),
 			'blacklist_suspect'        => __( 'Blacklist suspect', 'yoohw-customer-intelligence' ),
 			'bulk_customer_action'     => __( 'Bulk action', 'yoohw-customer-intelligence' ),
+			'customer_email_sent'      => __( 'Customer email sent', 'yoohw-customer-intelligence' ),
 			'premium_order_risk_scored' => __( 'Premium order risk scored', 'yoohw-customer-intelligence' ),
 			'premium_risk_rule_matched' => __( 'Premium risk rule matched', 'yoohw-customer-intelligence' ),
 			'premium_antibot_blocked' => __( 'Premium anti-bot blocked', 'yoohw-customer-intelligence' ),

@@ -56,6 +56,7 @@ final class YoOhw_COS_Loader {
 		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-tags.php';
 		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-notes.php';
 		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-tasks.php';
+		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-overview.php';
 		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-email-notifications.php';
 		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-intelligence.php';
 		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-blacklist-manager-integration.php';

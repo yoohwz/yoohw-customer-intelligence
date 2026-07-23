@@ -231,8 +231,78 @@ final class YoOhw_COS_Install {
 			self::create_tables();
 			self::ensure_customer_schema();
 			self::ensure_task_schema();
-			update_option( 'yoohw_cos_db_version', self::db_version() );
+			$migration_complete = true;
+
+			if ( version_compare( $current_db_version, '0.1.10', '<' ) ) {
+				$migration_complete = self::migrate_customer_activity_semantics();
+			}
+
+			if ( $migration_complete ) {
+				update_option( 'yoohw_cos_db_version', self::db_version() );
+			}
 		}
+	}
+
+	private static function migrate_customer_activity_semantics(): bool {
+		global $wpdb;
+
+		$customers_table = $wpdb->prefix . 'yoohw_cos_customers';
+		$events_table    = $wpdb->prefix . 'yoohw_cos_events';
+
+		if ( ! self::table_exists( $customers_table ) || ! self::table_exists( $events_table ) ) {
+			return false;
+		}
+
+		/*
+		 * Historical order sync previously stored the sync timestamp as customer
+		 * activity. Restore meaningful activity from the latest order or a real
+		 * loyalty event before intelligence is recalculated in background batches.
+		 */
+		$updated = $wpdb->query(
+			$wpdb->prepare(
+				"UPDATE %i c
+				LEFT JOIN (
+					SELECT customer_id, MAX(created_at) AS last_loyalty_activity
+					FROM %i
+					WHERE event_source = %s
+					GROUP BY customer_id
+				) loyalty_events ON loyalty_events.customer_id = c.id
+				SET c.last_activity_date = CASE
+					WHEN loyalty_events.last_loyalty_activity IS NOT NULL
+						AND (
+							c.last_order_date IS NULL
+							OR loyalty_events.last_loyalty_activity > c.last_order_date
+						)
+						THEN loyalty_events.last_loyalty_activity
+					WHEN c.last_order_date IS NOT NULL
+						THEN c.last_order_date
+					ELSE c.last_activity_date
+				END",
+				$customers_table,
+				$events_table,
+				'wc_loyalty'
+			)
+		);
+
+		if ( false === $updated ) {
+			return false;
+		}
+
+		update_option(
+			'yoohw_cos_activity_semantics_recalculation',
+			array(
+				'status'     => 'pending',
+				'next_page'  => 1,
+				'started_at' => YoOhw_COS_DB::now(),
+			),
+			false
+		);
+
+		if ( ! wp_next_scheduled( 'yoohw_cos_recalculate_activity_semantics' ) ) {
+			wp_schedule_single_event( time() + 5, 'yoohw_cos_recalculate_activity_semantics' );
+		}
+
+		return true;
 	}
 
 	private static function add_first_order_columns(): void {

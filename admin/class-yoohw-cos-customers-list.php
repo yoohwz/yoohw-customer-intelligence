@@ -193,7 +193,7 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 			return;
 		}
 
-		$filter_keys = array( 's', 'customer_status', 'customer_tag', 'customer_segment', 'vip_status', 'risk_level', 'lifecycle_stage' );
+		$filter_keys = array( 's', 'customer_status', 'customer_tag', 'customer_segment', 'vip_status', 'risk_level', 'lifecycle_stage', 'customer_cohort', 'customer_attention' );
 
 		if ( self::is_loyalty_integration_active() ) {
 			$filter_keys[] = 'loyalty_level';
@@ -493,7 +493,10 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 		$current_vip = isset( $_GET['vip_status'] ) ? sanitize_key( wp_unslash( $_GET['vip_status'] ) ) : '';
 
 		$vip_statuses = array_merge(
-			array( '' => __( 'All value tiers', 'yoohw-customer-intelligence' ) ),
+			array(
+				''           => __( 'All value tiers', 'yoohw-customer-intelligence' ),
+				'high_value' => __( 'Any high-value tier', 'yoohw-customer-intelligence' ),
+			),
 			YoOhw_COS_Intelligence::get_value_tier_labels()
 		);
 
@@ -551,6 +554,36 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 		foreach ( $lifecycle_options as $stage_key => $stage_label ) {
 			echo '<option value="' . esc_attr( $stage_key ) . '" ' . selected( $current_lifecycle, $stage_key, false ) . '>';
 			echo esc_html( $stage_label );
+			echo '</option>';
+		}
+		echo '</select>';
+
+		$current_cohort = isset( $_GET['customer_cohort'] ) ? sanitize_key( wp_unslash( $_GET['customer_cohort'] ) ) : '';
+		$cohort_options = array(
+			''           => __( 'All purchase cohorts', 'yoohw-customer-intelligence' ),
+			'first_time' => __( 'First-time customers', 'yoohw-customer-intelligence' ),
+			'repeat'     => __( 'Repeat customers', 'yoohw-customer-intelligence' ),
+		);
+
+		echo '<select name="customer_cohort">';
+		foreach ( $cohort_options as $cohort_key => $cohort_label ) {
+			echo '<option value="' . esc_attr( $cohort_key ) . '" ' . selected( $current_cohort, $cohort_key, false ) . '>';
+			echo esc_html( $cohort_label );
+			echo '</option>';
+		}
+		echo '</select>';
+
+		$current_attention = isset( $_GET['customer_attention'] ) ? sanitize_key( wp_unslash( $_GET['customer_attention'] ) ) : '';
+		$attention_options = array(
+			''                     => __( 'All attention states', 'yoohw-customer-intelligence' ),
+			'high_value_retention' => __( 'High-value retention risk', 'yoohw-customer-intelligence' ),
+			'missing_contact'      => __( 'Missing contact details', 'yoohw-customer-intelligence' ),
+		);
+
+		echo '<select name="customer_attention">';
+		foreach ( $attention_options as $attention_key => $attention_label ) {
+			echo '<option value="' . esc_attr( $attention_key ) . '" ' . selected( $current_attention, $attention_key, false ) . '>';
+			echo esc_html( $attention_label );
 			echo '</option>';
 		}
 		echo '</select>';

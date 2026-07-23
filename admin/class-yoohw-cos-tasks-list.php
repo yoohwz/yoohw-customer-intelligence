@@ -74,6 +74,13 @@ final class YoOhw_COS_Tasks_List extends WP_List_Table {
 				$params[] = $now;
 				break;
 
+			case 'due_soon':
+				$where   .= ' AND t.status <> %s AND t.due_date IS NOT NULL AND t.due_date >= %s AND t.due_date <= %s';
+				$params[] = YoOhw_COS_Tasks::STATUS_COMPLETED;
+				$params[] = $now;
+				$params[] = date_i18n( 'Y-m-d H:i:s', current_time( 'timestamp' ) + ( 7 * DAY_IN_SECONDS ) );
+				break;
+
 			case 'completed':
 				$where   .= ' AND t.status = %s';
 				$params[] = YoOhw_COS_Tasks::STATUS_COMPLETED;
@@ -190,6 +197,7 @@ final class YoOhw_COS_Tasks_List extends WP_List_Table {
 			'all'            => __( 'All', 'yoohw-customer-intelligence' ),
 			'open'           => __( 'Open', 'yoohw-customer-intelligence' ),
 			'overdue'        => __( 'Overdue', 'yoohw-customer-intelligence' ),
+			'due_soon'       => __( 'Due in 7 days', 'yoohw-customer-intelligence' ),
 			'completed'      => __( 'Completed', 'yoohw-customer-intelligence' ),
 			'assigned_to_me' => __( 'Assigned to me', 'yoohw-customer-intelligence' ),
 		);

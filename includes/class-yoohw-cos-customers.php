@@ -9,6 +9,8 @@ final class YoOhw_COS_Customers {
 	public static function init(): void {
 		add_action( 'woocommerce_checkout_order_processed', array( __CLASS__, 'sync_from_order_id' ), 20 );
 		add_action( 'woocommerce_order_status_changed', array( __CLASS__, 'sync_from_order_id' ), 20 );
+		add_action( 'yoohw_cos_recalculate_activity_semantics', array( __CLASS__, 'process_activity_semantics_recalculation' ) );
+		self::maybe_schedule_activity_semantics_recalculation();
 	}
 
 	public static function sync_from_order_id( int $order_id ): int {
@@ -39,6 +41,7 @@ final class YoOhw_COS_Customers {
 
 		$customer_id = self::find_customer_id_from_order( $order, $wp_user_id, $email, $phone );
 		$last_order_data = self::get_last_order_data_for_sync( $customer_id, $order_id, $order_date );
+		$last_activity_date = self::get_last_activity_date_for_sync( $customer_id, $last_order_data['last_order_date'] );
 
 		$data = array(
 			'wp_user_id'          => $wp_user_id ?: null,
@@ -52,7 +55,7 @@ final class YoOhw_COS_Customers {
 			'average_order_value' => 0,
 			'last_order_id'       => $last_order_data['last_order_id'],
 			'last_order_date'     => $last_order_data['last_order_date'],
-			'last_activity_date'  => YoOhw_COS_DB::now(),
+			'last_activity_date'  => $last_activity_date,
 			'updated_at'          => YoOhw_COS_DB::now(),
 		);
 
@@ -140,6 +143,10 @@ final class YoOhw_COS_Customers {
 			) );
 		}
 
+		if ( $customer_id > 0 ) {
+			self::mark_customer_data_updated();
+		}
+
 		return $customer_id;
 	}
 
@@ -199,6 +206,31 @@ final class YoOhw_COS_Customers {
 		return array(
 			'last_order_id'   => $last_order_id,
 			'last_order_date' => $last_order_date,
+		);
+	}
+
+	private static function get_last_activity_date_for_sync( int $customer_id, string $last_order_date ): string {
+		$last_activity_date = $last_order_date;
+
+		if ( $customer_id > 0 ) {
+			$customer          = self::get_customer( $customer_id );
+			$existing_activity = sanitize_text_field( (string) ( $customer['last_activity_date'] ?? '' ) );
+
+			if (
+				YoOhw_COS_DB::date_timestamp( $existing_activity )
+				> YoOhw_COS_DB::date_timestamp( $last_activity_date )
+			) {
+				$last_activity_date = $existing_activity;
+			}
+		}
+
+		return sanitize_text_field(
+			(string) apply_filters(
+				'yoohw_cos_customer_last_activity_date',
+				$last_activity_date,
+				$customer_id,
+				$last_order_date
+			)
 		);
 	}
 
@@ -679,6 +711,9 @@ final class YoOhw_COS_Customers {
 		delete_option( 'yoohw_cos_operation_sync_state_recalculate_intelligence' );
 		delete_option( 'yoohw_cos_operation_sync_state_backfill_first_orders' );
 		delete_option( 'yoohw_cos_operation_sync_state_blacklist_signals' );
+		delete_option( 'yoohw_cos_activity_semantics_recalculation' );
+		delete_option( 'yoohw_cos_customer_data_updated_at' );
+		wp_clear_scheduled_hook( 'yoohw_cos_recalculate_activity_semantics' );
 	}
 
 	public static function recalculate_intelligence( int $limit = 500, int $page = 1 ): array {
@@ -760,6 +795,65 @@ final class YoOhw_COS_Customers {
 			'has_more'  => count( $customers ) >= $limit,
 			'next_page' => $page + 1,
 		);
+	}
+
+	public static function process_activity_semantics_recalculation(): void {
+		$state = get_option( 'yoohw_cos_activity_semantics_recalculation', array() );
+		$state = is_array( $state ) ? $state : array();
+
+		if ( empty( $state ) || 'completed' === (string) ( $state['status'] ?? '' ) ) {
+			return;
+		}
+
+		$page   = max( 1, absint( $state['next_page'] ?? 1 ) );
+		$result = self::recalculate_intelligence( 250, $page );
+
+		$state['total_scanned'] = absint( $state['total_scanned'] ?? 0 ) + absint( $result['scanned'] ?? 0 );
+		$state['total_updated'] = absint( $state['total_updated'] ?? 0 ) + absint( $result['updated'] ?? 0 );
+
+		if ( ! empty( $result['has_more'] ) ) {
+			$state['status']        = 'in_progress';
+			$state['next_page']     = max( $page + 1, absint( $result['next_page'] ?? 0 ) );
+			$state['last_batch_at'] = YoOhw_COS_DB::now();
+
+			update_option( 'yoohw_cos_activity_semantics_recalculation', $state, false );
+
+			if ( ! wp_next_scheduled( 'yoohw_cos_recalculate_activity_semantics' ) ) {
+				wp_schedule_single_event( time() + 5, 'yoohw_cos_recalculate_activity_semantics' );
+			}
+
+			return;
+		}
+
+		$state['status']       = 'completed';
+		$state['next_page']    = $page;
+		$state['completed_at'] = YoOhw_COS_DB::now();
+
+		update_option( 'yoohw_cos_activity_semantics_recalculation', $state, false );
+		self::mark_customer_data_updated( true );
+	}
+
+	private static function maybe_schedule_activity_semantics_recalculation(): void {
+		$state  = get_option( 'yoohw_cos_activity_semantics_recalculation', array() );
+		$status = is_array( $state ) ? sanitize_key( (string) ( $state['status'] ?? '' ) ) : '';
+
+		if (
+			in_array( $status, array( 'pending', 'in_progress' ), true )
+			&& ! wp_next_scheduled( 'yoohw_cos_recalculate_activity_semantics' )
+		) {
+			wp_schedule_single_event( time() + 5, 'yoohw_cos_recalculate_activity_semantics' );
+		}
+	}
+
+	private static function mark_customer_data_updated( bool $force = false ): void {
+		$last_updated = sanitize_text_field( (string) get_option( 'yoohw_cos_customer_data_updated_at', '' ) );
+		$last_time    = YoOhw_COS_DB::date_timestamp( $last_updated );
+
+		if ( ! $force && $last_time > 0 && abs( current_time( 'timestamp' ) - $last_time ) < MINUTE_IN_SECONDS ) {
+			return;
+		}
+
+		update_option( 'yoohw_cos_customer_data_updated_at', YoOhw_COS_DB::now(), false );
 	}
 
 	public static function get_status_counts(): array {

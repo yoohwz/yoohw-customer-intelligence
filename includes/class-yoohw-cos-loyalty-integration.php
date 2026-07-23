@@ -217,7 +217,8 @@ final class YoOhw_COS_Loyalty_Integration {
 			$customer_id,
 			array_merge(
 				array(
-					'wp_user_id' => $user_id,
+					'wp_user_id'         => $user_id,
+					'last_activity_date' => YoOhw_COS_DB::now(),
 				),
 				self::get_user_loyalty_customer_data( $user_id, $role_slug )
 			)

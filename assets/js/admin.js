@@ -141,6 +141,152 @@
 		window.location.href = url;
 	}
 
+	var emailComposerLastFocus = null;
+
+	function getEmailComposer() {
+		return document.getElementById('yoohw-cos-email-composer');
+	}
+
+	function setEmailComposerStatus(modal, type, message) {
+		var status = modal ? modal.querySelector('[data-yoohw-cos-email-status]') : null;
+
+		if (!status) {
+			return;
+		}
+
+		status.className = 'yoohw-cos-email-composer__status';
+		status.textContent = message || '';
+
+		if (type) {
+			status.classList.add('is-' + type);
+		}
+	}
+
+	function openEmailComposer(trigger) {
+		var modal = getEmailComposer();
+
+		if (!modal) {
+			return;
+		}
+
+		emailComposerLastFocus = trigger || document.activeElement;
+		setEmailComposerStatus(modal, '', '');
+		modal.hidden = false;
+		document.body.classList.add('yoohw-cos-email-composer-open');
+
+		var subject = modal.querySelector('#yoohw-cos-email-subject');
+
+		if (subject) {
+			setTimeout(function() {
+				subject.focus();
+				subject.select();
+			}, 0);
+		}
+	}
+
+	function closeEmailComposer() {
+		var modal = getEmailComposer();
+
+		if (!modal || modal.hidden) {
+			return;
+		}
+
+		var form = modal.querySelector('[data-yoohw-cos-email-form]');
+
+		if (form && 'true' === form.getAttribute('aria-busy')) {
+			return;
+		}
+
+		modal.hidden = true;
+		document.body.classList.remove('yoohw-cos-email-composer-open');
+
+		if (emailComposerLastFocus && typeof emailComposerLastFocus.focus === 'function') {
+			emailComposerLastFocus.focus();
+		}
+	}
+
+	function keepFocusInEmailComposer(event) {
+		var modal = getEmailComposer();
+
+		if (!modal || modal.hidden || 'Tab' !== event.key) {
+			return;
+		}
+
+		var focusable = Array.prototype.slice.call(
+			modal.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')
+		).filter(function(element) {
+			return !element.hidden && null !== element.offsetParent;
+		});
+
+		if (!focusable.length) {
+			return;
+		}
+
+		var first = focusable[0];
+		var last = focusable[focusable.length - 1];
+
+		if (event.shiftKey && document.activeElement === first) {
+			event.preventDefault();
+			last.focus();
+		} else if (!event.shiftKey && document.activeElement === last) {
+			event.preventDefault();
+			first.focus();
+		}
+	}
+
+	function sendCustomerEmail(form) {
+		var admin = window.yoohwCosAdmin || {};
+		var modal = form.closest('.yoohw-cos-email-composer');
+		var submit = form.querySelector('[data-yoohw-cos-email-submit]');
+		var messageField = form.querySelector('[name="email_message"]');
+		var errorText = admin.emailSendErrorText || 'The email could not be sent. Please try again.';
+
+		if ('true' === form.getAttribute('aria-busy')) {
+			return;
+		}
+
+		if (!window.fetch || !window.FormData || !admin.ajaxUrl || !submit) {
+			setEmailComposerStatus(modal, 'error', errorText);
+			return;
+		}
+
+		var originalText = submit.textContent;
+		submit.disabled = true;
+		submit.textContent = submit.getAttribute('data-sending-text') || originalText;
+		form.setAttribute('aria-busy', 'true');
+		setEmailComposerStatus(modal, '', '');
+
+		window.fetch(admin.ajaxUrl, {
+			method: 'POST',
+			credentials: 'same-origin',
+			body: new window.FormData(form)
+		})
+		.then(function(response) {
+			return response.json();
+		})
+		.then(function(response) {
+			var message = response && response.data && response.data.message ? response.data.message : errorText;
+
+			if (!response || !response.success) {
+				throw new Error(message);
+			}
+
+			if (messageField) {
+				messageField.value = '';
+			}
+
+			setEmailComposerStatus(modal, 'success', message);
+		})
+		.catch(function(error) {
+			setEmailComposerStatus(modal, 'error', error && error.message ? error.message : errorText);
+		})
+		.then(function() {
+			submit.disabled = false;
+			submit.textContent = originalText;
+			form.removeAttribute('aria-busy');
+		});
+	}
+
 	function escapeHtml(value) {
 		var div = document.createElement('div');
 		div.textContent = value;
@@ -621,6 +767,14 @@
 		});
 
 		document.addEventListener('submit', function(event) {
+			var emailForm = event.target.closest('[data-yoohw-cos-email-form]');
+
+			if (emailForm) {
+				event.preventDefault();
+				sendCustomerEmail(emailForm);
+				return;
+			}
+
 			var syncForm = event.target.closest('form[data-yoohw-cos-ajax-sync="1"]');
 
 			if (syncForm && runAjaxSync(syncForm)) {
@@ -643,6 +797,22 @@
 		});
 
 		document.addEventListener('click', function(event) {
+			var emailOpen = event.target.closest('[data-yoohw-cos-email-open]');
+
+			if (emailOpen) {
+				event.preventDefault();
+				openEmailComposer(emailOpen);
+				return;
+			}
+
+			var emailClose = event.target.closest('[data-yoohw-cos-email-close]');
+
+			if (emailClose) {
+				event.preventDefault();
+				closeEmailComposer();
+				return;
+			}
+
 			var confirmTarget = event.target.closest('[data-yoohw-cos-confirm]');
 
 			var clickableRow = event.target.closest('[data-yoohw-cos-row-url]');
@@ -761,6 +931,18 @@
 		});
 
 		document.addEventListener('keydown', function(event) {
+			var modal = getEmailComposer();
+
+			if (modal && !modal.hidden) {
+				if ('Escape' === event.key) {
+					event.preventDefault();
+					closeEmailComposer();
+					return;
+				}
+
+				keepFocusInEmailComposer(event);
+			}
+
 			var row = event.target.closest('[data-yoohw-cos-row-url]');
 
 			if (!row || isInteractiveRowTarget(event.target) || ('Enter' !== event.key && ' ' !== event.key)) {

@@ -7,7 +7,7 @@ Requires PHP: 7.4
 Requires Plugins: woocommerce
 WC requires at least: 8.2
 WC tested up to: 10.8
-Stable tag: 1.2.0
+Stable tag: 1.2.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -25,9 +25,9 @@ It stores customer data in dedicated custom database tables. It does not use `wp
 
 = Main features =
 
-* Customer overview dashboard for totals, revenue, orders, VIP customers, risk, lifecycle, tasks, and recent activity.
-* Searchable customer list with status, VIP, risk, lifecycle, tag, and segment filters, plus sorting, pagination, clickable rows, archive/restore, and CSV export.
-* Customer profiles with identity, commerce summary, addresses, recent orders, notes, follow-up tasks, tags, segments, and activity timeline.
+* Action-oriented customer overview dashboard with data freshness, lifetime KPIs, attention queues, priority customers, lifecycle and risk drill-downs, tasks, and recent activity.
+* Searchable customer list with status, value tier, risk, lifecycle, purchase cohort, attention, tag, and segment filters, plus sorting, pagination, clickable rows, archive/restore, and CSV export.
+* Customer profiles with identity, direct customer email composer, commerce summary, addresses, recent orders, notes, follow-up tasks, tags, segments, and activity timeline.
 * Configurable customer scoring thresholds for value tier, lifecycle stage, customer status, risk, and trust review workflows.
 * Internal customer notes with create, edit, and delete actions.
 * Follow-up tasks with due date, priority, status, assignee, customer/order context, complete/reopen/edit/delete actions, reminders, and a WordPress Dashboard widget.
@@ -73,7 +73,7 @@ Task email notifications help teams respond faster to customer follow-ups. Assig
 
 = WooCommerce email notifications =
 
-CRM task emails use the WooCommerce email system, including WooCommerce email templates, sender settings, content type settings, and email styling. Store managers can review and configure these emails from Customers > Emails or WooCommerce > Settings > Emails > CRM.
+CRM task emails and direct customer messages use the WooCommerce email system, including WooCommerce email templates, sender settings, content type settings, and email styling. Store managers can compose a direct message from the Identity panel on a customer profile and configure the Customer message template from Customers > Emails or WooCommerce > Settings > Emails > CRM.
 
 = Tags and segments =
 
@@ -193,7 +193,7 @@ Yes. Use customer tags and static segments for manually maintained customer grou
 
 == Screenshots ==
 
-1. Overview dashboard with customer health, lifecycle, risk, tasks, and recent activity.
+1. Action-oriented Overview dashboard with data freshness, linked KPIs, attention queues, priority customers, tasks, lifecycle, risk, and recent activity.
 2. Customer list with filters, search, bulk actions, export, archive, optional integration columns, and customer intelligence data.
 3. Customer profile with commerce summary, identity, orders, notes, tasks, tags, segments, risk factors, optional loyalty context, optional security signals, and activity.
 4. WooCommerce order edit screen with customer profile selection and customer task metabox.
@@ -203,6 +203,12 @@ Yes. Use customer tags and static segments for manually maintained customer grou
 8. Segments management screen.
 
 == Changelog ==
+
+= 1.2.1 (Jul 23, 2026) =
+
+* Added a direct customer email composer to the Identity panel, with WooCommerce email branding, sender settings, configurable template content, secure AJAX delivery, and customer activity logging.
+* Redesigned Overview as an action dashboard with data freshness, linked lifetime KPIs, attention queues, priority customers, due-soon tasks, and drill-down customer distributions.
+* Corrected customer activity semantics so historical order sync uses meaningful order or loyalty activity dates, then refreshes status, lifecycle, and risk classifications in background batches.
 
 = 1.2.0 (Jul 10, 2026) =
 

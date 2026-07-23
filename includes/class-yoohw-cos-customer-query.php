@@ -13,21 +13,23 @@ final class YoOhw_COS_Customer_Query {
 		}
 
 		return array(
-			's'                => sanitize_text_field( self::get_scalar( $source, 's' ) ),
-			'customer_tag'     => absint( self::get_scalar( $source, 'customer_tag' ) ),
-			'customer_segment' => absint( self::get_scalar( $source, 'customer_segment' ) ),
-			'customer_status'  => self::sanitize_customer_status( self::get_scalar( $source, 'customer_status' ) ),
-			'vip_status'       => self::sanitize_vip_status( self::get_scalar( $source, 'vip_status' ) ),
-			'risk_level'       => self::sanitize_risk_level( self::get_scalar( $source, 'risk_level' ) ),
-			'loyalty_level'    => $loyalty_active ? self::sanitize_loyalty_level( self::get_scalar( $source, 'loyalty_level' ) ) : '',
-			'loyalty_score'    => $loyalty_active ? self::sanitize_loyalty_score_range( self::get_scalar( $source, 'loyalty_score' ) ) : '',
-			'lifecycle_stage'  => self::sanitize_lifecycle_stage( self::get_scalar( $source, 'lifecycle_stage' ) ),
-			'customer_view'    => self::sanitize_customer_view( self::get_scalar( $source, 'customer_view' ) ),
-			'orderby'          => $orderby,
-			'order'            => $order,
-			'paged'            => max( 1, absint( self::get_scalar( $source, 'paged', 1 ) ) ),
-			'per_page'         => self::sanitize_per_page( self::get_scalar( $source, 'per_page', 20 ) ),
-			'offset'           => isset( $source['offset'] ) ? max( 0, absint( self::get_scalar( $source, 'offset' ) ) ) : null,
+			's'                  => sanitize_text_field( self::get_scalar( $source, 's' ) ),
+			'customer_tag'       => absint( self::get_scalar( $source, 'customer_tag' ) ),
+			'customer_segment'   => absint( self::get_scalar( $source, 'customer_segment' ) ),
+			'customer_status'    => self::sanitize_customer_status( self::get_scalar( $source, 'customer_status' ) ),
+			'vip_status'         => self::sanitize_vip_status( self::get_scalar( $source, 'vip_status' ) ),
+			'risk_level'         => self::sanitize_risk_level( self::get_scalar( $source, 'risk_level' ) ),
+			'customer_cohort'    => self::sanitize_customer_cohort( self::get_scalar( $source, 'customer_cohort' ) ),
+			'customer_attention' => self::sanitize_customer_attention( self::get_scalar( $source, 'customer_attention' ) ),
+			'loyalty_level'      => $loyalty_active ? self::sanitize_loyalty_level( self::get_scalar( $source, 'loyalty_level' ) ) : '',
+			'loyalty_score'      => $loyalty_active ? self::sanitize_loyalty_score_range( self::get_scalar( $source, 'loyalty_score' ) ) : '',
+			'lifecycle_stage'    => self::sanitize_lifecycle_stage( self::get_scalar( $source, 'lifecycle_stage' ) ),
+			'customer_view'      => self::sanitize_customer_view( self::get_scalar( $source, 'customer_view' ) ),
+			'orderby'            => $orderby,
+			'order'              => $order,
+			'paged'              => max( 1, absint( self::get_scalar( $source, 'paged', 1 ) ) ),
+			'per_page'           => self::sanitize_per_page( self::get_scalar( $source, 'per_page', 20 ) ),
+			'offset'             => isset( $source['offset'] ) ? max( 0, absint( self::get_scalar( $source, 'offset' ) ) ) : null,
 		);
 	}
 
@@ -165,8 +167,13 @@ final class YoOhw_COS_Customer_Query {
 		}
 
 		if ( '' !== $args['vip_status'] ) {
-			$where   .= ' AND vip_status = %s';
-			$params[] = $args['vip_status'];
+			if ( 'high_value' === $args['vip_status'] ) {
+				$where   .= ' AND vip_status <> %s';
+				$params[] = 'none';
+			} else {
+				$where   .= ' AND vip_status = %s';
+				$params[] = $args['vip_status'];
+			}
 		}
 
 		if ( '' !== $args['risk_level'] ) {
@@ -205,6 +212,21 @@ final class YoOhw_COS_Customer_Query {
 		if ( '' !== $args['lifecycle_stage'] ) {
 			$where   .= ' AND lifecycle_stage = %s';
 			$params[] = $args['lifecycle_stage'];
+		}
+
+		if ( 'repeat' === $args['customer_cohort'] ) {
+			$where .= ' AND total_orders >= 2';
+		} elseif ( 'first_time' === $args['customer_cohort'] ) {
+			$where .= ' AND total_orders <= 1';
+		}
+
+		if ( 'high_value_retention' === $args['customer_attention'] ) {
+			$where   .= ' AND vip_status <> %s AND customer_status IN (%s, %s)';
+			$params[] = 'none';
+			$params[] = 'at_risk';
+			$params[] = 'inactive';
+		} elseif ( 'missing_contact' === $args['customer_attention'] ) {
+			$where .= " AND (email IS NULL OR email = '' OR phone IS NULL OR phone = '')";
 		}
 
 		return array(
@@ -294,13 +316,25 @@ final class YoOhw_COS_Customer_Query {
 	private static function sanitize_vip_status( string $status ): string {
 		$status = sanitize_key( $status );
 
-		return in_array( $status, array( 'none', 'silver', 'gold', 'platinum' ), true ) ? $status : '';
+		return in_array( $status, array( 'none', 'silver', 'gold', 'platinum', 'high_value' ), true ) ? $status : '';
 	}
 
 	private static function sanitize_risk_level( string $risk_level ): string {
 		$risk_level = sanitize_key( $risk_level );
 
 		return in_array( $risk_level, array( 'none', 'low', 'medium', 'high' ), true ) ? $risk_level : '';
+	}
+
+	private static function sanitize_customer_cohort( string $cohort ): string {
+		$cohort = sanitize_key( $cohort );
+
+		return in_array( $cohort, array( 'first_time', 'repeat' ), true ) ? $cohort : '';
+	}
+
+	private static function sanitize_customer_attention( string $attention ): string {
+		$attention = sanitize_key( $attention );
+
+		return in_array( $attention, array( 'high_value_retention', 'missing_contact' ), true ) ? $attention : '';
 	}
 
 	private static function sanitize_loyalty_score_range( string $range ): string {

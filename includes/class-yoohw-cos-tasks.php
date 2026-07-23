@@ -682,8 +682,9 @@ final class YoOhw_COS_Tasks {
 	public static function get_counts(): array {
 		global $wpdb;
 
-		$table = YoOhw_COS_DB::tasks_table();
-		$now   = YoOhw_COS_DB::now();
+		$table    = YoOhw_COS_DB::tasks_table();
+		$now      = YoOhw_COS_DB::now();
+		$due_soon = date_i18n( 'Y-m-d H:i:s', current_time( 'timestamp' ) + ( 7 * DAY_IN_SECONDS ) );
 
 		$row = $wpdb->get_row(
 			$wpdb->prepare(
@@ -691,12 +692,16 @@ final class YoOhw_COS_Tasks {
 					COUNT(*) AS total_count,
 					SUM(CASE WHEN status <> %s THEN 1 ELSE 0 END) AS open_count,
 					SUM(CASE WHEN status <> %s AND due_date IS NOT NULL AND due_date < %s THEN 1 ELSE 0 END) AS overdue_count,
+					SUM(CASE WHEN status <> %s AND due_date IS NOT NULL AND due_date >= %s AND due_date <= %s THEN 1 ELSE 0 END) AS due_soon_count,
 					SUM(CASE WHEN status = %s THEN 1 ELSE 0 END) AS completed_count,
 					SUM(CASE WHEN status <> %s AND assigned_user_id = %d THEN 1 ELSE 0 END) AS assigned_to_me_count
 				FROM %i",
 				self::STATUS_COMPLETED,
 				self::STATUS_COMPLETED,
 				$now,
+				self::STATUS_COMPLETED,
+				$now,
+				$due_soon,
 				self::STATUS_COMPLETED,
 				self::STATUS_COMPLETED,
 				get_current_user_id(),
@@ -709,6 +714,7 @@ final class YoOhw_COS_Tasks {
 			'all'            => absint( $row['total_count'] ?? 0 ),
 			'open'           => absint( $row['open_count'] ?? 0 ),
 			'overdue'        => absint( $row['overdue_count'] ?? 0 ),
+			'due_soon'       => absint( $row['due_soon_count'] ?? 0 ),
 			'completed'      => absint( $row['completed_count'] ?? 0 ),
 			'assigned_to_me' => absint( $row['assigned_to_me_count'] ?? 0 ),
 		);
