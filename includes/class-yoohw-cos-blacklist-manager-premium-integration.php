@@ -12,6 +12,9 @@ final class YoOhw_COS_Blacklist_Manager_Premium_Integration {
 	private const EVENT_PAYMENT_ABUSE = 'premium_payment_abuse_detected';
 	private const EVENT_DEVICE_SIGNAL = 'premium_device_signal_detected';
 	private const EVENT_GATEWAY_FRAUD = 'premium_gateway_fraud_signal';
+	private const REASSOCIATION_HOOK = 'yoohw_cos_reassociate_premium_checkout_events';
+	private const REASSOCIATION_STATE_OPTION = 'yoohw_cos_premium_reassociation_state';
+	private const REASSOCIATION_VERSION = 1;
 
 	public static function init(): void {
 		if ( ! self::is_premium_available() ) {
@@ -24,9 +27,16 @@ final class YoOhw_COS_Blacklist_Manager_Premium_Integration {
 		add_action( 'bmp_js_proof_failed', array( __CLASS__, 'handle_js_proof_failed' ), 10, 3 );
 		add_action( 'bmp_session_continuity_failed', array( __CLASS__, 'handle_session_continuity_failed' ), 10, 3 );
 		add_action( 'bmp_fp_anomalies_failed', array( __CLASS__, 'handle_fp_anomalies_failed' ), 10, 2 );
+		add_action( 'bmp_payment_abuse_event_recorded', array( __CLASS__, 'handle_payment_abuse_event_recorded' ), 10, 3 );
+		add_action( 'woocommerce_checkout_order_processed', array( __CLASS__, 'reassociate_checkout_events_for_order' ), 40, 1 );
+		add_action( 'woocommerce_store_api_checkout_order_processed', array( __CLASS__, 'reassociate_checkout_events_for_order' ), 40, 1 );
+		add_action( 'woocommerce_order_status_changed', array( __CLASS__, 'reassociate_checkout_events_for_order' ), 40, 1 );
+		add_action( self::REASSOCIATION_HOOK, array( __CLASS__, 'process_existing_event_reassociation' ) );
 
 		add_filter( 'yoohw_cos_customer_risk_score', array( __CLASS__, 'apply_customer_risk_score' ), 20, 2 );
 		add_filter( 'yoohw_cos_customer_risk_factors', array( __CLASS__, 'apply_customer_risk_factors' ), 20, 2 );
+
+		self::maybe_schedule_existing_event_reassociation();
 	}
 
 	public static function is_active(): bool {
@@ -186,6 +196,227 @@ final class YoOhw_COS_Blacklist_Manager_Premium_Integration {
 			__( 'Blacklist Manager Premium detected checkout browser fingerprint anomalies.', 'yoohw-customer-intelligence' ),
 			$payload
 		);
+	}
+
+	public static function handle_payment_abuse_event_recorded( int $event_id, $order = null, array $event_data = array() ): bool {
+		global $wpdb;
+
+		$event_id = absint( $event_id );
+
+		if ( $event_id <= 0 ) {
+			return false;
+		}
+
+		if ( empty( $event_data ) ) {
+			$table = $wpdb->prefix . 'wc_blacklist_payment_abuse_events';
+
+			if ( ! self::table_exists( $table ) ) {
+				return false;
+			}
+
+			$event_data = $wpdb->get_row(
+				$wpdb->prepare( 'SELECT * FROM %i WHERE id = %d LIMIT 1', $table, $event_id ),
+				ARRAY_A
+			);
+			$event_data = is_array( $event_data ) ? $event_data : array();
+		}
+
+		if ( empty( $event_data ) ) {
+			return false;
+		}
+
+		$event_data['id'] = $event_id;
+
+		if ( $order instanceof WC_Order ) {
+			$event_data['order_id'] = absint( $order->get_id() );
+		}
+
+		return self::backfill_payment_abuse_row( $event_data );
+	}
+
+	public static function reassociate_checkout_events_for_order( $order_or_id ): int {
+		global $wpdb;
+
+		$order_id = $order_or_id instanceof WC_Order ? absint( $order_or_id->get_id() ) : absint( $order_or_id );
+
+		if ( $order_id <= 0 || ! function_exists( 'wc_get_order' ) ) {
+			return 0;
+		}
+
+		$order = $order_or_id instanceof WC_Order ? $order_or_id : wc_get_order( $order_id );
+
+		if ( ! $order instanceof WC_Order || $order instanceof WC_Order_Refund ) {
+			return 0;
+		}
+
+		$customer_id = YoOhw_COS_Customers::find_customer_id_from_order(
+			$order,
+			absint( $order->get_customer_id() ),
+			sanitize_email( $order->get_billing_email() ),
+			sanitize_text_field( $order->get_billing_phone() )
+		);
+
+		if ( $customer_id <= 0 ) {
+			return 0;
+		}
+
+		$table      = YoOhw_COS_DB::events_table();
+		$candidates = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT *
+				FROM %i
+				WHERE event_source = %s
+					AND (customer_id IS NULL OR customer_id = 0)
+				ORDER BY created_at DESC, id DESC
+				LIMIT 500",
+				$table,
+				self::EVENT_SOURCE
+			),
+			ARRAY_A
+		);
+
+		$wp_user_id  = absint( $order->get_customer_id() );
+		$email_hash  = self::privacy_hash( strtolower( sanitize_email( $order->get_billing_email() ) ) );
+		$phone_value = preg_replace( '/\D+/', '', (string) $order->get_billing_phone() );
+		$phone_hash  = self::privacy_hash( $phone_value ?: (string) $order->get_billing_phone() );
+		$assigned    = 0;
+
+		foreach ( is_array( $candidates ) ? $candidates : array() as $event ) {
+			$metadata = YoOhw_COS_DB::json_decode( (string) ( $event['metadata_json'] ?? '' ) );
+
+			if ( ! self::unlinked_event_matches_order( $event, $metadata, $order, $wp_user_id, $email_hash, $phone_hash ) ) {
+				continue;
+			}
+
+			if ( YoOhw_COS_Events::assign_customer( absint( $event['id'] ?? 0 ), $customer_id, $wp_user_id ) ) {
+				$assigned++;
+			}
+		}
+
+		if ( $assigned > 0 ) {
+			self::refresh_customer_risk_score( $customer_id );
+		}
+
+		return $assigned;
+	}
+
+	public static function reassociate_existing_unlinked_events( int $after_event_id = 0, int $limit = 500 ): array {
+		global $wpdb;
+
+		$table = YoOhw_COS_DB::events_table();
+		$limit = min( 1000, max( 1, absint( $limit ) ) );
+		$rows  = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT *
+				FROM %i
+				WHERE id > %d
+					AND event_source = %s
+					AND (customer_id IS NULL OR customer_id = 0)
+				ORDER BY id ASC
+				LIMIT %d",
+				$table,
+				absint( $after_event_id ),
+				self::EVENT_SOURCE,
+				$limit
+			),
+			ARRAY_A
+		);
+		$assigned_customers = array();
+		$assigned           = 0;
+		$last_event_id      = absint( $after_event_id );
+
+		foreach ( is_array( $rows ) ? $rows : array() as $event ) {
+			$event_id      = absint( $event['id'] ?? 0 );
+			$last_event_id = max( $last_event_id, $event_id );
+			$metadata      = YoOhw_COS_DB::json_decode( (string) ( $event['metadata_json'] ?? '' ) );
+			$order_id      = 'order' === (string) ( $event['object_type'] ?? '' )
+				? absint( $event['object_id'] ?? 0 )
+				: absint( $metadata['order_id'] ?? 0 );
+			$wp_user_id    = absint( $event['wp_user_id'] ?? 0 );
+			$customer_id   = 0;
+
+			if ( $order_id > 0 && function_exists( 'wc_get_order' ) ) {
+				$order = wc_get_order( $order_id );
+
+				if ( $order instanceof WC_Order && ! $order instanceof WC_Order_Refund ) {
+					$wp_user_id = absint( $order->get_customer_id() );
+					$customer_id = YoOhw_COS_Customers::find_customer_id_from_order(
+						$order,
+						$wp_user_id,
+						sanitize_email( $order->get_billing_email() ),
+						sanitize_text_field( $order->get_billing_phone() )
+					);
+				}
+			}
+
+			if ( $customer_id <= 0 && $wp_user_id > 0 ) {
+				$customer_id = YoOhw_COS_Customers::find_customer_id(
+					array( 'wp_user_id' => $wp_user_id )
+				);
+			}
+
+			if ( $customer_id > 0 && YoOhw_COS_Events::assign_customer( $event_id, $customer_id, $wp_user_id ) ) {
+				$assigned++;
+				$assigned_customers[ $customer_id ] = true;
+			}
+		}
+
+		foreach ( array_keys( $assigned_customers ) as $customer_id ) {
+			self::refresh_customer_risk_score( absint( $customer_id ) );
+		}
+
+		return array(
+			'scanned'       => count( $rows ),
+			'assigned'      => $assigned,
+			'last_event_id' => $last_event_id,
+			'has_more'      => count( $rows ) >= $limit,
+		);
+	}
+
+	public static function process_existing_event_reassociation(): void {
+		$state = get_option( self::REASSOCIATION_STATE_OPTION, array() );
+		$state = is_array( $state ) ? $state : array();
+
+		if (
+			self::REASSOCIATION_VERSION === absint( $state['version'] ?? 0 )
+			&& 'completed' === (string) ( $state['status'] ?? '' )
+		) {
+			return;
+		}
+
+		$previous_state = $state;
+		$result         = self::reassociate_existing_unlinked_events( absint( $state['last_event_id'] ?? 0 ) );
+
+		$state = array(
+			'version'        => self::REASSOCIATION_VERSION,
+			'status'         => ! empty( $result['has_more'] ) ? 'in_progress' : 'completed',
+			'last_event_id'  => absint( $result['last_event_id'] ?? 0 ),
+			'total_scanned'  => absint( $previous_state['total_scanned'] ?? 0 ) + absint( $result['scanned'] ?? 0 ),
+			'total_assigned' => absint( $previous_state['total_assigned'] ?? 0 ) + absint( $result['assigned'] ?? 0 ),
+			'updated_at'     => YoOhw_COS_DB::now(),
+		);
+
+		update_option( self::REASSOCIATION_STATE_OPTION, $state, false );
+
+		if ( 'in_progress' === $state['status'] && ! wp_next_scheduled( self::REASSOCIATION_HOOK ) ) {
+			wp_schedule_single_event( time() + 5, self::REASSOCIATION_HOOK );
+		}
+	}
+
+	private static function maybe_schedule_existing_event_reassociation(): void {
+		$state = get_option( self::REASSOCIATION_STATE_OPTION, array() );
+		$state = is_array( $state ) ? $state : array();
+
+		if (
+			self::REASSOCIATION_VERSION === absint( $state['version'] ?? 0 )
+			&& 'completed' === (string) ( $state['status'] ?? '' )
+		) {
+			return;
+		}
+
+		if ( ! wp_next_scheduled( self::REASSOCIATION_HOOK ) ) {
+			wp_schedule_single_event( time() + 5, self::REASSOCIATION_HOOK );
+		}
 	}
 
 	public static function apply_customer_risk_score( $score, array $customer ): float {
@@ -1061,11 +1292,67 @@ final class YoOhw_COS_Blacklist_Manager_Premium_Integration {
 				'context'                          => self::sanitize_checkout_context( $payload['context'] ?? array() ),
 				'signals'                          => self::sanitize_signal_summary( $payload['signals'] ?? array() ),
 				'customer_matched'                 => ! empty( $payload['email'] ) || ! empty( $payload['phone'] ) || ! empty( $payload['wp_user_id'] ) || ! empty( $payload['order_id'] ),
+				'identity_hashes'                  => array_filter(
+					array(
+						'email' => self::privacy_hash( strtolower( sanitize_email( (string) ( $payload['email'] ?? '' ) ) ) ),
+						'phone' => self::privacy_hash( preg_replace( '/\D+/', '', (string) ( $payload['phone'] ?? '' ) ) ),
+					)
+				),
 			),
 			static function ( $value ) {
 				return ! ( '' === $value || array() === $value || null === $value );
 			}
 		);
+	}
+
+	private static function unlinked_event_matches_order(
+		array $event,
+		array $metadata,
+		WC_Order $order,
+		int $wp_user_id,
+		string $email_hash,
+		string $phone_hash
+	): bool {
+		$event_order_id = absint( $metadata['order_id'] ?? 0 );
+
+		if (
+			'order' === (string) ( $event['object_type'] ?? '' )
+			&& absint( $event['object_id'] ?? 0 ) === absint( $order->get_id() )
+		) {
+			return true;
+		}
+
+		if ( $event_order_id > 0 && $event_order_id === absint( $order->get_id() ) ) {
+			return true;
+		}
+
+		if ( ! self::event_is_near_order( (string) ( $event['created_at'] ?? '' ), $order ) ) {
+			return false;
+		}
+
+		if ( $wp_user_id > 0 && absint( $event['wp_user_id'] ?? 0 ) === $wp_user_id ) {
+			return true;
+		}
+
+		$identity_hashes = is_array( $metadata['identity_hashes'] ?? null ) ? $metadata['identity_hashes'] : array();
+
+		if ( '' !== $email_hash && hash_equals( $email_hash, (string) ( $identity_hashes['email'] ?? '' ) ) ) {
+			return true;
+		}
+
+		return '' !== $phone_hash && hash_equals( $phone_hash, (string) ( $identity_hashes['phone'] ?? '' ) );
+	}
+
+	private static function event_is_near_order( string $event_date, WC_Order $order ): bool {
+		$event_timestamp = YoOhw_COS_DB::date_timestamp( $event_date );
+		$order_date      = $order->get_date_created();
+		$order_timestamp = $order_date ? $order_date->getTimestamp() : 0;
+
+		if ( $event_timestamp <= 0 || $order_timestamp <= 0 ) {
+			return false;
+		}
+
+		return abs( $event_timestamp - $order_timestamp ) <= ( 2 * DAY_IN_SECONDS );
 	}
 
 	private static function checkout_failure_event_type( array $payload ): string {
@@ -1335,18 +1622,12 @@ final class YoOhw_COS_Blacklist_Manager_Premium_Integration {
 		$events = YoOhw_COS_Events::get_customer_events(
 			$customer_id,
 			array(
-				'limit' => $limit,
+				'limit'        => $limit,
+				'event_source' => self::EVENT_SOURCE,
 			)
 		);
 
-		return array_values(
-			array_filter(
-				$events,
-				static function ( array $event ): bool {
-					return self::EVENT_SOURCE === (string) ( $event['event_source'] ?? '' );
-				}
-			)
-		);
+		return $events;
 	}
 
 	private static function summary_order_risk_item( array $event, int $risk_score ): array {

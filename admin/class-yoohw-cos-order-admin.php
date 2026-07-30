@@ -10,6 +10,7 @@ final class YoOhw_COS_Order_Admin {
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_assets' ) );
 		add_action( 'wp_ajax_yoohw_cos_json_search_customers', array( __CLASS__, 'handle_customer_search' ) );
 		add_action( 'add_meta_boxes', array( __CLASS__, 'register_task_metabox' ), 5, 2 );
+		add_action( 'add_meta_boxes', array( __CLASS__, 'override_customer_history_metabox' ), 100, 2 );
 		add_action( 'admin_footer', array( __CLASS__, 'render_task_form_target' ) );
 		add_action( 'woocommerce_admin_order_data_after_order_details', array( __CLASS__, 'render_customer_field' ) );
 		add_action( 'woocommerce_process_shop_order_meta', array( __CLASS__, 'save_customer_profile_link' ), 60, 2 );
@@ -359,6 +360,141 @@ final class YoOhw_COS_Order_Admin {
 			'side',
 			'high'
 		);
+	}
+
+	public static function override_customer_history_metabox( string $screen_id, $order_or_post = null ): void {
+		if ( ! current_user_can( 'manage_woocommerce' ) || ! in_array( $screen_id, self::get_order_screen_ids(), true ) ) {
+			return;
+		}
+
+		remove_meta_box( 'woocommerce-customer-history', $screen_id, 'side' );
+
+		add_meta_box(
+			'woocommerce-customer-history',
+			__( 'Customer history', 'yoohw-customer-intelligence' ),
+			array( __CLASS__, 'render_customer_history_metabox' ),
+			$screen_id,
+			'side',
+			'high'
+		);
+	}
+
+	public static function render_customer_history_metabox( $order_or_post, array $metabox = array() ): void {
+		$order = self::resolve_order( $order_or_post );
+
+		if ( ! $order instanceof WC_Order || ! current_user_can( 'manage_woocommerce' ) ) {
+			return;
+		}
+
+		$customer_id = self::get_order_customer_profile_id( $order );
+		$customer    = $customer_id > 0 ? YoOhw_COS_Customers::get_customer( $customer_id ) : array();
+
+		if ( empty( $customer ) ) {
+			echo '<div class="yoohw-cos-customer-history-empty">';
+			echo '<span class="dashicons dashicons-groups" aria-hidden="true"></span>';
+			echo '<strong>' . esc_html__( 'No customer intelligence profile linked', 'yoohw-customer-intelligence' ) . '</strong>';
+			echo '<p>' . esc_html__( 'Select a YoOhw customer profile in the order details and save the order to see customer insights here.', 'yoohw-customer-intelligence' ) . '</p>';
+			echo '</div>';
+			return;
+		}
+
+		$total_orders    = absint( $customer['total_orders'] ?? 0 );
+		$total_spent     = (float) ( $customer['total_spent'] ?? 0 );
+		$average_value   = $total_orders > 0 ? $total_spent / $total_orders : 0.0;
+		$trust_score     = min( 100, max( 0, (float) ( $customer['trust_score'] ?? 0 ) ) );
+		$risk_score      = min( 100, max( 0, YoOhw_COS_Intelligence::get_current_risk_score( $customer ) ) );
+		$lifecycle_stage = sanitize_key( (string) ( $customer['lifecycle_stage'] ?? 'new' ) );
+		$value_tier      = sanitize_key( (string) ( $customer['vip_status'] ?? 'none' ) );
+		$risk_level      = YoOhw_COS_Intelligence::calculate_risk_level( $risk_score );
+		$trust_level     = self::get_trust_level( $trust_score );
+		$open_tasks      = YoOhw_COS_Tasks::get_customer_task_count( $customer_id, YoOhw_COS_Tasks::STATUS_OPEN );
+		$last_activity   = sanitize_text_field( (string) ( $customer['last_activity_date'] ?? '' ) );
+
+		if ( '' === $last_activity ) {
+			$last_activity = sanitize_text_field( (string) ( $customer['last_order_date'] ?? '' ) );
+		}
+
+		$profile_url     = self::get_customer_profile_url( $customer_id );
+		$tasks_url       = add_query_arg(
+			array(
+				'page'        => 'yoohw-customer-intelligence-tasks',
+				'task_view'   => 'open',
+				'customer_id' => $customer_id,
+			),
+			admin_url( 'admin.php' )
+		);
+
+		echo '<div class="yoohw-cos-customer-history">';
+		echo '<div class="yoohw-cos-customer-history__identity">';
+		echo '<div class="yoohw-cos-customer-history__avatar" aria-hidden="true">' . esc_html( self::get_customer_initials( $customer ) ) . '</div>';
+		echo '<div class="yoohw-cos-customer-history__identity-copy">';
+		echo '<a class="yoohw-cos-customer-history__name" href="' . esc_url( $profile_url ) . '">' . esc_html( self::get_customer_display_name( $customer ) ) . '</a>';
+		echo '<span>' . esc_html(
+			sprintf(
+				/* translators: %d: customer profile ID. */
+				__( 'Customer #%d', 'yoohw-customer-intelligence' ),
+				$customer_id
+			)
+		) . '</span>';
+		echo '</div>';
+		echo '</div>';
+
+		echo '<div class="yoohw-cos-customer-history__badges">';
+		self::render_customer_history_badge( self::get_lifecycle_label( $lifecycle_stage ), 'lifecycle-' . $lifecycle_stage );
+		self::render_customer_history_badge(
+			YoOhw_COS_Intelligence::get_value_tier_label( $value_tier ),
+			'value-tier-' . YoOhw_COS_Intelligence::get_value_tier_badge_class( $value_tier )
+		);
+
+		if ( ! empty( $customer['archived_at'] ) ) {
+			self::render_customer_history_badge( __( 'Archived', 'yoohw-customer-intelligence' ), 'archived' );
+		}
+		echo '</div>';
+
+		echo '<div class="yoohw-cos-customer-history__metrics">';
+		self::render_customer_history_metric(
+			__( 'Total orders', 'yoohw-customer-intelligence' ),
+			number_format_i18n( $total_orders ),
+			__( 'Orders recorded in the linked customer profile.', 'yoohw-customer-intelligence' )
+		);
+		self::render_customer_history_metric(
+			__( 'Lifetime value', 'yoohw-customer-intelligence' ),
+			wc_price( $total_spent ),
+			__( 'Total value recorded across this customer profile.', 'yoohw-customer-intelligence' )
+		);
+		self::render_customer_history_metric(
+			__( 'Average order', 'yoohw-customer-intelligence' ),
+			wc_price( $average_value )
+		);
+		self::render_customer_history_metric(
+			__( 'Open tasks', 'yoohw-customer-intelligence' ),
+			number_format_i18n( $open_tasks )
+		);
+		echo '</div>';
+
+		echo '<div class="yoohw-cos-customer-history__scores">';
+		self::render_customer_history_score(
+			__( 'Trust score', 'yoohw-customer-intelligence' ),
+			$trust_score,
+			'trust-' . $trust_level
+		);
+		self::render_customer_history_score(
+			__( 'Risk score', 'yoohw-customer-intelligence' ),
+			$risk_score,
+			'risk-' . $risk_level
+		);
+		echo '</div>';
+
+		echo '<div class="yoohw-cos-customer-history__activity">';
+		echo '<span>' . esc_html__( 'Last activity', 'yoohw-customer-intelligence' ) . '</span>';
+		echo '<strong>' . wp_kses_post( YoOhw_COS_DB::format_admin_date( $last_activity, '&mdash;' ) ) . '</strong>';
+		echo '</div>';
+
+		echo '<div class="yoohw-cos-customer-history__actions">';
+		echo '<a class="button button-primary" href="' . esc_url( $profile_url ) . '">' . esc_html__( 'View profile', 'yoohw-customer-intelligence' ) . '</a>';
+		echo '<a class="button" href="' . esc_url( $tasks_url ) . '">' . esc_html__( 'View tasks', 'yoohw-customer-intelligence' ) . '</a>';
+		echo '</div>';
+		echo '</div>';
 	}
 
 	public static function render_task_metabox( $order_or_post, array $metabox = array() ): void {
@@ -790,5 +926,104 @@ final class YoOhw_COS_Order_Admin {
 			),
 			admin_url( 'admin.php' )
 		);
+	}
+
+	private static function get_customer_display_name( array $customer ): string {
+		$display_name = trim( sanitize_text_field( (string) ( $customer['display_name'] ?? '' ) ) );
+
+		if ( '' === $display_name ) {
+			$display_name = trim(
+				sanitize_text_field( (string) ( $customer['first_name'] ?? '' ) ) . ' ' .
+				sanitize_text_field( (string) ( $customer['last_name'] ?? '' ) )
+			);
+		}
+
+		if ( '' === $display_name ) {
+			$display_name = sanitize_email( (string) ( $customer['email'] ?? '' ) );
+		}
+
+		return '' !== $display_name ? $display_name : __( 'Customer', 'yoohw-customer-intelligence' );
+	}
+
+	private static function get_customer_initials( array $customer ): string {
+		$name  = self::get_customer_display_name( $customer );
+		$words = preg_split( '/\s+/u', trim( $name ) );
+		$words = is_array( $words ) ? array_values( array_filter( $words ) ) : array();
+
+		if ( empty( $words ) ) {
+			return '?';
+		}
+
+		$initials = self::get_first_character( $words[0] );
+
+		if ( count( $words ) > 1 ) {
+			$initials .= self::get_first_character( $words[ count( $words ) - 1 ] );
+		}
+
+		return function_exists( 'mb_strtoupper' ) ? mb_strtoupper( $initials ) : strtoupper( $initials );
+	}
+
+	private static function get_first_character( string $value ): string {
+		return function_exists( 'mb_substr' ) ? mb_substr( $value, 0, 1 ) : substr( $value, 0, 1 );
+	}
+
+	private static function get_lifecycle_label( string $stage ): string {
+		$labels = array(
+			'new'     => __( 'New', 'yoohw-customer-intelligence' ),
+			'repeat'  => __( 'Repeat', 'yoohw-customer-intelligence' ),
+			'loyal'   => __( 'Loyal', 'yoohw-customer-intelligence' ),
+			'vip'     => __( 'VIP', 'yoohw-customer-intelligence' ),
+			'dormant' => __( 'Dormant', 'yoohw-customer-intelligence' ),
+		);
+
+		return $labels[ $stage ] ?? ucwords( str_replace( array( '_', '-' ), ' ', $stage ) );
+	}
+
+	private static function get_trust_level( float $trust_score ): string {
+		if ( $trust_score >= 80 ) {
+			return 'high';
+		}
+
+		if ( $trust_score >= 60 ) {
+			return 'medium';
+		}
+
+		if ( $trust_score >= 40 ) {
+			return 'low';
+		}
+
+		return 'limited';
+	}
+
+	private static function render_customer_history_badge( string $label, string $class ): void {
+		echo '<span class="yoohw-cos-customer-history__badge yoohw-cos-customer-history__badge--' .
+			esc_attr( sanitize_html_class( $class ) ) . '">' . esc_html( $label ) . '</span>';
+	}
+
+	private static function render_customer_history_metric( string $label, string $value, string $tooltip = '' ): void {
+		echo '<div class="yoohw-cos-customer-history__metric">';
+		echo '<span class="yoohw-cos-customer-history__metric-label">' . esc_html( $label );
+
+		if ( '' !== $tooltip && function_exists( 'wc_help_tip' ) ) {
+			echo wp_kses_post( wc_help_tip( $tooltip ) );
+		}
+
+		echo '</span>';
+		echo '<strong>' . wp_kses_post( $value ) . '</strong>';
+		echo '</div>';
+	}
+
+	private static function render_customer_history_score( string $label, float $score, string $class ): void {
+		$score = min( 100, max( 0, $score ) );
+
+		echo '<div class="yoohw-cos-customer-history__score">';
+		echo '<div class="yoohw-cos-customer-history__score-heading">';
+		echo '<span>' . esc_html( $label ) . '</span>';
+		echo '<strong>' . esc_html( number_format_i18n( $score, 0 ) ) . '/100</strong>';
+		echo '</div>';
+		echo '<div class="yoohw-cos-customer-history__score-track" aria-hidden="true">';
+		echo '<span class="yoohw-cos-customer-history__score-fill yoohw-cos-customer-history__score-fill--' . esc_attr( sanitize_html_class( $class ) ) . '" style="width:' . esc_attr( $score ) . '%"></span>';
+		echo '</div>';
+		echo '</div>';
 	}
 }

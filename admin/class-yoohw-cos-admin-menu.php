@@ -2861,7 +2861,7 @@ final class YoOhw_COS_Admin_Menu {
 		echo '<tr>';
 		echo '<th scope="row">' . esc_html__( 'Default assignee', 'yoohw-customer-intelligence' ) . '</th>';
 		echo '<td>';
-		echo '<select name="assigned_user_id" class="wc-enhanced-select" style="min-width: 260px;">';
+		echo '<select name="assigned_user_id" class="wc-enhanced-select yoohw-cos-settings-select yoohw-cos-settings-select--assignee">';
 		echo '<option value="0">' . esc_html__( 'Unassigned', 'yoohw-customer-intelligence' ) . '</option>';
 
 		foreach ( $assignees as $assignee ) {
@@ -2907,7 +2907,7 @@ final class YoOhw_COS_Admin_Menu {
 		}
 
 		echo '<p>';
-		echo '<select name="vip_levels[]" class="wc-enhanced-select" multiple="multiple" style="min-width: 320px;">';
+		echo '<select name="vip_levels[]" class="wc-enhanced-select yoohw-cos-settings-select yoohw-cos-settings-select--levels" multiple="multiple">';
 
 		foreach ( $roles as $role ) {
 			echo '<option value="' . esc_attr( $role ) . '" ' . selected( in_array( $role, $selected_roles, true ), true, false ) . '>';

@@ -175,15 +175,12 @@ final class YoOhw_COS_Blacklist_Manager_Integration {
 		$events = YoOhw_COS_Events::get_customer_events(
 			$customer_id,
 			array(
-				'limit' => 30,
+				'limit'        => 30,
+				'event_source' => self::EVENT_SOURCE,
 			)
 		);
 
 		foreach ( $events as $event ) {
-			if ( self::EVENT_SOURCE !== (string) ( $event['event_source'] ?? '' ) ) {
-				continue;
-			}
-
 			$event_type = sanitize_key( (string) ( $event['event_type'] ?? '' ) );
 
 			if ( 'blacklist_blocked' === $event_type ) {
@@ -664,15 +661,12 @@ final class YoOhw_COS_Blacklist_Manager_Integration {
 		$events = YoOhw_COS_Events::get_customer_events(
 			$customer_id,
 			array(
-				'limit' => 30,
+				'limit'        => 30,
+				'event_source' => self::EVENT_SOURCE,
 			)
 		);
 
 		foreach ( $events as $event ) {
-			if ( self::EVENT_SOURCE !== (string) ( $event['event_source'] ?? '' ) ) {
-				continue;
-			}
-
 			$event_type = sanitize_key( (string) ( $event['event_type'] ?? '' ) );
 
 			if ( 'blacklist_removed' === $event_type ) {

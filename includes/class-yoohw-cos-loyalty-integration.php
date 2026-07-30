@@ -5,6 +5,9 @@ final class YoOhw_COS_Loyalty_Integration {
 
 	private const EVENT_SOURCE = 'wc_loyalty';
 	private const TASK_AUTOMATION_OPTION = 'yoohw_cos_loyalty_task_automation';
+	private const BACKFILL_STATE_OPTION = 'yoohw_cos_loyalty_backfill_state';
+	private const BACKFILL_HOOK = 'yoohw_cos_backfill_loyalty_history';
+	private const BACKFILL_VERSION = 1;
 
 	public static function init(): void {
 		if ( ! self::is_loyalty_plugin_active() ) {
@@ -18,6 +21,9 @@ final class YoOhw_COS_Loyalty_Integration {
 		add_action( 'yowcl_user_loyalty_role_updated', array( __CLASS__, 'handle_loyalty_role_updated' ), 10, 3 );
 		add_action( 'yowcl_points_reconciliation_issue_found', array( __CLASS__, 'handle_points_reconciliation_issue_found' ), 10, 2 );
 		add_action( 'yoohw_cos_customer_intelligence_recalculated', array( __CLASS__, 'handle_customer_intelligence_recalculated' ), 10, 4 );
+		add_action( self::BACKFILL_HOOK, array( __CLASS__, 'process_legacy_points_backfill' ) );
+
+		self::maybe_schedule_legacy_points_backfill();
 	}
 
 	public static function is_loyalty_plugin_active(): bool {
@@ -200,34 +206,39 @@ final class YoOhw_COS_Loyalty_Integration {
 		self::maybe_create_reconciliation_issue_task( $customer_id, $user_id, $issue, $context );
 	}
 
-	private static function sync_user_to_customer_profile( int $user_id, string $role_slug = '' ): int {
+	private static function sync_user_to_customer_profile(
+		int $user_id,
+		string $role_slug = '',
+		bool $touch_activity = true,
+		string $initial_activity_date = ''
+	): int {
 		$user_id = absint( $user_id );
 
 		if ( $user_id <= 0 ) {
 			return 0;
 		}
 
-		$customer_id = self::find_or_create_customer_for_user( $user_id );
+		$customer_id = self::find_or_create_customer_for_user( $user_id, $initial_activity_date );
 
 		if ( $customer_id <= 0 ) {
 			return 0;
 		}
 
-		YoOhw_COS_Customers::update_customer(
-			$customer_id,
-			array_merge(
-				array(
-					'wp_user_id'         => $user_id,
-					'last_activity_date' => YoOhw_COS_DB::now(),
-				),
-				self::get_user_loyalty_customer_data( $user_id, $role_slug )
-			)
+		$customer_data = array_merge(
+			array( 'wp_user_id' => $user_id ),
+			self::get_user_loyalty_customer_data( $user_id, $role_slug )
 		);
+
+		if ( $touch_activity ) {
+			$customer_data['last_activity_date'] = YoOhw_COS_DB::now();
+		}
+
+		YoOhw_COS_Customers::update_customer( $customer_id, $customer_data );
 
 		return $customer_id;
 	}
 
-	private static function find_or_create_customer_for_user( int $user_id ): int {
+	private static function find_or_create_customer_for_user( int $user_id, string $initial_activity_date = '' ): int {
 		$user = get_userdata( $user_id );
 
 		if ( ! $user instanceof WP_User ) {
@@ -271,42 +282,175 @@ final class YoOhw_COS_Loyalty_Integration {
 					'customer_status'     => 'active',
 					'vip_status'          => 'none',
 					'lifecycle_stage'     => 'new',
-					'last_activity_date'  => YoOhw_COS_DB::now(),
+					'last_activity_date'  => self::normalize_event_date( $initial_activity_date ) ?: YoOhw_COS_DB::now(),
 				),
 				self::get_user_loyalty_customer_data( $user_id )
 			)
 		);
 	}
 
-	private static function record_points_event( int $customer_id, int $user_id, int $log_id, array $payload, array $context = array() ): void {
+	private static function record_points_event( int $customer_id, int $user_id, int $log_id, array $payload, array $context = array() ): bool {
 		$event_type = self::map_points_event_type( sanitize_key( (string) ( $payload['action'] ?? '' ) ), (float) ( $payload['amount'] ?? 0 ) );
 
 		if ( YoOhw_COS_Events::event_exists( $event_type, 'loyalty_points_log', $log_id, $customer_id ) ) {
+			return false;
+		}
+
+		$event_args = array(
+			'customer_id'  => $customer_id,
+			'wp_user_id'   => $user_id,
+			'event_type'   => $event_type,
+			'event_source' => self::EVENT_SOURCE,
+			'severity'     => self::get_points_event_severity( $event_type ),
+			'object_type'  => 'loyalty_points_log',
+			'object_id'    => $log_id,
+			'description'  => self::build_points_event_description( $event_type, $payload ),
+			'metadata'     => self::get_user_loyalty_metadata(
+				$user_id,
+				array(
+					'points_log_id' => $log_id,
+					'log_action'    => sanitize_key( (string) ( $payload['action'] ?? '' ) ),
+					'amount'        => isset( $payload['amount'] ) ? (float) $payload['amount'] : 0,
+					'order_id'      => absint( $payload['order_id'] ?? 0 ),
+					'context'       => $context,
+				)
+			),
+		);
+		$created_at = self::normalize_event_date( (string) ( $payload['date'] ?? '' ) );
+
+		if ( '' !== $created_at ) {
+			$event_args['created_at'] = $created_at;
+		}
+
+		return YoOhw_COS_Events::record( $event_args ) > 0;
+	}
+
+	public static function backfill_legacy_points_logs( int $limit = 200, int $page = 1 ): array {
+		global $wpdb;
+
+		$limit  = min( 500, max( 1, absint( $limit ) ) );
+		$page   = max( 1, absint( $page ) );
+		$table  = $wpdb->prefix . 'yo_loyalty_points_log';
+		$result = array(
+			'scanned'   => 0,
+			'processed' => 0,
+			'skipped'   => 0,
+			'has_more'  => false,
+			'next_page' => $page,
+		);
+
+		if ( ! self::table_exists( $table ) ) {
+			return $result;
+		}
+
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT id, user_id, action, order_id, amount, description, date
+				FROM %i
+				ORDER BY id ASC
+				LIMIT %d OFFSET %d",
+				$table,
+				$limit,
+				( $page - 1 ) * $limit
+			),
+			ARRAY_A
+		);
+
+		foreach ( is_array( $rows ) ? $rows : array() as $row ) {
+			$result['scanned']++;
+			$user_id = absint( $row['user_id'] ?? 0 );
+
+			if ( $user_id <= 0 ) {
+				$result['skipped']++;
+				continue;
+			}
+
+			$customer_id = self::sync_user_to_customer_profile(
+				$user_id,
+				'',
+				false,
+				(string) ( $row['date'] ?? '' )
+			);
+
+			if (
+				$customer_id > 0
+				&& self::record_points_event(
+					$customer_id,
+					$user_id,
+					absint( $row['id'] ?? 0 ),
+					$row,
+					array( 'backfilled' => true )
+				)
+			) {
+				$result['processed']++;
+			} else {
+				$result['skipped']++;
+			}
+		}
+
+		$result['has_more'] = count( $rows ) >= $limit;
+		$result['next_page'] = $result['has_more'] ? $page + 1 : $page;
+
+		return $result;
+	}
+
+	public static function process_legacy_points_backfill(): void {
+		$state = get_option( self::BACKFILL_STATE_OPTION, array() );
+		$state = is_array( $state ) ? $state : array();
+
+		if (
+			self::BACKFILL_VERSION === absint( $state['version'] ?? 0 )
+			&& 'completed' === (string) ( $state['status'] ?? '' )
+		) {
 			return;
 		}
 
-		YoOhw_COS_Events::record(
-			array(
-				'customer_id'  => $customer_id,
-				'wp_user_id'   => $user_id,
-				'event_type'   => $event_type,
-				'event_source' => self::EVENT_SOURCE,
-				'severity'     => self::get_points_event_severity( $event_type ),
-				'object_type'  => 'loyalty_points_log',
-				'object_id'    => $log_id,
-				'description'  => self::build_points_event_description( $event_type, $payload ),
-				'metadata'     => self::get_user_loyalty_metadata(
-					$user_id,
-					array(
-						'points_log_id' => $log_id,
-						'log_action'    => sanitize_key( (string) ( $payload['action'] ?? '' ) ),
-						'amount'        => isset( $payload['amount'] ) ? (float) $payload['amount'] : 0,
-						'order_id'      => absint( $payload['order_id'] ?? 0 ),
-						'context'       => $context,
-					)
-				),
-			)
+		$previous_state = $state;
+		$page           = max( 1, absint( $previous_state['next_page'] ?? 1 ) );
+		$result         = self::backfill_legacy_points_logs( 200, $page );
+
+		$state = array(
+			'version'        => self::BACKFILL_VERSION,
+			'status'         => ! empty( $result['has_more'] ) ? 'in_progress' : 'completed',
+			'next_page'      => absint( $result['next_page'] ?? $page ),
+			'total_scanned'  => absint( $previous_state['total_scanned'] ?? 0 ) + absint( $result['scanned'] ?? 0 ),
+			'total_imported' => absint( $previous_state['total_imported'] ?? 0 ) + absint( $result['processed'] ?? 0 ),
+			'updated_at'     => YoOhw_COS_DB::now(),
 		);
+
+		update_option( self::BACKFILL_STATE_OPTION, $state, false );
+
+		if ( 'in_progress' === $state['status'] && ! wp_next_scheduled( self::BACKFILL_HOOK ) ) {
+			wp_schedule_single_event( time() + 5, self::BACKFILL_HOOK );
+		}
+	}
+
+	private static function maybe_schedule_legacy_points_backfill(): void {
+		$state = get_option( self::BACKFILL_STATE_OPTION, array() );
+		$state = is_array( $state ) ? $state : array();
+
+		if (
+			self::BACKFILL_VERSION === absint( $state['version'] ?? 0 )
+			&& 'completed' === (string) ( $state['status'] ?? '' )
+		) {
+			return;
+		}
+
+		if ( ! wp_next_scheduled( self::BACKFILL_HOOK ) ) {
+			wp_schedule_single_event( time() + 5, self::BACKFILL_HOOK );
+		}
+	}
+
+	private static function normalize_event_date( string $date ): string {
+		$date = sanitize_text_field( $date );
+
+		return '' !== $date && YoOhw_COS_DB::date_timestamp( $date ) > 0 ? $date : '';
+	}
+
+	private static function table_exists( string $table ): bool {
+		global $wpdb;
+
+		return '' !== $table && $table === $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) );
 	}
 
 	private static function map_points_event_type( string $action, float $amount ): string {

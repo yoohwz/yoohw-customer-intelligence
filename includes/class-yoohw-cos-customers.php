@@ -5,12 +5,16 @@ final class YoOhw_COS_Customers {
 
 	public const SYNC_ORDER = 'oldest_first';
 	public const ORDER_CUSTOMER_META_KEY = '_yoohw_cos_customer_id';
+	public const RISK_SCORE_REFRESH_HOOK = 'yoohw_cos_refresh_risk_score_cache';
+	private const RISK_SCORE_REFRESH_BATCH_SIZE = 250;
 
 	public static function init(): void {
 		add_action( 'woocommerce_checkout_order_processed', array( __CLASS__, 'sync_from_order_id' ), 20 );
 		add_action( 'woocommerce_order_status_changed', array( __CLASS__, 'sync_from_order_id' ), 20 );
 		add_action( 'yoohw_cos_recalculate_activity_semantics', array( __CLASS__, 'process_activity_semantics_recalculation' ) );
+		add_action( self::RISK_SCORE_REFRESH_HOOK, array( __CLASS__, 'process_risk_score_cache_refresh' ), 10, 1 );
 		self::maybe_schedule_activity_semantics_recalculation();
+		self::maybe_schedule_risk_score_cache_refresh();
 	}
 
 	public static function sync_from_order_id( int $order_id ): int {
@@ -713,7 +717,11 @@ final class YoOhw_COS_Customers {
 		delete_option( 'yoohw_cos_operation_sync_state_blacklist_signals' );
 		delete_option( 'yoohw_cos_activity_semantics_recalculation' );
 		delete_option( 'yoohw_cos_customer_data_updated_at' );
+		delete_option( 'yoohw_cos_loyalty_backfill_state' );
+		delete_option( 'yoohw_cos_premium_reassociation_state' );
 		wp_clear_scheduled_hook( 'yoohw_cos_recalculate_activity_semantics' );
+		wp_clear_scheduled_hook( 'yoohw_cos_backfill_loyalty_history' );
+		wp_clear_scheduled_hook( 'yoohw_cos_reassociate_premium_checkout_events' );
 	}
 
 	public static function recalculate_intelligence( int $limit = 500, int $page = 1 ): array {
@@ -795,6 +803,73 @@ final class YoOhw_COS_Customers {
 			'has_more'  => count( $customers ) >= $limit,
 			'next_page' => $page + 1,
 		);
+	}
+
+	public static function refresh_risk_score_cache_batch( int $after_customer_id = 0, int $limit = self::RISK_SCORE_REFRESH_BATCH_SIZE ): array {
+		global $wpdb;
+
+		$table = YoOhw_COS_DB::customers_table();
+		$limit = min( 1000, max( 1, absint( $limit ) ) );
+		$rows  = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT *
+				FROM %i
+				WHERE id > %d
+					AND archived_at IS NULL
+				ORDER BY id ASC
+				LIMIT %d",
+				$table,
+				absint( $after_customer_id ),
+				$limit
+			),
+			ARRAY_A
+		);
+
+		$updated = 0;
+		$last_id = absint( $after_customer_id );
+
+		foreach ( is_array( $rows ) ? $rows : array() as $customer ) {
+			$customer_id = absint( $customer['id'] ?? 0 );
+			$last_id     = max( $last_id, $customer_id );
+			$current     = YoOhw_COS_Intelligence::get_current_risk_score( $customer );
+			$cached      = (float) ( $customer['risk_score'] ?? 0 );
+
+			if ( abs( $current - $cached ) < 0.01 ) {
+				continue;
+			}
+
+			if ( self::update_customer( $customer_id, array( 'risk_score' => $current ) ) ) {
+				$updated++;
+			}
+		}
+
+		return array(
+			'scanned'          => count( $rows ),
+			'updated'          => $updated,
+			'last_customer_id' => $last_id,
+			'has_more'         => count( $rows ) >= $limit,
+		);
+	}
+
+	public static function process_risk_score_cache_refresh( int $after_customer_id = 0 ): void {
+		$result = self::refresh_risk_score_cache_batch( $after_customer_id );
+
+		if ( empty( $result['has_more'] ) ) {
+			return;
+		}
+
+		$next_customer_id = absint( $result['last_customer_id'] ?? 0 );
+		$args             = array( $next_customer_id );
+
+		if ( $next_customer_id > 0 && ! wp_next_scheduled( self::RISK_SCORE_REFRESH_HOOK, $args ) ) {
+			wp_schedule_single_event( time() + 5, self::RISK_SCORE_REFRESH_HOOK, $args );
+		}
+	}
+
+	private static function maybe_schedule_risk_score_cache_refresh(): void {
+		if ( ! wp_next_scheduled( self::RISK_SCORE_REFRESH_HOOK ) ) {
+			wp_schedule_event( time() + HOUR_IN_SECONDS, 'daily', self::RISK_SCORE_REFRESH_HOOK );
+		}
 	}
 
 	public static function process_activity_semantics_recalculation(): void {

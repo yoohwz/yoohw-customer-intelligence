@@ -1,5 +1,15 @@
 === Customer Intelligence for WooCommerce Changelog ===
 
+= 1.2.2 (Jul 30, 2026) =
+
+* Redesigned the WooCommerce order Customer history metabox with a clearer customer identity, lifecycle and value badges, lifetime metrics, trust and risk scores, recent activity, and direct profile/task actions.
+* Improved Blacklist Manager, Blacklist Manager Premium, and Loyalty integrations so customer events, risk scores, loyalty history, and task automation synchronize immediately when supported integration signals are recorded.
+* Fixed customer event queries to filter by customer and event source before applying limits, reassociated checkout events after order creation, and added historical Loyalty event backfill support.
+* Fixed stored risk scores becoming stale after integration events by refreshing affected customer intelligence data and consistently using current risk factors.
+* Fixed the Tasks form expanding across the task list after selecting a customer with a long label, and hardened SelectWoo fields, settings controls, order task fields, and shared admin grids against similar responsive overflow.
+* Expanded integration coverage for event-source filtering, dynamic-versus-stored risk, checkout event reassociation, Premium payment-abuse hooks, and Loyalty history backfill.
+* Hardened email settings translations, Customer history badge rendering, plain-text task digests, and prepared event queries for WordPress.org release validation.
+
 = 1.2.1 (Jul 23, 2026) =
 
 * Added a direct customer email composer to the Identity panel, with WooCommerce email branding, sender settings, configurable template content, secure AJAX delivery, and customer activity logging.

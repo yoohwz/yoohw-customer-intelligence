@@ -2,14 +2,14 @@
 # This file is distributed under the GPLv2 or later.
 msgid ""
 msgstr ""
-"Project-Id-Version: YoOhw Customer Intelligence for WooCommerce 1.2.1\n"
+"Project-Id-Version: YoOhw Customer Intelligence for WooCommerce 1.2.2\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/yoohw-customer-intelligence\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-07-23T03:51:32+00:00\n"
+"POT-Creation-Date: 2026-07-30T03:30:04+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.9.0\n"
 "X-Domain: yoohw-customer-intelligence\n"
@@ -17,6 +17,10 @@ msgstr ""
 #. Plugin Name of the plugin
 #: admin/class-yoohw-cos-admin-menu.php:375
 msgid "YoOhw Customer Intelligence for WooCommerce"
+msgstr ""
+
+#. Plugin URI of the plugin
+msgid "https://yoohw.com/product/customer-intelligence/"
 msgstr ""
 
 #. Description of the plugin
@@ -32,7 +36,7 @@ msgid "https://yoohw.com"
 msgstr ""
 
 #: admin/class-yoohw-cos-activity-list.php:22
-#: admin/class-yoohw-cos-customer-profile.php:730
+#: admin/class-yoohw-cos-customer-profile.php:732
 msgid "Date"
 msgstr ""
 
@@ -40,9 +44,11 @@ msgstr ""
 #: admin/class-yoohw-cos-activity-list.php:315
 #: admin/class-yoohw-cos-activity-list.php:441
 #: admin/class-yoohw-cos-admin-menu.php:1618
-#: admin/class-yoohw-cos-customer-profile.php:204
+#: admin/class-yoohw-cos-customer-profile.php:206
 #: admin/class-yoohw-cos-customers-list.php:29
+#: admin/class-yoohw-cos-order-admin.php:945
 #: admin/class-yoohw-cos-tasks-list.php:24
+#: includes/class-yoohw-cos-email-notifications.php:844
 #: templates/emails/crm-task-digest.php:77
 #: templates/emails/crm-task-notification.php:13
 msgid "Customer"
@@ -62,7 +68,7 @@ msgid "Description"
 msgstr ""
 
 #: admin/class-yoohw-cos-activity-list.php:26
-#: admin/class-yoohw-cos-customer-profile.php:642
+#: admin/class-yoohw-cos-customer-profile.php:644
 msgid "Source"
 msgstr ""
 
@@ -103,7 +109,7 @@ msgstr ""
 
 #: admin/class-yoohw-cos-activity-list.php:272
 #: admin/class-yoohw-cos-admin-menu.php:3828
-#: admin/class-yoohw-cos-customer-profile.php:1053
+#: admin/class-yoohw-cos-customer-profile.php:1055
 msgid "Order synced"
 msgstr ""
 
@@ -113,44 +119,44 @@ msgstr ""
 
 #: admin/class-yoohw-cos-activity-list.php:274
 #: admin/class-yoohw-cos-admin-menu.php:3834
-#: admin/class-yoohw-cos-customer-profile.php:1059
+#: admin/class-yoohw-cos-customer-profile.php:1061
 msgid "Tag removed"
 msgstr ""
 
 #: admin/class-yoohw-cos-activity-list.php:275
 #: admin/class-yoohw-cos-admin-menu.php:3825
-#: admin/class-yoohw-cos-customer-profile.php:1050
+#: admin/class-yoohw-cos-customer-profile.php:1052
 msgid "Note added"
 msgstr ""
 
 #: admin/class-yoohw-cos-activity-list.php:276
 #: admin/class-yoohw-cos-admin-menu.php:3827
-#: admin/class-yoohw-cos-customer-profile.php:1052
+#: admin/class-yoohw-cos-customer-profile.php:1054
 msgid "Note updated"
 msgstr ""
 
 #: admin/class-yoohw-cos-activity-list.php:277
 #: admin/class-yoohw-cos-admin-menu.php:3826
-#: admin/class-yoohw-cos-customer-profile.php:1051
+#: admin/class-yoohw-cos-customer-profile.php:1053
 msgid "Note deleted"
 msgstr ""
 
 #: admin/class-yoohw-cos-activity-list.php:278
 #: admin/class-yoohw-cos-admin-menu.php:3832
-#: admin/class-yoohw-cos-customer-profile.php:1057
+#: admin/class-yoohw-cos-customer-profile.php:1059
 msgid "Task created"
 msgstr ""
 
 #: admin/class-yoohw-cos-activity-list.php:279
 #: admin/class-yoohw-cos-admin-menu.php:3831
-#: admin/class-yoohw-cos-customer-profile.php:1056
+#: admin/class-yoohw-cos-customer-profile.php:1058
 #: includes/emails/class-yoohw-cos-email-task-events.php:186
 msgid "Task completed"
 msgstr ""
 
 #: admin/class-yoohw-cos-activity-list.php:280
 #: admin/class-yoohw-cos-admin-menu.php:3813
-#: admin/class-yoohw-cos-customer-profile.php:1042
+#: admin/class-yoohw-cos-customer-profile.php:1044
 msgid "Customer email sent"
 msgstr ""
 
@@ -160,53 +166,53 @@ msgstr ""
 
 #: admin/class-yoohw-cos-activity-list.php:286
 #: admin/class-yoohw-cos-admin-menu.php:3814
-#: admin/class-yoohw-cos-customer-profile.php:1037
+#: admin/class-yoohw-cos-customer-profile.php:1039
 msgid "Blacklist blocked"
 msgstr ""
 
 #: admin/class-yoohw-cos-activity-list.php:287
 #: admin/class-yoohw-cos-admin-menu.php:3815
-#: admin/class-yoohw-cos-customer-profile.php:1038
+#: admin/class-yoohw-cos-customer-profile.php:1040
 msgid "Blacklist match"
 msgstr ""
 
 #: admin/class-yoohw-cos-activity-list.php:288
 #: admin/class-yoohw-cos-admin-menu.php:3816
-#: admin/class-yoohw-cos-customer-profile.php:1039
+#: admin/class-yoohw-cos-customer-profile.php:1041
 msgid "Blacklist cleared"
 msgstr ""
 
 #: admin/class-yoohw-cos-activity-list.php:289
 #: admin/class-yoohw-cos-admin-menu.php:3817
-#: admin/class-yoohw-cos-customer-profile.php:1040
+#: admin/class-yoohw-cos-customer-profile.php:1042
 msgid "Blacklist suspect"
 msgstr ""
 
 #: admin/class-yoohw-cos-activity-list.php:295
 #: admin/class-yoohw-cos-admin-menu.php:3818
-#: admin/class-yoohw-cos-customer-profile.php:1043
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:299
+#: admin/class-yoohw-cos-customer-profile.php:1045
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:530
 msgid "Premium order risk scored"
 msgstr ""
 
 #: admin/class-yoohw-cos-activity-list.php:296
 #: admin/class-yoohw-cos-admin-menu.php:3819
-#: admin/class-yoohw-cos-customer-profile.php:1044
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:300
+#: admin/class-yoohw-cos-customer-profile.php:1046
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:531
 msgid "Premium risk rule matched"
 msgstr ""
 
 #: admin/class-yoohw-cos-activity-list.php:297
 #: admin/class-yoohw-cos-admin-menu.php:3820
-#: admin/class-yoohw-cos-customer-profile.php:1045
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:301
+#: admin/class-yoohw-cos-customer-profile.php:1047
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:532
 msgid "Premium anti-bot blocked"
 msgstr ""
 
 #: admin/class-yoohw-cos-activity-list.php:298
 #: admin/class-yoohw-cos-admin-menu.php:3821
-#: admin/class-yoohw-cos-customer-profile.php:1046
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:302
+#: admin/class-yoohw-cos-customer-profile.php:1048
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:533
 msgid "Premium anti-bot challenge"
 msgstr ""
 
@@ -214,22 +220,22 @@ msgstr ""
 #: admin/class-yoohw-cos-admin-menu.php:3822
 #: admin/class-yoohw-cos-admin-menu.php:3853
 #: admin/class-yoohw-cos-admin-tools.php:569
-#: admin/class-yoohw-cos-customer-profile.php:1047
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:303
+#: admin/class-yoohw-cos-customer-profile.php:1049
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:534
 msgid "Premium payment abuse"
 msgstr ""
 
 #: admin/class-yoohw-cos-activity-list.php:300
 #: admin/class-yoohw-cos-admin-menu.php:3823
-#: admin/class-yoohw-cos-customer-profile.php:1048
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:304
+#: admin/class-yoohw-cos-customer-profile.php:1050
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:535
 msgid "Premium device signal"
 msgstr ""
 
 #: admin/class-yoohw-cos-activity-list.php:301
 #: admin/class-yoohw-cos-admin-menu.php:3824
-#: admin/class-yoohw-cos-customer-profile.php:1049
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:305
+#: admin/class-yoohw-cos-customer-profile.php:1051
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:536
 msgid "Premium gateway fraud signal"
 msgstr ""
 
@@ -251,13 +257,13 @@ msgstr ""
 
 #: admin/class-yoohw-cos-activity-list.php:319
 #: admin/class-yoohw-cos-activity-list.php:444
-#: admin/class-yoohw-cos-customer-profile.php:1007
+#: admin/class-yoohw-cos-customer-profile.php:1009
 msgid "Blacklist Manager"
 msgstr ""
 
 #: admin/class-yoohw-cos-activity-list.php:323
 #: admin/class-yoohw-cos-activity-list.php:445
-#: admin/class-yoohw-cos-customer-profile.php:1009
+#: admin/class-yoohw-cos-customer-profile.php:1011
 msgid "Blacklist Manager Premium"
 msgstr ""
 
@@ -287,22 +293,22 @@ msgstr ""
 #: admin/class-yoohw-cos-activity-list.php:404
 #: admin/class-yoohw-cos-admin-menu.php:1756
 #: admin/class-yoohw-cos-customer-exporter.php:215
-#: admin/class-yoohw-cos-customer-profile.php:1030
+#: admin/class-yoohw-cos-customer-profile.php:1032
 #: admin/class-yoohw-cos-customers-list.php:172
 #: admin/class-yoohw-cos-tasks-list.php:405
 msgid "(No name)"
 msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:77
-#: admin/class-yoohw-cos-order-admin.php:46
+#: admin/class-yoohw-cos-order-admin.php:47
 msgid "No assignable users found"
 msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:78
 #: admin/class-yoohw-cos-admin-menu.php:1773
-#: admin/class-yoohw-cos-customer-profile.php:1467
-#: admin/class-yoohw-cos-order-admin.php:47
-#: admin/class-yoohw-cos-order-admin.php:596
+#: admin/class-yoohw-cos-customer-profile.php:1469
+#: admin/class-yoohw-cos-order-admin.php:48
+#: admin/class-yoohw-cos-order-admin.php:732
 msgid "Search assignee"
 msgstr ""
 
@@ -311,7 +317,7 @@ msgid "Copied!"
 msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:81
-#: admin/class-yoohw-cos-order-admin.php:52
+#: admin/class-yoohw-cos-order-admin.php:53
 msgid "No customer profiles found"
 msgstr ""
 
@@ -343,9 +349,9 @@ msgstr ""
 #: admin/class-yoohw-cos-admin-menu.php:120
 #: admin/class-yoohw-cos-admin-menu.php:1774
 #: admin/class-yoohw-cos-admin-menu.php:2865
-#: admin/class-yoohw-cos-customer-profile.php:1468
+#: admin/class-yoohw-cos-customer-profile.php:1470
 #: admin/class-yoohw-cos-customers-list.php:445
-#: admin/class-yoohw-cos-order-admin.php:597
+#: admin/class-yoohw-cos-order-admin.php:733
 msgid "Unassigned"
 msgstr ""
 
@@ -374,6 +380,7 @@ msgid "Open customer follow-ups assigned to your account will appear here."
 msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:267
+#: admin/class-yoohw-cos-order-admin.php:470
 msgid "Open tasks"
 msgstr ""
 
@@ -405,8 +412,8 @@ msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:365
 #: admin/class-yoohw-cos-admin-menu.php:3660
-#: admin/class-yoohw-cos-customer-profile.php:1447
-#: admin/class-yoohw-cos-order-admin.php:637
+#: admin/class-yoohw-cos-customer-profile.php:1449
+#: admin/class-yoohw-cos-order-admin.php:773
 #: includes/class-yoohw-cos-tasks.php:23
 #: includes/emails/class-yoohw-cos-email-crm-base.php:191
 msgid "Normal"
@@ -417,8 +424,8 @@ msgstr ""
 #: admin/class-yoohw-cos-admin-menu.php:3664
 #: admin/class-yoohw-cos-admin-menu.php:3848
 #: admin/class-yoohw-cos-admin-tools.php:564
-#: admin/class-yoohw-cos-customer-profile.php:1460
-#: admin/class-yoohw-cos-order-admin.php:649
+#: admin/class-yoohw-cos-customer-profile.php:1462
+#: admin/class-yoohw-cos-order-admin.php:785
 #: admin/class-yoohw-cos-tasks-list.php:291
 msgid "Complete"
 msgstr ""
@@ -436,14 +443,14 @@ msgstr ""
 #: admin/class-yoohw-cos-admin-menu.php:386
 #: admin/class-yoohw-cos-admin-menu.php:387
 #: admin/class-yoohw-cos-admin-menu.php:653
-#: admin/class-yoohw-cos-customer-profile.php:172
+#: admin/class-yoohw-cos-customer-profile.php:174
 msgid "Overview"
 msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:404
 #: admin/class-yoohw-cos-admin-menu.php:478
 #: admin/class-yoohw-cos-admin-menu.php:1390
-#: admin/class-yoohw-cos-customer-profile.php:1310
+#: admin/class-yoohw-cos-customer-profile.php:1312
 #: includes/emails/class-yoohw-cos-email-task-digests.php:57
 msgid "Tasks"
 msgstr ""
@@ -452,7 +459,7 @@ msgstr ""
 #: admin/class-yoohw-cos-admin-menu.php:414
 #: admin/class-yoohw-cos-admin-menu.php:1830
 #: admin/class-yoohw-cos-customer-exporter.php:99
-#: admin/class-yoohw-cos-customer-profile.php:1202
+#: admin/class-yoohw-cos-customer-profile.php:1204
 msgid "Tags"
 msgstr ""
 
@@ -460,7 +467,7 @@ msgstr ""
 #: admin/class-yoohw-cos-admin-menu.php:423
 #: admin/class-yoohw-cos-admin-menu.php:2099
 #: admin/class-yoohw-cos-customer-exporter.php:100
-#: admin/class-yoohw-cos-customer-profile.php:1256
+#: admin/class-yoohw-cos-customer-profile.php:1258
 msgid "Segments"
 msgstr ""
 
@@ -468,8 +475,8 @@ msgstr ""
 #: admin/class-yoohw-cos-admin-menu.php:432
 #: admin/class-yoohw-cos-admin-menu.php:2367
 #: admin/class-yoohw-cos-admin-menu.php:3808
-#: admin/class-yoohw-cos-customer-profile.php:216
-#: admin/class-yoohw-cos-customer-profile.php:1066
+#: admin/class-yoohw-cos-customer-profile.php:218
+#: admin/class-yoohw-cos-customer-profile.php:1068
 msgid "Activity"
 msgstr ""
 
@@ -530,7 +537,7 @@ msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:683
 #: admin/class-yoohw-cos-customer-exporter.php:92
-#: admin/class-yoohw-cos-customer-profile.php:127
+#: admin/class-yoohw-cos-customer-profile.php:129
 msgid "Orders"
 msgstr ""
 
@@ -547,8 +554,8 @@ msgid "Lifetime revenue"
 msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:695
-#: admin/class-yoohw-cos-customer-profile.php:132
-#: admin/class-yoohw-cos-customer-profile.php:266
+#: admin/class-yoohw-cos-customer-profile.php:134
+#: admin/class-yoohw-cos-customer-profile.php:268
 msgid "Average order value"
 msgstr ""
 
@@ -655,7 +662,7 @@ msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:1243
 #: admin/class-yoohw-cos-admin-menu.php:3812
-#: admin/class-yoohw-cos-customer-profile.php:1041
+#: admin/class-yoohw-cos-customer-profile.php:1043
 msgid "Bulk action"
 msgstr ""
 
@@ -705,10 +712,10 @@ msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:1373
 #: admin/class-yoohw-cos-admin-menu.php:1677
-#: admin/class-yoohw-cos-customer-profile.php:1344
-#: admin/class-yoohw-cos-customer-profile.php:1379
-#: admin/class-yoohw-cos-order-admin.php:403
-#: admin/class-yoohw-cos-order-admin.php:433
+#: admin/class-yoohw-cos-customer-profile.php:1346
+#: admin/class-yoohw-cos-customer-profile.php:1381
+#: admin/class-yoohw-cos-order-admin.php:539
+#: admin/class-yoohw-cos-order-admin.php:569
 msgid "Add task"
 msgstr ""
 
@@ -762,14 +769,14 @@ msgid "Task could not be saved."
 msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:1551
-#: admin/class-yoohw-cos-customer-profile.php:1333
-#: admin/class-yoohw-cos-order-admin.php:589
+#: admin/class-yoohw-cos-customer-profile.php:1335
+#: admin/class-yoohw-cos-order-admin.php:725
 msgid "Task action could not be completed."
 msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:1556
-#: admin/class-yoohw-cos-customer-profile.php:1315
-#: admin/class-yoohw-cos-order-admin.php:577
+#: admin/class-yoohw-cos-customer-profile.php:1317
+#: admin/class-yoohw-cos-order-admin.php:713
 msgid "Task created successfully."
 msgstr ""
 
@@ -778,14 +785,14 @@ msgid "Task updated successfully."
 msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:1558
-#: admin/class-yoohw-cos-customer-profile.php:1321
-#: admin/class-yoohw-cos-order-admin.php:581
+#: admin/class-yoohw-cos-customer-profile.php:1323
+#: admin/class-yoohw-cos-order-admin.php:717
 msgid "Task marked complete."
 msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:1559
-#: admin/class-yoohw-cos-customer-profile.php:1327
-#: admin/class-yoohw-cos-order-admin.php:585
+#: admin/class-yoohw-cos-customer-profile.php:1329
+#: admin/class-yoohw-cos-order-admin.php:721
 msgid "Task reopened."
 msgstr ""
 
@@ -820,15 +827,15 @@ msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:1634
 #: admin/class-yoohw-cos-admin-menu.php:2886
-#: admin/class-yoohw-cos-customer-profile.php:1364
-#: admin/class-yoohw-cos-order-admin.php:419
+#: admin/class-yoohw-cos-customer-profile.php:1366
+#: admin/class-yoohw-cos-order-admin.php:555
 #: templates/emails/crm-task-notification.php:14
 msgid "Due date"
 msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:1639
-#: admin/class-yoohw-cos-customer-profile.php:1353
-#: admin/class-yoohw-cos-order-admin.php:408
+#: admin/class-yoohw-cos-customer-profile.php:1355
+#: admin/class-yoohw-cos-order-admin.php:544
 #: admin/class-yoohw-cos-tasks-list.php:27
 #: templates/emails/crm-task-digest.php:79
 #: templates/emails/crm-task-notification.php:15
@@ -837,16 +844,16 @@ msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:1651
 #: admin/class-yoohw-cos-admin-menu.php:3189
-#: admin/class-yoohw-cos-customer-profile.php:236
-#: admin/class-yoohw-cos-customer-profile.php:731
+#: admin/class-yoohw-cos-customer-profile.php:238
+#: admin/class-yoohw-cos-customer-profile.php:733
 #: admin/class-yoohw-cos-tasks-list.php:26
 #: templates/emails/crm-task-notification.php:16
 msgid "Status"
 msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:1663
-#: admin/class-yoohw-cos-customer-profile.php:1369
-#: admin/class-yoohw-cos-order-admin.php:424
+#: admin/class-yoohw-cos-customer-profile.php:1371
+#: admin/class-yoohw-cos-order-admin.php:560
 msgid "Assigned to"
 msgstr ""
 
@@ -865,8 +872,8 @@ msgstr ""
 #: admin/class-yoohw-cos-admin-menu.php:1685
 #: admin/class-yoohw-cos-admin-menu.php:2080
 #: admin/class-yoohw-cos-admin-menu.php:2350
-#: admin/class-yoohw-cos-customer-profile.php:521
-#: admin/class-yoohw-cos-customer-profile.php:1609
+#: admin/class-yoohw-cos-customer-profile.php:523
+#: admin/class-yoohw-cos-customer-profile.php:1611
 msgid "Cancel"
 msgstr ""
 
@@ -1141,7 +1148,7 @@ msgid "Loyalty task automation settings saved."
 msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:2505
-#: admin/class-yoohw-cos-customer-profile.php:191
+#: admin/class-yoohw-cos-customer-profile.php:193
 msgid "Operations"
 msgstr ""
 
@@ -1297,7 +1304,7 @@ msgid "Top customer"
 msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:2719
-#: admin/class-yoohw-cos-customer-profile.php:242
+#: admin/class-yoohw-cos-customer-profile.php:244
 msgid "Lifecycle stage"
 msgstr ""
 
@@ -1454,8 +1461,8 @@ msgid "Use this only for meaningful high-value tiers, not every loyalty level."
 msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:2985
-#: admin/class-yoohw-cos-customer-profile.php:1627
-#: admin/class-yoohw-cos-customer-profile.php:1639
+#: admin/class-yoohw-cos-customer-profile.php:1629
+#: admin/class-yoohw-cos-customer-profile.php:1641
 #: admin/class-yoohw-cos-customers-list.php:233
 #: admin/class-yoohw-cos-customers-list.php:715
 msgid "Active"
@@ -1463,8 +1470,8 @@ msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:2986
 #: admin/class-yoohw-cos-admin-menu.php:3559
-#: admin/class-yoohw-cos-customer-profile.php:1629
-#: admin/class-yoohw-cos-customer-profile.php:1641
+#: admin/class-yoohw-cos-customer-profile.php:1631
+#: admin/class-yoohw-cos-customer-profile.php:1643
 #: admin/class-yoohw-cos-customers-list.php:235
 #: admin/class-yoohw-cos-customers-list.php:717
 msgid "Inactive"
@@ -1493,6 +1500,7 @@ msgid "Missing: %s"
 msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:3056
+#: includes/class-yoohw-cos-email-notifications.php:851
 msgid "Enabled"
 msgstr ""
 
@@ -1505,7 +1513,7 @@ msgid "Compatibility declared"
 msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:3064
-#: admin/class-yoohw-cos-customer-profile.php:643
+#: admin/class-yoohw-cos-customer-profile.php:645
 msgid "Unknown"
 msgstr ""
 
@@ -1617,7 +1625,8 @@ msgid "Customer profiles updated"
 msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:3194
-#: admin/class-yoohw-cos-customer-profile.php:253
+#: admin/class-yoohw-cos-customer-profile.php:255
+#: admin/class-yoohw-cos-order-admin.php:456
 msgid "Total orders"
 msgstr ""
 
@@ -1736,55 +1745,60 @@ msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:3401
 #: admin/class-yoohw-cos-customer-exporter.php:98
-#: admin/class-yoohw-cos-customer-profile.php:1938
+#: admin/class-yoohw-cos-customer-profile.php:1940
 msgid "Lifecycle"
 msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:3405
 #: admin/class-yoohw-cos-customer-exporter.php:230
-#: admin/class-yoohw-cos-customer-profile.php:1626
-#: admin/class-yoohw-cos-customer-profile.php:1638
-#: admin/class-yoohw-cos-customer-profile.php:1920
+#: admin/class-yoohw-cos-customer-profile.php:1628
+#: admin/class-yoohw-cos-customer-profile.php:1640
+#: admin/class-yoohw-cos-customer-profile.php:1922
 #: admin/class-yoohw-cos-customers-list.php:232
 #: admin/class-yoohw-cos-customers-list.php:546
 #: admin/class-yoohw-cos-customers-list.php:714
 #: admin/class-yoohw-cos-customers-list.php:888
+#: admin/class-yoohw-cos-order-admin.php:972
 msgid "New"
 msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:3406
 #: admin/class-yoohw-cos-customer-exporter.php:231
-#: admin/class-yoohw-cos-customer-profile.php:1921
+#: admin/class-yoohw-cos-customer-profile.php:1923
 #: admin/class-yoohw-cos-customers-list.php:547
 #: admin/class-yoohw-cos-customers-list.php:889
+#: admin/class-yoohw-cos-order-admin.php:973
 msgid "Repeat"
 msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:3407
 #: admin/class-yoohw-cos-customer-exporter.php:232
-#: admin/class-yoohw-cos-customer-profile.php:1922
+#: admin/class-yoohw-cos-customer-profile.php:1924
 #: admin/class-yoohw-cos-customers-list.php:548
 #: admin/class-yoohw-cos-customers-list.php:890
+#: admin/class-yoohw-cos-order-admin.php:974
 msgid "Loyal"
 msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:3408
 #: admin/class-yoohw-cos-customer-exporter.php:233
-#: admin/class-yoohw-cos-customer-profile.php:1630
-#: admin/class-yoohw-cos-customer-profile.php:1642
-#: admin/class-yoohw-cos-customer-profile.php:1923
+#: admin/class-yoohw-cos-customer-profile.php:1632
+#: admin/class-yoohw-cos-customer-profile.php:1644
+#: admin/class-yoohw-cos-customer-profile.php:1925
 #: admin/class-yoohw-cos-customers-list.php:236
 #: admin/class-yoohw-cos-customers-list.php:549
 #: admin/class-yoohw-cos-customers-list.php:718
 #: admin/class-yoohw-cos-customers-list.php:891
+#: admin/class-yoohw-cos-order-admin.php:975
 msgid "VIP"
 msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:3409
 #: admin/class-yoohw-cos-customer-exporter.php:234
-#: admin/class-yoohw-cos-customer-profile.php:1924
+#: admin/class-yoohw-cos-customer-profile.php:1926
 #: admin/class-yoohw-cos-customers-list.php:550
 #: admin/class-yoohw-cos-customers-list.php:892
+#: admin/class-yoohw-cos-order-admin.php:976
 msgid "Dormant"
 msgstr ""
 
@@ -1793,27 +1807,27 @@ msgid "Risk and trust"
 msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:3426
-#: admin/class-yoohw-cos-customer-profile.php:1757
+#: admin/class-yoohw-cos-customer-profile.php:1759
 #: admin/class-yoohw-cos-customers-list.php:515
 #: admin/class-yoohw-cos-customers-list.php:737
 msgid "No risk"
 msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:3427
-#: admin/class-yoohw-cos-customer-profile.php:1758
+#: admin/class-yoohw-cos-customer-profile.php:1760
 #: admin/class-yoohw-cos-customers-list.php:516
 msgid "Low risk"
 msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:3428
-#: admin/class-yoohw-cos-customer-profile.php:1759
+#: admin/class-yoohw-cos-customer-profile.php:1761
 #: admin/class-yoohw-cos-customers-list.php:517
 msgid "Medium risk"
 msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:3429
 #: admin/class-yoohw-cos-admin-menu.php:3571
-#: admin/class-yoohw-cos-customer-profile.php:1760
+#: admin/class-yoohw-cos-customer-profile.php:1762
 #: admin/class-yoohw-cos-customers-list.php:518
 msgid "High risk"
 msgstr ""
@@ -1859,8 +1873,8 @@ msgid "View all customers"
 msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:3564
-#: admin/class-yoohw-cos-customer-profile.php:1628
-#: admin/class-yoohw-cos-customer-profile.php:1640
+#: admin/class-yoohw-cos-customer-profile.php:1630
+#: admin/class-yoohw-cos-customer-profile.php:1642
 #: admin/class-yoohw-cos-customers-list.php:234
 #: admin/class-yoohw-cos-customers-list.php:716
 msgid "At risk"
@@ -1875,7 +1889,7 @@ msgid "Tasks to handle"
 msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:3600
-#: admin/class-yoohw-cos-customer-profile.php:1390
+#: admin/class-yoohw-cos-customer-profile.php:1392
 #: admin/class-yoohw-cos-tasks-list.php:374
 msgid "No open tasks."
 msgstr ""
@@ -1885,8 +1899,8 @@ msgid "New customer follow-ups will appear here."
 msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:3615
-#: admin/class-yoohw-cos-customer-profile.php:1403
-#: admin/class-yoohw-cos-order-admin.php:455
+#: admin/class-yoohw-cos-customer-profile.php:1405
+#: admin/class-yoohw-cos-order-admin.php:591
 msgid "View all tasks"
 msgstr ""
 
@@ -1895,27 +1909,27 @@ msgid "Recent activity"
 msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:3706
-#: admin/class-yoohw-cos-customer-profile.php:977
+#: admin/class-yoohw-cos-customer-profile.php:979
 msgid "No activity yet."
 msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:3742
-#: admin/class-yoohw-cos-customer-profile.php:993
+#: admin/class-yoohw-cos-customer-profile.php:995
 msgid "View all activity"
 msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:3829
-#: admin/class-yoohw-cos-customer-profile.php:1054
+#: admin/class-yoohw-cos-customer-profile.php:1056
 msgid "Segment added"
 msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:3830
-#: admin/class-yoohw-cos-customer-profile.php:1055
+#: admin/class-yoohw-cos-customer-profile.php:1057
 msgid "Segment removed"
 msgstr ""
 
 #: admin/class-yoohw-cos-admin-menu.php:3833
-#: admin/class-yoohw-cos-customer-profile.php:1058
+#: admin/class-yoohw-cos-customer-profile.php:1060
 msgid "Tag added"
 msgstr ""
 
@@ -2032,12 +2046,13 @@ msgid "Customer export file could not be opened."
 msgstr ""
 
 #: admin/class-yoohw-cos-customer-exporter.php:90
-#: admin/class-yoohw-cos-customer-profile.php:400
+#: admin/class-yoohw-cos-customer-profile.php:402
+#: includes/class-yoohw-cos-email-notifications.php:135
 msgid "Email"
 msgstr ""
 
 #: admin/class-yoohw-cos-customer-exporter.php:91
-#: admin/class-yoohw-cos-customer-profile.php:409
+#: admin/class-yoohw-cos-customer-profile.php:411
 msgid "Phone"
 msgstr ""
 
@@ -2050,19 +2065,21 @@ msgid "AOV"
 msgstr ""
 
 #: admin/class-yoohw-cos-customer-exporter.php:95
-#: admin/class-yoohw-cos-customer-profile.php:137
-#: admin/class-yoohw-cos-customer-profile.php:1791
+#: admin/class-yoohw-cos-customer-profile.php:139
+#: admin/class-yoohw-cos-customer-profile.php:1793
+#: admin/class-yoohw-cos-order-admin.php:482
 msgid "Risk score"
 msgstr ""
 
 #: admin/class-yoohw-cos-customer-exporter.php:96
-#: admin/class-yoohw-cos-customer-profile.php:142
-#: admin/class-yoohw-cos-customer-profile.php:1855
+#: admin/class-yoohw-cos-customer-profile.php:144
+#: admin/class-yoohw-cos-customer-profile.php:1857
+#: admin/class-yoohw-cos-order-admin.php:477
 msgid "Trust score"
 msgstr ""
 
 #: admin/class-yoohw-cos-customer-exporter.php:97
-#: admin/class-yoohw-cos-customer-profile.php:248
+#: admin/class-yoohw-cos-customer-profile.php:250
 msgid "Value tier"
 msgstr ""
 
@@ -2070,433 +2087,434 @@ msgstr ""
 msgid "Customer not found"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:55
+#: admin/class-yoohw-cos-customer-profile.php:57
 msgid "Back to customers"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:73
+#: admin/class-yoohw-cos-customer-profile.php:75
 msgid "Edit WP user"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:117
+#: admin/class-yoohw-cos-customer-profile.php:119
 msgid "Customer summary"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:122
-#: admin/class-yoohw-cos-customer-profile.php:258
+#: admin/class-yoohw-cos-customer-profile.php:124
+#: admin/class-yoohw-cos-customer-profile.php:260
 msgid "Total spent"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:184
+#: admin/class-yoohw-cos-customer-profile.php:186
 #: admin/class-yoohw-cos-customers-list.php:32
 msgid "Commerce"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:212
+#: admin/class-yoohw-cos-customer-profile.php:214
 msgid "Security"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:230
+#: admin/class-yoohw-cos-customer-profile.php:232
 msgid "Commerce summary"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:274
+#: admin/class-yoohw-cos-customer-profile.php:276
 msgid "Last order"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:280
+#: admin/class-yoohw-cos-customer-profile.php:282
 msgid "Last order date"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:285
-#: includes/class-yoohw-cos-intelligence.php:500
+#: admin/class-yoohw-cos-customer-profile.php:287
+#: admin/class-yoohw-cos-order-admin.php:489
+#: includes/class-yoohw-cos-intelligence.php:511
 msgid "Last activity"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:303
+#: admin/class-yoohw-cos-customer-profile.php:305
 #: admin/class-yoohw-cos-customers-list.php:42
 #: includes/class-yoohw-cos-email-notifications.php:726
 msgid "Loyalty"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:308
+#: admin/class-yoohw-cos-customer-profile.php:310
 msgid "No loyalty data yet."
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:309
+#: admin/class-yoohw-cos-customer-profile.php:311
 msgid "Loyalty level and points will appear after this profile is linked to a registered loyalty user."
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:321
+#: admin/class-yoohw-cos-customer-profile.php:323
 msgid "Level"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:327
+#: admin/class-yoohw-cos-customer-profile.php:329
 msgid "Available points"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:332
+#: admin/class-yoohw-cos-customer-profile.php:334
 msgid "Earned points"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:384
+#: admin/class-yoohw-cos-customer-profile.php:386
 msgid "Identity"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:390
+#: admin/class-yoohw-cos-customer-profile.php:392
 msgid "Customer ID"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:395
+#: admin/class-yoohw-cos-customer-profile.php:397
 msgid "WP User ID"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:403
+#: admin/class-yoohw-cos-customer-profile.php:405
 msgid "Copy email"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:412
+#: admin/class-yoohw-cos-customer-profile.php:414
 msgid "Copy phone"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:418
+#: admin/class-yoohw-cos-customer-profile.php:420
 #: admin/class-yoohw-cos-segments-list.php:27
 #: admin/class-yoohw-cos-tags-list.php:27
 msgid "Created"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:423
-#: admin/class-yoohw-cos-customer-profile.php:1570
+#: admin/class-yoohw-cos-customer-profile.php:425
+#: admin/class-yoohw-cos-customer-profile.php:1572
 #: admin/class-yoohw-cos-tasks-list.php:30
 msgid "Updated"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:433
-#: admin/class-yoohw-cos-customer-profile.php:482
+#: admin/class-yoohw-cos-customer-profile.php:435
+#: admin/class-yoohw-cos-customer-profile.php:484
 msgid "Email customer"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:439
+#: admin/class-yoohw-cos-customer-profile.php:441
 msgid "Call customer"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:483
+#: admin/class-yoohw-cos-customer-profile.php:485
 msgid "Close email composer"
 msgstr ""
 
 #. translators: %s: customer name.
-#: admin/class-yoohw-cos-customer-profile.php:495
+#: admin/class-yoohw-cos-customer-profile.php:497
 msgid "Compose a direct email to %s. The message will use your WooCommerce email branding and sender settings."
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:501
+#: admin/class-yoohw-cos-customer-profile.php:503
 msgid "To"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:506
+#: admin/class-yoohw-cos-customer-profile.php:508
 msgid "Subject"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:511
+#: admin/class-yoohw-cos-customer-profile.php:513
 msgid "Message"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:519
+#: admin/class-yoohw-cos-customer-profile.php:521
 msgid "WooCommerce email settings"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:522
+#: admin/class-yoohw-cos-customer-profile.php:524
 msgid "Sending…"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:522
+#: admin/class-yoohw-cos-customer-profile.php:524
 msgid "Send email"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:558
+#: admin/class-yoohw-cos-customer-profile.php:560
 msgid "Addresses"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:563
+#: admin/class-yoohw-cos-customer-profile.php:565
 msgid "No address data yet."
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:564
+#: admin/class-yoohw-cos-customer-profile.php:566
 msgid "Billing and shipping addresses will appear after this customer has a synced WooCommerce order."
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:576
+#: admin/class-yoohw-cos-customer-profile.php:578
 msgid "Billing address"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:581
+#: admin/class-yoohw-cos-customer-profile.php:583
 msgid "Shipping address"
 msgstr ""
 
 #. translators: %s: WooCommerce order number.
-#: admin/class-yoohw-cos-customer-profile.php:590
+#: admin/class-yoohw-cos-customer-profile.php:592
 msgid "Address data is based on the latest WooCommerce order: #%s."
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:604
+#: admin/class-yoohw-cos-customer-profile.php:606
 msgid "No address available."
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:614
+#: admin/class-yoohw-cos-customer-profile.php:616
 msgid "Acquisition"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:620
+#: admin/class-yoohw-cos-customer-profile.php:622
 msgid "First seen"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:625
+#: admin/class-yoohw-cos-customer-profile.php:627
 msgid "First order"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:631
+#: admin/class-yoohw-cos-customer-profile.php:633
 msgid "First order date"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:636
+#: admin/class-yoohw-cos-customer-profile.php:638
 msgid "Latest order"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:647
+#: admin/class-yoohw-cos-customer-profile.php:649
 msgid "Campaign"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:648
+#: admin/class-yoohw-cos-customer-profile.php:650
 msgid "Not tracked yet"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:711
+#: admin/class-yoohw-cos-customer-profile.php:713
 msgid "Recent orders"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:716
+#: admin/class-yoohw-cos-customer-profile.php:718
 msgid "No orders found."
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:717
+#: admin/class-yoohw-cos-customer-profile.php:719
 msgid "Recent WooCommerce orders will appear here after this customer is synced."
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:729
+#: admin/class-yoohw-cos-customer-profile.php:731
 #: admin/class-yoohw-cos-tasks-list.php:29
 #: templates/emails/crm-task-notification.php:25
 msgid "Order"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:732
+#: admin/class-yoohw-cos-customer-profile.php:734
 msgid "Total"
 msgstr ""
 
 #. translators: 1: number of orders currently shown, 2: total number of customer orders.
-#: admin/class-yoohw-cos-customer-profile.php:769
+#: admin/class-yoohw-cos-customer-profile.php:771
 msgid "Showing the latest %1$s of %2$s orders."
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:773
+#: admin/class-yoohw-cos-customer-profile.php:775
 msgid "View all orders"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:796
+#: admin/class-yoohw-cos-customer-profile.php:798
 msgid "Security signals"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:801
+#: admin/class-yoohw-cos-customer-profile.php:803
 msgid "No premium security signals yet."
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:802
+#: admin/class-yoohw-cos-customer-profile.php:804
 msgid "Premium order risk, anti-bot, payment, and device signals will appear here when matched to this customer."
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:814
+#: admin/class-yoohw-cos-customer-profile.php:816
 msgid "Latest premium order risk"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:820
+#: admin/class-yoohw-cos-customer-profile.php:822
 msgid "Highest risk order"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:826
+#: admin/class-yoohw-cos-customer-profile.php:828
 msgid "Matched premium rules"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:832
+#: admin/class-yoohw-cos-customer-profile.php:834
 msgid "Recent anti-bot/payment/device events"
 msgstr ""
 
 #. translators: %d: risk score.
-#: admin/class-yoohw-cos-customer-profile.php:857
+#: admin/class-yoohw-cos-customer-profile.php:859
 msgid "Risk %d"
 msgstr ""
 
 #. translators: %d: score.
-#: admin/class-yoohw-cos-customer-profile.php:916
+#: admin/class-yoohw-cos-customer-profile.php:918
 msgid "Score %d"
 msgstr ""
 
 #. translators: %d: threshold.
-#: admin/class-yoohw-cos-customer-profile.php:924
+#: admin/class-yoohw-cos-customer-profile.php:926
 msgid "Threshold %d"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:972
+#: admin/class-yoohw-cos-customer-profile.php:974
 msgid "Timeline"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:978
+#: admin/class-yoohw-cos-customer-profile.php:980
 msgid "Orders, notes, tags, segments, and tasks will appear here as activity is recorded."
 msgstr ""
 
 #. translators: 1: number of events currently shown, 2: total number of customer activity events.
-#: admin/class-yoohw-cos-customer-profile.php:989
+#: admin/class-yoohw-cos-customer-profile.php:991
 msgid "Showing the latest %1$s of %2$s activity events."
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:1105
+#: admin/class-yoohw-cos-customer-profile.php:1107
 msgid "Add"
 msgstr ""
 
 #. translators: %s: term name.
-#: admin/class-yoohw-cos-customer-profile.php:1179
+#: admin/class-yoohw-cos-customer-profile.php:1181
 msgid "Remove term: %s"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:1207
+#: admin/class-yoohw-cos-customer-profile.php:1209
 msgid "Tag assigned successfully."
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:1213
+#: admin/class-yoohw-cos-customer-profile.php:1215
 msgid "Tag removed successfully."
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:1222
+#: admin/class-yoohw-cos-customer-profile.php:1224
 msgid "Add tag"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:1223
+#: admin/class-yoohw-cos-customer-profile.php:1225
 msgid "Add or remove tags"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:1228
+#: admin/class-yoohw-cos-customer-profile.php:1230
 msgid "Choose from existing tags"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:1232
+#: admin/class-yoohw-cos-customer-profile.php:1234
 msgid "Remove this tag?"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:1235
+#: admin/class-yoohw-cos-customer-profile.php:1237
 msgid "Separate tags with commas"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:1261
+#: admin/class-yoohw-cos-customer-profile.php:1263
 msgid "Segment assigned successfully."
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:1267
+#: admin/class-yoohw-cos-customer-profile.php:1269
 msgid "Segment removed successfully."
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:1276
+#: admin/class-yoohw-cos-customer-profile.php:1278
 msgid "Add segment"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:1277
+#: admin/class-yoohw-cos-customer-profile.php:1279
 msgid "Add or remove segments"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:1282
+#: admin/class-yoohw-cos-customer-profile.php:1284
 msgid "Choose from existing segments"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:1286
+#: admin/class-yoohw-cos-customer-profile.php:1288
 msgid "Remove this segment?"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:1289
+#: admin/class-yoohw-cos-customer-profile.php:1291
 msgid "Separate segments with commas"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:1348
+#: admin/class-yoohw-cos-customer-profile.php:1350
 msgid "Follow up with this customer..."
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:1375
-#: admin/class-yoohw-cos-order-admin.php:429
+#: admin/class-yoohw-cos-customer-profile.php:1377
+#: admin/class-yoohw-cos-order-admin.php:565
 msgid "Optional task notes..."
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:1391
+#: admin/class-yoohw-cos-customer-profile.php:1393
 msgid "Add a task above to schedule a follow-up."
 msgstr ""
 
 #. translators: 1: number of tasks currently shown, 2: total number of open tasks.
-#: admin/class-yoohw-cos-customer-profile.php:1399
-#: admin/class-yoohw-cos-order-admin.php:451
+#: admin/class-yoohw-cos-customer-profile.php:1401
+#: admin/class-yoohw-cos-order-admin.php:587
 msgid "Showing %1$s of %2$s open tasks."
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:1460
-#: admin/class-yoohw-cos-order-admin.php:649
+#: admin/class-yoohw-cos-customer-profile.php:1462
+#: admin/class-yoohw-cos-order-admin.php:785
 #: admin/class-yoohw-cos-tasks-list.php:41
 #: admin/class-yoohw-cos-tasks-list.php:290
 msgid "Reopen"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:1483
+#: admin/class-yoohw-cos-customer-profile.php:1485
 msgid "Internal notes"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:1488
+#: admin/class-yoohw-cos-customer-profile.php:1490
 msgid "Note added successfully."
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:1494
+#: admin/class-yoohw-cos-customer-profile.php:1496
 msgid "Note updated successfully."
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:1500
+#: admin/class-yoohw-cos-customer-profile.php:1502
 msgid "Note deleted successfully."
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:1510
+#: admin/class-yoohw-cos-customer-profile.php:1512
 msgid "Add an internal note about this customer..."
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:1514
+#: admin/class-yoohw-cos-customer-profile.php:1516
 msgid "Add note"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:1526
+#: admin/class-yoohw-cos-customer-profile.php:1528
 msgid "No internal notes."
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:1527
+#: admin/class-yoohw-cos-customer-profile.php:1529
 msgid "Add the first note above."
 msgstr ""
 
 #. translators: 1: number of notes currently shown, 2: total number of customer notes.
-#: admin/class-yoohw-cos-customer-profile.php:1535
+#: admin/class-yoohw-cos-customer-profile.php:1537
 msgid "Showing the latest %1$s of %2$s internal notes."
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:1577
+#: admin/class-yoohw-cos-customer-profile.php:1579
 #: admin/class-yoohw-cos-segments-list.php:143
 #: admin/class-yoohw-cos-tags-list.php:132
 #: admin/class-yoohw-cos-tasks-list.php:319
 msgid "Edit"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:1580
+#: admin/class-yoohw-cos-customer-profile.php:1582
 msgid "Delete this note?"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:1581
+#: admin/class-yoohw-cos-customer-profile.php:1583
 #: admin/class-yoohw-cos-segments-list.php:37
 #: admin/class-yoohw-cos-segments-list.php:160
 #: admin/class-yoohw-cos-tags-list.php:37
@@ -2506,29 +2524,29 @@ msgstr ""
 msgid "Delete"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:1602
+#: admin/class-yoohw-cos-customer-profile.php:1604
 msgid "Save note"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:1739
+#: admin/class-yoohw-cos-customer-profile.php:1741
 #: admin/class-yoohw-cos-customers-list.php:805
 #: admin/class-yoohw-cos-customers-list.php:848
 msgid "No loyalty level"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:1836
+#: admin/class-yoohw-cos-customer-profile.php:1838
 msgid "High trust"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:1839
+#: admin/class-yoohw-cos-customer-profile.php:1841
 msgid "Medium trust"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:1842
+#: admin/class-yoohw-cos-customer-profile.php:1844
 msgid "Low trust"
 msgstr ""
 
-#: admin/class-yoohw-cos-customer-profile.php:1845
+#: admin/class-yoohw-cos-customer-profile.php:1847
 msgid "Limited trust"
 msgstr ""
 
@@ -2582,6 +2600,7 @@ msgid "Sync existing WooCommerce orders to create customer profiles."
 msgstr ""
 
 #: admin/class-yoohw-cos-customers-list.php:280
+#: admin/class-yoohw-cos-order-admin.php:450
 msgid "Archived"
 msgstr ""
 
@@ -2683,67 +2702,106 @@ msgstr ""
 msgid "All loyalty levels"
 msgstr ""
 
-#: admin/class-yoohw-cos-order-admin.php:50
-#: admin/class-yoohw-cos-order-admin.php:297
+#: admin/class-yoohw-cos-order-admin.php:51
+#: admin/class-yoohw-cos-order-admin.php:298
 msgid "Search YoOhw customer profile"
 msgstr ""
 
-#: admin/class-yoohw-cos-order-admin.php:51
-#: admin/class-yoohw-cos-order-admin.php:238
+#: admin/class-yoohw-cos-order-admin.php:52
+#: admin/class-yoohw-cos-order-admin.php:239
 msgid "Filter by customer"
 msgstr ""
 
-#: admin/class-yoohw-cos-order-admin.php:275
+#: admin/class-yoohw-cos-order-admin.php:276
 msgid "Uses customer profiles. WooCommerce customer user is synchronized when the selected profile has a WP user."
 msgstr ""
 
-#: admin/class-yoohw-cos-order-admin.php:279
+#: admin/class-yoohw-cos-order-admin.php:280
 #: templates/emails/plain/crm-task-digest.php:31
 #: templates/emails/plain/crm-task-notification.php:20
 msgid "Customer:"
 msgstr ""
 
-#: admin/class-yoohw-cos-order-admin.php:283
+#: admin/class-yoohw-cos-order-admin.php:284
 msgid "Profile"
 msgstr ""
 
-#: admin/class-yoohw-cos-order-admin.php:287
+#: admin/class-yoohw-cos-order-admin.php:288
 msgid "WP user profile"
 msgstr ""
 
-#: admin/class-yoohw-cos-order-admin.php:356
+#: admin/class-yoohw-cos-order-admin.php:357
 msgid "Customer task"
 msgstr ""
 
-#: admin/class-yoohw-cos-order-admin.php:379
-msgid "No YoOhw customer profile is linked to this order yet. Select a customer profile and save the order before creating tasks."
+#: admin/class-yoohw-cos-order-admin.php:374
+msgid "Customer history"
 msgstr ""
 
-#: admin/class-yoohw-cos-order-admin.php:404
-msgid "Follow up about this order..."
+#: admin/class-yoohw-cos-order-admin.php:395
+msgid "No customer intelligence profile linked"
 msgstr ""
 
-#: admin/class-yoohw-cos-order-admin.php:444
-msgid "No open tasks for this order."
+#: admin/class-yoohw-cos-order-admin.php:396
+msgid "Select a YoOhw customer profile in the order details and save the order to see customer insights here."
 msgstr ""
 
+#. translators: %d: customer profile ID.
 #. translators: %d: customer ID.
-#: admin/class-yoohw-cos-order-admin.php:744
+#: admin/class-yoohw-cos-order-admin.php:435
+#: admin/class-yoohw-cos-order-admin.php:880
 msgid "Customer #%d"
 msgstr ""
 
+#: admin/class-yoohw-cos-order-admin.php:458
+msgid "Orders recorded in the linked customer profile."
+msgstr ""
+
+#: admin/class-yoohw-cos-order-admin.php:461
+#: includes/class-yoohw-cos-intelligence.php:502
+msgid "Lifetime value"
+msgstr ""
+
+#: admin/class-yoohw-cos-order-admin.php:463
+msgid "Total value recorded across this customer profile."
+msgstr ""
+
+#: admin/class-yoohw-cos-order-admin.php:466
+msgid "Average order"
+msgstr ""
+
+#: admin/class-yoohw-cos-order-admin.php:494
+msgid "View profile"
+msgstr ""
+
+#: admin/class-yoohw-cos-order-admin.php:495
+msgid "View tasks"
+msgstr ""
+
+#: admin/class-yoohw-cos-order-admin.php:515
+msgid "No YoOhw customer profile is linked to this order yet. Select a customer profile and save the order before creating tasks."
+msgstr ""
+
+#: admin/class-yoohw-cos-order-admin.php:540
+msgid "Follow up about this order..."
+msgstr ""
+
+#: admin/class-yoohw-cos-order-admin.php:580
+msgid "No open tasks for this order."
+msgstr ""
+
 #. translators: 1: customer name, 2: customer ID.
-#: admin/class-yoohw-cos-order-admin.php:754
+#: admin/class-yoohw-cos-order-admin.php:890
 msgid "%1$s (#%2$d)"
 msgstr ""
 
 #. translators: 1: customer name, 2: customer ID, 3: customer email or phone.
-#: admin/class-yoohw-cos-order-admin.php:764
+#: admin/class-yoohw-cos-order-admin.php:900
 msgid "%1$s (#%2$d - %3$s)"
 msgstr ""
 
 #. translators: %s: customer option label.
-#: admin/class-yoohw-cos-order-admin.php:780
+#: admin/class-yoohw-cos-order-admin.php:916
 msgid "%s (Archived)"
 msgstr ""
 
@@ -2890,292 +2948,292 @@ msgstr ""
 msgid "Blacklist Manager detected a suspect-list match for this order."
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-integration.php:192
+#: includes/class-yoohw-cos-blacklist-manager-integration.php:189
 msgid "Blacklist: Blocked"
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-integration.php:199
+#: includes/class-yoohw-cos-blacklist-manager-integration.php:196
 msgid "Blacklist: Cleared"
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-integration.php:206
+#: includes/class-yoohw-cos-blacklist-manager-integration.php:203
 msgid "Blacklist: Suspect"
 msgstr ""
 
 #. translators: 1: description, 2: order number.
-#: includes/class-yoohw-cos-blacklist-manager-integration.php:381
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:789
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1436
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1451
+#: includes/class-yoohw-cos-blacklist-manager-integration.php:378
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1020
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1717
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1732
 msgid "%1$s Order #%2$s."
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-integration.php:389
+#: includes/class-yoohw-cos-blacklist-manager-integration.php:386
 msgid "Blacklist Manager removed a dashboard blacklist record."
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-integration.php:394
+#: includes/class-yoohw-cos-blacklist-manager-integration.php:391
 msgid "Blacklist Manager dashboard marked an address as blocked."
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-integration.php:395
+#: includes/class-yoohw-cos-blacklist-manager-integration.php:392
 msgid "Blacklist Manager dashboard marked a record as blocked."
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-integration.php:399
+#: includes/class-yoohw-cos-blacklist-manager-integration.php:396
 msgid "Blacklist Manager dashboard marked an address as suspect."
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-integration.php:400
+#: includes/class-yoohw-cos-blacklist-manager-integration.php:397
 msgid "Blacklist Manager dashboard marked a record as suspect."
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-integration.php:457
+#: includes/class-yoohw-cos-blacklist-manager-integration.php:454
 msgid "Backfilled Blacklist Manager blocked signal."
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-integration.php:458
+#: includes/class-yoohw-cos-blacklist-manager-integration.php:455
 msgid "Backfilled Blacklist Manager suspect signal."
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-integration.php:595
+#: includes/class-yoohw-cos-blacklist-manager-integration.php:592
 msgid "Backfilled Blacklist Manager blocked activity."
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-integration.php:597
+#: includes/class-yoohw-cos-blacklist-manager-integration.php:594
 msgid "Backfilled Blacklist Manager cleared activity."
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-integration.php:599
+#: includes/class-yoohw-cos-blacklist-manager-integration.php:596
 msgid "Backfilled Blacklist Manager match activity."
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-integration.php:601
+#: includes/class-yoohw-cos-blacklist-manager-integration.php:598
 msgid "Backfilled Blacklist Manager suspect activity."
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-integration.php:685
+#: includes/class-yoohw-cos-blacklist-manager-integration.php:679
 msgid "Blacklist Manager: blocked"
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-integration.php:686
+#: includes/class-yoohw-cos-blacklist-manager-integration.php:680
 msgid "This customer has a recent blocked signal from Blacklist Manager."
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-integration.php:693
+#: includes/class-yoohw-cos-blacklist-manager-integration.php:687
 msgid "Blacklist Manager: suspect"
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-integration.php:694
+#: includes/class-yoohw-cos-blacklist-manager-integration.php:688
 msgid "This customer has a recent suspect signal from Blacklist Manager."
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-integration.php:701
+#: includes/class-yoohw-cos-blacklist-manager-integration.php:695
 msgid "Blacklist Manager: match"
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-integration.php:702
+#: includes/class-yoohw-cos-blacklist-manager-integration.php:696
 msgid "A recent order matched a suspect signal in Blacklist Manager."
 msgstr ""
 
 #. translators: 1: order number, 2: risk score.
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:108
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:118
 msgid "Blacklist Manager Premium scored order #%1$s at %2$d risk points."
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:128
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:138
 msgid "Blacklist Manager Premium blocked checkout after anti-bot risk evaluation."
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:139
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:149
 msgid "Blacklist Manager Premium required a checkout verification challenge."
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:153
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:163
 msgid "Blacklist Manager Premium detected a failed checkout JS proof."
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:175
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:185
 msgid "Blacklist Manager Premium detected failed checkout session continuity."
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:186
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:196
 msgid "Blacklist Manager Premium detected checkout browser fingerprint anomalies."
 msgstr ""
 
 #. translators: 1: order number, 2: risk score.
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:427
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:658
 msgid "Backfilled Blacklist Manager Premium risk score for order #%1$s: %2$d."
 msgstr ""
 
 #. translators: 1: rule label, 2: order number.
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:752
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:983
 msgid "Blacklist Manager Premium matched \"%1$s\" on order #%2$s."
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:920
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1151
 msgid "First-time order risk"
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:925
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1156
 msgid "Phone/email versus address"
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:930
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1161
 msgid "Phone/email versus IP"
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:935
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1166
 msgid "Billing versus shipping"
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:940
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1171
 msgid "Order value anomaly"
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:945
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1176
 msgid "Order attempts velocity"
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:950
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1181
 msgid "IP country mismatch"
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:955
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1186
 msgid "IP coordinates mismatch"
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:960
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1191
 msgid "Hosting IP risk"
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:965
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1196
 msgid "Proxy/VPN risk"
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:970
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1201
 msgid "Device versus email/phone"
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:975
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1206
 msgid "Device versus address"
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:980
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1211
 msgid "Device identity spread"
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:985
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1216
 msgid "Gateway AVS check"
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:990
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1221
 msgid "Card billing country"
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:995
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1226
 msgid "Gateway high-risk country"
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1000
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1231
 msgid "PayPal payer versus customer"
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1262
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1549
 msgid "Blacklist Manager Premium: security signal"
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1263
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1550
 msgid "This customer has a recent premium security signal."
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1268
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1555
 msgid "Blacklist Manager Premium: order risk"
 msgstr ""
 
 #. translators: %d: premium risk score.
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1271
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1558
 msgid "Highest recent premium order risk score contributes by capped max score, not repeated event count. Latest candidate score: %d."
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1276
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1563
 msgid "Blacklist Manager Premium: payment abuse"
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1277
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1564
 msgid "A matched checkout signal indicated premium payment abuse risk."
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1280
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1567
 msgid "Blacklist Manager Premium: anti-bot blocked"
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1281
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1568
 msgid "A matched checkout anti-bot block was recorded for this customer."
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1284
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1571
 msgid "Blacklist Manager Premium: device signal"
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1285
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1572
 msgid "A matched premium device or browser signal was recorded for this customer."
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1288
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1575
 msgid "Blacklist Manager Premium: gateway fraud signal"
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1289
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1576
 msgid "A matched premium gateway fraud signal was recorded for this customer."
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1293
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1580
 msgid "Blacklist Manager Premium: rule match"
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1294
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1581
 msgid "A premium risk rule matched this customer recently."
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1297
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1584
 msgid "Blacklist Manager Premium: checkout challenge"
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1298
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1585
 msgid "A checkout verification challenge was required; this is a light risk signal."
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1424
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1705
 msgid "Backfilled Blacklist Manager Premium payment-abuse detection log."
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1426
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1707
 msgid "Backfilled Blacklist Manager Premium checkout challenge or would-block log."
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1428
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1709
 msgid "Backfilled Blacklist Manager Premium anti-bot block log."
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1430
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1711
 msgid "Backfilled Blacklist Manager Premium device signal log."
 msgstr ""
 
-#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1446
+#: includes/class-yoohw-cos-blacklist-manager-premium-integration.php:1727
 msgid "Backfilled Blacklist Manager Premium payment-abuse event."
 msgstr ""
 
 #. translators: %s: order number
-#: includes/class-yoohw-cos-customers.php:135
+#: includes/class-yoohw-cos-customers.php:139
 msgid "Order #%s synced to customer profile."
 msgstr ""
 
-#: includes/class-yoohw-cos-customers.php:430
+#: includes/class-yoohw-cos-customers.php:434
 msgid "Customer archived."
 msgstr ""
 
-#: includes/class-yoohw-cos-customers.php:462
+#: includes/class-yoohw-cos-customers.php:466
 msgid "Customer restored from archive."
 msgstr ""
 
@@ -3202,6 +3260,14 @@ msgstr ""
 msgid "WooCommerce could not send the email. Please check the store email configuration and try again."
 msgstr ""
 
+#: includes/class-yoohw-cos-email-notifications.php:136
+msgid "Content type"
+msgstr ""
+
+#: includes/class-yoohw-cos-email-notifications.php:137
+msgid "Recipient(s)"
+msgstr ""
+
 #: includes/class-yoohw-cos-email-notifications.php:159
 msgid "No email notifications found in this group."
 msgstr ""
@@ -3210,294 +3276,310 @@ msgstr ""
 msgid "General"
 msgstr ""
 
+#: includes/class-yoohw-cos-email-notifications.php:849
+msgid "Manually sent"
+msgstr ""
+
+#: includes/class-yoohw-cos-email-notifications.php:849
+msgid "Manual"
+msgstr ""
+
+#: includes/class-yoohw-cos-email-notifications.php:851
+msgid "Yes"
+msgstr ""
+
+#: includes/class-yoohw-cos-email-notifications.php:853
+msgid "Disabled"
+msgstr ""
+
+#: includes/class-yoohw-cos-email-notifications.php:860
+msgid "Manage"
+msgstr ""
+
 #: includes/class-yoohw-cos-intelligence.php:160
 msgid "Standard"
 msgstr ""
 
-#: includes/class-yoohw-cos-intelligence.php:287
+#: includes/class-yoohw-cos-intelligence.php:298
 msgid "Missing email address"
 msgstr ""
 
-#: includes/class-yoohw-cos-intelligence.php:289
+#: includes/class-yoohw-cos-intelligence.php:300
 msgid "This customer profile does not have an email address."
 msgstr ""
 
-#: includes/class-yoohw-cos-intelligence.php:295
+#: includes/class-yoohw-cos-intelligence.php:306
 msgid "Missing phone number"
 msgstr ""
 
-#: includes/class-yoohw-cos-intelligence.php:297
+#: includes/class-yoohw-cos-intelligence.php:308
 msgid "This customer profile does not have a phone number."
 msgstr ""
 
-#: includes/class-yoohw-cos-intelligence.php:303
+#: includes/class-yoohw-cos-intelligence.php:314
 msgid "New or low-history customer"
 msgstr ""
 
-#: includes/class-yoohw-cos-intelligence.php:305
+#: includes/class-yoohw-cos-intelligence.php:316
 msgid "Customers with very limited order history have less trust data available."
 msgstr ""
 
-#: includes/class-yoohw-cos-intelligence.php:311
+#: includes/class-yoohw-cos-intelligence.php:322
 msgid "High value with limited history"
 msgstr ""
 
-#: includes/class-yoohw-cos-intelligence.php:313
+#: includes/class-yoohw-cos-intelligence.php:324
 msgid "A high-value purchase from a customer with limited history can require closer review."
 msgstr ""
 
-#: includes/class-yoohw-cos-intelligence.php:319
+#: includes/class-yoohw-cos-intelligence.php:330
 msgid "Long inactive period"
 msgstr ""
 
-#: includes/class-yoohw-cos-intelligence.php:321
+#: includes/class-yoohw-cos-intelligence.php:332
 msgid "This customer has not had recent recorded activity."
 msgstr ""
 
-#: includes/class-yoohw-cos-intelligence.php:330
+#: includes/class-yoohw-cos-intelligence.php:341
 msgid "No major risk factors detected"
 msgstr ""
 
-#: includes/class-yoohw-cos-intelligence.php:332
+#: includes/class-yoohw-cos-intelligence.php:343
 msgid "Based on the current basic rules, this customer does not show obvious risk indicators."
 msgstr ""
 
-#: includes/class-yoohw-cos-intelligence.php:349
+#: includes/class-yoohw-cos-intelligence.php:360
 msgid "Email available"
 msgstr ""
 
-#: includes/class-yoohw-cos-intelligence.php:351
+#: includes/class-yoohw-cos-intelligence.php:362
 msgid "This customer profile has an email address."
 msgstr ""
 
-#: includes/class-yoohw-cos-intelligence.php:357
+#: includes/class-yoohw-cos-intelligence.php:368
 msgid "Phone available"
 msgstr ""
 
-#: includes/class-yoohw-cos-intelligence.php:359
+#: includes/class-yoohw-cos-intelligence.php:370
 msgid "This customer profile has a phone number."
 msgstr ""
 
-#: includes/class-yoohw-cos-intelligence.php:365
-#: includes/class-yoohw-cos-intelligence.php:471
+#: includes/class-yoohw-cos-intelligence.php:376
+#: includes/class-yoohw-cos-intelligence.php:482
 msgid "Repeat customer"
 msgstr ""
 
-#: includes/class-yoohw-cos-intelligence.php:367
+#: includes/class-yoohw-cos-intelligence.php:378
 msgid "This customer has placed at least 2 orders."
 msgstr ""
 
-#: includes/class-yoohw-cos-intelligence.php:373
+#: includes/class-yoohw-cos-intelligence.php:384
 msgid "Established order history"
 msgstr ""
 
-#: includes/class-yoohw-cos-intelligence.php:375
+#: includes/class-yoohw-cos-intelligence.php:386
 msgid "This customer has placed at least 5 orders."
 msgstr ""
 
-#: includes/class-yoohw-cos-intelligence.php:381
+#: includes/class-yoohw-cos-intelligence.php:392
 msgid "Strong order history"
 msgstr ""
 
-#: includes/class-yoohw-cos-intelligence.php:383
+#: includes/class-yoohw-cos-intelligence.php:394
 msgid "This customer has placed at least 10 orders."
 msgstr ""
 
-#: includes/class-yoohw-cos-intelligence.php:389
+#: includes/class-yoohw-cos-intelligence.php:400
 msgid "Meaningful purchase value"
 msgstr ""
 
-#: includes/class-yoohw-cos-intelligence.php:391
+#: includes/class-yoohw-cos-intelligence.php:402
 msgid "This customer has spent at least 500 in store currency."
 msgstr ""
 
-#: includes/class-yoohw-cos-intelligence.php:397
+#: includes/class-yoohw-cos-intelligence.php:408
 msgid "High purchase value"
 msgstr ""
 
-#: includes/class-yoohw-cos-intelligence.php:399
+#: includes/class-yoohw-cos-intelligence.php:410
 msgid "This customer has spent at least 1000 in store currency."
 msgstr ""
 
-#: includes/class-yoohw-cos-intelligence.php:405
+#: includes/class-yoohw-cos-intelligence.php:416
 msgid "Limited trust signals"
 msgstr ""
 
-#: includes/class-yoohw-cos-intelligence.php:407
+#: includes/class-yoohw-cos-intelligence.php:418
 msgid "There is not enough customer history yet to build a stronger trust score."
 msgstr ""
 
-#: includes/class-yoohw-cos-intelligence.php:452
+#: includes/class-yoohw-cos-intelligence.php:463
 msgid "Dormant customer"
 msgstr ""
 
 #. translators: %s: dormant threshold in days.
-#: includes/class-yoohw-cos-intelligence.php:455
+#: includes/class-yoohw-cos-intelligence.php:466
 msgid "This customer has not had recorded activity for at least %s days."
 msgstr ""
 
-#: includes/class-yoohw-cos-intelligence.php:461
+#: includes/class-yoohw-cos-intelligence.php:472
 msgid "VIP customer"
 msgstr ""
 
-#: includes/class-yoohw-cos-intelligence.php:462
+#: includes/class-yoohw-cos-intelligence.php:473
 msgid "This customer has very high order count or purchase value."
 msgstr ""
 
-#: includes/class-yoohw-cos-intelligence.php:466
+#: includes/class-yoohw-cos-intelligence.php:477
 msgid "Loyal customer"
 msgstr ""
 
-#: includes/class-yoohw-cos-intelligence.php:467
+#: includes/class-yoohw-cos-intelligence.php:478
 msgid "This customer has strong repeat purchase behavior or meaningful lifetime value."
 msgstr ""
 
-#: includes/class-yoohw-cos-intelligence.php:472
+#: includes/class-yoohw-cos-intelligence.php:483
 msgid "This customer has placed more than one order."
 msgstr ""
 
-#: includes/class-yoohw-cos-intelligence.php:476
+#: includes/class-yoohw-cos-intelligence.php:487
 msgid "New customer"
 msgstr ""
 
-#: includes/class-yoohw-cos-intelligence.php:477
+#: includes/class-yoohw-cos-intelligence.php:488
 msgid "This customer has limited order history so far."
 msgstr ""
 
-#: includes/class-yoohw-cos-intelligence.php:482
+#: includes/class-yoohw-cos-intelligence.php:493
 msgid "Order count"
 msgstr ""
 
 #. translators: %d: order count
-#: includes/class-yoohw-cos-intelligence.php:485
+#: includes/class-yoohw-cos-intelligence.php:496
 msgid "This customer has placed %d orders."
 msgstr ""
 
-#: includes/class-yoohw-cos-intelligence.php:491
-msgid "Lifetime value"
-msgstr ""
-
 #. translators: %s: total spent
-#: includes/class-yoohw-cos-intelligence.php:494
+#: includes/class-yoohw-cos-intelligence.php:505
 msgid "This customer has spent %s in store currency."
 msgstr ""
 
 #. translators: %d: days since last activity
-#: includes/class-yoohw-cos-intelligence.php:503
+#: includes/class-yoohw-cos-intelligence.php:514
 msgid "Last recorded activity was %d days ago."
 msgstr ""
 
-#: includes/class-yoohw-cos-loader.php:90
+#: includes/class-yoohw-cos-loader.php:93
 msgid "YoOhw Customer Intelligence for WooCommerce requires WooCommerce to be active."
 msgstr ""
 
 #. translators: 1: old loyalty level, 2: new loyalty level.
-#: includes/class-yoohw-cos-loyalty-integration.php:154
+#: includes/class-yoohw-cos-loyalty-integration.php:160
 msgid "Loyalty level changed from %1$s to %2$s."
 msgstr ""
 
 #. translators: %s: points amount.
-#: includes/class-yoohw-cos-loyalty-integration.php:354
+#: includes/class-yoohw-cos-loyalty-integration.php:498
 msgid "Loyalty points rewarded: +%s."
 msgstr ""
 
 #. translators: %s: points amount.
-#: includes/class-yoohw-cos-loyalty-integration.php:362
+#: includes/class-yoohw-cos-loyalty-integration.php:506
 msgid "Loyalty points redeemed: %s."
 msgstr ""
 
 #. translators: %s: points amount.
-#: includes/class-yoohw-cos-loyalty-integration.php:370
+#: includes/class-yoohw-cos-loyalty-integration.php:514
 msgid "Loyalty points returned: %s."
 msgstr ""
 
 #. translators: %s: points amount.
-#: includes/class-yoohw-cos-loyalty-integration.php:378
+#: includes/class-yoohw-cos-loyalty-integration.php:522
 msgid "Loyalty points expired: %s."
 msgstr ""
 
 #. translators: %s: points amount.
-#: includes/class-yoohw-cos-loyalty-integration.php:385
+#: includes/class-yoohw-cos-loyalty-integration.php:529
 msgid "Loyalty points deducted: %s."
 msgstr ""
 
 #. translators: %s: loyalty level label.
-#: includes/class-yoohw-cos-loyalty-integration.php:544
+#: includes/class-yoohw-cos-loyalty-integration.php:688
 msgid "Follow up new %s loyalty customer"
 msgstr ""
 
 #. translators: 1: old loyalty level, 2: new loyalty level.
-#: includes/class-yoohw-cos-loyalty-integration.php:549
+#: includes/class-yoohw-cos-loyalty-integration.php:693
 msgid "Customer moved from %1$s to %2$s. Review whether a high-value follow-up, thank-you note, or retention offer is appropriate."
 msgstr ""
 
 #. translators: 1: old loyalty level, 2: new loyalty level.
-#: includes/class-yoohw-cos-loyalty-integration.php:570
+#: includes/class-yoohw-cos-loyalty-integration.php:714
 msgid "Review loyalty level change: %1$s to %2$s"
 msgstr ""
 
-#: includes/class-yoohw-cos-loyalty-integration.php:574
+#: includes/class-yoohw-cos-loyalty-integration.php:718
 msgid "Customer loyalty level was downgraded or reset. Check whether this was expected before the customer is contacted by future loyalty campaigns."
 msgstr ""
 
 #. translators: %s: available loyalty points.
-#: includes/class-yoohw-cos-loyalty-integration.php:608
+#: includes/class-yoohw-cos-loyalty-integration.php:752
 msgid "Follow up dormant customer with %s loyalty points"
 msgstr ""
 
 #. translators: 1: available loyalty points, 2: threshold points.
-#: includes/class-yoohw-cos-loyalty-integration.php:613
+#: includes/class-yoohw-cos-loyalty-integration.php:757
 msgid "Customer is dormant and still has %1$s available loyalty points, above the %2$s point threshold. Review whether a win-back task or points reminder is appropriate."
 msgstr ""
 
-#: includes/class-yoohw-cos-loyalty-integration.php:649
+#: includes/class-yoohw-cos-loyalty-integration.php:793
 msgid "Review urgent loyalty reconciliation issue"
 msgstr ""
 
-#: includes/class-yoohw-cos-loyalty-integration.php:650
+#: includes/class-yoohw-cos-loyalty-integration.php:794
 msgid "Review loyalty reconciliation mismatch"
 msgstr ""
 
 #. translators: %s: points amount.
-#: includes/class-yoohw-cos-loyalty-integration.php:687
+#: includes/class-yoohw-cos-loyalty-integration.php:831
 msgid "Review large loyalty redemption: %s points"
 msgstr ""
 
 #. translators: 1: points amount, 2: remaining points balance.
-#: includes/class-yoohw-cos-loyalty-integration.php:692
+#: includes/class-yoohw-cos-loyalty-integration.php:836
 msgid "Customer redeemed %1$s loyalty points. Current available balance is %2$s points. Review for high-value care, retention intent, or unusual redemption behavior."
 msgstr ""
 
-#: includes/class-yoohw-cos-loyalty-integration.php:708
+#: includes/class-yoohw-cos-loyalty-integration.php:852
 msgid "Review negative loyalty points balance"
 msgstr ""
 
 #. translators: 1: current points balance, 2: loyalty points log id.
-#: includes/class-yoohw-cos-loyalty-integration.php:711
+#: includes/class-yoohw-cos-loyalty-integration.php:855
 msgid "Customer has a negative available points balance of %1$s after loyalty log #%2$s. Reconcile points before further loyalty adjustments."
 msgstr ""
 
 #. translators: %s: reconciliation issue descriptions.
-#: includes/class-yoohw-cos-loyalty-integration.php:743
+#: includes/class-yoohw-cos-loyalty-integration.php:887
 msgid "Detected issues: %s."
 msgstr ""
 
 #. translators: 1: current points, 2: expected points, 3: current earned points, 4: expected earned points.
-#: includes/class-yoohw-cos-loyalty-integration.php:750
+#: includes/class-yoohw-cos-loyalty-integration.php:894
 msgid "Available points: %1$s current, %2$s expected. Earned points: %3$s current, %4$s expected."
 msgstr ""
 
 #. translators: 1: current loyalty level, 2: expected loyalty level.
-#: includes/class-yoohw-cos-loyalty-integration.php:760
+#: includes/class-yoohw-cos-loyalty-integration.php:904
 msgid "Loyalty level: %1$s current, %2$s expected."
 msgstr ""
 
 #. translators: %s: reconciliation issue codes.
-#: includes/class-yoohw-cos-loyalty-integration.php:768
+#: includes/class-yoohw-cos-loyalty-integration.php:912
 msgid "Issue codes: %s."
 msgstr ""
 
-#: includes/class-yoohw-cos-loyalty-integration.php:1003
+#: includes/class-yoohw-cos-loyalty-integration.php:1147
 msgid "None"
 msgstr ""
 

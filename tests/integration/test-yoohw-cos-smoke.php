@@ -325,11 +325,250 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 		$this->assertSame( 1, absint( $missing['total_items'] ) );
 	}
 
+	public function test_customer_events_filter_source_before_applying_limit(): void {
+		$customer_id = YoOhw_COS_Customers::create_customer(
+			array(
+				'email'              => 'event-source-limit@example.test',
+				'phone'              => '555-0199',
+				'display_name'       => 'Event source limit',
+				'total_orders'       => 2,
+				'last_activity_date' => YoOhw_COS_DB::now(),
+			)
+		);
+
+		$core_event_id = YoOhw_COS_Events::record(
+			array(
+				'customer_id'  => $customer_id,
+				'event_type'   => 'blacklist_blocked',
+				'event_source' => 'wc_blacklist_manager',
+			)
+		);
+
+		for ( $index = 0; $index < 35; $index++ ) {
+			YoOhw_COS_Events::record(
+				array(
+					'customer_id'  => $customer_id,
+					'event_type'   => 'order_synced',
+					'event_source' => 'woocommerce',
+				)
+			);
+		}
+
+		$events = YoOhw_COS_Events::get_customer_events(
+			$customer_id,
+			array(
+				'limit'        => 30,
+				'event_source' => 'wc_blacklist_manager',
+			)
+		);
+
+		$this->assertCount( 1, $events );
+		$this->assertSame( $core_event_id, absint( $events[0]['id'] ) );
+	}
+
+	public function test_risk_cache_refresh_uses_same_dynamic_score_as_integrations(): void {
+		$customer_id = YoOhw_COS_Customers::create_customer(
+			array(
+				'email'              => 'risk-cache@example.test',
+				'phone'              => '555-0188',
+				'display_name'       => 'Risk cache',
+				'total_orders'       => 2,
+				'total_spent'        => 100,
+				'risk_score'         => 0,
+				'last_activity_date' => YoOhw_COS_DB::now(),
+			)
+		);
+
+		YoOhw_COS_Events::record(
+			array(
+				'customer_id'  => $customer_id,
+				'event_type'   => 'premium_payment_abuse_detected',
+				'event_source' => 'wc_blacklist_manager_premium',
+				'created_at'   => YoOhw_COS_DB::now(),
+			)
+		);
+
+		add_filter(
+			'yoohw_cos_customer_risk_score',
+			array( 'YoOhw_COS_Blacklist_Manager_Premium_Integration', 'apply_customer_risk_score' ),
+			20,
+			2
+		);
+
+		try {
+			$customer = YoOhw_COS_Customers::get_customer( $customer_id );
+			$dynamic  = YoOhw_COS_Intelligence::get_current_risk_score( $customer );
+
+			$this->assertSame( 22.0, $dynamic );
+
+			YoOhw_COS_Customers::refresh_risk_score_cache_batch( 0, 500 );
+			$refreshed = YoOhw_COS_Customers::get_customer( $customer_id );
+
+			$this->assertSame( $dynamic, (float) $refreshed['risk_score'] );
+		} finally {
+			remove_filter(
+				'yoohw_cos_customer_risk_score',
+				array( 'YoOhw_COS_Blacklist_Manager_Premium_Integration', 'apply_customer_risk_score' ),
+				20
+			);
+		}
+	}
+
+	public function test_unlinked_premium_order_event_is_reassociated_after_order_sync(): void {
+		if ( ! function_exists( 'wc_create_order' ) ) {
+			$this->markTestSkipped( 'WooCommerce test helpers are not available.' );
+		}
+
+		global $wpdb;
+
+		$order = wc_create_order();
+		$order->set_billing_email( 'reassociate@example.test' );
+		$order->set_billing_phone( '555-0177' );
+		$order->set_status( 'processing' );
+		$order->save();
+
+		$customer_id = YoOhw_COS_Customers::sync_from_order( $order );
+		$event_id    = YoOhw_COS_Events::record(
+			array(
+				'event_type'   => 'premium_antibot_blocked',
+				'event_source' => 'wc_blacklist_manager_premium',
+				'object_type'  => 'order',
+				'object_id'    => $order->get_id(),
+				'metadata'     => array( 'order_id' => $order->get_id() ),
+			)
+		);
+
+		$assigned = YoOhw_COS_Blacklist_Manager_Premium_Integration::reassociate_checkout_events_for_order( $order->get_id() );
+		$linked   = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT customer_id FROM %i WHERE id = %d',
+				YoOhw_COS_DB::events_table(),
+				$event_id
+			)
+		);
+
+		$this->assertSame( 1, $assigned );
+		$this->assertSame( $customer_id, $linked );
+	}
+
+	public function test_payment_abuse_hook_records_an_idempotent_customer_event(): void {
+		if ( ! function_exists( 'wc_create_order' ) ) {
+			$this->markTestSkipped( 'WooCommerce test helpers are not available.' );
+		}
+
+		$order = wc_create_order();
+		$order->set_billing_email( 'payment-hook@example.test' );
+		$order->set_billing_phone( '555-0166' );
+		$order->save();
+		$customer_id = YoOhw_COS_Customers::sync_from_order( $order );
+
+		add_action(
+			'bmp_payment_abuse_event_recorded',
+			array( 'YoOhw_COS_Blacklist_Manager_Premium_Integration', 'handle_payment_abuse_event_recorded' ),
+			10,
+			3
+		);
+
+		try {
+			$payload = array(
+				'created_at'     => YoOhw_COS_DB::now(),
+				'order_id'       => $order->get_id(),
+				'source'         => 'woocommerce_failed_order',
+				'failure_family' => 'card_validation',
+			);
+
+			do_action( 'bmp_payment_abuse_event_recorded', 987654, $order, $payload );
+			do_action( 'bmp_payment_abuse_event_recorded', 987654, $order, $payload );
+		} finally {
+			remove_action(
+				'bmp_payment_abuse_event_recorded',
+				array( 'YoOhw_COS_Blacklist_Manager_Premium_Integration', 'handle_payment_abuse_event_recorded' ),
+				10
+			);
+		}
+
+		$events = YoOhw_COS_Events::get_customer_events(
+			$customer_id,
+			array( 'event_source' => 'wc_blacklist_manager_premium' )
+		);
+		$matched = array_filter(
+			$events,
+			static fn( array $event ): bool => 'premium_payment_abuse_event' === (string) ( $event['object_type'] ?? '' )
+				&& 987654 === absint( $event['object_id'] ?? 0 )
+		);
+
+		$this->assertCount( 1, $matched );
+	}
+
+	public function test_loyalty_backfill_imports_existing_log_with_original_date(): void {
+		global $wpdb;
+
+		$table = $wpdb->prefix . 'yo_loyalty_points_log';
+		$wpdb->query(
+			"CREATE TABLE IF NOT EXISTS {$table} (
+				id mediumint(9) NOT NULL AUTO_INCREMENT,
+				user_id bigint(20) NOT NULL,
+				action varchar(255) NOT NULL,
+				order_id bigint(20) NOT NULL,
+				amount decimal(10,2) NOT NULL,
+				description text NOT NULL,
+				date datetime NOT NULL,
+				expired_date datetime DEFAULT NULL,
+				PRIMARY KEY (id)
+			)"
+		);
+
+		$user_id = self::factory()->user->create(
+			array(
+				'user_email' => 'loyalty-backfill@example.test',
+				'role'       => 'customer',
+			)
+		);
+		$event_date = '2025-01-02 03:04:05';
+
+		$wpdb->insert(
+			$table,
+			array(
+				'user_id'    => $user_id,
+				'action'     => 'order_reward',
+				'order_id'   => 0,
+				'amount'     => 25,
+				'description' => 'Historical reward',
+				'date'       => $event_date,
+			),
+			array( '%d', '%s', '%d', '%f', '%s', '%s' )
+		);
+		$log_id = absint( $wpdb->insert_id );
+
+		try {
+			$result = YoOhw_COS_Loyalty_Integration::backfill_legacy_points_logs( 500, 1 );
+			$this->assertGreaterThanOrEqual( 1, absint( $result['processed'] ) );
+
+			$event = $wpdb->get_row(
+				$wpdb->prepare(
+					"SELECT * FROM %i
+					WHERE event_source = 'wc_loyalty'
+						AND object_type = 'loyalty_points_log'
+						AND object_id = %d
+					LIMIT 1",
+					YoOhw_COS_DB::events_table(),
+					$log_id
+				),
+				ARRAY_A
+			);
+
+			$this->assertIsArray( $event );
+			$this->assertSame( $event_date, $event['created_at'] );
+		} finally {
+			$wpdb->delete( $table, array( 'id' => $log_id ), array( '%d' ) );
+		}
+	}
+
 	private function load_plugin_classes(): void {
 		$root = dirname( __DIR__, 2 );
 
 		if ( ! defined( 'YOOHW_COS_VERSION' ) ) {
-			define( 'YOOHW_COS_VERSION', '1.2.1' );
+			define( 'YOOHW_COS_VERSION', '1.2.2' );
 		}
 
 		if ( ! defined( 'YOOHW_COS_DB_VERSION' ) ) {
@@ -352,6 +591,9 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 			'includes/class-yoohw-cos-overview.php',
 			'includes/class-yoohw-cos-intelligence.php',
 			'includes/class-yoohw-cos-segments.php',
+			'includes/class-yoohw-cos-blacklist-manager-integration.php',
+			'includes/class-yoohw-cos-blacklist-manager-premium-integration.php',
+			'includes/class-yoohw-cos-loyalty-integration.php',
 		);
 
 		foreach ( $files as $file ) {

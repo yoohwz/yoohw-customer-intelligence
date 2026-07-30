@@ -74,28 +74,51 @@ final class YoOhw_COS_Events {
 		global $wpdb;
 
 		$defaults = array(
-			'limit'  => 50,
-			'offset' => 0,
+			'limit'        => 50,
+			'offset'       => 0,
+			'event_source' => '',
 		);
 
 		$args = wp_parse_args( $args, $defaults );
 
-		$table = YoOhw_COS_DB::events_table();
+		$table        = YoOhw_COS_DB::events_table();
+		$event_source = sanitize_key( (string) $args['event_source'] );
+		$limit        = absint( $args['limit'] );
+		$offset       = absint( $args['offset'] );
 
-		$results = $wpdb->get_results(
-			$wpdb->prepare(
-				"SELECT *
-				FROM %i
-				WHERE customer_id = %d
-				ORDER BY created_at DESC, id DESC
-				LIMIT %d OFFSET %d",
-				$table,
-				$customer_id,
-				absint( $args['limit'] ),
-				absint( $args['offset'] )
-			),
-			ARRAY_A
-		);
+		if ( '' !== $event_source ) {
+			$results = $wpdb->get_results(
+				$wpdb->prepare(
+					"SELECT *
+					FROM %i
+					WHERE customer_id = %d
+						AND event_source = %s
+					ORDER BY created_at DESC, id DESC
+					LIMIT %d OFFSET %d",
+					$table,
+					$customer_id,
+					$event_source,
+					$limit,
+					$offset
+				),
+				ARRAY_A
+			);
+		} else {
+			$results = $wpdb->get_results(
+				$wpdb->prepare(
+					"SELECT *
+					FROM %i
+					WHERE customer_id = %d
+					ORDER BY created_at DESC, id DESC
+					LIMIT %d OFFSET %d",
+					$table,
+					$customer_id,
+					$limit,
+					$offset
+				),
+				ARRAY_A
+			);
+		}
 
 		if ( empty( $results ) ) {
 			return array();
@@ -123,6 +146,46 @@ final class YoOhw_COS_Events {
 				absint( $customer_id )
 			)
 		);
+	}
+
+	public static function assign_customer( int $event_id, int $customer_id, int $wp_user_id = 0 ): bool {
+		global $wpdb;
+
+		$event_id    = absint( $event_id );
+		$customer_id = absint( $customer_id );
+
+		if ( $event_id <= 0 || $customer_id <= 0 ) {
+			return false;
+		}
+
+		if ( $wp_user_id > 0 ) {
+			$updated = $wpdb->query(
+				$wpdb->prepare(
+					"UPDATE %i
+					SET customer_id = %d, wp_user_id = %d
+					WHERE id = %d
+						AND (customer_id IS NULL OR customer_id = 0)",
+					YoOhw_COS_DB::events_table(),
+					$customer_id,
+					absint( $wp_user_id ),
+					$event_id
+				)
+			);
+		} else {
+			$updated = $wpdb->query(
+				$wpdb->prepare(
+					"UPDATE %i
+					SET customer_id = %d
+					WHERE id = %d
+						AND (customer_id IS NULL OR customer_id = 0)",
+					YoOhw_COS_DB::events_table(),
+					$customer_id,
+					$event_id
+				)
+			);
+		}
+
+		return false !== $updated && $updated > 0;
 	}
 
 	public static function event_exists(

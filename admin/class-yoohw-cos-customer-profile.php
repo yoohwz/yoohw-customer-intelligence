@@ -14,6 +14,8 @@ final class YoOhw_COS_Customer_Profile {
 			return;
 		}
 
+		$customer['risk_score'] = YoOhw_COS_Intelligence::get_current_risk_score( $customer );
+
 		$events = YoOhw_COS_Events::get_customer_events( $customer_id, array(
 			'limit' => 20,
 		) );

@@ -132,9 +132,9 @@ final class YoOhw_COS_Email_Notifications {
 			'woocommerce_email_setting_columns',
 			array(
 				'status'     => '',
-				'name'       => __( 'Email', 'woocommerce' ),
-				'email_type' => __( 'Content type', 'woocommerce' ),
-				'recipient'  => __( 'Recipient(s)', 'woocommerce' ),
+				'name'       => __( 'Email', 'yoohw-customer-intelligence' ),
+				'email_type' => __( 'Content type', 'yoohw-customer-intelligence' ),
+				'recipient'  => __( 'Recipient(s)', 'yoohw-customer-intelligence' ),
 				'actions'    => '',
 			)
 		);
@@ -841,23 +841,23 @@ final class YoOhw_COS_Email_Notifications {
 				if ( method_exists( $email, 'get_recipient_label' ) ) {
 					echo esc_html( $email->get_recipient_label() );
 				} else {
-					echo esc_html( $email->is_customer_email() ? __( 'Customer', 'woocommerce' ) : $email->get_recipient() );
+					echo esc_html( $email->is_customer_email() ? __( 'Customer', 'yoohw-customer-intelligence' ) : $email->get_recipient() );
 				}
 				break;
 			case 'status':
 				if ( $email->is_manual() ) {
-					echo '<span class="status-manual tips" data-tip="' . esc_attr__( 'Manually sent', 'woocommerce' ) . '">' . esc_html__( 'Manual', 'woocommerce' ) . '</span>';
+					echo '<span class="status-manual tips" data-tip="' . esc_attr__( 'Manually sent', 'yoohw-customer-intelligence' ) . '">' . esc_html__( 'Manual', 'yoohw-customer-intelligence' ) . '</span>';
 				} elseif ( $email->is_enabled() ) {
-					echo '<span class="status-enabled tips" data-tip="' . esc_attr__( 'Enabled', 'woocommerce' ) . '">' . esc_html__( 'Yes', 'woocommerce' ) . '</span>';
+					echo '<span class="status-enabled tips" data-tip="' . esc_attr__( 'Enabled', 'yoohw-customer-intelligence' ) . '">' . esc_html__( 'Yes', 'yoohw-customer-intelligence' ) . '</span>';
 				} else {
-					echo '<span class="status-disabled tips" data-tip="' . esc_attr__( 'Disabled', 'woocommerce' ) . '">-</span>';
+					echo '<span class="status-disabled tips" data-tip="' . esc_attr__( 'Disabled', 'yoohw-customer-intelligence' ) . '">-</span>';
 				}
 				break;
 			case 'email_type':
 				echo esc_html( $email->get_content_type() );
 				break;
 			case 'actions':
-				echo '<a class="button alignright" href="' . esc_url( self::get_email_manage_url( $email_key, $email ) ) . '">' . esc_html__( 'Manage', 'woocommerce' ) . '</a>';
+				echo '<a class="button alignright" href="' . esc_url( self::get_email_manage_url( $email_key, $email ) ) . '">' . esc_html__( 'Manage', 'yoohw-customer-intelligence' ) . '</a>';
 				break;
 		}
 

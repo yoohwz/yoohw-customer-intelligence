@@ -13,6 +13,9 @@ final class YoOhw_COS_Loader {
 	public static function deactivate(): void {
 		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-email-notifications.php';
 		YoOhw_COS_Email_Notifications::deactivate();
+		wp_clear_scheduled_hook( 'yoohw_cos_refresh_risk_score_cache' );
+		wp_clear_scheduled_hook( 'yoohw_cos_backfill_loyalty_history' );
+		wp_clear_scheduled_hook( 'yoohw_cos_reassociate_premium_checkout_events' );
 	}
 
 	public static function init(): void {

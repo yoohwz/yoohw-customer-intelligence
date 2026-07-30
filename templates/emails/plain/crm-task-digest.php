@@ -22,7 +22,7 @@ foreach ( $sections as $section ) {
 	}
 
 	echo esc_html( $section['title'] ) . "\n";
-	echo str_repeat( '-', strlen( (string) $section['title'] ) ) . "\n";
+	echo esc_html( str_repeat( '-', strlen( (string) $section['title'] ) ) ) . "\n";
 
 	foreach ( $section['tasks'] as $task ) {
 		$summary = $email->get_template_task_summary( $task );

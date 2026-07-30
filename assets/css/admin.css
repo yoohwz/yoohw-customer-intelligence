@@ -449,11 +449,15 @@
 .yoohw-cos-task-layout #col-left,
 .yoohw-cos-task-layout #col-right {
 	float: none;
+	min-width: 0;
 	width: auto;
 }
 
 .yoohw-cos-task-layout #col-left .col-wrap,
 .yoohw-cos-task-layout #col-right .col-wrap {
+	box-sizing: border-box;
+	max-width: 100%;
+	min-width: 0;
 	padding: 0;
 }
 
@@ -503,20 +507,30 @@
 
 .yoohw-cos-task-form-wrap {
 	border-top: 3px solid var(--yoohw-cos-primary);
+	box-sizing: border-box;
 	margin: 0;
+	max-width: 100%;
+	min-width: 0;
 }
 
 .yoohw-cos-task-form-wrap .inside {
+	box-sizing: border-box;
+	max-width: 100%;
+	min-width: 0;
 	padding: 14px 16px 16px;
 }
 
 .yoohw-cos-task-form-wrap .inside form {
 	display: grid;
 	gap: 22px;
+	max-width: 100%;
+	min-width: 0;
 }
 
 .yoohw-cos-task-layout .form-field {
 	margin: 0;
+	max-width: 100%;
+	min-width: 0;
 }
 
 .yoohw-cos-task-layout .form-field label {
@@ -530,6 +544,9 @@
 .yoohw-cos-task-layout .form-field input[type="datetime-local"],
 .yoohw-cos-task-layout .form-field select,
 .yoohw-cos-task-layout .form-field textarea {
+	box-sizing: border-box;
+	max-width: 100%;
+	min-width: 0;
 	width: 100%;
 }
 
@@ -541,6 +558,7 @@
 
 .yoohw-cos-task-layout .form-field .select2-container {
 	max-width: 100%;
+	min-width: 0;
 	width: 100% !important;
 }
 
@@ -553,6 +571,8 @@
 }
 
 .yoohw-cos-profile-task-field .select2-container {
+	max-width: 100%;
+	min-width: 0;
 	width: 100% !important;
 }
 
@@ -1575,6 +1595,18 @@ body.yoohw-cos-email-composer-open {
 	gap: 16px;
 }
 
+.yoohw-cos-readiness-grid > *,
+.yoohw-cos-task-summary > *,
+.yoohw-cos-stat-grid > *,
+.yoohw-cos-overview-layout > *,
+.yoohw-cos-health-grid > *,
+.yoohw-cos-summary-cards > *,
+.yoohw-cos-profile-section-grid > *,
+.yoohw-cos-address-grid > *,
+.yoohw-cos-profile-task-fields > * {
+	min-width: 0;
+}
+
 .yoohw-cos-summary-cards {
 	grid-template-columns: repeat(5, minmax(140px, 1fr));
 	margin: 20px 0;
@@ -2037,8 +2069,29 @@ body.yoohw-cos-email-composer-open {
 
 .yoohw-cos-admin select,
 .yoohw-cos-admin input[type="text"],
+.yoohw-cos-admin input[type="email"],
+.yoohw-cos-admin input[type="number"],
+.yoohw-cos-admin input[type="datetime-local"],
 .yoohw-cos-admin textarea {
+	box-sizing: border-box;
 	max-width: 100%;
+}
+
+.yoohw-cos-admin .yoohw-cos-settings-select,
+.yoohw-cos-admin .yoohw-cos-settings-select + .select2-container {
+	box-sizing: border-box;
+	min-width: 0;
+	width: 100% !important;
+}
+
+.yoohw-cos-admin .yoohw-cos-settings-select--assignee,
+.yoohw-cos-admin .yoohw-cos-settings-select--assignee + .select2-container {
+	max-width: 260px;
+}
+
+.yoohw-cos-admin .yoohw-cos-settings-select--levels,
+.yoohw-cos-admin .yoohw-cos-settings-select--levels + .select2-container {
+	max-width: 320px;
 }
 
 @media screen and (max-width: 1280px) {
@@ -2274,12 +2327,14 @@ body.yoohw-cos-email-composer-open {
 	box-sizing: border-box;
 	display: block;
 	max-width: 100%;
+	min-width: 0;
 	width: 100% !important;
 }
 
 .yoohw-cos-task-layout .form-field .yoohw-cos-task-customer-search + .select2-container,
 .yoohw-cos-task-layout .form-field .yoohw-cos-task-assignee-search + .select2-container {
 	max-width: 100%;
+	min-width: 0;
 	width: 100% !important;
 }
 
@@ -2288,11 +2343,16 @@ body.yoohw-cos-email-composer-open {
 	display: block;
 	max-width: 100%;
 	min-height: 40px;
+	min-width: 0;
 	vertical-align: top;
 }
 
-.yoohw-cos-admin .select2-container .selection {
+.yoohw-cos-admin .select2-container .selection,
+.yoohw-cos-admin .select2-container .select2-selection {
+	box-sizing: border-box;
 	display: block;
+	max-width: 100%;
+	min-width: 0;
 }
 
 .yoohw-cos-admin .select2-container--default .select2-selection--single {
@@ -2321,11 +2381,14 @@ body.yoohw-cos-email-composer-open {
 }
 
 .yoohw-cos-admin .select2-container--default .select2-selection--single .select2-selection__rendered {
+	box-sizing: border-box;
 	color: #1e1e1e;
 	display: block;
 	font-size: 14px;
 	line-height: 38px;
+	max-width: 100%;
 	min-height: 38px;
+	min-width: 0;
 	overflow: hidden;
 	padding-left: 12px;
 	padding-right: 24px;
@@ -2335,6 +2398,21 @@ body.yoohw-cos-email-composer-open {
 
 .yoohw-cos-admin .select2-container--default .select2-selection--single .select2-selection__placeholder {
 	color: #646970;
+}
+
+.yoohw-cos-admin .select2-container--default .select2-selection--multiple,
+.yoohw-cos-admin .select2-container--default .select2-selection--multiple .select2-selection__rendered {
+	box-sizing: border-box;
+	max-width: 100%;
+	min-width: 0;
+}
+
+.yoohw-cos-admin .select2-container--default .select2-selection--multiple .select2-selection__choice {
+	box-sizing: border-box;
+	max-width: calc(100% - 10px);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .yoohw-cos-admin .select2-container--default .select2-selection--single .select2-selection__clear {
@@ -2403,6 +2481,7 @@ body.yoohw-cos-email-composer-open {
 	line-height: 1.4;
 	margin: 0;
 	min-height: 28px;
+	overflow-wrap: anywhere;
 	padding: 6px 8px;
 }
 

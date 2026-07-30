@@ -2,7 +2,7 @@
 	'use strict';
 
 	function initYoOhwOrderTooltips() {
-		var $tips = $('.yoohw-cos-order-customer-field .woocommerce-help-tip');
+		var $tips = $('.yoohw-cos-order-customer-field .woocommerce-help-tip, .yoohw-cos-customer-history .woocommerce-help-tip');
 
 		if (!$tips.length || !$.fn.tipTip) {
 			return;

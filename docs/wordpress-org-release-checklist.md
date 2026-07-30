@@ -12,39 +12,39 @@ Use this checklist before packaging YoOhw Customer Intelligence for WooCommerce 
 
 ## Current Baseline
 
-- Plugin version: `1.1.2`
-- Stable tag: `1.1.2`
+- Plugin version: `1.2.2`
+- Stable tag: `1.2.2`
 - Contributors: `yoohw`
 - Requires at least: `6.9`
 - Tested up to: `7.0`
 - Requires PHP: `7.4`
 - Requires Plugins: `woocommerce`
 - WC requires at least: `8.2`
-- WC tested up to: `10.8.1`
+- WC tested up to: `10.8`
 - License: `GPLv2 or later`
 - Plugin Check error-only: passes with `No errors found`
 - Full Plugin Check: `419` warnings, `0` errors; remaining warnings are triaged in `docs/wordpress-org-plugin-check-findings.md`
 - Admin menu label: `Customers`
-- Current DB version: `0.1.6`
+- Current DB version: `0.1.10`
 - Expected custom tables: `8`
 
 ## RC Verification
 
-- Date: `2026-06-11`
-- Latest hardening refresh: `2026-06-10`
-- Status: Release package rebuilt and error-only Plugin Check is green. Manual screenshots/fresh install QA should still be completed before final submission.
+- Date: `2026-07-30`
+- Latest hardening refresh: `2026-07-30`
+- Status: Version `1.2.2` package rebuilt, error-only Plugin Check is green, isolated fresh install/upgrade QA passes, and the seven release screenshots have been captured.
 - Foundation Pass verification: `2026-06-08`
-- PHP lint: pass on PHP `8.4.18` and PHP `8.2.29`
-- JavaScript syntax check: pass for `assets/js/admin.js`
-- Plugin Check error-only: pass with `No errors found`
+- PHP lint: pass on PHP `7.4.30` and PHP `8.4.18`
+- JavaScript syntax check: pass for `assets/js/admin.js` and `assets/js/order-admin.js`
+- Plugin Check error-only: pass with `No errors found` using the release-package exclusions.
 - Plugin Check full run: `419` warnings, `0` errors
-- Fresh table creation: pass using a temporary `$wpdb->prefix` smoke test; all eight customer tables were created and temporary tables were cleaned up.
-- Existing install/upgrade path: pass for DB version `0.1.5`; stored DB version matches the constant and all eight expected tables exist.
+- Fresh table creation: pass in an isolated WordPress/database install using the `1.2.2` release ZIP; all eight customer tables were created, plugin version is `1.2.2`, and DB version is `0.1.10`.
+- Existing install/upgrade path: pass from the public WordPress.org `1.2.1` tag to the `1.2.2` release ZIP; all eight expected tables exist and the seeded customer record was preserved.
 - HPOS-enabled order sync: pass on the Local test site, with HPOS reported as enabled.
 - Customer data smoke flow: pass for customer create/update, tags, static segments, notes, and WooCommerce order sync.
-- Release ZIP: `/private/tmp/yoohw-customer-intelligence-1.1.1.zip`
-- Release ZIP size: `112K`
-- Release ZIP SHA-256: `8461d6cb24a4f1b4cb199797c2bcd91ebf8dff33d59c4082c191b5643b691a5b`
+- Release ZIP: `/private/tmp/yoohw-customer-intelligence-1.2.2.zip`
+- Release ZIP size: `202255 bytes`
+- Release ZIP SHA-256: `242fa3e5bc26b8adf5de24d7fa5b406c9ffb543fa1cc9d33bb1e07cc60ba2d9e`
 
 ## Screenshots To Capture
 
@@ -68,8 +68,9 @@ Local screenshot URLs:
 
 Screenshot status:
 
-- Automated screenshot capture was not run in this Codex session because Playwright/browser automation is not installed in the workspace.
-- Capture the seven screenshots manually from the URLs above, or install Playwright/browser automation and rerun this step.
+- Captured on `2026-07-30` from the Local WordPress admin site with an authenticated Chrome session.
+- Files: `/Users/nguyenquocbao/.codex/visualizations/2026/07/29/019fad88-81b4-7db2-8e3d-9268104bcb86/yoohw-customer-intelligence-1.2.2/screenshot-1.png` through `screenshot-7.png`.
+- Tasks layout check with customer `#241`: the customer selector remains inside the form column, the form and table columns do not overlap, and the page has no horizontal overflow.
 
 ## Package Exclusions
 
