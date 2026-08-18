@@ -1,4 +1,4 @@
-=== YoOhw Customer Intelligence for WooCommerce ===
+=== Customer Intelligence for WooCommerce ===
 Contributors: yoohw
 Tags: woocommerce, crm, customer, customer management, analytics
 Requires at least: 6.9
