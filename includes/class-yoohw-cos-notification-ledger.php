@@ -21,11 +21,12 @@ final class YoOhw_COS_Notification_Ledger {
 	public static function claim( string $key, string $type, int $task_id = 0, int $recipient_user_id = 0 ): bool {
 		global $wpdb;
 
-		$key         = sanitize_text_field( $key );
-		$now         = YoOhw_COS_DB::now();
-		$lease_until = wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) + self::LEASE_MINUTES * MINUTE_IN_SECONDS );
-		$expires_at  = wp_date( 'Y-m-d H:i:s', current_time( 'timestamp' ) + self::RETENTION_DAYS * DAY_IN_SECONDS );
-		$token       = str_replace( '-', '', wp_generate_uuid4() );
+		$now_datetime = current_datetime();
+		$key          = sanitize_text_field( $key );
+		$now          = $now_datetime->format( 'Y-m-d H:i:s' );
+		$lease_until  = $now_datetime->modify( '+' . self::LEASE_MINUTES . ' minutes' )->format( 'Y-m-d H:i:s' );
+		$expires_at   = $now_datetime->modify( '+' . self::RETENTION_DAYS . ' days' )->format( 'Y-m-d H:i:s' );
+		$token        = str_replace( '-', '', wp_generate_uuid4() );
 		$previous_error_suppression = $wpdb->suppress_errors();
 		$inserted = $wpdb->query(
 			$wpdb->prepare(

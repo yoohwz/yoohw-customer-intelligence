@@ -473,10 +473,9 @@ final class YoOhw_COS_Email_Notifications {
 	}
 
 	private static function get_open_tasks_due_soon( int $lead_hours, int $after_task_id = 0 ): array {
-		$now       = current_time( 'timestamp' );
-		$end       = $now + ( max( 1, $lead_hours ) * HOUR_IN_SECONDS );
-		$start_sql = wp_date( 'Y-m-d H:i:s', $now );
-		$end_sql   = wp_date( 'Y-m-d H:i:s', $end );
+		$now       = current_datetime();
+		$start_sql = $now->format( 'Y-m-d H:i:s' );
+		$end_sql   = $now->modify( '+' . max( 1, $lead_hours ) . ' hours' )->format( 'Y-m-d H:i:s' );
 
 		return self::get_open_tasks_by_date_window( $start_sql, $end_sql, $after_task_id );
 	}
@@ -485,10 +484,10 @@ final class YoOhw_COS_Email_Notifications {
 		global $wpdb;
 
 		$cursor        = self::normalize_digest_cursor( $cursor );
-		$now_timestamp = current_time( 'timestamp' );
+		$now           = current_datetime();
 		$cutoff        = $minimum_days_overdue > 0
-			? wp_date( 'Y-m-d H:i:s', $now_timestamp - ( $minimum_days_overdue * DAY_IN_SECONDS ) )
-			: wp_date( 'Y-m-d H:i:s', $now_timestamp );
+			? $now->modify( '-' . $minimum_days_overdue . ' days' )->format( 'Y-m-d H:i:s' )
+			: $now->format( 'Y-m-d H:i:s' );
 		$user_id       = absint( $cursor['user_id'] );
 		$after_task_id = absint( $cursor['task_id'] );
 
@@ -580,10 +579,10 @@ final class YoOhw_COS_Email_Notifications {
 		global $wpdb;
 
 		$cursor       = self::normalize_digest_cursor( $cursor );
-		$now          = current_time( 'timestamp' );
-		$today_start  = wp_date( 'Y-m-d 00:00:00', $now );
-		$today_end    = wp_date( 'Y-m-d 23:59:59', $now );
-		$current_time = wp_date( 'Y-m-d H:i:s', $now );
+		$now          = current_datetime();
+		$today_start  = $now->setTime( 0, 0, 0 )->format( 'Y-m-d H:i:s' );
+		$today_end    = $now->setTime( 23, 59, 59 )->format( 'Y-m-d H:i:s' );
+		$current_time = $now->format( 'Y-m-d H:i:s' );
 		$user_id       = absint( $cursor['user_id'] );
 		$after_task_id = absint( $cursor['task_id'] );
 
@@ -848,7 +847,7 @@ final class YoOhw_COS_Email_Notifications {
 		$task_ids = array_values( array_filter( array_map( static fn( array $task ): int => absint( $task['id'] ?? 0 ), $tasks ) ) );
 
 		return sanitize_key( $type )
-			. '_' . wp_date( 'Ymd', current_time( 'timestamp' ) )
+			. '_' . current_datetime()->format( 'Ymd' )
 			. '_' . absint( $user_id )
 			. '_' . ( $task_ids[0] ?? 0 )
 			. '_' . ( ! empty( $task_ids ) ? end( $task_ids ) : 0 )

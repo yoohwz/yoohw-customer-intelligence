@@ -168,10 +168,6 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 	}
 
 	public function test_order_sync_uses_woocommerce_crud_when_available(): void {
-		if ( ! function_exists( 'wc_create_order' ) ) {
-			$this->markTestSkipped( 'WooCommerce test helpers are not available.' );
-		}
-
 		$order = wc_create_order();
 		$order->set_billing_email( 'sync-check@example.test' );
 		$order->set_billing_phone( '555-0100' );
@@ -194,10 +190,6 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 	}
 
 	public function test_commerce_metrics_use_one_paid_population_and_are_idempotent(): void {
-		if ( ! function_exists( 'wc_create_order' ) ) {
-			$this->markTestSkipped( 'WooCommerce test helpers are not available.' );
-		}
-
 		$email = 'commerce-policy@example.test';
 		$processing = $this->create_order( $email, 'processing', '100.00' );
 		$failed     = $this->create_order( $email, 'failed', '500.00' );
@@ -224,10 +216,6 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 	}
 
 	public function test_order_fact_moves_contribution_when_customer_is_reassigned(): void {
-		if ( ! function_exists( 'wc_create_order' ) ) {
-			$this->markTestSkipped( 'WooCommerce test helpers are not available.' );
-		}
-
 		$settings = YoOhw_COS_Intelligence::get_scoring_settings_defaults();
 		$settings['customer_status']['new_max_orders'] = 0;
 		YoOhw_COS_Intelligence::update_scoring_settings( $settings );
@@ -301,10 +289,6 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 	}
 
 	public function test_guest_email_change_keeps_explicit_profile_link(): void {
-		if ( ! function_exists( 'wc_create_order' ) ) {
-			$this->markTestSkipped( 'WooCommerce test helpers are not available.' );
-		}
-
 		$order = $this->create_order( 'guest-original@example.test', 'processing', '20.00' );
 		$customer_id = YoOhw_COS_Customers::sync_from_order( $order );
 		$order->set_billing_email( 'guest-changed@example.test' );
@@ -317,10 +301,6 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 	}
 
 	public function test_conflicting_order_identity_is_recorded_without_overwrite(): void {
-		if ( ! function_exists( 'wc_create_order' ) ) {
-			$this->markTestSkipped( 'WooCommerce test helpers are not available.' );
-		}
-
 		global $wpdb;
 		$user_id = self::factory()->user->create( array( 'user_email' => 'registered-owner@example.test' ) );
 		$owner_id = YoOhw_COS_Customers::create_customer(
@@ -351,10 +331,6 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 	}
 
 	public function test_guest_profile_safely_adopts_unowned_wp_user(): void {
-		if ( ! function_exists( 'wc_create_order' ) ) {
-			$this->markTestSkipped( 'WooCommerce test helpers are not available.' );
-		}
-
 		$order       = $this->create_order( 'guest-register@example.test', 'processing', '30.00' );
 		$customer_id = YoOhw_COS_Customers::sync_from_order( $order );
 		$user_id     = self::factory()->user->create( array( 'user_email' => 'registered-new@example.test' ) );
@@ -369,10 +345,6 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 	}
 
 	public function test_persisted_explicit_link_wins_over_stale_order_object_meta(): void {
-		if ( ! function_exists( 'wc_create_order' ) ) {
-			$this->markTestSkipped( 'WooCommerce test helpers are not available.' );
-		}
-
 		$order = $this->create_order( 'stale-link@example.test', 'completed', '40.00' );
 		$first_id = YoOhw_COS_Customers::sync_from_order( $order );
 		$stale_order = wc_get_order( $order->get_id() );
@@ -390,10 +362,6 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 	}
 
 	public function test_aggregate_rebuild_matches_incremental_facts(): void {
-		if ( ! function_exists( 'wc_create_order' ) ) {
-			$this->markTestSkipped( 'WooCommerce test helpers are not available.' );
-		}
-
 		$order = $this->create_order( 'rebuild@example.test', 'completed', '44.00' );
 		$customer_id = YoOhw_COS_Customers::sync_from_order( $order );
 		YoOhw_COS_Customers::update_customer(
@@ -421,10 +389,6 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 	}
 
 	public function test_refunded_status_reverses_the_order_population(): void {
-		if ( ! function_exists( 'wc_create_order' ) ) {
-			$this->markTestSkipped( 'WooCommerce test helpers are not available.' );
-		}
-
 		$order = $this->create_order( 'refunded@example.test', 'completed', '60.00' );
 		$customer_id = YoOhw_COS_Customers::sync_from_order( $order );
 		$order->set_status( 'refunded' );
@@ -438,10 +402,6 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 	}
 
 	public function test_partial_refund_reduces_net_revenue_without_changing_count(): void {
-		if ( ! function_exists( 'wc_create_order' ) || ! function_exists( 'wc_create_refund' ) ) {
-			$this->markTestSkipped( 'WooCommerce refund helpers are not available.' );
-		}
-
 		$order = $this->create_order( 'partial-refund@example.test', 'completed', '100.00' );
 		$customer_id = YoOhw_COS_Customers::sync_from_order( $order );
 		$refund = wc_create_refund(
@@ -461,10 +421,6 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 	}
 
 	public function test_deleted_order_removes_its_persisted_contribution(): void {
-		if ( ! function_exists( 'wc_create_order' ) ) {
-			$this->markTestSkipped( 'WooCommerce test helpers are not available.' );
-		}
-
 		$order = $this->create_order( 'delete-order@example.test', 'completed', '6000.00' );
 		$customer_id = YoOhw_COS_Customers::sync_from_order( $order );
 		YoOhw_COS_Customers::remove_deleted_order_contribution( $order->get_id(), $order );
@@ -511,6 +467,117 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 		);
 		$this->assertSame( 'sent', $claim['status'] );
 		$this->assertSame( 2, absint( $claim['attempts'] ) );
+	}
+
+	public function test_notification_lease_uses_site_local_clock_across_timezones(): void {
+		global $wpdb;
+
+		$original_timezone = get_option( 'timezone_string', '' );
+		$original_offset   = get_option( 'gmt_offset', 0 );
+
+		try {
+			foreach ( array( 'UTC', 'Asia/Ho_Chi_Minh', 'America/New_York' ) as $timezone ) {
+				update_option( 'timezone_string', $timezone );
+				$before = current_datetime();
+				$key = YoOhw_COS_Notification_Ledger::key( 'timezone-lease-' . sanitize_key( $timezone ), array( 'id' => 9001 ), 7 );
+
+				$this->assertTrue( YoOhw_COS_Notification_Ledger::claim( $key, 'timezone-lease', 9001, 7 ) );
+				$claim = $wpdb->get_row(
+					$wpdb->prepare(
+						'SELECT claim_token, lease_until, attempts FROM %i WHERE notification_key = %s',
+						YoOhw_COS_DB::notification_log_table(),
+						$key
+					),
+					ARRAY_A
+				);
+				$lease = DateTimeImmutable::createFromFormat( 'Y-m-d H:i:s', $claim['lease_until'], wp_timezone() );
+				$this->assertInstanceOf( DateTimeImmutable::class, $lease );
+				$this->assertGreaterThanOrEqual( 14 * MINUTE_IN_SECONDS, $lease->getTimestamp() - $before->getTimestamp() );
+				$this->assertLessThanOrEqual( 16 * MINUTE_IN_SECONDS, $lease->getTimestamp() - $before->getTimestamp() );
+				$this->assertFalse( YoOhw_COS_Notification_Ledger::claim( $key, 'timezone-lease', 9001, 7 ) );
+
+				$old_token = (string) $claim['claim_token'];
+				$wpdb->update(
+					YoOhw_COS_DB::notification_log_table(),
+					array( 'lease_until' => current_datetime()->modify( '-1 minute' )->format( 'Y-m-d H:i:s' ) ),
+					array( 'notification_key' => $key ),
+					array( '%s' ),
+					array( '%s' )
+				);
+				$this->assertTrue( YoOhw_COS_Notification_Ledger::claim( $key, 'timezone-lease', 9001, 7 ) );
+				$reclaimed = $wpdb->get_row(
+					$wpdb->prepare(
+						'SELECT claim_token, attempts FROM %i WHERE notification_key = %s',
+						YoOhw_COS_DB::notification_log_table(),
+						$key
+					),
+					ARRAY_A
+				);
+				$this->assertNotSame( $old_token, (string) $reclaimed['claim_token'] );
+				$this->assertSame( 2, absint( $reclaimed['attempts'] ) );
+				YoOhw_COS_Notification_Ledger::mark_sent( $key );
+				$this->assertFalse( YoOhw_COS_Notification_Ledger::claim( $key, 'timezone-lease', 9001, 7 ) );
+			}
+		} finally {
+			update_option( 'timezone_string', $original_timezone );
+			update_option( 'gmt_offset', $original_offset );
+		}
+	}
+
+	public function test_notification_windows_use_site_local_day_and_time(): void {
+		$original_timezone = get_option( 'timezone_string', '' );
+		$original_offset   = get_option( 'gmt_offset', 0 );
+
+		try {
+			update_option( 'timezone_string', 'Asia/Ho_Chi_Minh' );
+			$now = current_datetime();
+			$customer_id = YoOhw_COS_Customers::create_customer(
+				array( 'email' => 'timezone-window@example.test', 'display_name' => 'Timezone window' )
+			);
+			$user_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+			$inside_id = $this->insert_timezone_task( $customer_id, $user_id, 'Inside due-soon window', $now->modify( '+30 minutes' ) );
+			$outside_id = $this->insert_timezone_task( $customer_id, $user_id, 'Outside due-soon window', $now->modify( '+2 hours' ) );
+			$due_soon_method = new ReflectionMethod( 'YoOhw_COS_Email_Notifications', 'get_open_tasks_due_soon' );
+			$due_soon_method->setAccessible( true );
+			$due_soon_ids = array_map( 'absint', wp_list_pluck( $due_soon_method->invoke( null, 1, 0 ), 'id' ) );
+			$this->assertContains( $inside_id, $due_soon_ids );
+			$this->assertNotContains( $outside_id, $due_soon_ids );
+
+			$overdue_id = $this->insert_timezone_task( $customer_id, $user_id, 'Locally overdue', $now->modify( '-1 minute' ) );
+			$future_id = $this->insert_timezone_task( $customer_id, $user_id, 'Locally future', $now->modify( '+1 minute' ) );
+			$overdue_method = new ReflectionMethod( 'YoOhw_COS_Email_Notifications', 'get_open_overdue_task_groups' );
+			$overdue_method->setAccessible( true );
+			$overdue = $overdue_method->invoke( null, 0, array() );
+			$overdue_ids = array_map( 'absint', wp_list_pluck( $overdue['groups'][ $user_id ] ?? array(), 'id' ) );
+			$this->assertContains( $overdue_id, $overdue_ids );
+			$this->assertNotContains( $future_id, $overdue_ids );
+
+			$today_id = $this->insert_timezone_task( $customer_id, $user_id, 'Local today boundary', $now->setTime( 23, 30, 0 ) );
+			$tomorrow_id = $this->insert_timezone_task( $customer_id, $user_id, 'Local tomorrow boundary', $now->modify( '+1 day' )->setTime( 0, 30, 0 ) );
+			$summary_method = new ReflectionMethod( 'YoOhw_COS_Email_Notifications', 'get_daily_summary_task_groups' );
+			$summary_method->setAccessible( true );
+			$summary = $summary_method->invoke( null, array() );
+			$summary_ids = array_map( 'absint', wp_list_pluck( $summary['groups'][ $user_id ] ?? array(), 'id' ) );
+			$this->assertContains( $today_id, $summary_ids );
+			$this->assertNotContains( $tomorrow_id, $summary_ids );
+
+			$marker_method = new ReflectionMethod( 'YoOhw_COS_Email_Notifications', 'get_digest_chunk_marker' );
+			$marker_method->setAccessible( true );
+			$marker = $marker_method->invoke( null, 'timezone-marker', $user_id, array( array( 'id' => $today_id ) ) );
+			$this->assertStringContainsString( '_' . current_datetime()->format( 'Ymd' ) . '_', $marker );
+		} finally {
+			update_option( 'timezone_string', $original_timezone );
+			update_option( 'gmt_offset', $original_offset );
+		}
+	}
+
+	public function test_requested_woocommerce_order_storage_mode_is_active(): void {
+		$requested = strtolower( (string) getenv( 'WC_HPOS_ENABLED' ) );
+		$this->assertContains( $requested, array( 'yes', 'no' ) );
+		$this->assertSame(
+			'yes' === $requested,
+			\Automattic\WooCommerce\Utilities\OrderUtil::custom_orders_table_usage_is_enabled()
+		);
 	}
 
 	public function test_legacy_event_rows_adopt_deterministic_keys_without_duplicates(): void {
@@ -602,10 +669,6 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 	}
 
 	public function test_commerce_migration_retries_failures_and_accounts_for_unresolved_orders(): void {
-		if ( ! function_exists( 'wc_create_order' ) ) {
-			$this->markTestSkipped( 'WooCommerce test helpers are not available.' );
-		}
-
 		global $wpdb;
 		$retry_order = $this->create_order( 'migration-retry@example.test', 'processing', '31.00' );
 		YoOhw_COS_Customers::create_customer( array( 'email' => 'ambiguous-one@example.test', 'phone' => '+14155550177', 'display_name' => 'Ambiguous one' ) );
@@ -800,10 +863,6 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 	}
 
 	public function test_existing_order_sync_processes_oldest_orders_first(): void {
-		if ( ! function_exists( 'wc_create_order' ) || ! class_exists( 'WC_DateTime' ) ) {
-			$this->markTestSkipped( 'WooCommerce test helpers are not available.' );
-		}
-
 		global $wpdb;
 
 		$email     = 'sync-order-sequence@example.test';
@@ -1020,10 +1079,6 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 	}
 
 	public function test_unlinked_premium_order_event_is_reassociated_after_order_sync(): void {
-		if ( ! function_exists( 'wc_create_order' ) ) {
-			$this->markTestSkipped( 'WooCommerce test helpers are not available.' );
-		}
-
 		global $wpdb;
 
 		$order = wc_create_order();
@@ -1057,10 +1112,6 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 	}
 
 	public function test_payment_abuse_hook_records_an_idempotent_customer_event(): void {
-		if ( ! function_exists( 'wc_create_order' ) ) {
-			$this->markTestSkipped( 'WooCommerce test helpers are not available.' );
-		}
-
 		$order = wc_create_order();
 		$order->set_billing_email( 'payment-hook@example.test' );
 		$order->set_billing_phone( '555-0166' );
@@ -1180,6 +1231,27 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 		$order->save();
 
 		return $order;
+	}
+
+	private function insert_timezone_task( int $customer_id, int $user_id, string $title, DateTimeImmutable $due_date ): int {
+		global $wpdb;
+
+		$wpdb->insert(
+			YoOhw_COS_DB::tasks_table(),
+			array(
+				'customer_id'      => $customer_id,
+				'assigned_user_id' => $user_id,
+				'title'            => $title,
+				'status'           => 'open',
+				'priority'         => 'normal',
+				'due_date'         => $due_date->format( 'Y-m-d H:i:s' ),
+				'created_at'       => current_datetime()->format( 'Y-m-d H:i:s' ),
+				'updated_at'       => current_datetime()->format( 'Y-m-d H:i:s' ),
+			),
+			array( '%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s' )
+		);
+
+		return absint( $wpdb->insert_id );
 	}
 
 	private function clean_test_plugin_data(): void {
