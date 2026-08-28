@@ -61,19 +61,27 @@ abstract class YoOhw_COS_Email_Task_Digest extends YoOhw_COS_Email_CRM_Base {
 	}
 
 	protected function is_overdue( array $task ): bool {
-		$timestamp = YoOhw_COS_DB::date_timestamp( $task['due_date'] ?? '' );
+		$due_date = $this->get_task_due_datetime( $task );
 
-		return $timestamp > 0 && $timestamp < current_time( 'timestamp' );
+		return $due_date instanceof DateTimeImmutable && $due_date < current_datetime();
 	}
 
 	protected function is_due_today( array $task ): bool {
-		$timestamp = YoOhw_COS_DB::date_timestamp( $task['due_date'] ?? '' );
+		$due_date = $this->get_task_due_datetime( $task );
 
-		if ( $timestamp <= 0 ) {
-			return false;
+		return $due_date instanceof DateTimeImmutable && $due_date->format( 'Y-m-d' ) === current_datetime()->format( 'Y-m-d' );
+	}
+
+	private function get_task_due_datetime( array $task ): ?DateTimeImmutable {
+		$due_date = sanitize_text_field( (string) ( $task['due_date'] ?? '' ) );
+
+		if ( '' === $due_date ) {
+			return null;
 		}
 
-		return wp_date( 'Y-m-d', $timestamp ) === wp_date( 'Y-m-d', current_time( 'timestamp' ) );
+		$datetime = DateTimeImmutable::createFromFormat( 'Y-m-d H:i:s', $due_date, wp_timezone() );
+
+		return $datetime instanceof DateTimeImmutable ? $datetime : null;
 	}
 
 	protected function is_high_priority( array $task ): bool {

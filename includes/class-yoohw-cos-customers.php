@@ -70,15 +70,27 @@ final class YoOhw_COS_Customers {
 	}
 
 	public static function sync_from_order( WC_Order $order ): int {
+		$source_order = $order;
+		$order_id = absint( $order->get_id() );
+		self::invalidate_order_object_cache( $order_id );
+		$canonical_order = $order_id > 0 ? wc_get_order( $order_id ) : false;
+
+		if ( $canonical_order instanceof WC_Order && ! $canonical_order instanceof WC_Order_Refund ) {
+			$order = $canonical_order;
+		}
+
 		$identity   = YoOhw_COS_Customer_Identity::from_order( $order );
 		$wp_user_id = absint( $identity['wp_user_id'] );
 		$email      = (string) $identity['email'];
 		$phone      = (string) $identity['phone'];
-		$order_id   = absint( $order->get_id() );
 		$order_date = $order->get_date_created() ? $order->get_date_created()->date( 'Y-m-d H:i:s' ) : YoOhw_COS_DB::now();
 		$resolution = YoOhw_COS_Customer_Identity::resolve( $identity );
 		$customer_id = absint( $resolution['customer_id'] ?? 0 );
 		$identity_lock = '';
+
+		if ( ! empty( $resolution['conflicts'] ) ) {
+			self::record_identity_conflict( $resolution, $order_id );
+		}
 
 		if ( $customer_id <= 0 && empty( $resolution['conflicts'] ) ) {
 			$identity_lock = YoOhw_COS_Customer_Identity::acquire_creation_lock( $identity );
@@ -89,6 +101,10 @@ final class YoOhw_COS_Customers {
 
 			$resolution  = YoOhw_COS_Customer_Identity::resolve( $identity );
 			$customer_id = absint( $resolution['customer_id'] ?? 0 );
+
+			if ( ! empty( $resolution['conflicts'] ) ) {
+				self::record_identity_conflict( $resolution, $order_id );
+			}
 		}
 
 		$existing     = $customer_id > 0 ? self::get_customer( $customer_id ) : array();
@@ -130,46 +146,19 @@ final class YoOhw_COS_Customers {
 			return 0;
 		}
 
-		$data = array_merge( self::get_customer( $customer_id ), $data, $metrics );
+		$affected_customer_ids = array_map( 'absint', (array) ( $metrics['_affected_customer_ids'] ?? array( $customer_id ) ) );
+		unset( $metrics['_affected_customer_ids'] );
 
-		$intelligence_data = array_merge(
-			array(
-				'risk_score'       => 0,
-				'trust_score'      => 0,
-				'customer_status'  => 'active',
-				'vip_status'       => 'none',
-			),
-			$data
-		);
-
-		$intelligence_data = apply_filters( 'yoohw_cos_customer_intelligence_data', $intelligence_data, $order, $customer_id, $data );
-
-		if ( isset( $intelligence_data['loyalty_score'] ) ) {
-			$data['loyalty_score']              = self::normalize_score( $intelligence_data['loyalty_score'] );
-			$intelligence_data['loyalty_score'] = $data['loyalty_score'];
+		foreach ( array_values( array_unique( array_filter( $affected_customer_ids ) ) ) as $affected_customer_id ) {
+			self::refresh_derived_intelligence( $affected_customer_id, $affected_customer_id === $customer_id ? $order : null );
 		}
-
-		if ( array_key_exists( 'loyalty_level', $intelligence_data ) ) {
-			$data['loyalty_level'] = sanitize_key( (string) ( $intelligence_data['loyalty_level'] ?? '' ) );
-		}
-
-		if ( array_key_exists( 'available_points', $intelligence_data ) ) {
-			$data['available_points'] = (int) ( $intelligence_data['available_points'] ?? 0 );
-		}
-
-		if ( array_key_exists( 'earned_points', $intelligence_data ) ) {
-			$data['earned_points'] = (int) ( $intelligence_data['earned_points'] ?? 0 );
-		}
-
-		$data['customer_status'] = YoOhw_COS_Intelligence::calculate_customer_status( $intelligence_data );
-		$data['lifecycle_stage'] = YoOhw_COS_Intelligence::calculate_lifecycle_stage( $intelligence_data );
-		$data['vip_status']      = YoOhw_COS_Intelligence::calculate_vip_status( $intelligence_data );
-		$data['trust_score']     = YoOhw_COS_Intelligence::calculate_trust_score( $intelligence_data );
-		$data['risk_score']      = YoOhw_COS_Intelligence::calculate_risk_score( $intelligence_data );
-
-		self::update_customer( $customer_id, $data );
 
 		self::maybe_link_order_to_customer( $order, $customer_id );
+
+		if ( $source_order !== $order ) {
+			$source_order->read_meta_data( true );
+		}
+
 		self::invalidate_order_object_cache( $order_id );
 
 		if ( $customer_id ) {
@@ -208,25 +197,139 @@ final class YoOhw_COS_Customers {
 		$current_email   = YoOhw_COS_Customer_Identity::normalize_email( (string) ( $existing['email'] ?? '' ) );
 		$current_phone   = YoOhw_COS_Customer_Identity::normalize_phone( (string) ( $existing['phone'] ?? '' ) );
 
-		if ( absint( $identity['wp_user_id'] ?? 0 ) > 0 && ( 0 === $current_user_id || $current_user_id === absint( $identity['wp_user_id'] ) ) ) {
-			$updates['wp_user_id'] = absint( $identity['wp_user_id'] );
+		$customer_id = absint( $existing['id'] ?? 0 );
+		$incoming_user_id = absint( $identity['wp_user_id'] ?? 0 );
+		$incoming_email   = (string) ( $identity['email'] ?? '' );
+		$incoming_phone   = (string) ( $identity['phone'] ?? '' );
+
+		if (
+			$incoming_user_id > 0
+			&& ( 0 === $current_user_id || $current_user_id === $incoming_user_id )
+			&& YoOhw_COS_Customer_Identity::can_assign( 'wp_user_id', $incoming_user_id, $customer_id )
+		) {
+			$updates['wp_user_id'] = $incoming_user_id;
 		} elseif ( empty( $existing ) ) {
 			$updates['wp_user_id'] = null;
 		}
 
-		if ( ! empty( $identity['email'] ) && ( '' === $current_email || in_array( $matched_by, array( 'wp_user_id', 'email' ), true ) ) ) {
-			$updates['email'] = (string) $identity['email'];
+		if (
+			'' !== $incoming_email
+			&& ( '' === $current_email || $current_email !== $incoming_email || 'email' === $matched_by )
+			&& YoOhw_COS_Customer_Identity::can_assign( 'email', $incoming_email, $customer_id )
+		) {
+			$updates['email'] = $incoming_email;
 		} elseif ( empty( $existing ) ) {
 			$updates['email'] = null;
 		}
 
-		if ( ! empty( $identity['phone'] ) && ( '' === $current_phone || in_array( $matched_by, array( 'wp_user_id', 'email', 'phone' ), true ) ) ) {
-			$updates['phone'] = (string) $identity['phone'];
+		if (
+			'' !== $incoming_phone
+			&& ( '' === $current_phone || $current_phone !== $incoming_phone || 'phone' === $matched_by )
+			&& YoOhw_COS_Customer_Identity::can_assign( 'phone', $incoming_phone, $customer_id )
+		) {
+			$updates['phone'] = $incoming_phone;
 		} elseif ( empty( $existing ) ) {
 			$updates['phone'] = null;
 		}
 
 		return $updates;
+	}
+
+	private static function record_identity_conflict( array $resolution, int $order_id ): void {
+		$conflicts = array();
+
+		foreach ( (array) ( $resolution['conflicts'] ?? array() ) as $kind => $ids ) {
+			$ids = array_values( array_unique( array_filter( array_map( 'absint', (array) $ids ) ) ) );
+
+			if ( ! empty( $ids ) ) {
+				$conflicts[ sanitize_key( (string) $kind ) ] = $ids;
+			}
+		}
+
+		if ( empty( $conflicts ) ) {
+			return;
+		}
+
+		ksort( $conflicts );
+		$customer_id = absint( $resolution['customer_id'] ?? 0 );
+		YoOhw_COS_Events::record(
+			array(
+				'event_key'    => YoOhw_COS_Events::make_event_key(
+					'customer_os',
+					'customer_identity_conflict',
+					'order',
+					absint( $order_id ),
+					$customer_id,
+					hash( 'sha256', wp_json_encode( $conflicts ) )
+				),
+				'customer_id'  => $customer_id ?: null,
+				'event_type'   => 'customer_identity_conflict',
+				'event_source' => 'customer_os',
+				'severity'     => 'warning',
+				'object_type'  => 'order',
+				'object_id'    => absint( $order_id ),
+				'description'  => __( 'Conflicting customer identities were detected while synchronizing an order.', 'yoohw-customer-intelligence' ),
+				'metadata'     => array( 'conflicts' => $conflicts ),
+			)
+		);
+	}
+
+	/** Recalculate all persisted intelligence derived from customer commerce/activity. */
+	public static function refresh_derived_intelligence( int $customer_id, ?WC_Order $order = null ): bool {
+		global $wpdb;
+
+		$customer_id = absint( $customer_id );
+		$previous    = self::get_customer( $customer_id );
+
+		if ( $customer_id <= 0 || empty( $previous ) ) {
+			return false;
+		}
+
+		$order_activity = $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT MAX(order_date) FROM %i WHERE customer_id = %d',
+				YoOhw_COS_DB::order_facts_table(),
+				$customer_id
+			)
+		);
+		$loyalty_activity = $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT MAX(created_at) FROM %i WHERE customer_id = %d AND event_source = %s',
+				YoOhw_COS_DB::events_table(),
+				$customer_id,
+				'wc_loyalty'
+			)
+		);
+		$last_activity = YoOhw_COS_DB::date_timestamp( (string) $loyalty_activity ) > YoOhw_COS_DB::date_timestamp( (string) $order_activity )
+			? (string) $loyalty_activity
+			: (string) $order_activity;
+		$customer = array_merge( $previous, array( 'last_activity_date' => $last_activity ?: null ) );
+		$customer = apply_filters( 'yoohw_cos_customer_recalculate_intelligence_data', $customer, $customer_id );
+		$customer = apply_filters( 'yoohw_cos_customer_intelligence_data', $customer, $order, $customer_id, $customer );
+
+		$data = array(
+			'last_activity_date' => $last_activity ?: null,
+			'customer_status'    => YoOhw_COS_Intelligence::calculate_customer_status( $customer ),
+			'lifecycle_stage'    => YoOhw_COS_Intelligence::calculate_lifecycle_stage( $customer ),
+			'vip_status'         => YoOhw_COS_Intelligence::calculate_vip_status( $customer ),
+			'trust_score'        => YoOhw_COS_Intelligence::calculate_trust_score( $customer ),
+			'risk_score'         => YoOhw_COS_Intelligence::calculate_risk_score( $customer ),
+			'loyalty_score'      => self::normalize_score( $customer['loyalty_score'] ?? 0 ),
+			'loyalty_level'      => sanitize_key( (string) ( $customer['loyalty_level'] ?? '' ) ),
+			'available_points'   => (int) ( $customer['available_points'] ?? 0 ),
+			'earned_points'      => (int) ( $customer['earned_points'] ?? 0 ),
+		);
+		$updated = self::update_customer( $customer_id, $data );
+
+		do_action(
+			'yoohw_cos_customer_intelligence_recalculated',
+			$customer_id,
+			array_merge( $customer, $data ),
+			$previous,
+			$updated
+		);
+
+		return $updated;
 	}
 
 	private static function maybe_link_order_to_customer( WC_Order $order, int $customer_id ): void {
@@ -542,12 +645,28 @@ final class YoOhw_COS_Customers {
 	}
 
 	public static function sync_existing_orders( int $limit = 200, int $page = 1 ): array {
+		$result = self::sync_existing_orders_with_outcomes( $limit, $page );
+
+		return array(
+			'processed' => absint( $result['processed'] ?? 0 ),
+			'scanned'   => absint( $result['scanned'] ?? 0 ),
+			'has_more'  => ! empty( $result['has_more'] ),
+			'next_page' => absint( $result['next_page'] ?? $page ),
+		);
+	}
+
+	/**
+	 * Bounded order synchronization with explicit per-order outcomes for
+	 * migration retry and unresolved accounting.
+	 */
+	public static function sync_existing_orders_with_outcomes( int $limit = 200, int $page = 1 ): array {
 		if ( ! function_exists( 'wc_get_orders' ) ) {
 			return array(
 				'processed' => 0,
 				'scanned'   => 0,
 				'has_more'  => false,
 				'next_page' => 1,
+				'outcomes'  => array(),
 			);
 		}
 
@@ -574,15 +693,19 @@ final class YoOhw_COS_Customers {
 				'scanned'   => 0,
 				'has_more'  => false,
 				'next_page' => $page,
+				'outcomes'  => array(),
 			);
 		}
 
 		$processed = 0;
+		$outcomes  = array();
 
 		foreach ( $order_ids as $order_id ) {
-			$customer_id = self::sync_from_order_id( absint( $order_id ) );
+			$order_id = absint( $order_id );
+			$outcome  = self::sync_order_for_migration( $order_id );
+			$outcomes[ $order_id ] = $outcome;
 
-			if ( $customer_id ) {
+			if ( 'success' === (string) ( $outcome['status'] ?? '' ) ) {
 				$processed++;
 			}
 		}
@@ -592,7 +715,32 @@ final class YoOhw_COS_Customers {
 			'scanned'   => count( $order_ids ),
 			'has_more'  => count( $order_ids ) >= $limit,
 			'next_page' => $page + 1,
+			'outcomes'  => $outcomes,
 		);
+	}
+
+	public static function sync_order_for_migration( int $order_id ): array {
+		$order_id = absint( $order_id );
+		$order    = function_exists( 'wc_get_order' ) ? wc_get_order( $order_id ) : null;
+
+		if ( ! $order instanceof WC_Order || $order instanceof WC_Order_Refund ) {
+			$outcome = array( 'status' => 'unresolved', 'code' => 'order_unavailable' );
+		} else {
+			$resolution = YoOhw_COS_Customer_Identity::resolve( YoOhw_COS_Customer_Identity::from_order( $order ) );
+
+			if ( empty( $resolution['customer_id'] ) && ! empty( $resolution['conflicts'] ) ) {
+				$outcome = array( 'status' => 'unresolved', 'code' => 'identity_conflict' );
+			} else {
+				$customer_id = self::sync_from_order( $order );
+				$outcome = $customer_id > 0
+					? array( 'status' => 'success', 'customer_id' => $customer_id, 'code' => '' )
+					: array( 'status' => 'retry', 'code' => 'sync_failed' );
+			}
+		}
+
+		$outcome = apply_filters( 'yoohw_cos_migration_order_sync_outcome', $outcome, $order_id, $order );
+
+		return is_array( $outcome ) ? $outcome : array( 'status' => 'retry', 'code' => 'invalid_outcome' );
 	}
 
 	public static function get_sync_order_count(): int {
@@ -655,6 +803,7 @@ final class YoOhw_COS_Customers {
 		$wpdb->query( $wpdb->prepare( 'TRUNCATE TABLE %i', YoOhw_COS_DB::customer_segments_table() ) );
 		$wpdb->query( $wpdb->prepare( 'TRUNCATE TABLE %i', YoOhw_COS_DB::order_facts_table() ) );
 		$wpdb->query( $wpdb->prepare( 'TRUNCATE TABLE %i', YoOhw_COS_DB::notification_log_table() ) );
+		$wpdb->query( $wpdb->prepare( 'TRUNCATE TABLE %i', YoOhw_COS_DB::migration_issues_table() ) );
 
 		delete_option( 'yoohw_cos_last_sync_page' );
 		delete_option( 'yoohw_cos_last_sync_at' );
@@ -709,43 +858,10 @@ final class YoOhw_COS_Customers {
 
 		foreach ( $customers as $customer ) {
 			$customer_id = absint( $customer['id'] );
-			$previous_customer = $customer;
-			$customer    = apply_filters( 'yoohw_cos_customer_recalculate_intelligence_data', $customer, $customer_id );
-			$customer    = apply_filters( 'yoohw_cos_customer_intelligence_data', $customer, null, $customer_id, $customer );
 
-			$new_status    = YoOhw_COS_Intelligence::calculate_customer_status( $customer );
-			$new_lifecycle = YoOhw_COS_Intelligence::calculate_lifecycle_stage( $customer );
-			$new_vip       = YoOhw_COS_Intelligence::calculate_vip_status( $customer );
-			$new_trust     = YoOhw_COS_Intelligence::calculate_trust_score( $customer );
-			$new_risk      = YoOhw_COS_Intelligence::calculate_risk_score( $customer );
-			$new_loyalty   = self::normalize_score( $customer['loyalty_score'] ?? 0 );
-			$loyalty_level = sanitize_key( (string) ( $customer['loyalty_level'] ?? '' ) );
-
-			$recalculated_data = array(
-				'customer_status' => $new_status,
-				'lifecycle_stage' => $new_lifecycle,
-				'vip_status'      => $new_vip,
-				'trust_score'     => $new_trust,
-				'risk_score'      => $new_risk,
-				'loyalty_score'    => $new_loyalty,
-				'loyalty_level'    => $loyalty_level,
-				'available_points' => (int) ( $customer['available_points'] ?? 0 ),
-				'earned_points'    => (int) ( $customer['earned_points'] ?? 0 ),
-			);
-
-			$updated = self::update_customer( $customer_id, $recalculated_data );
-
-			if ( $updated ) {
+			if ( self::refresh_derived_intelligence( $customer_id ) ) {
 				$updated_count++;
 			}
-
-			do_action(
-				'yoohw_cos_customer_intelligence_recalculated',
-				$customer_id,
-				array_merge( $customer, $recalculated_data ),
-				$previous_customer,
-				(bool) $updated
-			);
 		}
 
 		return array(

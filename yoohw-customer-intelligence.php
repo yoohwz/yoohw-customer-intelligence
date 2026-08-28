@@ -21,7 +21,7 @@
 defined( 'ABSPATH' ) || exit;
 
 define( 'YOOHW_COS_VERSION', '1.2.2' );
-define( 'YOOHW_COS_DB_VERSION', '0.2.0' );
+define( 'YOOHW_COS_DB_VERSION', '0.2.1' );
 define( 'YOOHW_COS_FILE', __FILE__ );
 define( 'YOOHW_COS_PATH', plugin_dir_path( __FILE__ ) );
 define( 'YOOHW_COS_URL', plugin_dir_url( __FILE__ ) );

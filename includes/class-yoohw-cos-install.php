@@ -26,6 +26,7 @@ final class YoOhw_COS_Install {
 			'customer_segments',
 			'order_facts',
 			'notification_log',
+			'migration_issues',
 		);
 	}
 
@@ -50,6 +51,7 @@ final class YoOhw_COS_Install {
 		$customer_segments_table = $wpdb->prefix . 'yoohw_cos_customer_segments';
 		$order_facts_table       = $wpdb->prefix . 'yoohw_cos_customer_order_facts';
 		$notification_log_table  = $wpdb->prefix . 'yoohw_cos_notification_log';
+		$migration_issues_table  = $wpdb->prefix . 'yoohw_cos_migration_issues';
 
 		$sql_customers = "CREATE TABLE {$customers_table} (
 			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -249,13 +251,35 @@ final class YoOhw_COS_Install {
 			task_id BIGINT UNSIGNED NULL,
 			recipient_user_id BIGINT UNSIGNED NULL,
 			status VARCHAR(20) NOT NULL DEFAULT 'pending',
+			claim_token VARCHAR(64) NULL,
+			lease_until DATETIME NULL,
+			attempts INT UNSIGNED NOT NULL DEFAULT 0,
 			created_at DATETIME NOT NULL,
+			updated_at DATETIME NULL,
 			sent_at DATETIME NULL,
 			expires_at DATETIME NOT NULL,
 			PRIMARY KEY  (id),
 			UNIQUE KEY notification_key (notification_key),
 			KEY expires_at (expires_at),
+			KEY status_lease (status, lease_until),
 			KEY task_lookup (task_id, notification_type)
+		) {$charset_collate};";
+
+		$sql_migration_issues = "CREATE TABLE {$migration_issues_table} (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			migration_id VARCHAR(100) NOT NULL,
+			object_type VARCHAR(50) NOT NULL,
+			object_id BIGINT UNSIGNED NOT NULL,
+			error_code VARCHAR(100) NOT NULL,
+			last_error TEXT NULL,
+			status VARCHAR(20) NOT NULL DEFAULT 'pending',
+			attempts INT UNSIGNED NOT NULL DEFAULT 1,
+			created_at DATETIME NOT NULL,
+			updated_at DATETIME NOT NULL,
+			resolved_at DATETIME NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY migration_object (migration_id, object_type, object_id),
+			KEY retry_queue (migration_id, status, id)
 		) {$charset_collate};";
 
 		dbDelta( $sql_customers );
@@ -268,6 +292,7 @@ final class YoOhw_COS_Install {
 		dbDelta( $sql_customer_segments );
 		dbDelta( $sql_order_facts );
 		dbDelta( $sql_notification_log );
+		dbDelta( $sql_migration_issues );
 	}
 
 	public static function maybe_update(): void {

@@ -447,7 +447,16 @@ final class YoOhw_COS_Loyalty_Integration {
 	private static function table_exists( string $table ): bool {
 		global $wpdb;
 
-		return '' !== $table && $table === $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) );
+		if ( '' === $table ) {
+			return false;
+		}
+
+		$previous_suppression = $wpdb->suppress_errors( true );
+		$wpdb->get_var( $wpdb->prepare( 'SELECT 1 FROM %i LIMIT 1', $table ) );
+		$exists = '' === (string) $wpdb->last_error;
+		$wpdb->suppress_errors( $previous_suppression );
+
+		return $exists;
 	}
 
 	private static function map_points_event_type( string $action, float $amount ): string {

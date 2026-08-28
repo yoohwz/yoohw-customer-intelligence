@@ -7,7 +7,6 @@ final class YoOhw_COS_Email_Notifications {
 	private const CRON_DUE_SOON = 'yoohw_cos_crm_email_due_soon';
 	private const CRON_DAILY = 'yoohw_cos_crm_email_daily';
 	private const BATCH_SIZE = 200;
-	private const ASSIGNEE_BATCH_SIZE = 20;
 	private const DIGEST_TASK_LIMIT = 200;
 
 	private static $email_classes = array(
@@ -324,9 +323,9 @@ final class YoOhw_COS_Email_Notifications {
 
 	public static function run_daily_notifications( array $cursors = array() ): void {
 		$next = array(
-			'overdue'    => self::run_overdue_digest_notifications( absint( $cursors['overdue'] ?? 0 ) ),
-			'escalation' => self::run_overdue_escalation_notifications( absint( $cursors['escalation'] ?? 0 ) ),
-			'summary'    => self::run_daily_summary_notifications( absint( $cursors['summary'] ?? 0 ) ),
+			'overdue'    => self::run_overdue_digest_notifications( self::normalize_digest_cursor( $cursors['overdue'] ?? array() ) ),
+			'escalation' => self::run_overdue_escalation_notifications( self::normalize_digest_cursor( $cursors['escalation'] ?? array() ) ),
+			'summary'    => self::run_daily_summary_notifications( self::normalize_digest_cursor( $cursors['summary'] ?? array() ) ),
 		);
 
 		YoOhw_COS_Notification_Ledger::cleanup();
@@ -336,7 +335,7 @@ final class YoOhw_COS_Email_Notifications {
 
 		foreach ( $next as $channel => $result ) {
 			$has_more = $has_more || ! empty( $result['has_more'] );
-			$next_cursors[ $channel ] = absint( $result['cursor'] ?? 0 );
+			$next_cursors[ $channel ] = self::normalize_digest_cursor( $result['cursor'] ?? array() );
 		}
 
 		if ( $has_more ) {
@@ -348,17 +347,17 @@ final class YoOhw_COS_Email_Notifications {
 		}
 	}
 
-	private static function run_overdue_digest_notifications( int $after_user_id = 0 ): array {
+	private static function run_overdue_digest_notifications( array $cursor = array() ): array {
 		$email = self::get_crm_email( 'YoOhw_COS_Email_Task_Overdue' );
 
 		if ( ! $email || ! $email->is_enabled() ) {
-			return array( 'cursor' => $after_user_id, 'has_more' => false );
+			return array( 'cursor' => $cursor, 'has_more' => false );
 		}
 
-		$batch = self::get_open_overdue_task_groups( 0, $after_user_id );
+		$batch = self::get_open_overdue_task_groups( 0, $cursor );
 
 		foreach ( $batch['groups'] as $user_id => $tasks ) {
-			$marker = 'overdue_digest_' . wp_date( 'Ymd', current_time( 'timestamp' ) ) . '_' . absint( $user_id );
+			$marker = self::get_digest_chunk_marker( 'overdue_digest', absint( $user_id ), $tasks );
 			$notification_key = self::claim_notification( $marker, array(), absint( $user_id ) );
 
 			if ( '' === $notification_key ) {
@@ -375,19 +374,19 @@ final class YoOhw_COS_Email_Notifications {
 		return array( 'cursor' => $batch['cursor'], 'has_more' => $batch['has_more'] );
 	}
 
-	private static function run_overdue_escalation_notifications( int $after_user_id = 0 ): array {
+	private static function run_overdue_escalation_notifications( array $cursor = array() ): array {
 		$email = self::get_crm_email( 'YoOhw_COS_Email_Task_Overdue_Escalation' );
 
 		if ( ! $email || ! $email->is_enabled() ) {
-			return array( 'cursor' => $after_user_id, 'has_more' => false );
+			return array( 'cursor' => $cursor, 'has_more' => false );
 		}
 
 		$days_overdue = $email instanceof YoOhw_COS_Email_Task_Overdue_Escalation ? $email->get_days_overdue() : 3;
 
-		$batch = self::get_open_overdue_task_groups( $days_overdue, $after_user_id );
+		$batch = self::get_open_overdue_task_groups( $days_overdue, $cursor );
 
 		foreach ( $batch['groups'] as $user_id => $tasks ) {
-			$marker = 'overdue_escalation_' . wp_date( 'Ymd', current_time( 'timestamp' ) ) . '_' . absint( $user_id ) . '_' . absint( $days_overdue );
+			$marker = self::get_digest_chunk_marker( 'overdue_escalation_' . absint( $days_overdue ), absint( $user_id ), $tasks );
 			$notification_key = self::claim_notification( $marker, array(), absint( $user_id ) );
 
 			if ( '' === $notification_key ) {
@@ -404,17 +403,17 @@ final class YoOhw_COS_Email_Notifications {
 		return array( 'cursor' => $batch['cursor'], 'has_more' => $batch['has_more'] );
 	}
 
-	private static function run_daily_summary_notifications( int $after_user_id = 0 ): array {
+	private static function run_daily_summary_notifications( array $cursor = array() ): array {
 		$email = self::get_crm_email( 'YoOhw_COS_Email_Daily_Followup_Summary' );
 
 		if ( ! $email || ! $email->is_enabled() ) {
-			return array( 'cursor' => $after_user_id, 'has_more' => false );
+			return array( 'cursor' => $cursor, 'has_more' => false );
 		}
 
-		$batch = self::get_daily_summary_task_groups( $after_user_id );
+		$batch = self::get_daily_summary_task_groups( $cursor );
 
 		foreach ( $batch['groups'] as $user_id => $tasks ) {
-			$marker = 'daily_summary_' . wp_date( 'Ymd', current_time( 'timestamp' ) ) . '_' . absint( $user_id );
+			$marker = self::get_digest_chunk_marker( 'daily_summary', absint( $user_id ), $tasks );
 			$notification_key = self::claim_notification( $marker, array(), absint( $user_id ) );
 
 			if ( '' === $notification_key ) {
@@ -474,55 +473,68 @@ final class YoOhw_COS_Email_Notifications {
 	}
 
 	private static function get_open_tasks_due_soon( int $lead_hours, int $after_task_id = 0 ): array {
-		$now       = current_time( 'timestamp' );
-		$end       = $now + ( max( 1, $lead_hours ) * HOUR_IN_SECONDS );
-		$start_sql = wp_date( 'Y-m-d H:i:s', $now );
-		$end_sql   = wp_date( 'Y-m-d H:i:s', $end );
+		$now       = current_datetime();
+		$start_sql = $now->format( 'Y-m-d H:i:s' );
+		$end_sql   = $now->modify( '+' . max( 1, $lead_hours ) . ' hours' )->format( 'Y-m-d H:i:s' );
 
 		return self::get_open_tasks_by_date_window( $start_sql, $end_sql, $after_task_id );
 	}
 
-	private static function get_open_overdue_task_groups( int $minimum_days_overdue = 0, int $after_user_id = 0 ): array {
+	private static function get_open_overdue_task_groups( int $minimum_days_overdue = 0, array $cursor = array() ): array {
 		global $wpdb;
 
-		$now_timestamp = current_time( 'timestamp' );
+		$cursor        = self::normalize_digest_cursor( $cursor );
+		$now           = current_datetime();
 		$cutoff        = $minimum_days_overdue > 0
-			? wp_date( 'Y-m-d H:i:s', $now_timestamp - ( $minimum_days_overdue * DAY_IN_SECONDS ) )
-			: wp_date( 'Y-m-d H:i:s', $now_timestamp );
-		$user_ids = $wpdb->get_col(
-			$wpdb->prepare(
-				"SELECT DISTINCT assigned_user_id
-				FROM %i
-				WHERE status <> %s
-					AND assigned_user_id > %d
-					AND due_date IS NOT NULL
-					AND due_date < %s
-				ORDER BY assigned_user_id ASC
-				LIMIT %d",
-				YoOhw_COS_DB::tasks_table(),
-				YoOhw_COS_Tasks::STATUS_COMPLETED,
-				absint( $after_user_id ),
-				$cutoff,
-				self::ASSIGNEE_BATCH_SIZE
-			)
-		);
-		$groups = array();
-		$cursor = absint( $after_user_id );
+			? $now->modify( '-' . $minimum_days_overdue . ' days' )->format( 'Y-m-d H:i:s' )
+			: $now->format( 'Y-m-d H:i:s' );
+		$user_id       = absint( $cursor['user_id'] );
+		$after_task_id = absint( $cursor['task_id'] );
 
-		foreach ( is_array( $user_ids ) ? $user_ids : array() as $user_id ) {
-			$user_id = absint( $user_id );
-			$cursor  = max( $cursor, $user_id );
-			$groups[ $user_id ] = self::get_open_overdue_tasks_for_user( $user_id, $cutoff );
+		if ( $after_task_id <= 0 ) {
+			$user_id = self::get_next_overdue_assignee( $user_id, $cutoff );
 		}
 
+		if ( $user_id <= 0 ) {
+			return array( 'groups' => array(), 'cursor' => $cursor, 'has_more' => false );
+		}
+
+		$tasks = self::get_open_overdue_tasks_for_user( $user_id, $cutoff, $after_task_id );
+
+		if ( empty( $tasks ) && $after_task_id > 0 ) {
+			return self::get_open_overdue_task_groups( $minimum_days_overdue, array( 'user_id' => $user_id, 'task_id' => 0 ) );
+		}
+
+		$last_task_id = ! empty( $tasks ) ? absint( end( $tasks )['id'] ?? 0 ) : 0;
+		$chunk_full   = count( $tasks ) >= self::DIGEST_TASK_LIMIT;
+		$next_user    = $chunk_full ? 0 : self::get_next_overdue_assignee( $user_id, $cutoff );
+
 		return array(
-			'groups'   => $groups,
-			'cursor'   => $cursor,
-			'has_more' => count( $user_ids ) >= self::ASSIGNEE_BATCH_SIZE && $cursor > $after_user_id,
+			'groups'   => empty( $tasks ) ? array() : array( $user_id => $tasks ),
+			'cursor'   => array( 'user_id' => $user_id, 'task_id' => $chunk_full ? $last_task_id : 0 ),
+			'has_more' => $chunk_full || $next_user > 0,
 		);
 	}
 
-	private static function get_open_overdue_tasks_for_user( int $user_id, string $cutoff ): array {
+	private static function get_next_overdue_assignee( int $after_user_id, string $cutoff ): int {
+		global $wpdb;
+
+		return absint(
+			$wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT assigned_user_id FROM %i
+					WHERE status <> %s AND assigned_user_id > %d AND due_date IS NOT NULL AND due_date < %s
+					ORDER BY assigned_user_id ASC LIMIT 1",
+					YoOhw_COS_DB::tasks_table(),
+					YoOhw_COS_Tasks::STATUS_COMPLETED,
+					absint( $after_user_id ),
+					$cutoff
+				)
+			)
+		);
+	}
+
+	private static function get_open_overdue_tasks_for_user( int $user_id, string $cutoff, int $after_task_id = 0 ): array {
 		global $wpdb;
 
 		$tasks = $wpdb->get_results(
@@ -542,9 +554,10 @@ final class YoOhw_COS_Email_Notifications {
 				LEFT JOIN %i creator ON creator.ID = t.created_by
 				WHERE t.status <> %s
 					AND t.assigned_user_id = %d
+					AND t.id > %d
 					AND t.due_date IS NOT NULL
 					AND t.due_date < %s
-				ORDER BY t.due_date ASC, t.id ASC
+				ORDER BY t.id ASC
 				LIMIT %d",
 				YoOhw_COS_DB::tasks_table(),
 				YoOhw_COS_DB::customers_table(),
@@ -552,6 +565,7 @@ final class YoOhw_COS_Email_Notifications {
 				$wpdb->users,
 				YoOhw_COS_Tasks::STATUS_COMPLETED,
 				absint( $user_id ),
+				absint( $after_task_id ),
 				$cutoff,
 				self::DIGEST_TASK_LIMIT
 			),
@@ -561,52 +575,66 @@ final class YoOhw_COS_Email_Notifications {
 		return is_array( $tasks ) ? $tasks : array();
 	}
 
-	private static function get_daily_summary_task_groups( int $after_user_id = 0 ): array {
+	private static function get_daily_summary_task_groups( array $cursor = array() ): array {
 		global $wpdb;
 
-		$now          = current_time( 'timestamp' );
-		$today_start  = wp_date( 'Y-m-d 00:00:00', $now );
-		$today_end    = wp_date( 'Y-m-d 23:59:59', $now );
-		$current_time = wp_date( 'Y-m-d H:i:s', $now );
-		$user_ids = $wpdb->get_col(
-			$wpdb->prepare(
-				"SELECT DISTINCT assigned_user_id
-				FROM %i
-				WHERE status <> %s
-					AND assigned_user_id > %d
-					AND (
-						(due_date IS NOT NULL AND due_date < %s)
-						OR (due_date IS NOT NULL AND due_date BETWEEN %s AND %s)
-						OR priority IN ('high', 'urgent')
-					)
-				ORDER BY assigned_user_id ASC
-				LIMIT %d",
-				YoOhw_COS_DB::tasks_table(),
-				YoOhw_COS_Tasks::STATUS_COMPLETED,
-				absint( $after_user_id ),
-				$current_time,
-				$today_start,
-				$today_end,
-				self::ASSIGNEE_BATCH_SIZE
-			)
-		);
-		$groups = array();
-		$cursor = absint( $after_user_id );
+		$cursor       = self::normalize_digest_cursor( $cursor );
+		$now          = current_datetime();
+		$today_start  = $now->setTime( 0, 0, 0 )->format( 'Y-m-d H:i:s' );
+		$today_end    = $now->setTime( 23, 59, 59 )->format( 'Y-m-d H:i:s' );
+		$current_time = $now->format( 'Y-m-d H:i:s' );
+		$user_id       = absint( $cursor['user_id'] );
+		$after_task_id = absint( $cursor['task_id'] );
 
-		foreach ( is_array( $user_ids ) ? $user_ids : array() as $user_id ) {
-			$user_id = absint( $user_id );
-			$cursor  = max( $cursor, $user_id );
-			$groups[ $user_id ] = self::get_daily_summary_tasks_for_user( $user_id, $current_time, $today_start, $today_end );
+		if ( $after_task_id <= 0 ) {
+			$user_id = self::get_next_summary_assignee( $user_id, $current_time, $today_start, $today_end );
 		}
 
+		if ( $user_id <= 0 ) {
+			return array( 'groups' => array(), 'cursor' => $cursor, 'has_more' => false );
+		}
+
+		$tasks = self::get_daily_summary_tasks_for_user( $user_id, $current_time, $today_start, $today_end, $after_task_id );
+
+		if ( empty( $tasks ) && $after_task_id > 0 ) {
+			return self::get_daily_summary_task_groups( array( 'user_id' => $user_id, 'task_id' => 0 ) );
+		}
+
+		$last_task_id = ! empty( $tasks ) ? absint( end( $tasks )['id'] ?? 0 ) : 0;
+		$chunk_full   = count( $tasks ) >= self::DIGEST_TASK_LIMIT;
+		$next_user    = $chunk_full ? 0 : self::get_next_summary_assignee( $user_id, $current_time, $today_start, $today_end );
+
 		return array(
-			'groups'   => $groups,
-			'cursor'   => $cursor,
-			'has_more' => count( $user_ids ) >= self::ASSIGNEE_BATCH_SIZE && $cursor > $after_user_id,
+			'groups'   => empty( $tasks ) ? array() : array( $user_id => $tasks ),
+			'cursor'   => array( 'user_id' => $user_id, 'task_id' => $chunk_full ? $last_task_id : 0 ),
+			'has_more' => $chunk_full || $next_user > 0,
 		);
 	}
 
-	private static function get_daily_summary_tasks_for_user( int $user_id, string $current_time, string $today_start, string $today_end ): array {
+	private static function get_next_summary_assignee( int $after_user_id, string $current_time, string $today_start, string $today_end ): int {
+		global $wpdb;
+
+		return absint(
+			$wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT assigned_user_id FROM %i
+					WHERE status <> %s AND assigned_user_id > %d
+						AND ((due_date IS NOT NULL AND due_date < %s)
+						OR (due_date IS NOT NULL AND due_date BETWEEN %s AND %s)
+						OR priority IN ('high', 'urgent'))
+					ORDER BY assigned_user_id ASC LIMIT 1",
+					YoOhw_COS_DB::tasks_table(),
+					YoOhw_COS_Tasks::STATUS_COMPLETED,
+					absint( $after_user_id ),
+					$current_time,
+					$today_start,
+					$today_end
+				)
+			)
+		);
+	}
+
+	private static function get_daily_summary_tasks_for_user( int $user_id, string $current_time, string $today_start, string $today_end, int $after_task_id = 0 ): array {
 		global $wpdb;
 
 		$tasks = $wpdb->get_results(
@@ -626,16 +654,13 @@ final class YoOhw_COS_Email_Notifications {
 				LEFT JOIN %i creator ON creator.ID = t.created_by
 				WHERE t.status <> %s
 					AND t.assigned_user_id = %d
+					AND t.id > %d
 					AND (
 						(t.due_date IS NOT NULL AND t.due_date < %s)
 						OR (t.due_date IS NOT NULL AND t.due_date BETWEEN %s AND %s)
 						OR t.priority IN ('high', 'urgent')
 					)
-				ORDER BY
-					CASE WHEN t.due_date IS NULL THEN 1 ELSE 0 END ASC,
-					t.due_date ASC,
-					t.priority DESC,
-					t.id ASC
+				ORDER BY t.id ASC
 				LIMIT %d",
 				YoOhw_COS_DB::tasks_table(),
 				YoOhw_COS_DB::customers_table(),
@@ -643,6 +668,7 @@ final class YoOhw_COS_Email_Notifications {
 				$wpdb->users,
 				YoOhw_COS_Tasks::STATUS_COMPLETED,
 				absint( $user_id ),
+				absint( $after_task_id ),
 				$current_time,
 				$today_start,
 				$today_end,
@@ -804,6 +830,28 @@ final class YoOhw_COS_Email_Notifications {
 		}
 
 		return YoOhw_COS_Notification_Ledger::claim( $key, $event, absint( $task['id'] ?? 0 ), $recipient_user_id ) ? $key : '';
+	}
+
+	private static function normalize_digest_cursor( $cursor ): array {
+		if ( ! is_array( $cursor ) ) {
+			return array( 'user_id' => absint( $cursor ), 'task_id' => 0 );
+		}
+
+		return array(
+			'user_id' => absint( $cursor['user_id'] ?? 0 ),
+			'task_id' => absint( $cursor['task_id'] ?? 0 ),
+		);
+	}
+
+	private static function get_digest_chunk_marker( string $type, int $user_id, array $tasks ): string {
+		$task_ids = array_values( array_filter( array_map( static fn( array $task ): int => absint( $task['id'] ?? 0 ), $tasks ) ) );
+
+		return sanitize_key( $type )
+			. '_' . current_datetime()->format( 'Ymd' )
+			. '_' . absint( $user_id )
+			. '_' . ( $task_ids[0] ?? 0 )
+			. '_' . ( ! empty( $task_ids ) ? end( $task_ids ) : 0 )
+			. '_' . substr( hash( 'sha256', implode( ',', $task_ids ) ), 0, 16 );
 	}
 
 	private static function get_notification_marker_key( string $event, array $task = array() ): string {

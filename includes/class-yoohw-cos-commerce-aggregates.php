@@ -110,7 +110,14 @@ final class YoOhw_COS_Commerce_Aggregates {
 			do_action( 'yoohw_cos_commerce_aggregate_error', $exception, $order_id, $customer_id );
 		}
 
-		return $transaction_ok ? self::get_customer_metrics( $customer_id ) : array();
+		if ( ! $transaction_ok ) {
+			return array();
+		}
+
+		$metrics = self::get_customer_metrics( $customer_id );
+		$metrics['_affected_customer_ids'] = $affected_ids;
+
+		return $metrics;
 	}
 
 	/**
@@ -168,6 +175,8 @@ final class YoOhw_COS_Commerce_Aggregates {
 
 			return 0;
 		}
+
+		YoOhw_COS_Customers::refresh_derived_intelligence( $customer_id );
 
 		return $customer_id;
 	}
@@ -246,14 +255,16 @@ final class YoOhw_COS_Commerce_Aggregates {
 
 			self::refresh_order_bounds( $customer_id );
 			$wpdb->query( 'COMMIT' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.TransactionQuery
-
-			return true;
 		} catch ( Throwable $exception ) {
 			$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.TransactionQuery
 			do_action( 'yoohw_cos_commerce_rebuild_error', $exception, $customer_id );
 
 			return false;
 		}
+
+		YoOhw_COS_Customers::refresh_derived_intelligence( $customer_id );
+
+		return true;
 	}
 
 	private static function lock_and_initialize_customer( int $customer_id ): void {
