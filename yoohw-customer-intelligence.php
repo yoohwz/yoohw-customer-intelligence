@@ -3,7 +3,7 @@
  * Plugin Name: YoOhw Customer Intelligence for WooCommerce
  * Plugin URI: https://yoohw.com/product/customer-intelligence/
  * Description: Unified customer intelligence and operations platform for WooCommerce.
- * Version: 1.2.2
+ * Version: 1.3.0
  * Requires at least: 6.9
  * Tested up to: 7.0
  * Requires PHP: 7.4
@@ -20,7 +20,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'YOOHW_COS_VERSION', '1.2.2' );
+define( 'YOOHW_COS_VERSION', '1.3.0' );
 define( 'YOOHW_COS_DB_VERSION', '0.2.1' );
 define( 'YOOHW_COS_FILE', __FILE__ );
 define( 'YOOHW_COS_PATH', plugin_dir_path( __FILE__ ) );

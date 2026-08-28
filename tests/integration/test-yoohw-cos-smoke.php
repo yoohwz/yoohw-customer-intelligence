@@ -1287,7 +1287,7 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 		$root = dirname( __DIR__, 2 );
 
 		if ( ! defined( 'YOOHW_COS_VERSION' ) ) {
-			define( 'YOOHW_COS_VERSION', '1.2.2' );
+			define( 'YOOHW_COS_VERSION', '1.3.0' );
 		}
 
 		if ( ! defined( 'YOOHW_COS_DB_VERSION' ) ) {
