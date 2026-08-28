@@ -20,6 +20,7 @@ final class YoOhw_COS_Events {
 			'object_id'     => null,
 			'description'   => '',
 			'metadata'      => array(),
+			'event_key'     => null,
 			'created_at'    => YoOhw_COS_DB::now(),
 		);
 
@@ -30,6 +31,8 @@ final class YoOhw_COS_Events {
 		}
 
 		$table = YoOhw_COS_DB::events_table();
+		$event_key = self::normalize_event_key( (string) ( $args['event_key'] ?? '' ) );
+		$previous_error_suppression = '' !== $event_key ? $wpdb->suppress_errors() : null;
 
 		$inserted = $wpdb->insert(
 			$table,
@@ -43,6 +46,7 @@ final class YoOhw_COS_Events {
 				'object_id'     => $args['object_id'] ? absint( $args['object_id'] ) : null,
 				'description'   => wp_kses_post( $args['description'] ),
 				'metadata_json' => YoOhw_COS_DB::json_encode( (array) $args['metadata'] ),
+				'event_key'     => $event_key ?: null,
 				'created_at'    => $args['created_at'],
 			),
 			array(
@@ -56,10 +60,23 @@ final class YoOhw_COS_Events {
 				'%s',
 				'%s',
 				'%s',
+				'%s',
 			)
 		);
 
+		if ( '' !== $event_key ) {
+			$wpdb->suppress_errors( (bool) $previous_error_suppression );
+		}
+
 		if ( ! $inserted ) {
+			if ( '' !== $event_key ) {
+				$existing_id = $wpdb->get_var(
+					$wpdb->prepare( 'SELECT id FROM %i WHERE event_key = %s LIMIT 1', $table, $event_key )
+				);
+
+				return absint( $existing_id );
+			}
+
 			return 0;
 		}
 
@@ -68,6 +85,39 @@ final class YoOhw_COS_Events {
 		do_action( 'yoohw_cos_event_recorded', $event_id, $args );
 
 		return $event_id;
+	}
+
+	public static function make_event_key(
+		string $event_source,
+		string $event_type,
+		string $object_type,
+		int $object_id,
+		int $customer_id = 0,
+		string $external_id = ''
+	): string {
+		$identity = implode(
+			'|',
+			array(
+				sanitize_key( $event_source ),
+				sanitize_key( $event_type ),
+				sanitize_key( $object_type ),
+				absint( $object_id ),
+				absint( $customer_id ),
+				sanitize_text_field( $external_id ),
+			)
+		);
+
+		return hash( 'sha256', $identity );
+	}
+
+	private static function normalize_event_key( string $event_key ): string {
+		$event_key = trim( sanitize_text_field( $event_key ) );
+
+		if ( '' === $event_key ) {
+			return '';
+		}
+
+		return strlen( $event_key ) <= 191 ? $event_key : hash( 'sha256', $event_key );
 	}
 
 	public static function get_customer_events( int $customer_id, array $args = array() ): array {

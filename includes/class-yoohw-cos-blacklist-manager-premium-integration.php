@@ -601,6 +601,10 @@ final class YoOhw_COS_Blacklist_Manager_Premium_Integration {
 		return $result;
 	}
 
+	public static function get_backfill_source_count(): int {
+		return self::count_risk_orders() + self::count_detection_log_rows() + self::count_payment_abuse_rows();
+	}
+
 	private static function backfill_risk_orders_batch( int $limit, int $page ): array {
 		$query = self::risk_order_query( $limit, $page );
 		$ids   = is_array( $query['ids'] ?? null ) ? $query['ids'] : array();
@@ -1047,19 +1051,6 @@ final class YoOhw_COS_Blacklist_Manager_Premium_Integration {
 			return false;
 		}
 
-		if (
-			! empty( $args['idempotent'] )
-			&& '' !== $object_type
-			&& $object_id > 0
-			&& YoOhw_COS_Events::event_exists( $event_type, $object_type, $object_id, $customer_id )
-		) {
-			if ( $customer_id > 0 ) {
-				self::refresh_customer_risk_score( $customer_id );
-			}
-
-			return false;
-		}
-
 		$event_args = array(
 				'customer_id'  => $customer_id ?: null,
 				'wp_user_id'   => ! empty( $args['wp_user_id'] ) ? absint( $args['wp_user_id'] ) : null,
@@ -1071,6 +1062,16 @@ final class YoOhw_COS_Blacklist_Manager_Premium_Integration {
 				'description'  => wp_kses_post( (string) ( $args['description'] ?? '' ) ),
 				'metadata'     => self::sanitize_metadata( (array) ( $args['metadata'] ?? array() ) ),
 		);
+
+		if ( ! empty( $args['idempotent'] ) && '' !== $object_type && $object_id > 0 ) {
+			$event_args['event_key'] = YoOhw_COS_Events::make_event_key(
+				self::EVENT_SOURCE,
+				$event_type,
+				$object_type,
+				$object_id,
+				0
+			);
+		}
 
 		$created_at = self::normalize_created_at( $args['created_at'] ?? '' );
 

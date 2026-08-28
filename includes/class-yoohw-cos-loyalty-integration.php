@@ -292,11 +292,8 @@ final class YoOhw_COS_Loyalty_Integration {
 	private static function record_points_event( int $customer_id, int $user_id, int $log_id, array $payload, array $context = array() ): bool {
 		$event_type = self::map_points_event_type( sanitize_key( (string) ( $payload['action'] ?? '' ) ), (float) ( $payload['amount'] ?? 0 ) );
 
-		if ( YoOhw_COS_Events::event_exists( $event_type, 'loyalty_points_log', $log_id, $customer_id ) ) {
-			return false;
-		}
-
 		$event_args = array(
+			'event_key'    => YoOhw_COS_Events::make_event_key( self::EVENT_SOURCE, $event_type, 'loyalty_points_log', $log_id ),
 			'customer_id'  => $customer_id,
 			'wp_user_id'   => $user_id,
 			'event_type'   => $event_type,

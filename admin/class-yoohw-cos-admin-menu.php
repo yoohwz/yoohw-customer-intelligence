@@ -3954,21 +3954,14 @@ final class YoOhw_COS_Admin_Menu {
 	}
 
 	private static function is_loyalty_integration_active(): bool {
-		return class_exists( 'YoOhw_COS_Loyalty_Integration' )
-			&& is_callable( array( 'YoOhw_COS_Loyalty_Integration', 'is_loyalty_plugin_active' ) )
-			&& YoOhw_COS_Loyalty_Integration::is_loyalty_plugin_active();
+		return YoOhw_COS_Integrations::loyalty_active();
 	}
 
 	private static function is_blacklist_manager_integration_active(): bool {
-		return class_exists( 'YoOhw_COS_Blacklist_Manager_Integration' )
-			&& is_callable( array( 'YoOhw_COS_Blacklist_Manager_Integration', 'is_active' ) )
-			&& YoOhw_COS_Blacklist_Manager_Integration::is_active();
+		return YoOhw_COS_Integrations::blacklist_active();
 	}
 
 	private static function is_blacklist_manager_premium_integration_active(): bool {
-		return self::is_blacklist_manager_integration_active()
-			&& class_exists( 'YoOhw_COS_Blacklist_Manager_Premium_Integration' )
-			&& is_callable( array( 'YoOhw_COS_Blacklist_Manager_Premium_Integration', 'is_active' ) )
-			&& YoOhw_COS_Blacklist_Manager_Premium_Integration::is_active();
+		return YoOhw_COS_Integrations::blacklist_premium_active();
 	}
 }

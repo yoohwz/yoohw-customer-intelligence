@@ -952,16 +952,11 @@ final class YoOhw_COS_Admin_Tools {
 	}
 
 	private static function is_blacklist_manager_sync_available(): bool {
-		return class_exists( 'YoOhw_COS_Blacklist_Manager_Integration' )
-			&& is_callable( array( 'YoOhw_COS_Blacklist_Manager_Integration', 'is_active' ) )
-			&& YoOhw_COS_Blacklist_Manager_Integration::is_active();
+		return YoOhw_COS_Integrations::blacklist_active();
 	}
 
 	private static function is_premium_risk_sync_available(): bool {
-		return self::is_blacklist_manager_sync_available()
-			&& class_exists( 'YoOhw_COS_Blacklist_Manager_Premium_Integration' )
-			&& is_callable( array( 'YoOhw_COS_Blacklist_Manager_Premium_Integration', 'is_active' ) )
-			&& YoOhw_COS_Blacklist_Manager_Premium_Integration::is_active()
+		return YoOhw_COS_Integrations::blacklist_premium_active()
 			&& is_callable( array( 'YoOhw_COS_Blacklist_Manager_Premium_Integration', 'backfill_legacy_signals' ) );
 	}
 
@@ -977,132 +972,7 @@ final class YoOhw_COS_Admin_Tools {
 	}
 
 	private static function count_blacklist_sync_rows(): int {
-		$total = self::count_core_blacklist_rows();
-
-		if ( self::is_premium_risk_sync_available() ) {
-			$total += self::count_premium_blacklist_rows();
-		}
-
-		return $total;
-	}
-
-	private static function count_core_blacklist_rows(): int {
-		global $wpdb;
-
-		if ( ! self::is_blacklist_manager_sync_available() ) {
-			return 0;
-		}
-
-		$blacklist_table = $wpdb->prefix . 'wc_blacklist';
-		$log_table       = $wpdb->prefix . 'wc_blacklist_detection_log';
-
-		return self::count_table_rows( $blacklist_table )
-			+ self::count_detection_log_rows_like_source( $log_table, 'woo_order_%' );
-	}
-
-	private static function count_premium_blacklist_rows(): int {
-		global $wpdb;
-
-		return self::count_premium_risk_orders()
-			+ self::count_premium_detection_log_rows()
-			+ self::count_table_rows( $wpdb->prefix . 'wc_blacklist_payment_abuse_events' );
-	}
-
-	private static function count_premium_risk_orders(): int {
-		if ( ! function_exists( 'wc_get_orders' ) ) {
-			return 0;
-		}
-
-		$query = wc_get_orders(
-			array(
-				'type'       => 'shop_order',
-				'limit'      => 1,
-				'page'       => 1,
-				'paginate'   => true,
-				'orderby'    => 'ID',
-				'order'      => 'ASC',
-				'return'     => 'ids',
-				'status'     => function_exists( 'wc_get_order_statuses' ) ? array_keys( wc_get_order_statuses() ) : 'any',
-				'meta_query' => array(
-					array(
-						'key'     => '_risk_score',
-						'value'   => 0,
-						'compare' => '>',
-						'type'    => 'NUMERIC',
-					),
-				),
-			)
-		);
-
-		if ( is_object( $query ) && isset( $query->total ) ) {
-			return absint( $query->total );
-		}
-
-		return is_array( $query ) ? count( $query ) : 0;
-	}
-
-	private static function count_premium_detection_log_rows(): int {
-		global $wpdb;
-
-		$table = $wpdb->prefix . 'wc_blacklist_detection_log';
-
-		if ( ! self::table_exists( $table ) ) {
-			return 0;
-		}
-
-		return (int) $wpdb->get_var(
-			$wpdb->prepare(
-				"SELECT COUNT(*)
-				FROM %i
-				WHERE (source LIKE %s AND details LIKE %s)
-				OR source IN ('woo_checkout', 'woo_api_checkout', 'paypal_payments_create_order')",
-				$table,
-				'woo_order_%',
-				'%risk_score%'
-			)
-		);
-	}
-
-	private static function count_detection_log_rows_like_source( string $table, string $source_like ): int {
-		global $wpdb;
-
-		if ( ! self::table_exists( $table ) ) {
-			return 0;
-		}
-
-		return (int) $wpdb->get_var(
-			$wpdb->prepare(
-				'SELECT COUNT(*) FROM %i WHERE source LIKE %s',
-				$table,
-				$source_like
-			)
-		);
-	}
-
-	private static function count_table_rows( string $table ): int {
-		global $wpdb;
-
-		if ( ! self::table_exists( $table ) ) {
-			return 0;
-		}
-
-		return (int) $wpdb->get_var(
-			$wpdb->prepare(
-				'SELECT COUNT(*) FROM %i',
-				$table
-			)
-		);
-	}
-
-	private static function table_exists( string $table ): bool {
-		global $wpdb;
-
-		return $table === $wpdb->get_var(
-			$wpdb->prepare(
-				'SHOW TABLES LIKE %s',
-				$table
-			)
-		);
+		return YoOhw_COS_Integrations::blacklist_backfill_source_count();
 	}
 
 	public static function handle_assign_customer_segment(): void {

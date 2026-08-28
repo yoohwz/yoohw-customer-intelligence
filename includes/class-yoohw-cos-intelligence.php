@@ -258,14 +258,12 @@ final class YoOhw_COS_Intelligence {
 	}
 
 	/**
-	 * Returns the authoritative risk score for display and cache refreshes.
+	 * Returns the authoritative persisted risk score for list/detail/filter parity.
 	 *
-	 * The value stored on the customer row is a query cache. Integrations and
-	 * time-based decay are always applied here so detail screens never present
-	 * a stale score alongside freshly calculated risk factors.
+	 * Live evidence is folded into this value by the bounded cache refresh worker.
 	 */
 	public static function get_current_risk_score( array $customer ): float {
-		return self::calculate_risk_score( $customer );
+		return min( 100, max( 0, (float) ( $customer['risk_score'] ?? 0 ) ) );
 	}
 
 	public static function calculate_risk_level( float $risk_score ): string {

@@ -5,6 +5,8 @@ final class YoOhw_COS_Loader {
 
 	public static function activate(): void {
 		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-install.php';
+		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-db.php';
+		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-migration-runner.php';
 		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-email-notifications.php';
 		YoOhw_COS_Install::install();
 		YoOhw_COS_Email_Notifications::activate();
@@ -12,7 +14,10 @@ final class YoOhw_COS_Loader {
 
 	public static function deactivate(): void {
 		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-email-notifications.php';
+		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-migration-runner.php';
 		YoOhw_COS_Email_Notifications::deactivate();
+		wp_clear_scheduled_hook( YoOhw_COS_Migration_Runner::HOOK );
+		wp_clear_scheduled_hook( 'yoohw_cos_retry_order_sync' );
 		wp_clear_scheduled_hook( 'yoohw_cos_refresh_risk_score_cache' );
 		wp_clear_scheduled_hook( 'yoohw_cos_backfill_loyalty_history' );
 		wp_clear_scheduled_hook( 'yoohw_cos_reassociate_premium_checkout_events' );
@@ -22,6 +27,7 @@ final class YoOhw_COS_Loader {
 		self::includes();
 
 		YoOhw_COS_Install::maybe_update();
+		YoOhw_COS_Migration_Runner::init();
 
 		if ( ! self::is_woocommerce_active() ) {
 			if ( is_admin() ) {
@@ -53,6 +59,12 @@ final class YoOhw_COS_Loader {
 	private static function includes(): void {
 		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-install.php';
 		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-db.php';
+		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-commerce-metrics-policy.php';
+		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-customer-identity.php';
+		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-commerce-aggregates.php';
+		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-migration-runner.php';
+		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-notification-ledger.php';
+		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-integrations.php';
 		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-customer-query.php';
 		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-events.php';
 		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-customers.php';

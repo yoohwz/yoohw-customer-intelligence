@@ -7,8 +7,10 @@ final class YoOhw_COS_Install {
 		self::create_tables();
 		self::ensure_customer_schema();
 		self::ensure_task_schema();
+		self::ensure_event_schema();
 
 		update_option( 'yoohw_cos_version', YOOHW_COS_VERSION );
+		YoOhw_COS_Migration_Runner::register_upgrade( '', self::db_version() );
 		update_option( 'yoohw_cos_db_version', self::db_version() );
 	}
 
@@ -22,6 +24,8 @@ final class YoOhw_COS_Install {
 			'customer_tags',
 			'segments',
 			'customer_segments',
+			'order_facts',
+			'notification_log',
 		);
 	}
 
@@ -44,6 +48,8 @@ final class YoOhw_COS_Install {
 		$customer_tags_table     = $wpdb->prefix . 'yoohw_cos_customer_tags';
 		$segments_table          = $wpdb->prefix . 'yoohw_cos_segments';
 		$customer_segments_table = $wpdb->prefix . 'yoohw_cos_customer_segments';
+		$order_facts_table       = $wpdb->prefix . 'yoohw_cos_customer_order_facts';
+		$notification_log_table  = $wpdb->prefix . 'yoohw_cos_notification_log';
 
 		$sql_customers = "CREATE TABLE {$customers_table} (
 			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -56,6 +62,7 @@ final class YoOhw_COS_Install {
 			total_orders BIGINT UNSIGNED NOT NULL DEFAULT 0,
 			total_spent DECIMAL(20,6) NOT NULL DEFAULT 0.000000,
 			average_order_value DECIMAL(20,6) NOT NULL DEFAULT 0.000000,
+			commerce_metrics_version SMALLINT UNSIGNED NOT NULL DEFAULT 0,
 			risk_score DECIMAL(5,2) NOT NULL DEFAULT 0.00,
 			trust_score DECIMAL(5,2) NOT NULL DEFAULT 0.00,
 			loyalty_score DECIMAL(5,2) NOT NULL DEFAULT 0.00,
@@ -104,6 +111,7 @@ final class YoOhw_COS_Install {
 			object_id BIGINT UNSIGNED NULL,
 			description TEXT NULL,
 			metadata_json LONGTEXT NULL,
+			event_key VARCHAR(191) NULL,
 			created_at DATETIME NOT NULL,
 			PRIMARY KEY  (id),
 			KEY customer_id (customer_id),
@@ -112,6 +120,7 @@ final class YoOhw_COS_Install {
 			KEY event_source (event_source),
 			KEY severity (severity),
 			KEY object_lookup (object_type, object_id),
+			UNIQUE KEY event_key (event_key),
 			KEY created_at (created_at)
 		) {$charset_collate};";
 
@@ -160,7 +169,8 @@ final class YoOhw_COS_Install {
 			KEY priority (priority),
 			KEY due_date (due_date),
 			KEY completed_at (completed_at),
-			KEY task_queue (status, due_date)
+			KEY task_queue (status, due_date),
+			KEY notification_queue (assigned_user_id, status, due_date, id)
 		) {$charset_collate};";
 
 		$sql_tags = "CREATE TABLE {$tags_table} (
@@ -214,6 +224,40 @@ final class YoOhw_COS_Install {
 			KEY segment_id (segment_id)
 		) {$charset_collate};";
 
+		$sql_order_facts = "CREATE TABLE {$order_facts_table} (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			order_id BIGINT UNSIGNED NOT NULL,
+			customer_id BIGINT UNSIGNED NOT NULL,
+			order_status VARCHAR(30) NOT NULL,
+			order_total DECIMAL(20,6) NOT NULL DEFAULT 0.000000,
+			revenue_amount DECIMAL(20,6) NOT NULL DEFAULT 0.000000,
+			counts_as_order TINYINT(1) NOT NULL DEFAULT 0,
+			counts_as_revenue TINYINT(1) NOT NULL DEFAULT 0,
+			order_date DATETIME NOT NULL,
+			policy_version SMALLINT UNSIGNED NOT NULL DEFAULT 1,
+			updated_at DATETIME NOT NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY order_id (order_id),
+			KEY customer_order (customer_id, order_date, order_id),
+			KEY contribution (customer_id, counts_as_order)
+		) {$charset_collate};";
+
+		$sql_notification_log = "CREATE TABLE {$notification_log_table} (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			notification_key VARCHAR(191) NOT NULL,
+			notification_type VARCHAR(100) NOT NULL,
+			task_id BIGINT UNSIGNED NULL,
+			recipient_user_id BIGINT UNSIGNED NULL,
+			status VARCHAR(20) NOT NULL DEFAULT 'pending',
+			created_at DATETIME NOT NULL,
+			sent_at DATETIME NULL,
+			expires_at DATETIME NOT NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY notification_key (notification_key),
+			KEY expires_at (expires_at),
+			KEY task_lookup (task_id, notification_type)
+		) {$charset_collate};";
+
 		dbDelta( $sql_customers );
 		dbDelta( $sql_events );
 		dbDelta( $sql_notes );
@@ -222,6 +266,8 @@ final class YoOhw_COS_Install {
 		dbDelta( $sql_customer_tags );
 		dbDelta( $sql_segments );
 		dbDelta( $sql_customer_segments );
+		dbDelta( $sql_order_facts );
+		dbDelta( $sql_notification_log );
 	}
 
 	public static function maybe_update(): void {
@@ -231,78 +277,10 @@ final class YoOhw_COS_Install {
 			self::create_tables();
 			self::ensure_customer_schema();
 			self::ensure_task_schema();
-			$migration_complete = true;
-
-			if ( version_compare( $current_db_version, '0.1.10', '<' ) ) {
-				$migration_complete = self::migrate_customer_activity_semantics();
-			}
-
-			if ( $migration_complete ) {
-				update_option( 'yoohw_cos_db_version', self::db_version() );
-			}
+			self::ensure_event_schema();
+			YoOhw_COS_Migration_Runner::register_upgrade( $current_db_version, self::db_version() );
+			update_option( 'yoohw_cos_db_version', self::db_version() );
 		}
-	}
-
-	private static function migrate_customer_activity_semantics(): bool {
-		global $wpdb;
-
-		$customers_table = $wpdb->prefix . 'yoohw_cos_customers';
-		$events_table    = $wpdb->prefix . 'yoohw_cos_events';
-
-		if ( ! self::table_exists( $customers_table ) || ! self::table_exists( $events_table ) ) {
-			return false;
-		}
-
-		/*
-		 * Historical order sync previously stored the sync timestamp as customer
-		 * activity. Restore meaningful activity from the latest order or a real
-		 * loyalty event before intelligence is recalculated in background batches.
-		 */
-		$updated = $wpdb->query(
-			$wpdb->prepare(
-				"UPDATE %i c
-				LEFT JOIN (
-					SELECT customer_id, MAX(created_at) AS last_loyalty_activity
-					FROM %i
-					WHERE event_source = %s
-					GROUP BY customer_id
-				) loyalty_events ON loyalty_events.customer_id = c.id
-				SET c.last_activity_date = CASE
-					WHEN loyalty_events.last_loyalty_activity IS NOT NULL
-						AND (
-							c.last_order_date IS NULL
-							OR loyalty_events.last_loyalty_activity > c.last_order_date
-						)
-						THEN loyalty_events.last_loyalty_activity
-					WHEN c.last_order_date IS NOT NULL
-						THEN c.last_order_date
-					ELSE c.last_activity_date
-				END",
-				$customers_table,
-				$events_table,
-				'wc_loyalty'
-			)
-		);
-
-		if ( false === $updated ) {
-			return false;
-		}
-
-		update_option(
-			'yoohw_cos_activity_semantics_recalculation',
-			array(
-				'status'     => 'pending',
-				'next_page'  => 1,
-				'started_at' => YoOhw_COS_DB::now(),
-			),
-			false
-		);
-
-		if ( ! wp_next_scheduled( 'yoohw_cos_recalculate_activity_semantics' ) ) {
-			wp_schedule_single_event( time() + 5, 'yoohw_cos_recalculate_activity_semantics' );
-		}
-
-		return true;
 	}
 
 	private static function add_first_order_columns(): void {
@@ -510,6 +488,23 @@ final class YoOhw_COS_Install {
 		self::add_archive_columns();
 		self::add_loyalty_columns();
 
+		$metrics_version_exists = $wpdb->get_var(
+			$wpdb->prepare(
+				'SHOW COLUMNS FROM %i LIKE %s',
+				$table,
+				'commerce_metrics_version'
+			)
+		);
+
+		if ( empty( $metrics_version_exists ) ) {
+			$wpdb->query(
+				$wpdb->prepare(
+					'ALTER TABLE %i ADD commerce_metrics_version SMALLINT UNSIGNED NOT NULL DEFAULT 0 AFTER average_order_value',
+					$table
+				)
+			);
+		}
+
 		self::maybe_add_index( $table, 'last_activity_date', 'last_activity_date' );
 		self::maybe_add_index( $table, 'lifecycle_stage', 'lifecycle_stage' );
 		self::maybe_add_index( $table, 'loyalty_score', 'loyalty_score' );
@@ -544,6 +539,36 @@ final class YoOhw_COS_Install {
 		}
 
 		self::maybe_add_unique_index( $table, 'source_key', 'source_key' );
+	}
+
+	private static function ensure_event_schema(): void {
+		global $wpdb;
+
+		$table = $wpdb->prefix . 'yoohw_cos_events';
+
+		if ( ! self::table_exists( $table ) ) {
+			return;
+		}
+
+		$event_key_exists = $wpdb->get_var(
+			$wpdb->prepare( 'SHOW COLUMNS FROM %i LIKE %s', $table, 'event_key' )
+		);
+
+		if ( empty( $event_key_exists ) ) {
+			$wpdb->query(
+				$wpdb->prepare( 'ALTER TABLE %i ADD event_key VARCHAR(191) NULL AFTER metadata_json', $table )
+			);
+		}
+
+		$index_exists = $wpdb->get_var(
+			$wpdb->prepare( 'SHOW INDEX FROM %i WHERE Key_name = %s', $table, 'event_key' )
+		);
+
+		if ( empty( $index_exists ) ) {
+			$wpdb->query(
+				$wpdb->prepare( 'ALTER TABLE %i ADD UNIQUE KEY %i (%i)', $table, 'event_key', 'event_key' )
+			);
+		}
 	}
 
 	private static function table_exists( string $table ): bool {

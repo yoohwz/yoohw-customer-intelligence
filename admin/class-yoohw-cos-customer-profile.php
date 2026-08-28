@@ -14,7 +14,9 @@ final class YoOhw_COS_Customer_Profile {
 			return;
 		}
 
-		$customer['risk_score'] = YoOhw_COS_Intelligence::get_current_risk_score( $customer );
+		// Lists, filters and details share the persisted cache; integrations and the
+		// bounded refresh worker update this value when risk evidence changes.
+		$customer['risk_score'] = (float) ( $customer['risk_score'] ?? 0 );
 
 		$events = YoOhw_COS_Events::get_customer_events( $customer_id, array(
 			'limit' => 20,
@@ -1712,22 +1714,15 @@ final class YoOhw_COS_Customer_Profile {
 	}
 
 	private static function is_loyalty_integration_active(): bool {
-		return class_exists( 'YoOhw_COS_Loyalty_Integration' )
-			&& is_callable( array( 'YoOhw_COS_Loyalty_Integration', 'is_loyalty_plugin_active' ) )
-			&& YoOhw_COS_Loyalty_Integration::is_loyalty_plugin_active();
+		return YoOhw_COS_Integrations::loyalty_active();
 	}
 
 	private static function is_blacklist_manager_integration_active(): bool {
-		return class_exists( 'YoOhw_COS_Blacklist_Manager_Integration' )
-			&& is_callable( array( 'YoOhw_COS_Blacklist_Manager_Integration', 'is_active' ) )
-			&& YoOhw_COS_Blacklist_Manager_Integration::is_active();
+		return YoOhw_COS_Integrations::blacklist_active();
 	}
 
 	private static function is_blacklist_manager_premium_integration_active(): bool {
-		return self::is_blacklist_manager_integration_active()
-			&& class_exists( 'YoOhw_COS_Blacklist_Manager_Premium_Integration' )
-			&& is_callable( array( 'YoOhw_COS_Blacklist_Manager_Premium_Integration', 'is_active' ) )
-			&& YoOhw_COS_Blacklist_Manager_Premium_Integration::is_active();
+		return YoOhw_COS_Integrations::blacklist_premium_active();
 	}
 
 	private static function format_loyalty_level_label( string $level ): string {
