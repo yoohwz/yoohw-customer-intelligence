@@ -18,6 +18,7 @@ $yoohw_cos_table_suffixes = array(
 	'yoohw_cos_customer_segments',
 	'yoohw_cos_customer_tags',
 	'yoohw_cos_notification_log',
+	'yoohw_cos_migration_issues',
 	'yoohw_cos_customer_order_facts',
 	'yoohw_cos_segments',
 	'yoohw_cos_tags',

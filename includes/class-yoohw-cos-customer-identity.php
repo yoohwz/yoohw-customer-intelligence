@@ -65,15 +65,24 @@ final class YoOhw_COS_Customer_Identity {
 		$customer_ids = array();
 
 		if ( $order->get_id() > 0 && is_object( $data_store ) && method_exists( $data_store, 'read_meta' ) ) {
-			$metadata = $data_store->read_meta( $order );
+			for ( $attempt = 0; $attempt < 2 && empty( $customer_ids ); $attempt++ ) {
+				$metadata = $data_store->read_meta( $order );
 
-			foreach ( is_array( $metadata ) ? $metadata : array() as $meta ) {
-				if (
-					is_object( $meta )
-					&& isset( $meta->meta_key )
-					&& YoOhw_COS_Customers::ORDER_CUSTOMER_META_KEY === (string) $meta->meta_key
-				) {
-					$customer_ids[] = absint( maybe_unserialize( $meta->meta_value ?? 0 ) );
+				foreach ( is_array( $metadata ) ? $metadata : array() as $meta ) {
+					if ( is_object( $meta ) && method_exists( $meta, 'get_data' ) ) {
+						$meta = $meta->get_data();
+					}
+
+					$meta_key = is_object( $meta )
+						? (string) ( $meta->meta_key ?? $meta->key ?? '' )
+						: (string) ( $meta['meta_key'] ?? $meta['key'] ?? '' );
+					$meta_value = is_object( $meta )
+						? ( $meta->meta_value ?? $meta->value ?? 0 )
+						: ( $meta['meta_value'] ?? $meta['value'] ?? 0 );
+
+					if ( YoOhw_COS_Customers::ORDER_CUSTOMER_META_KEY === $meta_key ) {
+						$customer_ids[] = absint( maybe_unserialize( $meta_value ) );
+					}
 				}
 			}
 		}
@@ -199,6 +208,27 @@ final class YoOhw_COS_Customer_Identity {
 		}
 
 		return $result;
+	}
+
+	/**
+	 * Whether a canonical identity value is unowned or already belongs to the
+	 * target customer. This is the write-side counterpart to resolve().
+	 */
+	public static function can_assign( string $kind, $value, int $customer_id ): bool {
+		if ( ! in_array( $kind, array( 'wp_user_id', 'email', 'phone' ), true ) ) {
+			return false;
+		}
+
+		$identity = self::normalize( array( $kind => $value ) );
+		$value    = $identity[ $kind ];
+
+		if ( empty( $value ) ) {
+			return false;
+		}
+
+		$matches = self::find_matches( $kind, $value );
+
+		return empty( $matches ) || ( 1 === count( $matches ) && absint( $matches[0] ) === absint( $customer_id ) );
 	}
 
 	private static function find_matches( string $kind, $value ): array {

@@ -13,15 +13,13 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 		parent::set_up();
 
 		$this->load_plugin_classes();
-		YoOhw_COS_Install::install();
 	}
 
 	public function tear_down(): void {
-		if ( class_exists( 'YoOhw_COS_Customers' ) ) {
-			YoOhw_COS_Customers::reset_data();
-		}
-
 		parent::tear_down();
+
+		$this->clean_test_plugin_data();
+		delete_option( 'yoohw_cos_scoring_settings' );
 	}
 
 	public function test_install_creates_expected_custom_tables(): void {
@@ -230,8 +228,16 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 			$this->markTestSkipped( 'WooCommerce test helpers are not available.' );
 		}
 
-		$order = $this->create_order( 'reassign-one@example.test', 'processing', '80.00' );
+		$settings = YoOhw_COS_Intelligence::get_scoring_settings_defaults();
+		$settings['customer_status']['new_max_orders'] = 0;
+		YoOhw_COS_Intelligence::update_scoring_settings( $settings );
+		$order = $this->create_order( 'reassign-one@example.test', 'processing', '6000.00' );
 		$first_id = YoOhw_COS_Customers::sync_from_order( $order );
+		$first_before = YoOhw_COS_Customers::get_customer( $first_id );
+		$this->assertSame( 'platinum', $first_before['vip_status'] );
+		$this->assertSame( 'vip', $first_before['customer_status'] );
+		$this->assertSame( 'vip', $first_before['lifecycle_stage'] );
+		$this->assertSame( 70.0, (float) $first_before['trust_score'] );
 		$second_id = YoOhw_COS_Customers::create_customer(
 			array( 'email' => 'reassign-two@example.test', 'display_name' => 'Second customer' )
 		);
@@ -245,7 +251,15 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 		$this->assertSame( 0, absint( $first['total_orders'] ) );
 		$this->assertSame( 0.0, (float) $first['total_spent'] );
 		$this->assertSame( 1, absint( $second['total_orders'] ) );
-		$this->assertSame( 80.0, (float) $second['total_spent'] );
+		$this->assertSame( 6000.0, (float) $second['total_spent'] );
+		$this->assertSame( 'none', $first['vip_status'] );
+		$this->assertSame( 'inactive', $first['customer_status'] );
+		$this->assertSame( 'dormant', $first['lifecycle_stage'] );
+		$this->assertSame( 50.0, (float) $first['trust_score'] );
+		$this->assertSame( 'platinum', $second['vip_status'] );
+		$this->assertSame( 'vip', $second['customer_status'] );
+		$this->assertSame( 'vip', $second['lifecycle_stage'] );
+		$this->assertSame( 70.0, (float) $second['trust_score'] );
 	}
 
 	public function test_identity_normalization_precedence_and_ambiguous_phone(): void {
@@ -297,7 +311,61 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 		$order->save();
 
 		$this->assertSame( $customer_id, YoOhw_COS_Customers::sync_from_order( $order ) );
-		$this->assertSame( 1, absint( YoOhw_COS_Customers::get_customer( $customer_id )['total_orders'] ) );
+		$customer = YoOhw_COS_Customers::get_customer( $customer_id );
+		$this->assertSame( 1, absint( $customer['total_orders'] ) );
+		$this->assertSame( 'guest-changed@example.test', $customer['email'] );
+	}
+
+	public function test_conflicting_order_identity_is_recorded_without_overwrite(): void {
+		if ( ! function_exists( 'wc_create_order' ) ) {
+			$this->markTestSkipped( 'WooCommerce test helpers are not available.' );
+		}
+
+		global $wpdb;
+		$user_id = self::factory()->user->create( array( 'user_email' => 'registered-owner@example.test' ) );
+		$owner_id = YoOhw_COS_Customers::create_customer(
+			array( 'wp_user_id' => $user_id, 'email' => 'registered-owner@example.test', 'display_name' => 'Registered owner' )
+		);
+		$other_id = YoOhw_COS_Customers::create_customer(
+			array( 'email' => 'claimed-email@example.test', 'display_name' => 'Email owner' )
+		);
+		$order = $this->create_order( 'claimed-email@example.test', 'processing', '25.00' );
+		$order = wc_get_order( $order->get_id() );
+		$order->delete_meta_data( YoOhw_COS_Customers::ORDER_CUSTOMER_META_KEY );
+		$order->set_customer_id( $user_id );
+		$order->save();
+
+		$this->assertSame( $owner_id, YoOhw_COS_Customers::sync_from_order( $order ) );
+		$this->assertSame( 'registered-owner@example.test', YoOhw_COS_Customers::get_customer( $owner_id )['email'] );
+		$this->assertSame( 'claimed-email@example.test', YoOhw_COS_Customers::get_customer( $other_id )['email'] );
+		$this->assertSame(
+			1,
+			(int) $wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT COUNT(*) FROM %i WHERE event_type = 'customer_identity_conflict' AND object_id = %d",
+					YoOhw_COS_DB::events_table(),
+					$order->get_id()
+				)
+			)
+		);
+	}
+
+	public function test_guest_profile_safely_adopts_unowned_wp_user(): void {
+		if ( ! function_exists( 'wc_create_order' ) ) {
+			$this->markTestSkipped( 'WooCommerce test helpers are not available.' );
+		}
+
+		$order       = $this->create_order( 'guest-register@example.test', 'processing', '30.00' );
+		$customer_id = YoOhw_COS_Customers::sync_from_order( $order );
+		$user_id     = self::factory()->user->create( array( 'user_email' => 'registered-new@example.test' ) );
+		$order->set_customer_id( $user_id );
+		$order->set_billing_email( 'registered-new@example.test' );
+		$order->save();
+
+		$this->assertSame( $customer_id, YoOhw_COS_Customers::sync_from_order( $order ) );
+		$customer = YoOhw_COS_Customers::get_customer( $customer_id );
+		$this->assertSame( $user_id, absint( $customer['wp_user_id'] ) );
+		$this->assertSame( 'registered-new@example.test', $customer['email'] );
 	}
 
 	public function test_persisted_explicit_link_wins_over_stale_order_object_meta(): void {
@@ -312,6 +380,7 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 			array( 'email' => 'stale-link-new@example.test', 'display_name' => 'Persisted target' )
 		);
 
+		$order->read_meta_data( true );
 		$order->update_meta_data( YoOhw_COS_Customers::ORDER_CUSTOMER_META_KEY, $second_id );
 		$order->save();
 
@@ -329,7 +398,15 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 		$customer_id = YoOhw_COS_Customers::sync_from_order( $order );
 		YoOhw_COS_Customers::update_customer(
 			$customer_id,
-			array( 'total_orders' => 99, 'total_spent' => 999, 'average_order_value' => 10 )
+			array(
+				'total_orders' => 99,
+				'total_spent' => 9999,
+				'average_order_value' => 101,
+				'vip_status' => 'platinum',
+				'customer_status' => 'vip',
+				'lifecycle_stage' => 'vip',
+				'trust_score' => 100,
+			)
 		);
 
 		$this->assertTrue( YoOhw_COS_Commerce_Aggregates::rebuild_customer( $customer_id ) );
@@ -337,6 +414,10 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 		$this->assertSame( 1, absint( $customer['total_orders'] ) );
 		$this->assertSame( 44.0, (float) $customer['total_spent'] );
 		$this->assertSame( 44.0, (float) $customer['average_order_value'] );
+		$this->assertSame( 'none', $customer['vip_status'] );
+		$this->assertSame( 'new', $customer['customer_status'] );
+		$this->assertSame( 'new', $customer['lifecycle_stage'] );
+		$this->assertSame( 50.0, (float) $customer['trust_score'] );
 	}
 
 	public function test_refunded_status_reverses_the_order_population(): void {
@@ -384,7 +465,7 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 			$this->markTestSkipped( 'WooCommerce test helpers are not available.' );
 		}
 
-		$order = $this->create_order( 'delete-order@example.test', 'completed', '35.00' );
+		$order = $this->create_order( 'delete-order@example.test', 'completed', '6000.00' );
 		$customer_id = YoOhw_COS_Customers::sync_from_order( $order );
 		YoOhw_COS_Customers::remove_deleted_order_contribution( $order->get_id(), $order );
 		$customer = YoOhw_COS_Customers::get_customer( $customer_id );
@@ -392,9 +473,15 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 		$this->assertSame( 0, absint( $customer['total_orders'] ) );
 		$this->assertSame( 0.0, (float) $customer['total_spent'] );
 		$this->assertSame( 0.0, (float) $customer['average_order_value'] );
+		$this->assertSame( 'none', $customer['vip_status'] );
+		$this->assertSame( 'inactive', $customer['customer_status'] );
+		$this->assertSame( 'dormant', $customer['lifecycle_stage'] );
+		$this->assertSame( 50.0, (float) $customer['trust_score'] );
 	}
 
 	public function test_event_key_and_notification_claims_are_atomic(): void {
+		global $wpdb;
+
 		$key = YoOhw_COS_Events::make_event_key( 'test', 'delivered', 'external', 123, 0 );
 		$first = YoOhw_COS_Events::record(
 			array( 'event_key' => $key, 'event_type' => 'delivered', 'event_source' => 'test' )
@@ -408,8 +495,75 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 		$notification_key = YoOhw_COS_Notification_Ledger::key( 'retry-test', array( 'id' => 123 ), 7 );
 		$this->assertTrue( YoOhw_COS_Notification_Ledger::claim( $notification_key, 'retry-test', 123, 7 ) );
 		$this->assertFalse( YoOhw_COS_Notification_Ledger::claim( $notification_key, 'retry-test', 123, 7 ) );
+		$wpdb->update(
+			YoOhw_COS_DB::notification_log_table(),
+			array( 'lease_until' => '2000-01-01 00:00:00' ),
+			array( 'notification_key' => $notification_key ),
+			array( '%s' ),
+			array( '%s' )
+		);
+		$this->assertTrue( YoOhw_COS_Notification_Ledger::claim( $notification_key, 'retry-test', 123, 7 ) );
 		YoOhw_COS_Notification_Ledger::mark_sent( $notification_key );
 		$this->assertFalse( YoOhw_COS_Notification_Ledger::claim( $notification_key, 'retry-test', 123, 7 ) );
+		$claim = $wpdb->get_row(
+			$wpdb->prepare( 'SELECT status, attempts FROM %i WHERE notification_key = %s', YoOhw_COS_DB::notification_log_table(), $notification_key ),
+			ARRAY_A
+		);
+		$this->assertSame( 'sent', $claim['status'] );
+		$this->assertSame( 2, absint( $claim['attempts'] ) );
+	}
+
+	public function test_legacy_event_rows_adopt_deterministic_keys_without_duplicates(): void {
+		global $wpdb;
+		$customer_id = YoOhw_COS_Customers::create_customer(
+			array( 'email' => 'legacy-events@example.test', 'display_name' => 'Legacy events' )
+		);
+		$cases = array(
+			array( 'source' => 'woocommerce', 'type' => 'order_synced', 'object_type' => 'order', 'object_id' => 12345 ),
+			array( 'source' => 'wc_loyalty', 'type' => 'loyalty_points_rewarded', 'object_type' => 'loyalty_points_log', 'object_id' => 67890 ),
+		);
+
+		foreach ( $cases as $case ) {
+			$wpdb->insert(
+				YoOhw_COS_DB::events_table(),
+				array(
+					'customer_id' => $customer_id,
+					'event_type' => $case['type'],
+					'event_source' => $case['source'],
+					'severity' => 'info',
+					'object_type' => $case['object_type'],
+					'object_id' => $case['object_id'],
+					'created_at' => YoOhw_COS_DB::now(),
+				),
+				array( '%d', '%s', '%s', '%s', '%s', '%d', '%s' )
+			);
+			$legacy_id = absint( $wpdb->insert_id );
+			$key = YoOhw_COS_Events::make_event_key( $case['source'], $case['type'], $case['object_type'], $case['object_id'], $customer_id );
+			$args = array(
+				'event_key' => $key,
+				'customer_id' => $customer_id,
+				'event_type' => $case['type'],
+				'event_source' => $case['source'],
+				'object_type' => $case['object_type'],
+				'object_id' => $case['object_id'],
+			);
+
+			$this->assertSame( $legacy_id, YoOhw_COS_Events::record( $args ) );
+			$this->assertSame( $legacy_id, YoOhw_COS_Events::record( $args ) );
+			$this->assertSame(
+				1,
+				(int) $wpdb->get_var(
+					$wpdb->prepare(
+						'SELECT COUNT(*) FROM %i WHERE event_type = %s AND object_type = %s AND object_id = %d AND customer_id = %d',
+						YoOhw_COS_DB::events_table(),
+						$case['type'],
+						$case['object_type'],
+						$case['object_id'],
+						$customer_id
+					)
+				)
+			);
+		}
 	}
 
 	public function test_upgrade_from_0110_registers_resumable_data_migrations(): void {
@@ -421,26 +575,106 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 		YoOhw_COS_Install::maybe_update();
 
 		$state = YoOhw_COS_Migration_Runner::get_state();
-		$this->assertSame( '0.2.0', get_option( 'yoohw_cos_db_version' ) );
-		$this->assertSame( 'pending', $state['commerce_facts_v1']['status'] );
-		$this->assertSame( 'pending', $state['identity_normalization_v1']['status'] );
+		$this->assertSame( '0.2.1', get_option( 'yoohw_cos_db_version' ) );
+		$this->assertSame( 'pending', $state['identity_normalization_v2']['status'] );
+		$this->assertSame( 'pending', $state['commerce_facts_v2']['status'] );
 		$this->assertSame(
 			'migration-preserved@example.test',
 			YoOhw_COS_Customers::get_customer( $preserved_customer_id )['email']
 		);
 
-		$state['commerce_facts_v1']['status'] = 'completed';
-		$state['identity_normalization_v1']['status'] = 'pending';
-		$state['identity_normalization_v1']['last_customer_id'] = 0;
+		$state['commerce_facts_v2']['status'] = 'pending';
+		$state['identity_normalization_v2']['status'] = 'pending';
+		$state['identity_normalization_v2']['phase'] = 'scan';
+		$state['identity_normalization_v2']['last_customer_id'] = 0;
 		update_option( 'yoohw_cos_data_migrations', $state, false );
 		delete_option( 'yoohw_cos_data_migration_lock' );
 		YoOhw_COS_Migration_Runner::run_next_batch();
 		$resumed = YoOhw_COS_Migration_Runner::get_state();
 
-		$this->assertSame( 'completed', $resumed['identity_normalization_v1']['status'] );
-		$completed_at = $resumed['identity_normalization_v1']['completed_at'];
+		$this->assertSame( 'retries', $resumed['identity_normalization_v2']['phase'] );
 		YoOhw_COS_Migration_Runner::run_next_batch();
-		$this->assertSame( $completed_at, YoOhw_COS_Migration_Runner::get_state()['identity_normalization_v1']['completed_at'] );
+		$resumed = YoOhw_COS_Migration_Runner::get_state();
+		$this->assertSame( 'completed', $resumed['identity_normalization_v2']['status'] );
+		$completed_at = $resumed['identity_normalization_v2']['completed_at'];
+		YoOhw_COS_Migration_Runner::run_next_batch();
+		$this->assertSame( $completed_at, YoOhw_COS_Migration_Runner::get_state()['identity_normalization_v2']['completed_at'] );
+	}
+
+	public function test_commerce_migration_retries_failures_and_accounts_for_unresolved_orders(): void {
+		if ( ! function_exists( 'wc_create_order' ) ) {
+			$this->markTestSkipped( 'WooCommerce test helpers are not available.' );
+		}
+
+		global $wpdb;
+		$retry_order = $this->create_order( 'migration-retry@example.test', 'processing', '31.00' );
+		YoOhw_COS_Customers::create_customer( array( 'email' => 'ambiguous-one@example.test', 'phone' => '+14155550177', 'display_name' => 'Ambiguous one' ) );
+		YoOhw_COS_Customers::create_customer( array( 'email' => 'ambiguous-two@example.test', 'phone' => '+14155550177', 'display_name' => 'Ambiguous two' ) );
+		$unresolved_order = wc_create_order();
+		$unresolved_order->set_billing_phone( '+1 (415) 555-0177' );
+		$unresolved_order->set_total( '32.00' );
+		$unresolved_order->set_status( 'processing' );
+		$unresolved_order->save();
+		$attempts         = 0;
+		$filter = static function( array $outcome, int $order_id ) use ( $retry_order, &$attempts ): array {
+			if ( $order_id === $retry_order->get_id() && $attempts++ < 1 ) {
+				return array( 'status' => 'retry', 'code' => 'transient_test_failure' );
+			}
+
+			return $outcome;
+		};
+
+		add_filter( 'yoohw_cos_migration_order_sync_outcome', $filter, 10, 2 );
+		delete_option( 'yoohw_cos_data_migrations' );
+		delete_option( 'yoohw_cos_data_migration_lock' );
+		YoOhw_COS_Migration_Runner::register_upgrade( '0.2.0', '0.2.1' );
+		$state = YoOhw_COS_Migration_Runner::get_state();
+		$state['identity_normalization_v2']['status'] = 'completed';
+		update_option( 'yoohw_cos_data_migrations', $state, false );
+
+		try {
+			for ( $batch = 0; $batch < 12; $batch++ ) {
+				delete_option( 'yoohw_cos_data_migration_lock' );
+				YoOhw_COS_Migration_Runner::run_next_batch();
+				$current = YoOhw_COS_Migration_Runner::get_state()['commerce_facts_v2'];
+
+				if ( in_array( $current['status'], array( 'completed', 'completed_with_issues' ), true ) ) {
+					break;
+				}
+			}
+		} finally {
+			remove_filter( 'yoohw_cos_migration_order_sync_outcome', $filter, 10 );
+		}
+
+		$migration = YoOhw_COS_Migration_Runner::get_state()['commerce_facts_v2'];
+		$this->assertSame( 'completed_with_issues', $migration['status'] );
+		$this->assertGreaterThanOrEqual( 1, absint( $migration['unresolved_issues'] ) );
+		$this->assertSame(
+			1,
+			(int) $wpdb->get_var(
+				$wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE order_id = %d', YoOhw_COS_DB::order_facts_table(), $retry_order->get_id() )
+			)
+		);
+		$this->assertSame(
+			'resolved',
+			$wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT status FROM %i WHERE migration_id = 'commerce_facts_v2' AND object_type = 'order' AND object_id = %d",
+					YoOhw_COS_DB::migration_issues_table(),
+					$retry_order->get_id()
+				)
+			)
+		);
+		$this->assertSame(
+			'unresolved',
+			$wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT status FROM %i WHERE migration_id = 'commerce_facts_v2' AND object_type = 'order' AND object_id = %d",
+					YoOhw_COS_DB::migration_issues_table(),
+					$unresolved_order->get_id()
+				)
+			)
+		);
 	}
 
 	public function test_order_admin_customer_filter_uses_query_meta_without_materializing_ids(): void {
@@ -496,6 +730,8 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 		$method->setAccessible( true );
 		$tasks = $method->invoke( null, '2029-12-31 00:00:00', '2030-01-02 00:00:00', 0 );
 		$this->assertCount( 200, $tasks );
+		$remaining = $method->invoke( null, '2029-12-31 00:00:00', '2030-01-02 00:00:00', absint( end( $tasks )['id'] ) );
+		$this->assertCount( 5, $remaining );
 
 		$wpdb->query(
 			$wpdb->prepare(
@@ -509,13 +745,58 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 
 		$overdue_method = new ReflectionMethod( 'YoOhw_COS_Email_Notifications', 'get_open_overdue_task_groups' );
 		$overdue_method->setAccessible( true );
-		$overdue = $overdue_method->invoke( null, 0, 0 );
-		$this->assertCount( 200, $overdue['groups'][ $user_id ] );
+		$overdue_ids = array();
+		$cursor = array();
+
+		do {
+			$overdue = $overdue_method->invoke( null, 0, $cursor );
+			foreach ( (array) ( $overdue['groups'][ $user_id ] ?? array() ) as $task ) {
+				$overdue_ids[] = absint( $task['id'] );
+			}
+			$cursor = $overdue['cursor'];
+		} while ( ! empty( $overdue['has_more'] ) );
+
+		$this->assertCount( 205, array_unique( $overdue_ids ) );
+
+		$escalation_ids = array();
+		$cursor = array();
+
+		do {
+			$escalation = $overdue_method->invoke( null, 3, $cursor );
+			foreach ( (array) ( $escalation['groups'][ $user_id ] ?? array() ) as $task ) {
+				$escalation_ids[] = absint( $task['id'] );
+			}
+			$cursor = $escalation['cursor'];
+		} while ( ! empty( $escalation['has_more'] ) );
+
+		$this->assertSame( $overdue_ids, $escalation_ids );
 
 		$summary_method = new ReflectionMethod( 'YoOhw_COS_Email_Notifications', 'get_daily_summary_task_groups' );
 		$summary_method->setAccessible( true );
-		$summary = $summary_method->invoke( null, 0 );
-		$this->assertCount( 200, $summary['groups'][ $user_id ] );
+		$summary_ids = array();
+		$cursor = array();
+
+		do {
+			$summary = $summary_method->invoke( null, $cursor );
+			foreach ( (array) ( $summary['groups'][ $user_id ] ?? array() ) as $task ) {
+				$summary_ids[] = absint( $task['id'] );
+			}
+			$cursor = $summary['cursor'];
+		} while ( ! empty( $summary['has_more'] ) );
+
+		$this->assertSame( $overdue_ids, $summary_ids );
+
+		$marker_method = new ReflectionMethod( 'YoOhw_COS_Email_Notifications', 'get_digest_chunk_marker' );
+		$marker_method->setAccessible( true );
+		$first_chunk = array_slice( $tasks, 0, 200 );
+		$this->assertSame(
+			$marker_method->invoke( null, 'overdue_digest', $user_id, $first_chunk ),
+			$marker_method->invoke( null, 'overdue_digest', $user_id, $first_chunk )
+		);
+		$this->assertNotSame(
+			$marker_method->invoke( null, 'overdue_digest', $user_id, $first_chunk ),
+			$marker_method->invoke( null, 'overdue_digest', $user_id, $remaining )
+		);
 	}
 
 	public function test_existing_order_sync_processes_oldest_orders_first(): void {
@@ -901,6 +1182,35 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 		return $order;
 	}
 
+	private function clean_test_plugin_data(): void {
+		global $wpdb;
+
+		foreach ( YoOhw_COS_Install::expected_table_keys() as $table_key ) {
+			$wpdb->query( $wpdb->prepare( 'DELETE FROM %i', YoOhw_COS_DB::table( $table_key ) ) );
+		}
+
+		if ( ! function_exists( 'wc_get_orders' ) ) {
+			return;
+		}
+
+		do {
+			$orders = wc_get_orders(
+				array(
+					'limit'  => 100,
+					'return' => 'objects',
+					'status' => array_keys( wc_get_order_statuses() ),
+					'type'   => 'shop_order',
+				)
+			);
+
+			foreach ( is_array( $orders ) ? $orders : array() as $order ) {
+				if ( $order instanceof WC_Order ) {
+					$order->delete( true );
+				}
+			}
+		} while ( count( $orders ) >= 100 );
+	}
+
 	private function load_plugin_classes(): void {
 		$root = dirname( __DIR__, 2 );
 
@@ -909,7 +1219,7 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 		}
 
 		if ( ! defined( 'YOOHW_COS_DB_VERSION' ) ) {
-			define( 'YOOHW_COS_DB_VERSION', '0.2.0' );
+			define( 'YOOHW_COS_DB_VERSION', '0.2.1' );
 		}
 
 		if ( ! defined( 'YOOHW_COS_PATH' ) ) {

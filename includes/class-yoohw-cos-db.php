@@ -17,6 +17,7 @@ final class YoOhw_COS_DB {
 			'customer_segments' => 'yoohw_cos_customer_segments',
 			'order_facts'       => 'yoohw_cos_customer_order_facts',
 			'notification_log'  => 'yoohw_cos_notification_log',
+			'migration_issues'  => 'yoohw_cos_migration_issues',
 		);
 
 		if ( ! isset( $allowed_tables[ $name ] ) ) {
@@ -64,6 +65,10 @@ final class YoOhw_COS_DB {
 
 	public static function notification_log_table(): string {
 		return self::table( 'notification_log' );
+	}
+
+	public static function migration_issues_table(): string {
+		return self::table( 'migration_issues' );
 	}
 
 	public static function now(): string {

@@ -32,6 +32,15 @@ final class YoOhw_COS_Events {
 
 		$table = YoOhw_COS_DB::events_table();
 		$event_key = self::normalize_event_key( (string) ( $args['event_key'] ?? '' ) );
+
+		if ( '' !== $event_key ) {
+			$legacy_event_id = self::adopt_legacy_event_key( $table, $event_key, $args );
+
+			if ( $legacy_event_id > 0 ) {
+				return $legacy_event_id;
+			}
+		}
+
 		$previous_error_suppression = '' !== $event_key ? $wpdb->suppress_errors() : null;
 
 		$inserted = $wpdb->insert(
@@ -118,6 +127,89 @@ final class YoOhw_COS_Events {
 		}
 
 		return strlen( $event_key ) <= 191 ? $event_key : hash( 'sha256', $event_key );
+	}
+
+	/**
+	 * Atomically attach a deterministic key to the oldest matching pre-key row.
+	 * The unique event_key index arbitrates concurrent adopters and insertions.
+	 */
+	private static function adopt_legacy_event_key( string $table, string $event_key, array $args ): int {
+		global $wpdb;
+
+		$object_type = sanitize_key( (string) ( $args['object_type'] ?? '' ) );
+		$object_id   = absint( $args['object_id'] ?? 0 );
+
+		if ( '' === $object_type || $object_id <= 0 ) {
+			return 0;
+		}
+
+		$event_type   = sanitize_key( (string) ( $args['event_type'] ?? '' ) );
+		$event_source = sanitize_key( (string) ( $args['event_source'] ?? 'system' ) );
+		$customer_id  = absint( $args['customer_id'] ?? 0 );
+		$previous_error_suppression = $wpdb->suppress_errors();
+
+		if ( $customer_id > 0 ) {
+			$wpdb->query(
+				$wpdb->prepare(
+					"UPDATE %i target
+					JOIN (
+						SELECT id FROM %i
+						WHERE event_key IS NULL
+							AND event_type = %s
+							AND event_source = %s
+							AND object_type = %s
+							AND object_id = %d
+							AND customer_id = %d
+						ORDER BY id ASC
+						LIMIT 1
+					) legacy ON legacy.id = target.id
+					SET target.event_key = %s
+					WHERE target.event_key IS NULL",
+					$table,
+					$table,
+					$event_type,
+					$event_source,
+					$object_type,
+					$object_id,
+					$customer_id,
+					$event_key
+				)
+			);
+		} else {
+			$wpdb->query(
+				$wpdb->prepare(
+					"UPDATE %i target
+					JOIN (
+						SELECT id FROM %i
+						WHERE event_key IS NULL
+							AND event_type = %s
+							AND event_source = %s
+							AND object_type = %s
+							AND object_id = %d
+							AND (customer_id IS NULL OR customer_id = 0)
+						ORDER BY id ASC
+						LIMIT 1
+					) legacy ON legacy.id = target.id
+					SET target.event_key = %s
+					WHERE target.event_key IS NULL",
+					$table,
+					$table,
+					$event_type,
+					$event_source,
+					$object_type,
+					$object_id,
+					$event_key
+				)
+			);
+		}
+
+		$wpdb->suppress_errors( (bool) $previous_error_suppression );
+
+		return absint(
+			$wpdb->get_var(
+				$wpdb->prepare( 'SELECT id FROM %i WHERE event_key = %s LIMIT 1', $table, $event_key )
+			)
+		);
 	}
 
 	public static function get_customer_events( int $customer_id, array $args = array() ): array {
