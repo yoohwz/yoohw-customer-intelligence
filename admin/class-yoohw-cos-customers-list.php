@@ -806,14 +806,7 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 		);
 		$levels  = array();
 
-		if ( class_exists( 'YOWCL_Helper_Roles' ) && is_callable( array( 'YOWCL_Helper_Roles', 'get_configured_loyalty_roles' ) ) ) {
-			$levels = array_merge( $levels, (array) YOWCL_Helper_Roles::get_configured_loyalty_roles() );
-		}
-
-		$rules = maybe_unserialize( get_option( 'loyalty_levels_rules', array() ) );
-		if ( is_array( $rules ) ) {
-			$levels = array_merge( $levels, array_keys( $rules ) );
-		}
+		$levels = array_merge( $levels, YoOhw_COS_Integrations::loyalty_roles() );
 
 		$stored_levels = $wpdb->get_col(
 			$wpdb->prepare(
@@ -860,9 +853,7 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 	}
 
 	private static function is_loyalty_integration_active(): bool {
-		return class_exists( 'YoOhw_COS_Loyalty_Integration' )
-			&& is_callable( array( 'YoOhw_COS_Loyalty_Integration', 'is_loyalty_plugin_active' ) )
-			&& YoOhw_COS_Loyalty_Integration::is_loyalty_plugin_active();
+		return YoOhw_COS_Integrations::loyalty_active();
 	}
 
 	private static function insert_column_before( array $columns, string $before_key, string $new_key, string $new_label ): array {

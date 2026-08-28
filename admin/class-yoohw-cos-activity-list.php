@@ -449,16 +449,11 @@ final class YoOhw_COS_Activity_List extends WP_List_Table {
 	}
 
 	private static function is_blacklist_manager_integration_active(): bool {
-		return class_exists( 'YoOhw_COS_Blacklist_Manager_Integration' )
-			&& is_callable( array( 'YoOhw_COS_Blacklist_Manager_Integration', 'is_active' ) )
-			&& YoOhw_COS_Blacklist_Manager_Integration::is_active();
+		return YoOhw_COS_Integrations::blacklist_active();
 	}
 
 	private static function is_blacklist_manager_premium_integration_active(): bool {
-		return self::is_blacklist_manager_integration_active()
-			&& class_exists( 'YoOhw_COS_Blacklist_Manager_Premium_Integration' )
-			&& is_callable( array( 'YoOhw_COS_Blacklist_Manager_Premium_Integration', 'is_active' ) )
-			&& YoOhw_COS_Blacklist_Manager_Premium_Integration::is_active();
+		return YoOhw_COS_Integrations::blacklist_premium_active();
 	}
 
 	private function format_date( ?string $date ): string {

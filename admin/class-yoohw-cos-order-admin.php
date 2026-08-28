@@ -151,85 +151,28 @@ final class YoOhw_COS_Order_Admin {
 	}
 
 	private static function apply_order_list_customer_filter_to_query_args( array $query_args, int $customer_id ): array {
-		$customer = YoOhw_COS_Customers::get_customer( $customer_id );
-
-		if ( empty( $customer ) ) {
+		if ( ! YoOhw_COS_Customers::customer_exists( $customer_id ) ) {
 			return $query_args;
 		}
 
-		$order_ids = self::get_order_ids_for_customer_filter( $customer );
-
-		if ( empty( $order_ids ) ) {
-			$order_ids = array( 0 );
-		}
-
-		$current_post_in = isset( $query_args['post__in'] ) && is_array( $query_args['post__in'] )
-			? array_map( 'absint', $query_args['post__in'] )
+		$profile_clause = array(
+			'key'     => YoOhw_COS_Customers::ORDER_CUSTOMER_META_KEY,
+			'value'   => (string) absint( $customer_id ),
+			'compare' => '=',
+		);
+		$existing_meta_query = isset( $query_args['meta_query'] ) && is_array( $query_args['meta_query'] )
+			? $query_args['meta_query']
 			: array();
 
-		if ( ! empty( $current_post_in ) ) {
-			$order_ids = array_values( array_intersect( $current_post_in, $order_ids ) );
-		}
-
-		$query_args['post__in'] = ! empty( $order_ids ) ? $order_ids : array( 0 );
+		$query_args['meta_query'] = empty( $existing_meta_query )
+			? array( $profile_clause )
+			: array(
+				'relation' => 'AND',
+				$existing_meta_query,
+				$profile_clause,
+			);
 
 		return $query_args;
-	}
-
-	private static function get_order_ids_for_customer_filter( array $customer ): array {
-		if ( ! function_exists( 'wc_get_orders' ) ) {
-			return array();
-		}
-
-		$base_args = array(
-			'type'   => 'shop_order',
-			'limit'  => -1,
-			'return' => 'ids',
-			'status' => array_keys( wc_get_order_statuses() ),
-		);
-
-		$queries     = array();
-		$customer_id = absint( $customer['id'] ?? 0 );
-		$wp_user_id  = absint( $customer['wp_user_id'] ?? 0 );
-		$email       = sanitize_email( (string) ( $customer['email'] ?? '' ) );
-		$phone       = sanitize_text_field( (string) ( $customer['phone'] ?? '' ) );
-
-		if ( $customer_id > 0 ) {
-			$queries[] = array(
-				'meta_key'   => YoOhw_COS_Customers::ORDER_CUSTOMER_META_KEY,
-				'meta_value' => (string) $customer_id,
-			);
-		}
-
-		if ( $wp_user_id > 0 ) {
-			$queries[] = array(
-				'customer_id' => $wp_user_id,
-			);
-		}
-
-		if ( '' !== $email ) {
-			$queries[] = array(
-				'billing_email' => $email,
-			);
-		}
-
-		if ( '' !== $phone ) {
-			$queries[] = array(
-				'billing_phone' => $phone,
-			);
-		}
-
-		$order_ids = array();
-
-		foreach ( $queries as $query ) {
-			$ids = wc_get_orders( array_merge( $base_args, $query ) );
-
-			if ( is_array( $ids ) ) {
-				$order_ids = array_merge( $order_ids, array_map( 'absint', $ids ) );
-			}
-		}
-
-		return array_values( array_unique( array_filter( $order_ids ) ) );
 	}
 
 	private static function render_order_list_customer_filter_select(): void {
@@ -334,7 +277,8 @@ final class YoOhw_COS_Order_Admin {
 				return;
 			}
 
-			$wc_order->update_meta_data( YoOhw_COS_Customers::ORDER_CUSTOMER_META_KEY, $customer_id );
+			$wc_order->delete_meta_data( YoOhw_COS_Customers::ORDER_CUSTOMER_META_KEY );
+			$wc_order->add_meta_data( YoOhw_COS_Customers::ORDER_CUSTOMER_META_KEY, $customer_id, true );
 
 			$wp_user_id = absint( $customer['wp_user_id'] ?? 0 );
 			$wc_order->set_customer_id( $wp_user_id > 0 && get_user_by( 'id', $wp_user_id ) ? $wp_user_id : 0 );
@@ -402,7 +346,7 @@ final class YoOhw_COS_Order_Admin {
 		$total_spent     = (float) ( $customer['total_spent'] ?? 0 );
 		$average_value   = $total_orders > 0 ? $total_spent / $total_orders : 0.0;
 		$trust_score     = min( 100, max( 0, (float) ( $customer['trust_score'] ?? 0 ) ) );
-		$risk_score      = min( 100, max( 0, YoOhw_COS_Intelligence::get_current_risk_score( $customer ) ) );
+		$risk_score      = min( 100, max( 0, (float) ( $customer['risk_score'] ?? 0 ) ) );
 		$lifecycle_stage = sanitize_key( (string) ( $customer['lifecycle_stage'] ?? 'new' ) );
 		$value_tier      = sanitize_key( (string) ( $customer['vip_status'] ?? 'none' ) );
 		$risk_level      = YoOhw_COS_Intelligence::calculate_risk_level( $risk_score );
@@ -528,7 +472,9 @@ final class YoOhw_COS_Order_Admin {
 			admin_url( 'admin.php' )
 		);
 
-		echo '<div class="yoohw-cos-order-task-form">';
+		echo '<details class="yoohw-cos-order-task-form">';
+		echo '<summary>' . esc_html__( 'Add task', 'yoohw-customer-intelligence' ) . '</summary>';
+		echo '<div class="yoohw-cos-order-task-form__fields">';
 		echo '<input form="' . esc_attr( $form_id ) . '" type="hidden" name="action" value="yoohw_cos_create_task" />';
 		echo '<input form="' . esc_attr( $form_id ) . '" type="hidden" name="customer_id" value="' . esc_attr( $customer_id ) . '" />';
 		echo '<input form="' . esc_attr( $form_id ) . '" type="hidden" name="order_id" value="' . esc_attr( $order_id ) . '" />';
@@ -536,7 +482,6 @@ final class YoOhw_COS_Order_Admin {
 		echo '<input form="' . esc_attr( $form_id ) . '" type="hidden" name="_wpnonce" value="' . esc_attr( wp_create_nonce( 'yoohw_cos_create_task' ) ) . '" />';
 
 		echo '<p>';
-		echo '<label for="yoohw_cos_order_task_title"><strong>' . esc_html__( 'Add task', 'yoohw-customer-intelligence' ) . '</strong></label>';
 		echo '<input form="' . esc_attr( $form_id ) . '" type="text" id="yoohw_cos_order_task_title" name="task_title" class="widefat" placeholder="' . esc_attr__( 'Follow up about this order...', 'yoohw-customer-intelligence' ) . '" required />';
 		echo '</p>';
 
@@ -574,6 +519,7 @@ final class YoOhw_COS_Order_Admin {
 		);
 
 		echo '</div>';
+		echo '</details>';
 		echo '<hr />';
 
 		if ( empty( $tasks ) ) {

@@ -362,8 +362,6 @@ final class YoOhw_COS_Customer_Query {
 	}
 
 	private static function is_loyalty_integration_active(): bool {
-		return class_exists( 'YoOhw_COS_Loyalty_Integration' )
-			&& is_callable( array( 'YoOhw_COS_Loyalty_Integration', 'is_loyalty_plugin_active' ) )
-			&& YoOhw_COS_Loyalty_Integration::is_loyalty_plugin_active();
+		return YoOhw_COS_Integrations::loyalty_active();
 	}
 }

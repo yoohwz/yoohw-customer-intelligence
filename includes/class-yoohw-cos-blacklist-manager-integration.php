@@ -165,6 +165,30 @@ final class YoOhw_COS_Blacklist_Manager_Integration {
 		return $result;
 	}
 
+	public static function get_backfill_source_count(): int {
+		global $wpdb;
+
+		if ( ! self::is_active() ) {
+			return 0;
+		}
+
+		$blacklist_table = $wpdb->prefix . 'wc_blacklist';
+		$log_table       = $wpdb->prefix . 'wc_blacklist_detection_log';
+		$total           = 0;
+
+		if ( self::table_exists( $blacklist_table ) ) {
+			$total += (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i', $blacklist_table ) );
+		}
+
+		if ( self::table_exists( $log_table ) ) {
+			$total += (int) $wpdb->get_var(
+				$wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE source LIKE %s', $log_table, 'woo_order_%' )
+			);
+		}
+
+		return $total;
+	}
+
 	public static function get_customer_blacklist_status( int $customer_id ): array {
 		$customer_id = absint( $customer_id );
 
@@ -238,23 +262,6 @@ final class YoOhw_COS_Blacklist_Manager_Integration {
 			return false;
 		}
 
-		if (
-			! empty( $options['idempotent'] )
-			&& $object_id > 0
-			&& YoOhw_COS_Events::event_exists(
-				$event_type,
-				$object_type,
-				$object_id,
-				$customer_id
-			)
-		) {
-			if ( $customer_id > 0 ) {
-				self::refresh_customer_risk_score( $customer_id );
-			}
-
-			return false;
-		}
-
 		$event_args = array(
 			'customer_id'  => $customer_id ?: null,
 			'wp_user_id'   => $wp_user_id ?: null,
@@ -266,6 +273,16 @@ final class YoOhw_COS_Blacklist_Manager_Integration {
 			'description'  => $description,
 			'metadata'     => self::event_metadata( $payload ),
 		);
+
+		if ( ! empty( $options['idempotent'] ) && $object_id > 0 ) {
+			$event_args['event_key'] = YoOhw_COS_Events::make_event_key(
+				self::EVENT_SOURCE,
+				$event_type,
+				$object_type,
+				$object_id,
+				0
+			);
+		}
 
 		$created_at = self::normalize_created_at( $options['created_at'] ?? '' );
 

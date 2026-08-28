@@ -15,6 +15,8 @@ final class YoOhw_COS_DB {
 			'customer_tags'     => 'yoohw_cos_customer_tags',
 			'segments'          => 'yoohw_cos_segments',
 			'customer_segments' => 'yoohw_cos_customer_segments',
+			'order_facts'       => 'yoohw_cos_customer_order_facts',
+			'notification_log'  => 'yoohw_cos_notification_log',
 		);
 
 		if ( ! isset( $allowed_tables[ $name ] ) ) {
@@ -54,6 +56,14 @@ final class YoOhw_COS_DB {
 
 	public static function customer_segments_table(): string {
 		return self::table( 'customer_segments' );
+	}
+
+	public static function order_facts_table(): string {
+		return self::table( 'order_facts' );
+	}
+
+	public static function notification_log_table(): string {
+		return self::table( 'notification_log' );
 	}
 
 	public static function now(): string {
