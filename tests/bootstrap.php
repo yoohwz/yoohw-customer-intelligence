@@ -21,6 +21,15 @@ if ( ! file_exists( $yoohw_cos_tests_dir . '/includes/functions.php' ) ) {
 
 require_once $yoohw_cos_tests_dir . '/includes/functions.php';
 
+$yoohw_cos_hpos_enabled = strtolower( (string) getenv( 'WC_HPOS_ENABLED' ) );
+
+if ( in_array( $yoohw_cos_hpos_enabled, array( 'yes', 'no' ), true ) ) {
+	tests_add_filter(
+		'pre_option_woocommerce_custom_orders_table_enabled',
+		static fn(): string => $yoohw_cos_hpos_enabled
+	);
+}
+
 tests_add_filter(
 	'muplugins_loaded',
 	static function(): void {
