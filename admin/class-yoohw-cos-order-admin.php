@@ -472,7 +472,9 @@ final class YoOhw_COS_Order_Admin {
 			admin_url( 'admin.php' )
 		);
 
-		echo '<div class="yoohw-cos-order-task-form">';
+		echo '<details class="yoohw-cos-order-task-form">';
+		echo '<summary>' . esc_html__( 'Add task', 'yoohw-customer-intelligence' ) . '</summary>';
+		echo '<div class="yoohw-cos-order-task-form__fields">';
 		echo '<input form="' . esc_attr( $form_id ) . '" type="hidden" name="action" value="yoohw_cos_create_task" />';
 		echo '<input form="' . esc_attr( $form_id ) . '" type="hidden" name="customer_id" value="' . esc_attr( $customer_id ) . '" />';
 		echo '<input form="' . esc_attr( $form_id ) . '" type="hidden" name="order_id" value="' . esc_attr( $order_id ) . '" />';
@@ -480,7 +482,6 @@ final class YoOhw_COS_Order_Admin {
 		echo '<input form="' . esc_attr( $form_id ) . '" type="hidden" name="_wpnonce" value="' . esc_attr( wp_create_nonce( 'yoohw_cos_create_task' ) ) . '" />';
 
 		echo '<p>';
-		echo '<label for="yoohw_cos_order_task_title"><strong>' . esc_html__( 'Add task', 'yoohw-customer-intelligence' ) . '</strong></label>';
 		echo '<input form="' . esc_attr( $form_id ) . '" type="text" id="yoohw_cos_order_task_title" name="task_title" class="widefat" placeholder="' . esc_attr__( 'Follow up about this order...', 'yoohw-customer-intelligence' ) . '" required />';
 		echo '</p>';
 
@@ -518,6 +519,7 @@ final class YoOhw_COS_Order_Admin {
 		);
 
 		echo '</div>';
+		echo '</details>';
 		echo '<hr />';
 
 		if ( empty( $tasks ) ) {
