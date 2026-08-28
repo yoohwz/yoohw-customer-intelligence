@@ -5,11 +5,11 @@
  * Description: Unified customer intelligence and operations platform for WooCommerce.
  * Version: 1.3.0
  * Requires at least: 6.9
- * Tested up to: 7.0
+ * Tested up to: 7.1
  * Requires PHP: 7.4
  * Requires Plugins: woocommerce
  * WC requires at least: 8.2
- * WC tested up to: 10.8
+ * WC tested up to: 11.0
  * Author: YoOhw Studio
  * Author URI: https://yoohw.com
  * License: GPLv2 or later
