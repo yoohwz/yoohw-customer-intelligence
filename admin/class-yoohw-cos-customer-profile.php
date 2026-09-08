@@ -4,6 +4,18 @@ defined( 'ABSPATH' ) || exit;
 final class YoOhw_COS_Customer_Profile {
 
 	public static function render( int $customer_id ): void {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			echo '<p>' . esc_html( YoOhw_COS_Reset_Guard::rejection_message() ) . '</p>';
+			return;
+		}
+		try {
+			self::render_guarded( $customer_id );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function render_guarded( int $customer_id ): void {
 		$customer = YoOhw_COS_Customers::get_customer( $customer_id );
 
 		if ( ! $customer ) {
@@ -491,6 +503,7 @@ final class YoOhw_COS_Customer_Profile {
 		echo '<input type="hidden" name="action" value="yoohw_cos_send_customer_email" />';
 		echo '<input type="hidden" name="customer_id" value="' . esc_attr( $customer_id ) . '" />';
 		wp_nonce_field( 'yoohw_cos_send_customer_email', 'security', false );
+		YoOhw_COS_Reset_Guard::render_field( YoOhw_COS_Reset_Guard::epoch() );
 
 		echo '<div class="yoohw-cos-email-composer__body">';
 		echo '<p id="yoohw-cos-email-composer-description" class="description">';
@@ -1096,6 +1109,7 @@ final class YoOhw_COS_Customer_Profile {
 		echo '<input type="hidden" name="action" value="' . esc_attr( $args['assign_action'] ) . '" />';
 		echo '<input type="hidden" name="customer_id" value="' . esc_attr( $customer_id ) . '" />';
 		wp_nonce_field( (string) $args['assign_nonce'] );
+		YoOhw_COS_Reset_Guard::render_field( YoOhw_COS_Reset_Guard::epoch() );
 
 		echo '<div class="tagsdiv yoohw-cos-term-add-form" id="' . esc_attr( $box_id ) . '">';
 		echo '<div class="jaxtag">';
@@ -1150,6 +1164,7 @@ final class YoOhw_COS_Customer_Profile {
 			add_query_arg(
 				array(
 					'action'                  => $args['remove_action'],
+					YoOhw_COS_Reset_Guard::FORM_FIELD => YoOhw_COS_Reset_Guard::epoch(),
 					'customer_id'             => $customer_id,
 					$args['remove_id_param']  => $term_id,
 				),
@@ -1343,6 +1358,7 @@ final class YoOhw_COS_Customer_Profile {
 		echo '<input type="hidden" name="customer_id" value="' . esc_attr( $customer_id ) . '" />';
 		echo '<input type="hidden" name="_redirect" value="' . esc_attr( $profile_url ) . '" />';
 		wp_nonce_field( 'yoohw_cos_create_task' );
+		YoOhw_COS_Reset_Guard::render_field( YoOhw_COS_Reset_Guard::epoch() );
 
 		echo '<p>';
 		echo '<label for="yoohw_cos_profile_task_title"><strong>' . esc_html__( 'Add task', 'yoohw-customer-intelligence' ) . '</strong></label>';
@@ -1430,6 +1446,7 @@ final class YoOhw_COS_Customer_Profile {
 			add_query_arg(
 				array(
 					'action'    => 'yoohw_cos_' . $action . '_task',
+					YoOhw_COS_Reset_Guard::FORM_FIELD => YoOhw_COS_Reset_Guard::epoch(),
 					'task_id'   => $task_id,
 					'_redirect' => rawurlencode( self::get_profile_url( $customer_id, 'yoohw-cos-add-task' ) ),
 				),
@@ -1509,6 +1526,7 @@ final class YoOhw_COS_Customer_Profile {
 		echo '<input type="hidden" name="action" value="yoohw_cos_add_customer_note" />';
 		echo '<input type="hidden" name="customer_id" value="' . esc_attr( $customer_id ) . '" />';
 		wp_nonce_field( 'yoohw_cos_add_customer_note' );
+		YoOhw_COS_Reset_Guard::render_field( YoOhw_COS_Reset_Guard::epoch() );
 
 		echo '<p>';
 		echo '<textarea name="customer_note" rows="4" class="large-text" placeholder="' . esc_attr__( 'Add an internal note about this customer...', 'yoohw-customer-intelligence' ) . '"></textarea>';
@@ -1550,6 +1568,7 @@ final class YoOhw_COS_Customer_Profile {
 					add_query_arg(
 						array(
 							'action'      => 'yoohw_cos_delete_customer_note',
+							YoOhw_COS_Reset_Guard::FORM_FIELD => YoOhw_COS_Reset_Guard::epoch(),
 							'customer_id' => $customer_id,
 							'note_id'     => $note_id,
 						),
@@ -1599,6 +1618,7 @@ final class YoOhw_COS_Customer_Profile {
 				echo '<input type="hidden" name="customer_id" value="' . esc_attr( $customer_id ) . '" />';
 				echo '<input type="hidden" name="note_id" value="' . esc_attr( $note_id ) . '" />';
 				wp_nonce_field( 'yoohw_cos_update_customer_note' );
+				YoOhw_COS_Reset_Guard::render_field( YoOhw_COS_Reset_Guard::epoch() );
 
 				echo '<textarea name="customer_note" rows="4" class="large-text yoohw-cos-textarea-spaced">' . esc_textarea( $note['note_content'] ?? '' ) . '</textarea>';
 

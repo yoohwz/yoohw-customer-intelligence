@@ -78,6 +78,53 @@ final class YoOhw_COS_Reset_Guard {
 		return true;
 	}
 
+	public const FORM_FIELD = 'yoohw_cos_epoch';
+
+	/** Missing and non-string transport values are never the legacy empty epoch. */
+	public static function matches_submission( array $source, string $field = self::FORM_FIELD ): bool {
+		return array_key_exists( $field, $source ) && is_string( $source[ $field ] )
+			&& self::ready() && self::epoch() === wp_unslash( $source[ $field ] );
+	}
+
+	public static function rejection_message(): string {
+		return __( 'Customer data changed or is busy. If Reset was interrupted, finish Reset recovery first. Reload this page and select the records again before retrying.', 'yoohw-customer-intelligence' );
+	}
+
+	/** Called after permission/nonce checks, before any submitted reference is read. */
+	public static function require_submission( array $source, bool $ajax = false ): void {
+		$entered = self::enter();
+		if ( $entered && self::matches_submission( $source ) ) {
+			return;
+		}
+		if ( $entered ) { self::leave(); }
+		if ( $ajax ) {
+			wp_send_json_error( array( 'message' => self::rejection_message() ), 409 );
+		}
+		wp_die( esc_html( self::rejection_message() ), '', array( 'response' => 409 ) );
+	}
+
+	/** Only render with an epoch captured alongside the referenced records. */
+	public static function render_field( string $epoch, string $form = '' ): void {
+		echo '<input type="hidden" name="' . esc_attr( self::FORM_FIELD ) . '" value="' . esc_attr( $epoch ) . '"' . ( '' !== $form ? ' form="' . esc_attr( $form ) . '"' : '' ) . ' />';
+	}
+
+	/** A bounded read can outlive its lock, but its action URLs keep this epoch. */
+	public static function snapshot_rows( callable $read ): array {
+		if ( ! self::enter() ) { return array(); }
+		try {
+			$epoch = self::epoch();
+			$rows = $read();
+			foreach ( $rows as &$row ) { $row[ self::FORM_FIELD ] = $epoch; }
+			return $rows;
+		} finally { self::leave(); }
+	}
+
+	public static function check_bulk_size( array $ids ): void {
+		if ( count( $ids ) > 100 ) {
+			wp_die( esc_html__( 'Select at most 100 records per action.', 'yoohw-customer-intelligence' ), '', array( 'response' => 400 ) );
+		}
+	}
+
 	private static function deferred(): bool {
 		if ( ! self::$reported && ! self::$resetting ) {
 			self::$reported = true;

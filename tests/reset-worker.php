@@ -14,7 +14,57 @@ $GLOBALS['wp_filter'] = array(
 );
 require ABSPATH . 'wp-settings.php';
 $mode = $argv[1] ?? '';
-if ( 'stale-sync' === $mode ) {
+
+if ( 'ordinary-request' === $mode ) {
+	// Fresh PHP request with the actual handler/nonce/capability path; no existing site.
+	$input = json_decode( fgets( STDIN ), true );
+	wp_set_current_user( (int) $input['user'] );
+	if ( 'handle_send_customer_email' === ( $input['handler'] ?? '' ) || ! empty( $input['search'] ) ) { define( 'DOING_AJAX', true ); }
+	$_SERVER['REQUEST_METHOD'] = $input['method'];
+	$_POST = 'POST' === $input['method'] ? $input['data'] : array();
+	$_GET = 'GET' === $input['method'] ? $input['data'] : array();
+	$_REQUEST = $input['data'];
+	$before_mail = $GLOBALS['yci_intercepted_mail'] ?? 0;
+	add_filter( 'wp_die_handler', static function() {
+		return static function( $message, $title = '', $args = array() ) {
+			throw new RuntimeException( strip_tags( (string) $message ), (int) ( $args['response'] ?? 500 ) );
+		};
+	} );
+	add_filter( 'wp_die_ajax_handler', static function() { return apply_filters( 'wp_die_handler', null ); } );
+	add_filter( 'wp_redirect', static function( $url ) { throw new RuntimeException( $url, 302 ); } );
+	ob_start();
+	try {
+		if ( isset( $input['bulk'] ) ) {
+			$method = new ReflectionMethod( 'YoOhw_COS_Admin_Menu', 'maybe_handle_' . $input['bulk'] . '_bulk_action' );
+			$method->setAccessible( true );
+			$method->invoke( null );
+		} else {
+			call_user_func( array( ! empty( $input['search'] ) ? 'YoOhw_COS_Order_Admin' : 'YoOhw_COS_Admin_Tools', $input['handler'] ) );
+		}
+		$status = 200;
+		$message = '';
+	} catch ( RuntimeException $exception ) {
+		$status = $exception->getCode();
+		$message = $exception->getMessage();
+	}
+	$output = ob_get_clean();
+	echo json_encode( array( 'status' => $status, 'message' => $message, 'body' => $output, 'mail' => ( $GLOBALS['yci_intercepted_mail'] ?? 0 ) - $before_mail ) ) . "\n";
+} elseif ( 'stale-ordinary' === $mode ) {
+	echo "READY\n";
+	fflush( STDOUT );
+	fgets( STDIN );
+	echo 'RESULT:' . YoOhw_COS_Notes::add_note( (int) $argv[2], 'Old request' ) . "\n";
+} elseif ( 'hold-ordinary' === $mode ) {
+	add_filter( 'query', static function( $query ) {
+		if ( 0 === strpos( $query, 'INSERT INTO `' . YoOhw_COS_DB::notes_table() . '`' ) ) {
+			echo "LOCKED\n";
+			fflush( STDOUT );
+			fgets( STDIN );
+		}
+		return $query;
+	} );
+	echo 'NOTE:' . YoOhw_COS_Notes::add_note( (int) $argv[2], 'Current writer' ) . "\n";
+} elseif ( 'stale-sync' === $mode ) {
 	$wpdb->query( 'START TRANSACTION' );
 	YoOhw_COS_Reset_Guard::state(); // Establish an old repeatable-read snapshot before Reset.
 	echo "READY\n";

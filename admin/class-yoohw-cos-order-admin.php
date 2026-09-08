@@ -69,19 +69,29 @@ final class YoOhw_COS_Order_Admin {
 			wp_send_json( array() );
 		}
 
-		$term             = isset( $_GET['term'] ) ? sanitize_text_field( wp_unslash( $_GET['term'] ) ) : '';
-		$include_archived = ! empty( $_GET['include_archived'] );
-		$results          = array();
-
-		foreach ( self::search_customers( $term, $include_archived ) as $customer ) {
-			$customer_id = absint( $customer['id'] ?? 0 );
-
-			if ( $customer_id > 0 ) {
-				$results[ $customer_id ] = self::format_customer_option( $customer, $include_archived );
-			}
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			wp_send_json_error( array( 'message' => YoOhw_COS_Reset_Guard::rejection_message() ), 409 );
 		}
+		try {
+			if ( isset( $_GET['selection'] ) && ! YoOhw_COS_Reset_Guard::matches_submission( $_GET ) ) {
+				wp_send_json_error( array( 'message' => YoOhw_COS_Reset_Guard::rejection_message() ), 409 );
+			}
 
+			$term             = isset( $_GET['term'] ) ? sanitize_text_field( wp_unslash( $_GET['term'] ) ) : '';
+			$include_archived = ! empty( $_GET['include_archived'] );
+			$results          = array();
+
+			foreach ( self::search_customers( $term, $include_archived ) as $customer ) {
+				$customer_id = absint( $customer['id'] ?? 0 );
+
+				if ( $customer_id > 0 ) {
+					$results[ $customer_id ] = self::format_customer_option( $customer, $include_archived );
+				}
+			}
+
+		} finally { YoOhw_COS_Reset_Guard::leave(); }
 		wp_send_json( $results );
+
 	}
 
 	public static function remove_registered_customer_order_list_filter(): void {
@@ -273,6 +283,9 @@ final class YoOhw_COS_Order_Admin {
 
 	public static function save_customer_profile_link( int $order_id, $order = null ): void {
 		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			if ( isset( $_POST['yoohw_cos_customer_id'] ) && class_exists( 'WC_Admin_Meta_Boxes' ) ) {
+				WC_Admin_Meta_Boxes::add_error( YoOhw_COS_Reset_Guard::rejection_message() );
+			}
 			return;
 		}
 		try {
@@ -295,7 +308,7 @@ final class YoOhw_COS_Order_Admin {
 			return;
 		}
 
-		if ( YoOhw_COS_Reset_Guard::epoch() !== sanitize_text_field( wp_unslash( $_POST['yoohw_cos_link_epoch'] ?? '' ) ) ) {
+		if ( ! YoOhw_COS_Reset_Guard::matches_submission( $_POST, 'yoohw_cos_link_epoch' ) ) {
 			if ( class_exists( 'WC_Admin_Meta_Boxes' ) ) {
 				WC_Admin_Meta_Boxes::add_error( __( 'Customer data was reset. Reload the order before choosing its customer profile.', 'yoohw-customer-intelligence' ) );
 			}
@@ -536,6 +549,8 @@ final class YoOhw_COS_Order_Admin {
 		echo '<details class="yoohw-cos-order-task-form">';
 		echo '<summary>' . esc_html__( 'Add task', 'yoohw-customer-intelligence' ) . '</summary>';
 		echo '<div class="yoohw-cos-order-task-form__fields">';
+		YoOhw_COS_Reset_Guard::render_field( YoOhw_COS_Reset_Guard::epoch(), $form_id );
+
 		echo '<input form="' . esc_attr( $form_id ) . '" type="hidden" name="action" value="yoohw_cos_create_task" />';
 		echo '<input form="' . esc_attr( $form_id ) . '" type="hidden" name="customer_id" value="' . esc_attr( $customer_id ) . '" />';
 		echo '<input form="' . esc_attr( $form_id ) . '" type="hidden" name="order_id" value="' . esc_attr( $order_id ) . '" />';
@@ -770,6 +785,7 @@ final class YoOhw_COS_Order_Admin {
 			add_query_arg(
 				array(
 					'action'    => 'yoohw_cos_' . $action . '_task',
+					YoOhw_COS_Reset_Guard::FORM_FIELD => YoOhw_COS_Reset_Guard::epoch(),
 					'task_id'   => $task_id,
 					'_redirect' => rawurlencode( $redirect ),
 				),

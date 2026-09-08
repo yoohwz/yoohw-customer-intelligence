@@ -342,4 +342,351 @@ final class YCI_Reset_Link_Integrity_Test extends WP_UnitTestCase {
 		return array( $process, $pipes );
 	}
 
+	public static function ordinary_operations(): array {
+		return array_map( static function( $name ) { return array( $name ); }, array(
+			'note_add', 'note_update', 'note_delete', 'task_create', 'task_idempotent', 'task_update',
+			'task_complete', 'task_reopen', 'task_delete', 'tag_assign', 'tag_remove', 'segment_assign', 'segment_remove', 'tag_delete', 'segment_delete'
+		) );
+	}
+
+	private function ordinary_fixture(): array {
+		YoOhw_COS_Customers::reset_data();
+		$c = YoOhw_COS_Customers::create_customer( array( 'email' => 'ordinary@example.test', 'display_name' => 'Rebuilt record' ) );
+		$n = YoOhw_COS_Notes::add_note( $c, 'Retained note' );
+		$t = YoOhw_COS_Tasks::create_task( array( 'customer_id' => $c, 'title' => 'Retained task' ) );
+		$tag = YoOhw_COS_Tags::create_tag( 'Ordinary tag' );
+		$segment = YoOhw_COS_Segments::create_segment( 'Ordinary segment' );
+		YoOhw_COS_Tags::assign_tag( $c, $tag );
+		YoOhw_COS_Segments::assign_customer( $c, $segment );
+		return array( $c, $n, $t, $tag, $segment );
+	}
+
+	private function ordinary_rows(): array {
+		global $wpdb;
+		$rows = array();
+		foreach ( array( 'customers', 'notes', 'tasks', 'tags', 'segments', 'customer_tags', 'customer_segments', 'events' ) as $table ) {
+			$rows[ $table ] = $wpdb->get_results( 'SELECT * FROM `' . call_user_func( array( 'YoOhw_COS_DB', $table . '_table' ) ) . '` ORDER BY 1', ARRAY_A );
+		}
+		return $rows;
+	}
+
+	private function ordinary_operation( string $operation, array $ids ) {
+		list( $c, $n, $t, $tag, $segment ) = $ids;
+		switch ( $operation ) {
+			case 'note_add': return YoOhw_COS_Notes::add_note( $c, 'Stale note' );
+			case 'note_update': return YoOhw_COS_Notes::update_note( $n, 'Stale edit' );
+			case 'note_delete': return YoOhw_COS_Notes::delete_note( $n );
+			case 'task_create': return YoOhw_COS_Tasks::create_task( array( 'customer_id' => $c, 'title' => 'Stale task' ) );
+			case 'task_idempotent': return YoOhw_COS_Tasks::create_idempotent_task( 'ordinary-source', array( 'customer_id' => $c, 'title' => 'Stale task' ) );
+			case 'task_update': return YoOhw_COS_Tasks::update_task( $t, array( 'title' => 'Stale edit' ) );
+			case 'task_complete': return YoOhw_COS_Tasks::complete_task( $t );
+			case 'task_reopen': return YoOhw_COS_Tasks::reopen_task( $t );
+			case 'task_delete': return YoOhw_COS_Tasks::delete_task( $t );
+			case 'tag_assign': return YoOhw_COS_Tags::assign_tag( $c, $tag );
+			case 'tag_remove': return YoOhw_COS_Tags::remove_tag( $c, $tag );
+			case 'segment_assign': return YoOhw_COS_Segments::assign_customer( $c, $segment );
+			case 'segment_remove': return YoOhw_COS_Segments::remove_customer( $c, $segment );
+			case 'tag_delete': return YoOhw_COS_Tags::delete_tag( $tag, true );
+			case 'segment_delete': return YoOhw_COS_Segments::delete_segment( $segment, true );
+		}
+	}
+
+	/** @dataProvider ordinary_operations */
+	public function test_pending_reset_rejects_ordinary_writers( string $operation ): void {
+		$ids = $this->ordinary_fixture();
+		if ( 'task_reopen' === $operation ) { YoOhw_COS_Tasks::complete_task( $ids[2] ); }
+		if ( 'tag_assign' === $operation ) { YoOhw_COS_Tags::remove_tag( $ids[0], $ids[3] ); }
+		if ( 'segment_assign' === $operation ) { YoOhw_COS_Segments::remove_customer( $ids[0], $ids[4] ); }
+		$before = $this->ordinary_rows();
+		$mail = $GLOBALS['yci_intercepted_mail'] ?? 0;
+		$state = YoOhw_COS_Reset_Guard::state();
+		update_option( YoOhw_COS_Reset_Guard::OPTION, array( 'epoch' => $state['epoch'], 'status' => 'pending' ), false );
+		try {
+			$result = $this->ordinary_operation( $operation, $ids );
+			$this->assertSame( $before, $this->ordinary_rows(), $operation . ' must not mutate while Reset is pending.' );
+			$this->assertFalse( (bool) $result );
+			$this->assertSame( $mail, $GLOBALS['yci_intercepted_mail'] ?? 0 );
+		} finally {
+			update_option( YoOhw_COS_Reset_Guard::OPTION, $state, false );
+			YoOhw_COS_Reset_Guard::init();
+		}
+		$this->assertTrue( (bool) $this->ordinary_operation( $operation, $ids ), 'Valid current operation remains available.' );
+	}
+
+	private function fresh_action( array $input ): array {
+		list( $process, $pipes ) = $this->worker( 'ordinary-request' );
+		try {
+			fwrite( $pipes[0], wp_json_encode( $input ) . "\n" );
+			fclose( $pipes[0] );
+			$output = stream_get_contents( $pipes[1] );
+			$error = stream_get_contents( $pipes[2] );
+		} finally {
+			foreach ( $pipes as $pipe ) { if ( is_resource( $pipe ) ) { fclose( $pipe ); } }
+			proc_terminate( $process );
+			proc_close( $process );
+		}
+		global $wpdb;
+		$wpdb->query( 'COMMIT' ); // End PHPUnit's read snapshot before checking another connection's writes.
+		$result = json_decode( $output, true );
+		$this->assertIsArray( $result, $output . $error );
+		return $result;
+	}
+
+	public function test_old_rendered_forms_rows_and_bulk_reject_reused_records_in_fresh_requests(): void {
+		global $wpdb;
+		$old = $this->ordinary_fixture();
+		$user = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		get_user_by( 'id', $user )->add_cap( 'manage_woocommerce' );
+		wp_set_current_user( $user );
+		set_current_screen( 'woocommerce_page_yoohw-customer-intelligence' );
+		ob_start();
+		YoOhw_COS_Customer_Profile::render( $old[0] );
+		$profile = ob_get_clean();
+		$dom = new DOMDocument();
+		@$dom->loadHTML( $profile );
+		$xpath = new DOMXPath( $dom );
+		$forms = array();
+		foreach ( $xpath->query( '//form' ) as $form ) {
+			$fields = array();
+			foreach ( $xpath->query( './/input[@name]', $form ) as $input ) {
+				$fields[ $input->getAttribute( 'name' ) ] = $input->getAttribute( 'value' );
+			}
+			if ( isset( $fields['action'] ) ) {
+				$this->assertArrayHasKey( 'yoohw_cos_epoch', $fields, $fields['action'] );
+				$forms[ $fields['action'] ] = $fields;
+			}
+		}
+		$epoch = $forms['yoohw_cos_add_customer_note']['yoohw_cos_epoch'];
+		$this->assertSame( YoOhw_COS_Reset_Guard::epoch(), $epoch );
+		$rows = array();
+		foreach ( $xpath->query( '//a[@href]' ) as $link ) {
+			parse_str( (string) parse_url( html_entity_decode( $link->getAttribute( 'href' ) ), PHP_URL_QUERY ), $args );
+			if ( isset( $args['action'] ) ) {
+				$this->assertSame( $epoch, $args['yoohw_cos_epoch'] ?? null, $args['action'] );
+				$rows[ $args['action'] ] = $args;
+			}
+		}
+		// Every list holds its old epoch even when the rows are displayed after Reset.
+		$lists = array();
+		foreach ( array( 'Customers', 'Tasks', 'Tags', 'Segments' ) as $kind ) {
+			$class = 'YoOhw_COS_' . $kind . '_List';
+			$lists[ $kind ] = new $class();
+			$lists[ $kind ]->prepare_items();
+			$this->assertSame( $epoch, $lists[ $kind ]->selection_epoch );
+		}
+		$new = $this->ordinary_fixture();
+		foreach ( array( 'Tasks' => 'column_title', 'Tags' => 'column_name', 'Segments' => 'column_name' ) as $kind => $column ) {
+			$html = $lists[ $kind ]->$column( $lists[ $kind ]->items[0] );
+			$this->assertStringContainsString( 'yoohw_cos_epoch=' . $epoch, $html );
+			$this->assertStringNotContainsString( 'yoohw_cos_epoch=' . YoOhw_COS_Reset_Guard::epoch(), $html );
+		}
+		$this->assertSame( array_slice( $old, 0, 3 ), array_slice( $new, 0, 3 ), 'Customer, note AND task IDs are reused.' );
+		$wpdb->query( 'COMMIT' );
+		$before = $this->ordinary_rows();
+		$requests = array();
+		foreach ( $forms as $action => $data ) {
+			$data += array( 'customer_note' => 'Stale', 'task_title' => 'Stale task', 'tag_name' => 'Must not create tag', 'segment_name' => 'Must not create segment', 'email_subject' => 'Stale', 'email_message' => 'Stale' );
+			$requests[] = array( 'handler' => 'handle_' . substr( $action, strlen( 'yoohw_cos_' ) ), 'method' => 'POST', 'data' => $data );
+		}
+		foreach ( $rows as $action => $data ) {
+			$requests[] = array( 'handler' => 'handle_' . substr( $action, strlen( 'yoohw_cos_' ) ), 'method' => 'GET', 'data' => $data );
+		}
+		// Additional task list actions, editing, and both status transitions.
+		foreach ( array( 'complete_task', 'reopen_task', 'delete_task', 'delete_tag', 'delete_segment' ) as $action ) {
+			$requests[] = array( 'handler' => 'handle_' . $action, 'method' => 'GET', 'data' => array( 'task_id' => $old[2], 'tag_id' => $old[3], 'segment_id' => $old[4], '_wpnonce' => wp_create_nonce( 'yoohw_cos_' . $action ), 'yoohw_cos_epoch' => $epoch ) );
+		}
+		$requests[] = array( 'handler' => 'handle_update_task', 'method' => 'POST', 'data' => array( 'task_id' => $old[2], 'customer_id' => $old[0], 'task_title' => 'Stale edit', '_wpnonce' => wp_create_nonce( 'yoohw_cos_update_task' ), 'yoohw_cos_epoch' => $epoch ) );
+		foreach ( array( 'bulk_assign_tag', 'bulk_remove_tag', 'bulk_assign_segment', 'bulk_remove_segment', 'bulk_create_task', 'bulk_archive_customer', 'bulk_restore_customer' ) as $action ) {
+			$requests[] = array( 'bulk' => 'customers', 'method' => 'POST', 'data' => array( 'action' => $action, 'customer_ids' => array( $old[0] ), 'yoohw_cos_customers_bulk_nonce' => wp_create_nonce( 'yoohw_cos_customers_bulk_action' ), 'yoohw_cos_epoch' => $lists['Customers']->selection_epoch ) );
+		}
+		foreach ( array( 'tasks' => 'task_ids', 'tags' => 'tag_ids', 'segments' => 'segment_ids' ) as $kind => $key ) {
+			foreach ( 'tasks' === $kind ? array( 'complete', 'reopen', 'delete' ) : array( 'delete' ) as $action ) {
+				$requests[] = array( 'bulk' => $kind, 'method' => 'POST', 'data' => array( 'action' => $action, $key => array( 1 ), '_wpnonce' => wp_create_nonce( 'bulk-yoohw_cos_' . $kind ), 'yoohw_cos_epoch' => $lists[ ucfirst( $kind ) ]->selection_epoch ) );
+			}
+		}
+		foreach ( $requests as $request ) {
+			$result = $this->fresh_action( $request + array( 'user' => $user ) );
+			$this->assertSame( $before, $this->ordinary_rows(), wp_json_encode( $request ) );
+			$this->assertSame( 0, $result['mail'] );
+			if ( 'handle_send_customer_email' === ( $request['handler'] ?? '' ) ) {
+				$this->assertStringContainsString( 'Reload', $result['body'] );
+				$this->assertStringContainsString( '"success":false', $result['body'] );
+			} else {
+				$this->assertSame( 409, $result['status'], wp_json_encode( $result ) );
+				$this->assertStringContainsString( 'Reload', $result['message'] );
+			}
+		}
+		// Missing, malformed (including arrays), and valid reloaded HTTP submissions.
+		$request = array( 'user' => $user, 'handler' => 'handle_add_customer_note', 'method' => 'POST', 'data' => $forms['yoohw_cos_add_customer_note'] + array( 'customer_note' => 'Reloaded note' ) );
+		foreach ( array( null, 'bad', array(), '' ) as $invalid ) {
+			unset( $request['data']['yoohw_cos_epoch'] );
+			if ( null !== $invalid ) { $request['data']['yoohw_cos_epoch'] = $invalid; }
+			$this->assertSame( 409, $this->fresh_action( $request )['status'] );
+			$this->assertSame( $before, $this->ordinary_rows() );
+		}
+		$request['data']['yoohw_cos_epoch'] = YoOhw_COS_Reset_Guard::epoch();
+		$this->assertSame( 302, $this->fresh_action( $request )['status'] );
+		$this->assertSame( 2, YoOhw_COS_Notes::get_customer_note_count( $new[0] ) );
+	}
+
+	public function test_ordinary_writer_critical_section_and_stale_request_use_real_connections(): void {
+		global $wpdb;
+		$ids = $this->ordinary_fixture();
+		$wpdb->query( 'COMMIT' );
+		list( $process, $pipes ) = $this->worker( 'hold-ordinary', $ids[0] );
+		try {
+			$this->assertSame( "LOCKED\n", fgets( $pipes[1] ) );
+			try {
+				YoOhw_COS_Customers::reset_data();
+				$this->fail( 'Reset must not interleave between ordinary reference read and INSERT.' );
+			} catch ( RuntimeException $exception ) { $this->assertStringContainsString( 'busy', $exception->getMessage() ); }
+			fwrite( $pipes[0], "GO\n" );
+			fclose( $pipes[0] );
+			$this->assertStringContainsString( 'NOTE:2', stream_get_contents( $pipes[1] ) );
+		} finally {
+			foreach ( $pipes as $pipe ) { if ( is_resource( $pipe ) ) { fclose( $pipe ); } }
+			proc_terminate( $process ); proc_close( $process );
+		}
+		$this->assertSame( 2, YoOhw_COS_Notes::get_customer_note_count( $ids[0] ) );
+		list( $process, $pipes ) = $this->worker( 'stale-ordinary', $ids[0] );
+		try {
+			$this->assertSame( "READY\n", fgets( $pipes[1] ) );
+			$new = $this->ordinary_fixture();
+			$wpdb->query( 'COMMIT' );
+			$before = $this->ordinary_rows();
+			fwrite( $pipes[0], "GO\n" ); fclose( $pipes[0] );
+			$this->assertStringContainsString( 'RESULT:0', stream_get_contents( $pipes[1] ) );
+			$wpdb->query( 'COMMIT' );
+			$this->assertSame( $before, $this->ordinary_rows() );
+		} finally {
+			foreach ( $pipes as $pipe ) { if ( is_resource( $pipe ) ) { fclose( $pipe ); } }
+			proc_terminate( $process ); proc_close( $process );
+		}
+	}
+
+	public function test_reset_cannot_split_profile_snapshot_and_rendered_epoch(): void {
+		global $wpdb;
+		$ids = $this->ordinary_fixture();
+		$user = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		get_user_by( 'id', $user )->add_cap( 'manage_woocommerce' );
+		wp_set_current_user( $user );
+		$epoch = YoOhw_COS_Reset_Guard::epoch();
+		$wpdb->query( 'COMMIT' );
+		$observed = '';
+		$pause = function( $translation, $text ) use ( &$observed ) {
+			if ( 'Internal notes' === $text && '' === $observed ) {
+				global $wpdb;
+				$wpdb->query( 'COMMIT' );
+				list( $process, $pipes ) = $this->worker( 'reset' );
+				fclose( $pipes[0] );
+				$observed = stream_get_contents( $pipes[1] );
+				$error = stream_get_contents( $pipes[2] );
+				fclose( $pipes[1] ); fclose( $pipes[2] );
+				$this->assertSame( 0, proc_close( $process ), $error );
+			}
+			return $translation;
+		};
+		add_filter( 'gettext', $pause, 10, 2 );
+		ob_start();
+		try {
+			YoOhw_COS_Customer_Profile::render( $ids[0] );
+			$html = ob_get_contents();
+		} finally { ob_end_clean(); remove_filter( 'gettext', $pause, 10 ); }
+		$this->assertStringContainsString( 'BUSY', $observed );
+		$this->assertStringContainsString( 'name="yoohw_cos_epoch" value="' . $epoch . '"', $html );
+		$this->assertSame( $epoch, YoOhw_COS_Reset_Guard::epoch() );
+		// Nested service calls must not release the snapshot owner's lock.
+		$this->assertTrue( YoOhw_COS_Reset_Guard::enter() );
+		try {
+			$this->assertGreaterThan( 0, YoOhw_COS_Notes::add_note( $ids[0], 'Nested note' ) );
+			$this->assertNotNull( $wpdb->get_var( $wpdb->prepare( 'SELECT IS_USED_LOCK(%s)', YoOhw_COS_Reset_Guard::lock_name() ) ) );
+		} finally { YoOhw_COS_Reset_Guard::leave(); }
+		$this->assertNull( $wpdb->get_var( $wpdb->prepare( 'SELECT IS_USED_LOCK(%s)', YoOhw_COS_Reset_Guard::lock_name() ) ) );
+	}
+
+	public function test_explicit_empty_legacy_epoch_missing_permission_and_nonce_controls(): void {
+		global $wpdb;
+		$ids = $this->ordinary_fixture();
+		delete_option( YoOhw_COS_Reset_Guard::OPTION );
+		YoOhw_COS_Reset_Guard::init();
+		$user = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		get_user_by( 'id', $user )->add_cap( 'manage_woocommerce' );
+		wp_set_current_user( $user );
+		$wpdb->query( 'COMMIT' );
+		$request = array( 'user' => $user, 'handler' => 'handle_add_customer_note', 'method' => 'POST', 'data' => array( 'customer_id' => $ids[0], 'customer_note' => 'Legacy note', '_wpnonce' => wp_create_nonce( 'yoohw_cos_add_customer_note' ) ) );
+		$this->assertSame( 409, $this->fresh_action( $request )['status'] );
+		$this->assertSame( 1, YoOhw_COS_Notes::get_customer_note_count( $ids[0] ) );
+		$request['data']['yoohw_cos_epoch'] = '';
+		$this->assertSame( 302, $this->fresh_action( $request )['status'] );
+		$this->assertSame( 2, YoOhw_COS_Notes::get_customer_note_count( $ids[0] ) );
+		$request['data']['_wpnonce'] = 'invalid';
+		$this->assertSame( 403, $this->fresh_action( $request )['status'] );
+		$request['user'] = 0;
+		$this->assertNotSame( 302, $this->fresh_action( $request )['status'] );
+		$this->assertSame( 2, YoOhw_COS_Notes::get_customer_note_count( $ids[0] ) );
+	}
+
+	public function test_ajax_selector_keeps_original_form_epoch_and_reloaded_results(): void {
+		global $wpdb;
+		$ids = $this->ordinary_fixture();
+		$user = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		get_user_by( 'id', $user )->add_cap( 'manage_woocommerce' );
+		wp_set_current_user( $user );
+		$epoch = YoOhw_COS_Reset_Guard::epoch();
+		$wpdb->query( 'COMMIT' );
+		$request = array( 'search' => true, 'user' => $user, 'handler' => 'handle_customer_search', 'method' => 'GET', 'data' => array( 'security' => wp_create_nonce( 'yoohw_cos_search_customers' ), 'term' => 'ordinary', 'selection' => '1', 'yoohw_cos_epoch' => $epoch ) );
+		$result = $this->fresh_action( $request );
+		$this->assertStringContainsString( 'Rebuilt record', $result['body'] );
+		$this->ordinary_fixture();
+		$wpdb->query( 'COMMIT' );
+		$before = $this->ordinary_rows();
+		$result = $this->fresh_action( $request );
+		$this->assertStringContainsString( '"success":false', $result['body'] );
+		$this->assertStringContainsString( 'Reload', $result['body'] );
+		$this->assertSame( $before, $this->ordinary_rows() );
+		unset( $request['data']['yoohw_cos_epoch'] );
+		$this->assertStringContainsString( '"success":false', $this->fresh_action( $request )['body'] );
+		$request['data']['yoohw_cos_epoch'] = YoOhw_COS_Reset_Guard::epoch();
+		$this->assertStringContainsString( 'Rebuilt record', $this->fresh_action( $request )['body'] );
+	}
+
+	public function test_remaining_action_renderers_carry_coherent_selection_epochs(): void {
+		global $wpdb;
+		$ids = $this->ordinary_fixture();
+		$user = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		get_user_by( 'id', $user )->add_cap( 'manage_woocommerce' );
+		wp_set_current_user( $user );
+		// Render fixture only: existing assigned-task email trigger calls missing send_notification (CIT-A03).
+		$wpdb->update( YoOhw_COS_DB::tasks_table(), array( 'assigned_user_id' => $user ), array( 'id' => $ids[2] ) );
+		$epoch = YoOhw_COS_Reset_Guard::epoch();
+		$saved_get = $_GET; $saved_post = $_POST; $saved_request = $_REQUEST;
+		$_GET = $_POST = $_REQUEST = array();
+		set_current_screen( 'woocommerce_page_yoohw-customer-intelligence' );
+		try {
+			foreach ( array( 'customers', 'tasks', 'tags', 'segments' ) as $kind ) {
+				ob_start();
+				call_user_func( array( 'YoOhw_COS_Admin_Menu', 'render_' . $kind . '_page' ) );
+				$html = ob_get_clean();
+				$this->assertStringContainsString( 'name="yoohw_cos_epoch" value="' . $epoch . '"', $html, $kind );
+			}
+			ob_start();
+			YoOhw_COS_Admin_Menu::render_dashboard_tasks_widget();
+			$dashboard = ob_get_clean();
+			$this->assertStringContainsString( 'yoohw_cos_epoch=' . $epoch, $dashboard );
+			$tasks = YoOhw_COS_Reset_Guard::snapshot_rows( array( 'YoOhw_COS_Overview', 'get_priority_tasks' ) );
+			$render = new ReflectionMethod( 'YoOhw_COS_Admin_Menu', 'render_priority_tasks_panel' );
+			$render->setAccessible( true );
+			ob_start(); $render->invoke( null, $tasks ); $overview = ob_get_clean();
+			$this->assertStringContainsString( 'yoohw_cos_epoch=' . $epoch, $overview );
+			$order = wc_create_order();
+			$order->set_billing_email( 'ordinary@example.test' );
+			$order->save();
+			YoOhw_COS_Customers::sync_from_order( $order );
+			YoOhw_COS_Tasks::update_task( $ids[2], array( 'order_id' => $order->get_id() ) );
+			ob_start(); YoOhw_COS_Order_Admin::render_task_metabox( $order ); $metabox = ob_get_clean();
+			$this->assertStringContainsString( 'name="yoohw_cos_epoch" value="' . $epoch . '" form="yoohw-cos-order-task-form"', $metabox );
+			$this->assertStringContainsString( 'yoohw_cos_epoch=' . $epoch, $metabox );
+		} finally { $_GET = $saved_get; $_POST = $saved_post; $_REQUEST = $saved_request; }
+	}
+
 }

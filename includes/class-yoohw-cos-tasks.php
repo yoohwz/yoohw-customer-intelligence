@@ -73,6 +73,17 @@ final class YoOhw_COS_Tasks {
 	}
 
 	public static function create_task( array $data ): int {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return 0;
+		}
+		try {
+			return self::create_task_guarded( $data );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function create_task_guarded( array $data ): int {
 		global $wpdb;
 
 		$customer_id = absint( $data['customer_id'] ?? 0 );
@@ -143,6 +154,17 @@ final class YoOhw_COS_Tasks {
 	}
 
 	public static function create_idempotent_task( string $source_key, array $data ): int {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return 0;
+		}
+		try {
+			return self::create_idempotent_task_guarded( $source_key, $data );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function create_idempotent_task_guarded( string $source_key, array $data ): int {
 		$source_key = self::normalize_source_key( $source_key );
 
 		if ( null === $source_key ) {
@@ -161,6 +183,17 @@ final class YoOhw_COS_Tasks {
 	}
 
 	public static function update_task( int $task_id, array $data ): bool {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return false;
+		}
+		try {
+			return self::update_task_guarded( $task_id, $data );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function update_task_guarded( int $task_id, array $data ): bool {
 		global $wpdb;
 
 		$task = self::get_task( $task_id );
@@ -244,6 +277,17 @@ final class YoOhw_COS_Tasks {
 	}
 
 	public static function set_task_status( int $task_id, string $status, int $user_id = 0 ): bool {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return false;
+		}
+		try {
+			return self::set_task_status_guarded( $task_id, $status, $user_id );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function set_task_status_guarded( int $task_id, string $status, int $user_id = 0 ): bool {
 		global $wpdb;
 
 		$task = self::get_task( $task_id );
@@ -289,6 +333,17 @@ final class YoOhw_COS_Tasks {
 	}
 
 	public static function delete_task( int $task_id ): bool {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return false;
+		}
+		try {
+			return self::delete_task_guarded( $task_id );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function delete_task_guarded( int $task_id ): bool {
 		global $wpdb;
 
 		if ( $task_id <= 0 ) {

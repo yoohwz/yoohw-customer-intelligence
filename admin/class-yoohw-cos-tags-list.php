@@ -7,6 +7,8 @@ if ( ! class_exists( 'WP_List_Table' ) ) {
 
 final class YoOhw_COS_Tags_List extends WP_List_Table {
 
+	public $selection_epoch = 'invalid';
+
 	public function __construct() {
 		parent::__construct(
 			array(
@@ -39,6 +41,18 @@ final class YoOhw_COS_Tags_List extends WP_List_Table {
 	}
 
 	public function prepare_items(): void {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return;
+		}
+		try {
+			$this->selection_epoch = YoOhw_COS_Reset_Guard::epoch();
+			$this->prepare_items_guarded(  );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private function prepare_items_guarded(): void {
 		global $wpdb;
 
 		$tags_table          = YoOhw_COS_DB::tags_table();
@@ -120,6 +134,7 @@ final class YoOhw_COS_Tags_List extends WP_List_Table {
 			add_query_arg(
 				array(
 					'action' => 'yoohw_cos_delete_tag',
+					YoOhw_COS_Reset_Guard::FORM_FIELD => $this->selection_epoch,
 					'tag_id' => absint( $item['id'] ),
 				),
 				admin_url( 'admin-post.php' )

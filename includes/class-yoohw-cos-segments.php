@@ -76,9 +76,20 @@ final class YoOhw_COS_Segments {
 	}
 
 	public static function assign_customer( int $customer_id, int $segment_id, int $created_by = 0, bool $record_event = true ): bool {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return false;
+		}
+		try {
+			return self::assign_customer_guarded( $customer_id, $segment_id, $created_by, $record_event );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function assign_customer_guarded( int $customer_id, int $segment_id, int $created_by = 0, bool $record_event = true ): bool {
 		global $wpdb;
 
-		if ( $customer_id <= 0 || $segment_id <= 0 ) {
+		if ( $customer_id <= 0 || $segment_id <= 0 || ! YoOhw_COS_Customers::customer_exists( $customer_id ) || ! self::get_segment( $segment_id ) ) {
 			return false;
 		}
 
@@ -125,6 +136,17 @@ final class YoOhw_COS_Segments {
 	}
 
 	public static function remove_customer( int $customer_id, int $segment_id, bool $record_event = true ): bool {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return false;
+		}
+		try {
+			return self::remove_customer_guarded( $customer_id, $segment_id, $record_event );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function remove_customer_guarded( int $customer_id, int $segment_id, bool $record_event = true ): bool {
 		global $wpdb;
 
 		$segment = self::get_segment( $segment_id );
@@ -233,6 +255,17 @@ final class YoOhw_COS_Segments {
 	}
 
 	public static function delete_segment( int $segment_id, bool $force = false ): bool {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return false;
+		}
+		try {
+			return self::delete_segment_guarded( $segment_id, $force );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function delete_segment_guarded( int $segment_id, bool $force = false ): bool {
 		global $wpdb;
 
 		$segment = self::get_segment( $segment_id );

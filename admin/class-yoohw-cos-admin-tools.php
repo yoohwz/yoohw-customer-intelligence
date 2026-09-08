@@ -48,90 +48,95 @@ final class YoOhw_COS_Admin_Tools {
 
 		check_ajax_referer( 'yoohw_cos_send_customer_email', 'security' );
 
-		$customer_id = isset( $_POST['customer_id'] ) ? absint( wp_unslash( $_POST['customer_id'] ) ) : 0;
-		$subject     = isset( $_POST['email_subject'] ) ? sanitize_text_field( wp_unslash( $_POST['email_subject'] ) ) : '';
-		$message     = isset( $_POST['email_message'] ) ? sanitize_textarea_field( wp_unslash( $_POST['email_message'] ) ) : '';
-		$customer    = $customer_id > 0 ? YoOhw_COS_Customers::get_customer( $customer_id ) : array();
+		YoOhw_COS_Reset_Guard::require_submission( $_POST, true );
+		try {
+			$customer_id = isset( $_POST['customer_id'] ) ? absint( wp_unslash( $_POST['customer_id'] ) ) : 0;
+			$subject     = isset( $_POST['email_subject'] ) ? sanitize_text_field( wp_unslash( $_POST['email_subject'] ) ) : '';
+			$message     = isset( $_POST['email_message'] ) ? sanitize_textarea_field( wp_unslash( $_POST['email_message'] ) ) : '';
+			$customer    = $customer_id > 0 ? YoOhw_COS_Customers::get_customer( $customer_id ) : array();
 
-		if ( empty( $customer ) ) {
-			wp_send_json_error(
+			if ( empty( $customer ) ) {
+				wp_send_json_error(
+					array(
+						'message' => __( 'The requested customer profile does not exist.', 'yoohw-customer-intelligence' ),
+					),
+					404
+				);
+			}
+
+			$recipient = sanitize_email( (string) ( $customer['email'] ?? '' ) );
+
+			if ( ! is_email( $recipient ) ) {
+				wp_send_json_error(
+					array(
+						'message' => __( 'This customer profile does not have a valid email address.', 'yoohw-customer-intelligence' ),
+					),
+					400
+				);
+			}
+
+			if ( '' === trim( $subject ) ) {
+				wp_send_json_error(
+					array(
+						'message' => __( 'Enter an email subject.', 'yoohw-customer-intelligence' ),
+					),
+					400
+				);
+			}
+
+			if ( '' === trim( $message ) ) {
+				wp_send_json_error(
+					array(
+						'message' => __( 'Enter an email message.', 'yoohw-customer-intelligence' ),
+					),
+					400
+				);
+			}
+
+			$result = YoOhw_COS_Email_Notifications::send_customer_message( $customer, $subject, $message );
+
+			if ( is_wp_error( $result ) ) {
+				wp_send_json_error(
+					array(
+						'message' => $result->get_error_message(),
+					),
+					500
+				);
+			}
+
+			YoOhw_COS_Events::record(
 				array(
-					'message' => __( 'The requested customer profile does not exist.', 'yoohw-customer-intelligence' ),
-				),
-				404
+					'customer_id'  => $customer_id,
+					'event_type'   => 'customer_email_sent',
+					'event_source' => 'customer_os',
+					'object_type'  => 'customer',
+					'object_id'    => $customer_id,
+					'description'  => sprintf(
+						/* translators: 1: customer email address, 2: email subject. */
+						__( 'Email sent to %1$s with subject “%2$s”.', 'yoohw-customer-intelligence' ),
+						$recipient,
+						$subject
+					),
+					'metadata'     => array(
+						'recipient'       => $recipient,
+						'subject'         => $subject,
+						'sent_by_user_id' => get_current_user_id(),
+					),
+				)
 			);
-		}
 
-		$recipient = sanitize_email( (string) ( $customer['email'] ?? '' ) );
-
-		if ( ! is_email( $recipient ) ) {
-			wp_send_json_error(
+			wp_send_json_success(
 				array(
-					'message' => __( 'This customer profile does not have a valid email address.', 'yoohw-customer-intelligence' ),
-				),
-				400
+					'message' => sprintf(
+						/* translators: %s: customer email address. */
+						__( 'Email sent to %s.', 'yoohw-customer-intelligence' ),
+						$recipient
+					),
+				)
 			);
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
 		}
-
-		if ( '' === trim( $subject ) ) {
-			wp_send_json_error(
-				array(
-					'message' => __( 'Enter an email subject.', 'yoohw-customer-intelligence' ),
-				),
-				400
-			);
-		}
-
-		if ( '' === trim( $message ) ) {
-			wp_send_json_error(
-				array(
-					'message' => __( 'Enter an email message.', 'yoohw-customer-intelligence' ),
-				),
-				400
-			);
-		}
-
-		$result = YoOhw_COS_Email_Notifications::send_customer_message( $customer, $subject, $message );
-
-		if ( is_wp_error( $result ) ) {
-			wp_send_json_error(
-				array(
-					'message' => $result->get_error_message(),
-				),
-				500
-			);
-		}
-
-		YoOhw_COS_Events::record(
-			array(
-				'customer_id'  => $customer_id,
-				'event_type'   => 'customer_email_sent',
-				'event_source' => 'customer_os',
-				'object_type'  => 'customer',
-				'object_id'    => $customer_id,
-				'description'  => sprintf(
-					/* translators: 1: customer email address, 2: email subject. */
-					__( 'Email sent to %1$s with subject “%2$s”.', 'yoohw-customer-intelligence' ),
-					$recipient,
-					$subject
-				),
-				'metadata'     => array(
-					'recipient'       => $recipient,
-					'subject'         => $subject,
-					'sent_by_user_id' => get_current_user_id(),
-				),
-			)
-		);
-
-		wp_send_json_success(
-			array(
-				'message' => sprintf(
-					/* translators: %s: customer email address. */
-					__( 'Email sent to %s.', 'yoohw-customer-intelligence' ),
-					$recipient
-				),
-			)
-		);
 	}
 
 	public static function handle_sync_customers(): void {
@@ -665,38 +670,44 @@ final class YoOhw_COS_Admin_Tools {
 
 		check_admin_referer( 'yoohw_cos_assign_customer_tag' );
 
-		$customer_id = isset( $_POST['customer_id'] ) ? absint( wp_unslash( $_POST['customer_id'] ) ) : 0;
-		$tag_id      = isset( $_POST['tag_id'] ) ? absint( wp_unslash( $_POST['tag_id'] ) ) : 0;
-		$tag_name    = isset( $_POST['tag_name'] ) ? sanitize_text_field( wp_unslash( $_POST['tag_name'] ) ) : '';
-		$tag_name    = '' !== $tag_name || ! isset( $_POST['tag_name_nojs'] )
-			? $tag_name
-			: sanitize_textarea_field( wp_unslash( $_POST['tag_name_nojs'] ) );
-		$assigned    = false;
+		YoOhw_COS_Reset_Guard::require_submission( $_POST );
+		try {
+			$customer_id = isset( $_POST['customer_id'] ) ? absint( wp_unslash( $_POST['customer_id'] ) ) : 0;
+			$tag_id      = isset( $_POST['tag_id'] ) ? absint( wp_unslash( $_POST['tag_id'] ) ) : 0;
+			$tag_name    = isset( $_POST['tag_name'] ) ? sanitize_text_field( wp_unslash( $_POST['tag_name'] ) ) : '';
+			$tag_name    = '' !== $tag_name || ! isset( $_POST['tag_name_nojs'] )
+				? $tag_name
+				: sanitize_textarea_field( wp_unslash( $_POST['tag_name_nojs'] ) );
+			$assigned    = false;
+			$names       = self::parse_relationship_names( $tag_name );
 
-		if ( $customer_id && YoOhw_COS_Customers::customer_exists( $customer_id ) ) {
-			if ( $tag_id && YoOhw_COS_Tags::tag_exists( $tag_id ) ) {
-				$assigned = YoOhw_COS_Tags::assign_tag( $customer_id, $tag_id );
-			}
+			if ( $customer_id && YoOhw_COS_Customers::customer_exists( $customer_id ) ) {
+				if ( $tag_id && YoOhw_COS_Tags::tag_exists( $tag_id ) ) {
+					$assigned = YoOhw_COS_Tags::assign_tag( $customer_id, $tag_id );
+				}
 
-			foreach ( self::parse_relationship_names( $tag_name ) as $name ) {
-				$created_tag_id = YoOhw_COS_Tags::create_tag( $name );
+				foreach ( $names as $name ) {
+					$created_tag_id = YoOhw_COS_Tags::create_tag( $name );
 
-				if ( $created_tag_id && YoOhw_COS_Tags::tag_exists( $created_tag_id ) ) {
-					$assigned = YoOhw_COS_Tags::assign_tag( $customer_id, $created_tag_id ) || $assigned;
+					if ( $created_tag_id && YoOhw_COS_Tags::tag_exists( $created_tag_id ) ) {
+						$assigned = YoOhw_COS_Tags::assign_tag( $customer_id, $created_tag_id ) || $assigned;
+					}
 				}
 			}
-		}
 
-		wp_safe_redirect(
-			self::get_customer_profile_redirect_url(
-				$customer_id,
-				array(
-					'tag_added' => $assigned ? 1 : 0,
-				),
-				'yoohw-cos-add-tag'
-			)
-		);
-		exit;
+			wp_safe_redirect(
+				self::get_customer_profile_redirect_url(
+					$customer_id,
+					array(
+						'tag_added' => $assigned ? 1 : 0,
+					),
+					'yoohw-cos-add-tag'
+				)
+			);
+			return;
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
 	}
 
 	private static function get_customer_profile_redirect_url( int $customer_id, array $args, string $fragment = '' ): string {
@@ -733,6 +744,7 @@ final class YoOhw_COS_Admin_Tools {
 			$names[ $key ?: md5( $name ) ] = $name;
 		}
 
+		YoOhw_COS_Reset_Guard::check_bulk_size( $names );
 		return array_values( $names );
 	}
 
@@ -743,29 +755,34 @@ final class YoOhw_COS_Admin_Tools {
 
 		check_admin_referer( 'yoohw_cos_remove_customer_tag' );
 
-		$customer_id = isset( $_GET['customer_id'] ) ? absint( wp_unslash( $_GET['customer_id'] ) ) : 0;
-		$tag_id      = isset( $_GET['tag_id'] ) ? absint( wp_unslash( $_GET['tag_id'] ) ) : 0;
-		$removed     = false;
+		YoOhw_COS_Reset_Guard::require_submission( $_GET );
+		try {
+			$customer_id = isset( $_GET['customer_id'] ) ? absint( wp_unslash( $_GET['customer_id'] ) ) : 0;
+			$tag_id      = isset( $_GET['tag_id'] ) ? absint( wp_unslash( $_GET['tag_id'] ) ) : 0;
+			$removed     = false;
 
-		if (
-			$customer_id
-			&& $tag_id
-			&& YoOhw_COS_Customers::customer_exists( $customer_id )
-			&& YoOhw_COS_Tags::tag_exists( $tag_id )
-		) {
-			$removed = YoOhw_COS_Tags::remove_tag( $customer_id, $tag_id );
+			if (
+				$customer_id
+				&& $tag_id
+				&& YoOhw_COS_Customers::customer_exists( $customer_id )
+				&& YoOhw_COS_Tags::tag_exists( $tag_id )
+			) {
+				$removed = YoOhw_COS_Tags::remove_tag( $customer_id, $tag_id );
+			}
+
+			wp_safe_redirect(
+				self::get_customer_profile_redirect_url(
+					$customer_id,
+					array(
+						'tag_removed' => $removed ? 1 : 0,
+					),
+					'yoohw-cos-add-tag'
+				)
+			);
+			return;
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
 		}
-
-		wp_safe_redirect(
-			self::get_customer_profile_redirect_url(
-				$customer_id,
-				array(
-					'tag_removed' => $removed ? 1 : 0,
-				),
-				'yoohw-cos-add-tag'
-			)
-		);
-		exit;
 	}
 
 	public static function handle_add_customer_note(): void {
@@ -775,25 +792,30 @@ final class YoOhw_COS_Admin_Tools {
 
 		check_admin_referer( 'yoohw_cos_add_customer_note' );
 
-		$customer_id = isset( $_POST['customer_id'] ) ? absint( wp_unslash( $_POST['customer_id'] ) ) : 0;
-		$note        = isset( $_POST['customer_note'] ) ? wp_kses_post( wp_unslash( $_POST['customer_note'] ) ) : '';
-		$added       = false;
+		YoOhw_COS_Reset_Guard::require_submission( $_POST );
+		try {
+			$customer_id = isset( $_POST['customer_id'] ) ? absint( wp_unslash( $_POST['customer_id'] ) ) : 0;
+			$note        = isset( $_POST['customer_note'] ) ? wp_kses_post( wp_unslash( $_POST['customer_note'] ) ) : '';
+			$added       = false;
 
-		if ( $customer_id && $note && YoOhw_COS_Customers::customer_exists( $customer_id ) ) {
-			$added = (bool) YoOhw_COS_Notes::add_note( $customer_id, $note );
+			if ( $customer_id && $note && YoOhw_COS_Customers::customer_exists( $customer_id ) ) {
+				$added = (bool) YoOhw_COS_Notes::add_note( $customer_id, $note );
+			}
+
+			wp_safe_redirect(
+				add_query_arg(
+					array(
+							'page'        => 'yoohw-customer-intelligence',
+							'customer_id' => $customer_id,
+							'note_added'  => $added ? 1 : 0,
+						),
+					admin_url( 'admin.php' )
+				)
+			);
+			return;
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
 		}
-
-		wp_safe_redirect(
-			add_query_arg(
-				array(
-						'page'        => 'yoohw-customer-intelligence',
-						'customer_id' => $customer_id,
-						'note_added'  => $added ? 1 : 0,
-					),
-				admin_url( 'admin.php' )
-			)
-		);
-		exit;
 	}
 
 	public static function handle_update_customer_note(): void {
@@ -803,31 +825,36 @@ final class YoOhw_COS_Admin_Tools {
 
 		check_admin_referer( 'yoohw_cos_update_customer_note' );
 
-		$customer_id = isset( $_POST['customer_id'] ) ? absint( wp_unslash( $_POST['customer_id'] ) ) : 0;
-		$note_id     = isset( $_POST['note_id'] ) ? absint( wp_unslash( $_POST['note_id'] ) ) : 0;
-		$content     = isset( $_POST['customer_note'] ) ? wp_kses_post( wp_unslash( $_POST['customer_note'] ) ) : '';
-		$updated     = false;
+		YoOhw_COS_Reset_Guard::require_submission( $_POST );
+		try {
+			$customer_id = isset( $_POST['customer_id'] ) ? absint( wp_unslash( $_POST['customer_id'] ) ) : 0;
+			$note_id     = isset( $_POST['note_id'] ) ? absint( wp_unslash( $_POST['note_id'] ) ) : 0;
+			$content     = isset( $_POST['customer_note'] ) ? wp_kses_post( wp_unslash( $_POST['customer_note'] ) ) : '';
+			$updated     = false;
 
-		if (
-			$customer_id
-			&& $note_id
-			&& $content
-			&& YoOhw_COS_Notes::note_belongs_to_customer( $note_id, $customer_id )
-		) {
-			$updated = YoOhw_COS_Notes::update_note( $note_id, $content );
+			if (
+				$customer_id
+				&& $note_id
+				&& $content
+				&& YoOhw_COS_Notes::note_belongs_to_customer( $note_id, $customer_id )
+			) {
+				$updated = YoOhw_COS_Notes::update_note( $note_id, $content );
+			}
+
+			wp_safe_redirect(
+				add_query_arg(
+					array(
+							'page'         => 'yoohw-customer-intelligence',
+							'customer_id'  => $customer_id,
+							'note_updated' => $updated ? 1 : 0,
+						),
+					admin_url( 'admin.php' )
+				)
+			);
+			return;
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
 		}
-
-		wp_safe_redirect(
-			add_query_arg(
-				array(
-						'page'         => 'yoohw-customer-intelligence',
-						'customer_id'  => $customer_id,
-						'note_updated' => $updated ? 1 : 0,
-					),
-				admin_url( 'admin.php' )
-			)
-		);
-		exit;
 	}
 
 	public static function handle_delete_customer_note(): void {
@@ -837,29 +864,34 @@ final class YoOhw_COS_Admin_Tools {
 
 		check_admin_referer( 'yoohw_cos_delete_customer_note' );
 
-		$customer_id = isset( $_GET['customer_id'] ) ? absint( wp_unslash( $_GET['customer_id'] ) ) : 0;
-		$note_id     = isset( $_GET['note_id'] ) ? absint( wp_unslash( $_GET['note_id'] ) ) : 0;
-		$deleted     = false;
+		YoOhw_COS_Reset_Guard::require_submission( $_GET );
+		try {
+			$customer_id = isset( $_GET['customer_id'] ) ? absint( wp_unslash( $_GET['customer_id'] ) ) : 0;
+			$note_id     = isset( $_GET['note_id'] ) ? absint( wp_unslash( $_GET['note_id'] ) ) : 0;
+			$deleted     = false;
 
-		if (
-			$customer_id
-			&& $note_id
-			&& YoOhw_COS_Notes::note_belongs_to_customer( $note_id, $customer_id )
-		) {
-			$deleted = YoOhw_COS_Notes::delete_note( $note_id );
+			if (
+				$customer_id
+				&& $note_id
+				&& YoOhw_COS_Notes::note_belongs_to_customer( $note_id, $customer_id )
+			) {
+				$deleted = YoOhw_COS_Notes::delete_note( $note_id );
+			}
+
+			wp_safe_redirect(
+				add_query_arg(
+					array(
+							'page'         => 'yoohw-customer-intelligence',
+							'customer_id'  => $customer_id,
+							'note_deleted' => $deleted ? 1 : 0,
+						),
+					admin_url( 'admin.php' )
+				)
+			);
+			return;
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
 		}
-
-		wp_safe_redirect(
-			add_query_arg(
-				array(
-						'page'         => 'yoohw-customer-intelligence',
-						'customer_id'  => $customer_id,
-						'note_deleted' => $deleted ? 1 : 0,
-					),
-				admin_url( 'admin.php' )
-			)
-		);
-		exit;
 	}
 
 	public static function handle_recalculate_intelligence(): void {
@@ -1082,38 +1114,43 @@ final class YoOhw_COS_Admin_Tools {
 
 		check_admin_referer( 'yoohw_cos_assign_customer_segment' );
 
-		$customer_id  = isset( $_POST['customer_id'] ) ? absint( wp_unslash( $_POST['customer_id'] ) ) : 0;
-		$segment_id   = isset( $_POST['segment_id'] ) ? absint( wp_unslash( $_POST['segment_id'] ) ) : 0;
-		$segment_name = isset( $_POST['segment_name'] ) ? sanitize_text_field( wp_unslash( $_POST['segment_name'] ) ) : '';
-		$segment_name = '' !== $segment_name || ! isset( $_POST['segment_name_nojs'] )
-			? $segment_name
-			: sanitize_textarea_field( wp_unslash( $_POST['segment_name_nojs'] ) );
-		$assigned     = false;
+		YoOhw_COS_Reset_Guard::require_submission( $_POST );
+		try {
+			$customer_id  = isset( $_POST['customer_id'] ) ? absint( wp_unslash( $_POST['customer_id'] ) ) : 0;
+			$segment_id   = isset( $_POST['segment_id'] ) ? absint( wp_unslash( $_POST['segment_id'] ) ) : 0;
+			$segment_name = isset( $_POST['segment_name'] ) ? sanitize_text_field( wp_unslash( $_POST['segment_name'] ) ) : '';
+			$segment_name = '' !== $segment_name || ! isset( $_POST['segment_name_nojs'] )
+				? $segment_name
+				: sanitize_textarea_field( wp_unslash( $_POST['segment_name_nojs'] ) );
+			$assigned     = false;
 
-		if ( $customer_id && YoOhw_COS_Customers::customer_exists( $customer_id ) ) {
-			if ( $segment_id && YoOhw_COS_Segments::segment_exists( $segment_id ) ) {
-				$assigned = YoOhw_COS_Segments::assign_customer( $customer_id, $segment_id );
-			}
+			if ( $customer_id && YoOhw_COS_Customers::customer_exists( $customer_id ) ) {
+				if ( $segment_id && YoOhw_COS_Segments::segment_exists( $segment_id ) ) {
+					$assigned = YoOhw_COS_Segments::assign_customer( $customer_id, $segment_id );
+				}
 
-			foreach ( self::parse_relationship_names( $segment_name ) as $name ) {
-				$created_segment_id = YoOhw_COS_Segments::create_segment( $name );
+				foreach ( $names as $name ) {
+					$created_segment_id = YoOhw_COS_Segments::create_segment( $name );
 
-				if ( $created_segment_id && YoOhw_COS_Segments::segment_exists( $created_segment_id ) ) {
-					$assigned = YoOhw_COS_Segments::assign_customer( $customer_id, $created_segment_id ) || $assigned;
+					if ( $created_segment_id && YoOhw_COS_Segments::segment_exists( $created_segment_id ) ) {
+						$assigned = YoOhw_COS_Segments::assign_customer( $customer_id, $created_segment_id ) || $assigned;
+					}
 				}
 			}
-		}
 
-		wp_safe_redirect(
-			self::get_customer_profile_redirect_url(
-				$customer_id,
-				array(
-					'segment_added' => $assigned ? 1 : 0,
-				),
-				'yoohw-cos-add-segment'
-			)
-		);
-		exit;
+			wp_safe_redirect(
+				self::get_customer_profile_redirect_url(
+					$customer_id,
+					array(
+						'segment_added' => $assigned ? 1 : 0,
+					),
+					'yoohw-cos-add-segment'
+				)
+			);
+			return;
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
 	}
 
 	public static function handle_remove_customer_segment(): void {
@@ -1123,29 +1160,34 @@ final class YoOhw_COS_Admin_Tools {
 
 		check_admin_referer( 'yoohw_cos_remove_customer_segment' );
 
-		$customer_id = isset( $_GET['customer_id'] ) ? absint( wp_unslash( $_GET['customer_id'] ) ) : 0;
-		$segment_id  = isset( $_GET['segment_id'] ) ? absint( wp_unslash( $_GET['segment_id'] ) ) : 0;
-		$removed     = false;
+		YoOhw_COS_Reset_Guard::require_submission( $_GET );
+		try {
+			$customer_id = isset( $_GET['customer_id'] ) ? absint( wp_unslash( $_GET['customer_id'] ) ) : 0;
+			$segment_id  = isset( $_GET['segment_id'] ) ? absint( wp_unslash( $_GET['segment_id'] ) ) : 0;
+			$removed     = false;
 
-		if (
-			$customer_id
-			&& $segment_id
-			&& YoOhw_COS_Customers::customer_exists( $customer_id )
-			&& YoOhw_COS_Segments::segment_exists( $segment_id )
-		) {
-			$removed = YoOhw_COS_Segments::remove_customer( $customer_id, $segment_id );
+			if (
+				$customer_id
+				&& $segment_id
+				&& YoOhw_COS_Customers::customer_exists( $customer_id )
+				&& YoOhw_COS_Segments::segment_exists( $segment_id )
+			) {
+				$removed = YoOhw_COS_Segments::remove_customer( $customer_id, $segment_id );
+			}
+
+			wp_safe_redirect(
+				self::get_customer_profile_redirect_url(
+					$customer_id,
+					array(
+						'segment_removed' => $removed ? 1 : 0,
+					),
+					'yoohw-cos-add-segment'
+				)
+			);
+			return;
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
 		}
-
-		wp_safe_redirect(
-			self::get_customer_profile_redirect_url(
-				$customer_id,
-				array(
-					'segment_removed' => $removed ? 1 : 0,
-				),
-				'yoohw-cos-add-segment'
-			)
-		);
-		exit;
 	}
 
 	public static function handle_create_task(): void {
@@ -1155,31 +1197,36 @@ final class YoOhw_COS_Admin_Tools {
 
 		check_admin_referer( 'yoohw_cos_create_task' );
 
-		$data  = self::get_task_post_data();
-		$error = self::validate_task_data( $data );
+		YoOhw_COS_Reset_Guard::require_submission( $_POST );
+		try {
+			$data  = self::get_task_post_data();
+			$error = self::validate_task_data( $data );
 
-		if ( '' !== $error ) {
+			if ( '' !== $error ) {
+				wp_safe_redirect(
+					self::get_task_action_redirect(
+						array(
+							'yoohw_task_error' => $error,
+						)
+					)
+				);
+				return;
+			}
+
+			$task_id = YoOhw_COS_Tasks::create_task( $data );
+
 			wp_safe_redirect(
 				self::get_task_action_redirect(
 					array(
-						'yoohw_task_error' => $error,
+						'yoohw_task_created' => $task_id ? 1 : 0,
+						'yoohw_task_error'   => $task_id ? null : 'save_failed',
 					)
 				)
 			);
-			exit;
+			return;
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
 		}
-
-		$task_id = YoOhw_COS_Tasks::create_task( $data );
-
-		wp_safe_redirect(
-			self::get_task_action_redirect(
-				array(
-					'yoohw_task_created' => $task_id ? 1 : 0,
-					'yoohw_task_error'   => $task_id ? null : 'save_failed',
-				)
-			)
-		);
-		exit;
 	}
 
 	public static function handle_update_task(): void {
@@ -1189,45 +1236,50 @@ final class YoOhw_COS_Admin_Tools {
 
 		check_admin_referer( 'yoohw_cos_update_task' );
 
-		$task_id = isset( $_POST['task_id'] ) ? absint( wp_unslash( $_POST['task_id'] ) ) : 0;
+		YoOhw_COS_Reset_Guard::require_submission( $_POST );
+		try {
+			$task_id = isset( $_POST['task_id'] ) ? absint( wp_unslash( $_POST['task_id'] ) ) : 0;
 
-		if ( $task_id <= 0 || empty( YoOhw_COS_Tasks::get_task( $task_id ) ) ) {
+			if ( $task_id <= 0 || empty( YoOhw_COS_Tasks::get_task( $task_id ) ) ) {
+				wp_safe_redirect(
+					self::get_task_action_redirect(
+						array(
+							'yoohw_task_error' => 'invalid_task',
+						)
+					)
+				);
+				return;
+			}
+
+			$data  = self::get_task_post_data();
+			$error = self::validate_task_data( $data );
+
+			if ( '' !== $error ) {
+				wp_safe_redirect(
+					self::get_task_action_redirect(
+						array(
+							'task_id'          => $task_id,
+							'yoohw_task_error' => $error,
+						)
+					)
+				);
+				return;
+			}
+
+			$updated = YoOhw_COS_Tasks::update_task( $task_id, $data );
+
 			wp_safe_redirect(
 				self::get_task_action_redirect(
 					array(
-						'yoohw_task_error' => 'invalid_task',
+						'yoohw_task_updated' => $updated ? 1 : 0,
+						'yoohw_task_error'   => $updated ? null : 'save_failed',
 					)
 				)
 			);
-			exit;
+			return;
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
 		}
-
-		$data  = self::get_task_post_data();
-		$error = self::validate_task_data( $data );
-
-		if ( '' !== $error ) {
-			wp_safe_redirect(
-				self::get_task_action_redirect(
-					array(
-						'task_id'          => $task_id,
-						'yoohw_task_error' => $error,
-					)
-				)
-			);
-			exit;
-		}
-
-		$updated = YoOhw_COS_Tasks::update_task( $task_id, $data );
-
-		wp_safe_redirect(
-			self::get_task_action_redirect(
-				array(
-					'yoohw_task_updated' => $updated ? 1 : 0,
-					'yoohw_task_error'   => $updated ? null : 'save_failed',
-				)
-			)
-		);
-		exit;
 	}
 
 	public static function handle_complete_task(): void {
@@ -1245,18 +1297,23 @@ final class YoOhw_COS_Admin_Tools {
 
 		check_admin_referer( 'yoohw_cos_delete_task' );
 
-		$task_id = isset( $_GET['task_id'] ) ? absint( wp_unslash( $_GET['task_id'] ) ) : 0;
-		$deleted = $task_id > 0 ? YoOhw_COS_Tasks::delete_task( $task_id ) : false;
+		YoOhw_COS_Reset_Guard::require_submission( $_GET );
+		try {
+			$task_id = isset( $_GET['task_id'] ) ? absint( wp_unslash( $_GET['task_id'] ) ) : 0;
+			$deleted = $task_id > 0 ? YoOhw_COS_Tasks::delete_task( $task_id ) : false;
 
-		wp_safe_redirect(
-			self::get_task_action_redirect(
-				array(
-					'yoohw_task_deleted' => $deleted ? 1 : 0,
-					'yoohw_task_error'   => $deleted ? null : 'invalid_task',
+			wp_safe_redirect(
+				self::get_task_action_redirect(
+					array(
+						'yoohw_task_deleted' => $deleted ? 1 : 0,
+						'yoohw_task_error'   => $deleted ? null : 'invalid_task',
+					)
 				)
-			)
-		);
-		exit;
+			);
+			return;
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
 	}
 
 	private static function handle_task_status_action( string $task_action ): void {
@@ -1269,25 +1326,30 @@ final class YoOhw_COS_Admin_Tools {
 
 		check_admin_referer( $nonce );
 
-		$task_id = isset( $_GET['task_id'] ) ? absint( wp_unslash( $_GET['task_id'] ) ) : 0;
-		$updated = false;
+		YoOhw_COS_Reset_Guard::require_submission( $_GET );
+		try {
+			$task_id = isset( $_GET['task_id'] ) ? absint( wp_unslash( $_GET['task_id'] ) ) : 0;
+			$updated = false;
 
-		if ( $task_id > 0 ) {
-			$updated = 'complete' === $task_action
-				? YoOhw_COS_Tasks::complete_task( $task_id )
-				: YoOhw_COS_Tasks::reopen_task( $task_id );
-		}
+			if ( $task_id > 0 ) {
+				$updated = 'complete' === $task_action
+					? YoOhw_COS_Tasks::complete_task( $task_id )
+					: YoOhw_COS_Tasks::reopen_task( $task_id );
+			}
 
-		wp_safe_redirect(
-			self::get_task_action_redirect(
-				array(
-					'yoohw_task_completed' => 'complete' === $task_action && $updated ? 1 : null,
-					'yoohw_task_reopened'  => 'reopen' === $task_action && $updated ? 1 : null,
-					'yoohw_task_error'     => $updated ? null : 'invalid_task',
+			wp_safe_redirect(
+				self::get_task_action_redirect(
+					array(
+						'yoohw_task_completed' => 'complete' === $task_action && $updated ? 1 : null,
+						'yoohw_task_reopened'  => 'reopen' === $task_action && $updated ? 1 : null,
+						'yoohw_task_error'     => $updated ? null : 'invalid_task',
+					)
 				)
-			)
-		);
-		exit;
+			);
+			return;
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
 	}
 
 	private static function get_task_post_data(): array {
@@ -1480,50 +1542,55 @@ final class YoOhw_COS_Admin_Tools {
 
 		check_admin_referer( 'yoohw_cos_delete_tag' );
 
-		$tag_id = isset( $_GET['tag_id'] ) ? absint( wp_unslash( $_GET['tag_id'] ) ) : 0;
-		$force  = ! empty( $_GET['force'] );
+		YoOhw_COS_Reset_Guard::require_submission( $_GET );
+		try {
+			$tag_id = isset( $_GET['tag_id'] ) ? absint( wp_unslash( $_GET['tag_id'] ) ) : 0;
+			$force  = ! empty( $_GET['force'] );
 
-		if ( ! $tag_id ) {
+			if ( ! $tag_id ) {
+				wp_safe_redirect(
+					add_query_arg(
+						array(
+							'page'              => 'yoohw-customer-intelligence-tags',
+							'yoohw_tag_deleted' => 0,
+						),
+						admin_url( 'admin.php' )
+					)
+				);
+				return;
+			}
+
+			$count = YoOhw_COS_Tags::get_tag_customer_count( $tag_id );
+
+			if ( $count > 0 && ! $force ) {
+				wp_safe_redirect(
+					add_query_arg(
+						array(
+							'page'                    => 'yoohw-customer-intelligence-tags',
+							'yoohw_tag_delete_block'  => $tag_id,
+							'tag_customer_count'      => $count,
+						),
+						admin_url( 'admin.php' )
+					)
+				);
+				return;
+			}
+
+			$deleted = YoOhw_COS_Tags::delete_tag( $tag_id, $force );
+
 			wp_safe_redirect(
 				add_query_arg(
 					array(
 						'page'              => 'yoohw-customer-intelligence-tags',
-						'yoohw_tag_deleted' => 0,
+						'yoohw_tag_deleted' => $deleted ? 1 : 0,
 					),
 					admin_url( 'admin.php' )
 				)
 			);
-			exit;
+			return;
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
 		}
-
-		$count = YoOhw_COS_Tags::get_tag_customer_count( $tag_id );
-
-		if ( $count > 0 && ! $force ) {
-			wp_safe_redirect(
-				add_query_arg(
-					array(
-						'page'                    => 'yoohw-customer-intelligence-tags',
-						'yoohw_tag_delete_block'  => $tag_id,
-						'tag_customer_count'      => $count,
-					),
-					admin_url( 'admin.php' )
-				)
-			);
-			exit;
-		}
-
-		$deleted = YoOhw_COS_Tags::delete_tag( $tag_id, $force );
-
-		wp_safe_redirect(
-			add_query_arg(
-				array(
-					'page'              => 'yoohw-customer-intelligence-tags',
-					'yoohw_tag_deleted' => $deleted ? 1 : 0,
-				),
-				admin_url( 'admin.php' )
-			)
-		);
-		exit;
 	}
 
 	public static function handle_create_segment(): void {
@@ -1587,50 +1654,55 @@ final class YoOhw_COS_Admin_Tools {
 
 		check_admin_referer( 'yoohw_cos_delete_segment' );
 
-		$segment_id = isset( $_GET['segment_id'] ) ? absint( wp_unslash( $_GET['segment_id'] ) ) : 0;
-		$force      = ! empty( $_GET['force'] );
+		YoOhw_COS_Reset_Guard::require_submission( $_GET );
+		try {
+			$segment_id = isset( $_GET['segment_id'] ) ? absint( wp_unslash( $_GET['segment_id'] ) ) : 0;
+			$force      = ! empty( $_GET['force'] );
 
-		if ( ! $segment_id ) {
+			if ( ! $segment_id ) {
+				wp_safe_redirect(
+					add_query_arg(
+						array(
+							'page'                  => 'yoohw-customer-intelligence-segments',
+							'yoohw_segment_deleted' => 0,
+						),
+						admin_url( 'admin.php' )
+					)
+				);
+				return;
+			}
+
+			$count = YoOhw_COS_Segments::get_segment_customer_count( $segment_id );
+
+			if ( $count > 0 && ! $force ) {
+				wp_safe_redirect(
+					add_query_arg(
+						array(
+							'page'                       => 'yoohw-customer-intelligence-segments',
+							'yoohw_segment_delete_block' => $segment_id,
+							'segment_customer_count'     => $count,
+						),
+						admin_url( 'admin.php' )
+					)
+				);
+				return;
+			}
+
+			$deleted = YoOhw_COS_Segments::delete_segment( $segment_id, $force );
+
 			wp_safe_redirect(
 				add_query_arg(
 					array(
 						'page'                  => 'yoohw-customer-intelligence-segments',
-						'yoohw_segment_deleted' => 0,
+						'yoohw_segment_deleted' => $deleted ? 1 : 0,
 					),
 					admin_url( 'admin.php' )
 				)
 			);
-			exit;
+			return;
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
 		}
-
-		$count = YoOhw_COS_Segments::get_segment_customer_count( $segment_id );
-
-		if ( $count > 0 && ! $force ) {
-			wp_safe_redirect(
-				add_query_arg(
-					array(
-						'page'                       => 'yoohw-customer-intelligence-segments',
-						'yoohw_segment_delete_block' => $segment_id,
-						'segment_customer_count'     => $count,
-					),
-					admin_url( 'admin.php' )
-				)
-			);
-			exit;
-		}
-
-		$deleted = YoOhw_COS_Segments::delete_segment( $segment_id, $force );
-
-		wp_safe_redirect(
-			add_query_arg(
-				array(
-					'page'                  => 'yoohw-customer-intelligence-segments',
-					'yoohw_segment_deleted' => $deleted ? 1 : 0,
-				),
-				admin_url( 'admin.php' )
-			)
-		);
-		exit;
 	}
 
 	public static function handle_update_segment(): void {

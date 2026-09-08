@@ -7,6 +7,8 @@ if ( ! class_exists( 'WP_List_Table' ) ) {
 
 final class YoOhw_COS_Tasks_List extends WP_List_Table {
 
+	public $selection_epoch = 'invalid';
+
 	public function __construct() {
 		parent::__construct(
 			array(
@@ -44,6 +46,18 @@ final class YoOhw_COS_Tasks_List extends WP_List_Table {
 	}
 
 	public function prepare_items(): void {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return;
+		}
+		try {
+			$this->selection_epoch = YoOhw_COS_Reset_Guard::epoch();
+			$this->prepare_items_guarded(  );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private function prepare_items_guarded(): void {
 		global $wpdb;
 
 		$tasks_table     = YoOhw_COS_DB::tasks_table();
@@ -294,6 +308,7 @@ final class YoOhw_COS_Tasks_List extends WP_List_Table {
 			add_query_arg(
 				array(
 					'action'      => 'yoohw_cos_' . $status_action . '_task',
+					YoOhw_COS_Reset_Guard::FORM_FIELD => $this->selection_epoch,
 					'task_id'     => $task_id,
 					'_redirect'   => rawurlencode( $this->get_current_url() ),
 				),
@@ -306,6 +321,7 @@ final class YoOhw_COS_Tasks_List extends WP_List_Table {
 			add_query_arg(
 				array(
 					'action'    => 'yoohw_cos_delete_task',
+					YoOhw_COS_Reset_Guard::FORM_FIELD => $this->selection_epoch,
 					'task_id'   => $task_id,
 					'_redirect' => rawurlencode( $this->get_current_url() ),
 				),

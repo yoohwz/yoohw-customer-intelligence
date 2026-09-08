@@ -58,6 +58,42 @@ The SQL lock does not certify arbitrary third-party code that writes CIT tables,
 manual mutation of the marker, or database middleware transparently replaying writes
 across connections. Run independent validation of such deployments before Reset.
 
+## Ordinary CRM actions and selection freshness
+
+Notes (`add_note`, `update_note`, `delete_note`), Tasks (`create_task`,
+`create_idempotent_task`, `update_task`, `set_task_status`, `delete_task`, including
+complete/reopen), tag/segment membership assignment/removal and existing definition
+deletion cascades enter the same boundary **before** checking customer/note/task,
+source-key or membership references. Their events and task hooks run within it.
+Definitions retained by Reset and existing definition CRUD behavior are unchanged.
+Inline definition creation stays within the enclosing, validated relationship action.
+
+Admin_Tools validates an explicitly present `yoohw_cos_epoch` before all corresponding
+POST and destructive GET actions, including the existing profile email form. It does
+not change email recipient policy. An explicit empty string represents pre-first-Reset
+forms; missing, non-string, malformed and stale values are rejected. The order editor
+applies the same strict rule to its existing `yoohw_cos_link_epoch` field. Permission,
+nonce and note ownership checks remain mandatory. A fresh PHP request cannot substitute
+its current epoch for the submitted form's epoch.
+
+The customer profile, task editor and dashboard widget render their bounded record
+sections under the guard. The four customer/task/tag/segment list `prepare_items`
+methods retain the epoch with their selected rows; form and row actions never obtain
+a replacement epoch later during display. Overview captures only its actionable task
+rows with an epoch, without locking the unrelated overview panels. Order task forms
+(including their external `form` attribute) and completion links use the metabox's
+existing guarded snapshot. Bulk handlers validate before reference reads and limit a
+submission to 100 records; inline relationship names share that bound.
+
+The editable order-customer AJAX selector sends the original form epoch and the server
+reads results under that same generation. A 409 disables this selector and asks for a
+reload; it does not upgrade the form's epoch. The separate read-only order-list search
+keeps its response contract. Stale or pending user-authored actions show a reload/recovery
+error and produce no success redirect, record-specific event or mail. They are never
+queued for automatic replay against reused IDs. Internal synchronous callers use the
+request epoch; callers retaining user selections across requests must carry and validate
+the captured epoch before resolving those selections.
+
 ## Regression evidence boundaries
 
 The isolated integration suite covers guest and registered ID reuse, conflicting
@@ -70,3 +106,23 @@ profile resolution and epoch output, and contended permanent deletion followed b
 repeated cleanup retry.
 A query-hook exception separately exercises interruption handling. These are owned
 synthetic fixtures, not production tests or real-provider/browser certification.
+
+The ordinary-writer matrix covers pending rejection and valid current operations for
+15 service operations, with persisted row/relationship/event comparisons and intercepted
+mail. Fresh PHP processes execute actual nonce/capability-protected GET/POST/bulk/AJAX
+handlers using pre-Reset rendered inputs after customer, note and task ID reuse. Separate
+processes also pause an ordinary note writer at INSERT and resume an old request after
+Reset. A renderer pause attempts Reset between profile reads and epoch output. Persistence
+checks end the PHPUnit transaction snapshot before reading another connection's changes.
+The selector's shipped JavaScript executes in a Node synthetic jQuery/SelectWoo transport
+smoke (`node tests/reset-selector-smoke.js`, also run by the isolated runner); this is
+not a browser-layout, real-provider or existing-site test. Node 18+ is required for that
+smoke. Test isolation, CLI-only admission, early mail/HTTP interception and owned cleanup
+remain unchanged.
+
+A render-fixture setup exposed a pre-existing assigned-task email failure:
+`YoOhw_COS_Email_Task_Event::trigger()` calls an undefined `send_notification()` method
+at the admitted baseline too. The rendering fixture assigns its synthetic row directly;
+this suite does not certify successful assigned-task delivery. This separate email
+implementation defect is not repaired or suppressed in #9. Rejected reset/stale actions
+are checked before any such hook or mail attempt, and the existing task hooks remain.

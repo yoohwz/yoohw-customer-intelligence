@@ -8,11 +8,22 @@ final class YoOhw_COS_Notes {
 	}
 
 	public static function add_note( int $customer_id, string $content, string $note_type = 'internal' ): int {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return 0;
+		}
+		try {
+			return self::add_note_guarded( $customer_id, $content, $note_type );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function add_note_guarded( int $customer_id, string $content, string $note_type = 'internal' ): int {
 		global $wpdb;
 
 		$content = wp_kses_post( trim( $content ) );
 
-		if ( $customer_id <= 0 || '' === $content ) {
+		if ( $customer_id <= 0 || '' === $content || ! YoOhw_COS_Customers::customer_exists( $customer_id ) ) {
 			return 0;
 		}
 
@@ -111,6 +122,17 @@ final class YoOhw_COS_Notes {
 	}
 
 	public static function update_note( int $note_id, string $content ): bool {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return false;
+		}
+		try {
+			return self::update_note_guarded( $note_id, $content );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function update_note_guarded( int $note_id, string $content ): bool {
 		global $wpdb;
 
 		$note = self::get_note( $note_id );
@@ -157,6 +179,17 @@ final class YoOhw_COS_Notes {
 	}
 
 	public static function delete_note( int $note_id ): bool {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return false;
+		}
+		try {
+			return self::delete_note_guarded( $note_id );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function delete_note_guarded( int $note_id ): bool {
 		global $wpdb;
 
 		$note = self::get_note( $note_id );

@@ -132,6 +132,8 @@ def controls(root, env, php, sql, credentials):
 
 
 def main():
+    run(['node', '--version'])
+    run(['node', REPO / 'tests/reset-selector-smoke.js'])
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--mysql-bin', type=Path, required=True, help='Directory containing MySQL 8 mysqld and mysql')
     parser.add_argument('--mysqld', type=Path, help='Server binary when installed outside mysql-bin')
