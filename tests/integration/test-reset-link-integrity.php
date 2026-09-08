@@ -209,7 +209,11 @@ final class YCI_Reset_Link_Integrity_Test extends WP_UnitTestCase {
 		$a = YoOhw_COS_Customers::sync_from_order( $order );
 		$b = YoOhw_COS_Customers::create_customer( array( 'email' => 'token-b@example.test' ) );
 		$order->update_meta_data( YoOhw_COS_Customers::ORDER_CUSTOMER_META_KEY, $b );
-		$order->save_meta_data(); // Simulates an incomplete two-key link update.
+		$callback = array( YoOhw_COS_Customers::class, 'sync_persisted_order_update' );
+		$priority = has_action( 'woocommerce_update_order', $callback );
+		if ( false !== $priority ) { remove_action( 'woocommerce_update_order', $callback, $priority ); }
+		try { $order->save_meta_data(); } // Preserve the half-write fixture before automatic repair can run.
+		finally { if ( false !== $priority ) { add_action( 'woocommerce_update_order', $callback, $priority ); } }
 		$this->assertSame( 0, YoOhw_COS_Customer_Identity::get_persisted_order_customer_id( $order ) );
 		$this->assertSame( $a, YoOhw_COS_Customers::sync_from_order( $order ) );
 	}
@@ -1471,6 +1475,10 @@ final class YCI_Identity_Lock_Test extends WP_UnitTestCase {
 		$callback = array( YoOhw_COS_Customers::class, 'sync_from_order_id' );
 		$priority = has_action( 'woocommerce_order_status_changed', $callback );
 		if ( false !== $priority ) { remove_action( 'woocommerce_order_status_changed', $callback, $priority ); }
+		$update_callback = array( YoOhw_COS_Customers::class, 'sync_persisted_order_update' );
+		$update_priority = has_action( 'woocommerce_update_order', $update_callback );
+		// Construct unsynchronized fixtures before the real separate-process lock probe begins.
+		if ( false !== $update_priority ) { remove_action( 'woocommerce_update_order', $update_callback, $update_priority ); }
 		try {
 			foreach ( array( $a, $b ) as $i => $identity ) {
 				$order = wc_create_order( array( 'customer_id' => $identity['wp_user_id'] ) );
@@ -1478,7 +1486,10 @@ final class YCI_Identity_Lock_Test extends WP_UnitTestCase {
 				$order->set_total( 0 === $i ? '11.00' : '19.00' ); $order->set_status( 'completed' );
 				$order->save(); $orders[] = $order;
 			}
-		} finally { if ( false !== $priority ) { add_action( 'woocommerce_order_status_changed', $callback, $priority, 1 ); } }
+		} finally {
+			if ( false !== $priority ) { add_action( 'woocommerce_order_status_changed', $callback, $priority, 1 ); }
+			if ( false !== $update_priority ) { add_action( 'woocommerce_update_order', $update_callback, $update_priority, 1 ); }
+		}
 		$this->refresh(); return $orders;
 	}
 	public static function overlapping_identities(): array {
@@ -1669,6 +1680,250 @@ final class YCI_Identity_Lock_Test extends WP_UnitTestCase {
 		YoOhw_COS_Migration_Runner::run_next_batch(); $this->refresh();
 		$worker = $this->worker( 'lock-probe', 0, array( 'kind' => 'migration' ) );
 		$this->assertTrue( json_decode( $this->line( $worker ), true )['acquired'] ); $this->stop( $worker );
+	}
+
+}
+
+final class YCI_Order_Change_Test extends WP_UnitTestCase {
+	private function paid_order(): WC_Order {
+		YoOhw_COS_Customers::reset_data();
+		$order = wc_create_order();
+		$order->set_billing_email( 'change-' . wp_generate_uuid4() . '@example.test' );
+		$order->set_billing_first_name( 'Before' );
+		$order->set_total( '20.00' );
+		$order->set_status( 'completed' );
+		$order->save();
+		$this->assertGreaterThan( 0, YoOhw_COS_Customers::sync_from_order( $order ) );
+		return new WC_Order( $order->get_id() );
+	}
+	private function fact( WC_Order $order ): array {
+		global $wpdb;
+		return $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i WHERE order_id = %d', YoOhw_COS_DB::order_facts_table(), $order->get_id() ), ARRAY_A );
+	}
+	private function customer( WC_Order $order ): array {
+		return YoOhw_COS_Customers::get_customer( YoOhw_COS_Customer_Identity::get_persisted_order_customer_id( new WC_Order( $order->get_id() ) ) );
+	}
+	public function test_same_status_crud_total_refreshes_persisted_contribution(): void {
+		$order = $this->paid_order();
+		$this->assertSame( 20.0, (float) $this->fact( $order )['order_total'] );
+		$order->set_total( '35.00' ); $order->save();
+		$this->assertSame( '35.00', ( new WC_Order( $order->get_id() ) )->get_total() );
+		$this->assertSame( 'completed', ( new WC_Order( $order->get_id() ) )->get_status() );
+		$this->assertSame( 35.0, (float) $this->fact( $order )['order_total'] );
+		$this->assertSame( 35.0, (float) $this->fact( $order )['revenue_amount'] );
+		$this->assertSame( 35.0, (float) $this->customer( $order )['total_spent'] );
+		$this->assertSame( 1, (int) $this->customer( $order )['total_orders'] );
+	}
+	public function test_same_status_crud_profile_refreshes_persisted_customer(): void {
+		$order = $this->paid_order();
+		$this->assertSame( 'Before', $this->customer( $order )['first_name'] );
+		$order->set_billing_first_name( 'After' ); $order->save();
+		$this->assertSame( 'After', ( new WC_Order( $order->get_id() ) )->get_billing_first_name() );
+		$this->assertSame( 'completed', ( new WC_Order( $order->get_id() ) )->get_status() );
+		$this->assertSame( 'After', $this->customer( $order )['first_name'] );
+	}
+	public function test_same_status_rest_controller_refreshes_persisted_profile(): void {
+		$order = $this->paid_order();
+		$user = get_current_user_id();
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		try {
+			$request = new WP_REST_Request( 'PUT', '/wc/v3/orders/' . $order->get_id() );
+			$request->set_param( 'id', $order->get_id() );
+			$request->set_param( 'billing', array( 'first_name' => 'REST Changed', 'phone' => '+84912345678' ) );
+			$controller = new WC_REST_Orders_Controller();
+			$this->assertTrue( $controller->update_item_permissions_check( $request ) );
+			$response = $controller->update_item( $request );
+			$this->assertInstanceOf( WP_REST_Response::class, $response );
+			$this->assertSame( 200, $response->get_status() );
+		} finally { wp_set_current_user( $user ); }
+		$fresh = new WC_Order( $order->get_id() );
+		$this->assertSame( 'REST Changed', $fresh->get_billing_first_name() );
+		$this->assertSame( 'completed', $fresh->get_status() );
+		$this->assertSame( 'REST Changed', $this->customer( $order )['first_name'] );
+		$this->assertSame( '+84912345678', $this->customer( $order )['phone'] );
+	}
+	private function assert_single_contribution( WC_Order $order, float $total ): void {
+		global $wpdb;
+		$facts = $this->fact( $order ); $customer = $this->customer( $order );
+		$this->assertSame( $total, (float) $facts['order_total'] );
+		$this->assertSame( $total, (float) $facts['revenue_amount'] );
+		$this->assertSame( $total, (float) $customer['total_spent'] );
+		$this->assertSame( $total, (float) $customer['average_order_value'] );
+		$this->assertSame( 1, (int) $customer['total_orders'] );
+		$this->assertSame( (int) $customer['id'], (int) $facts['customer_id'] );
+		$this->assertSame( 1, (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE order_id = %d', YoOhw_COS_DB::order_facts_table(), $order->get_id() ) ) );
+		$this->assertSame( 1, (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM %i WHERE object_id = %d AND event_type = 'order_synced' AND customer_id = %d", YoOhw_COS_DB::table( 'events' ), $order->get_id(), $customer['id'] ) ) );
+	}
+	public function test_recalculation_date_and_second_distinct_save_remain_observable(): void {
+		$order = $this->paid_order();
+		$item = new WC_Order_Item_Product();
+		$item->set_name( 'Synthetic item' ); $item->set_quantity( 2 );
+		$item->set_subtotal( '46.00' ); $item->set_total( '46.00' );
+		$order->add_item( $item ); $order->calculate_totals( false );
+		$this->assertSame( 'completed', ( new WC_Order( $order->get_id() ) )->get_status() );
+		$this->assert_single_contribution( $order, 46.0 );
+		$order->save(); $order->save();
+		$this->assert_single_contribution( $order, 46.0 );
+		$order->set_total( '59.00' ); $order->set_date_created( '2024-03-04 12:00:00' ); $order->save();
+		$this->assert_single_contribution( $order, 59.0 );
+		$this->assertSame( '2024-03-04 12:00:00', $this->fact( $order )['order_date'] );
+		$this->assertSame( '2024-03-04 12:00:00', $this->customer( $order )['first_order_date'] );
+		$this->assertSame( '2024-03-04 12:00:00', $this->customer( $order )['last_order_date'] );
+		$this->assertFalse( wp_next_scheduled( YoOhw_COS_Customers::ORDER_SYNC_RETRY_HOOK, array( $order->get_id() ) ) );
+	}
+	public function test_status_metadata_and_explicit_admin_link_are_idempotent(): void {
+		$order = $this->paid_order();
+		$order->set_status( 'processing' ); $order->save();
+		$this->assertSame( 'processing', $this->fact( $order )['order_status'] );
+		$this->assert_single_contribution( $order, 20.0 );
+		$calls = 0;
+		$observe = static function ( $data ) use ( &$calls ) { ++$calls; return $data; };
+		add_filter( 'yoohw_cos_customer_sync_data', $observe );
+		try {
+			$order->update_meta_data( '_synthetic_unrelated', 'kept' ); $order->save();
+			$this->assertLessThanOrEqual( 1, $calls );
+			$order->read_meta_data( true );
+			$order->update_meta_data( YoOhw_COS_Reset_Guard::META_KEY, YoOhw_COS_Reset_Guard::epoch() . ':' . $this->customer( $order )['id'] );
+			$order->save_meta_data();
+			$this->assertLessThanOrEqual( 1, $calls );
+		} finally { remove_filter( 'yoohw_cos_customer_sync_data', $observe ); }
+		$this->assertSame( 'kept', ( new WC_Order( $order->get_id() ) )->get_meta( '_synthetic_unrelated' ) );
+		$this->assert_single_contribution( $order, 20.0 );
+		$target = YoOhw_COS_Customers::create_customer( array( 'email' => 'explicit-' . wp_generate_uuid4() . '@example.test' ) );
+		$old = $this->customer( $order );
+		$post = $_POST; $method = $_SERVER['REQUEST_METHOD'] ?? null; $user = get_current_user_id();
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		$_SERVER['REQUEST_METHOD'] = 'POST';
+		$_POST = array( 'woocommerce_meta_nonce' => wp_create_nonce( 'woocommerce_save_data' ), 'yoohw_cos_customer_id' => $target, 'yoohw_cos_link_epoch' => YoOhw_COS_Reset_Guard::epoch() );
+		try { YoOhw_COS_Order_Admin::save_customer_profile_link( $order->get_id(), new WC_Order( $order->get_id() ) ); }
+		finally { $_POST = $post; wp_set_current_user( $user ); if ( null === $method ) { unset( $_SERVER['REQUEST_METHOD'] ); } else { $_SERVER['REQUEST_METHOD'] = $method; } }
+		$this->assertSame( $target, (int) $this->customer( $order )['id'] );
+		$this->assertSame( 0.0, (float) YoOhw_COS_Customers::get_customer( (int) $old['id'] )['total_spent'] );
+		$this->assert_single_contribution( $order, 20.0 );
+		$order = new WC_Order( $order->get_id() );
+		$order->set_billing_first_name( 'Explicit remains' ); $order->save();
+		$this->assertSame( $target, (int) $this->customer( $order )['id'] );
+		$this->assertSame( 'Explicit remains', $this->customer( $order )['first_name'] );
+		$this->assertFalse( wp_next_scheduled( YoOhw_COS_Customers::ORDER_SYNC_RETRY_HOOK, array( $order->get_id() ) ) );
+	}
+	public function test_contact_and_user_updates_preserve_conflicting_identity_assignment(): void {
+		$order = $this->paid_order(); $id = (int) $this->customer( $order )['id'];
+		$user = self::factory()->user->create();
+		$order->set_customer_id( $user ); $order->set_billing_last_name( 'Last changed' );
+		$order->set_billing_email( 'changed-' . wp_generate_uuid4() . '@example.test' );
+		$order->set_billing_phone( '0084912345678' ); $order->save();
+		$customer = $this->customer( $order );
+		$this->assertSame( $id, (int) $customer['id'] );
+		$this->assertSame( $user, (int) $customer['wp_user_id'] );
+		$this->assertSame( 'Last changed', $customer['last_name'] );
+		$this->assertSame( $order->get_billing_email(), $customer['email'] );
+		$this->assertSame( '+84912345678', $customer['phone'] );
+		$email = 'conflict-' . wp_generate_uuid4() . '@example.test';
+		$other = YoOhw_COS_Customers::create_customer( array( 'email' => $email ) );
+		$order->set_billing_email( $email ); $order->save();
+		$this->assertSame( $id, (int) $this->customer( $order )['id'] );
+		$this->assertSame( $customer['email'], $this->customer( $order )['email'] );
+		$this->assertSame( $email, YoOhw_COS_Customers::get_customer( $other )['email'] );
+		$this->assert_single_contribution( $order, 20.0 );
+	}
+	private function retry_count( int $id ): int {
+		$count = 0;
+		foreach ( _get_cron_array() as $hooks ) {
+			foreach ( $hooks[ YoOhw_COS_Customers::ORDER_SYNC_RETRY_HOOK ] ?? array() as $event ) {
+				if ( array( $id ) === $event['args'] ) { ++$count; }
+			}
+		}
+		return $count;
+	}
+	public function test_automatic_failure_and_nested_save_defer_once_then_converge(): void {
+		$order = $this->paid_order();
+		$throw = static function () { throw new RuntimeException( 'Synthetic automatic failure' ); };
+		add_filter( 'yoohw_cos_customer_sync_data', $throw );
+		try { $order->set_total( '41.00' ); $order->save(); $order->save(); }
+		finally { remove_filter( 'yoohw_cos_customer_sync_data', $throw ); }
+		$this->assertSame( '41.00', ( new WC_Order( $order->get_id() ) )->get_total() );
+		$this->assertSame( 20.0, (float) $this->fact( $order )['order_total'] );
+		$this->assertSame( 1, $this->retry_count( $order->get_id() ) );
+		wp_clear_scheduled_hook( YoOhw_COS_Customers::ORDER_SYNC_RETRY_HOOK, array( $order->get_id() ) );
+		do_action( YoOhw_COS_Customers::ORDER_SYNC_RETRY_HOOK, $order->get_id() );
+		$this->assert_single_contribution( $order, 41.0 );
+		$calls = 0;
+		$nested = static function ( $data, $sync_order ) use ( &$calls ) {
+			++$calls;
+			$fresh = new WC_Order( $sync_order->get_id() ); $fresh->set_total( '73.00' ); $fresh->save();
+			return $data;
+		};
+		add_filter( 'yoohw_cos_customer_sync_data', $nested, 10, 2 );
+		try { $order = new WC_Order( $order->get_id() ); $order->set_total( '62.00' ); $order->save(); }
+		finally { remove_filter( 'yoohw_cos_customer_sync_data', $nested, 10 ); }
+		$this->assertSame( 1, $calls );
+		$this->assertSame( '73.00', ( new WC_Order( $order->get_id() ) )->get_total() );
+		$this->assertSame( 1, $this->retry_count( $order->get_id() ) );
+		wp_clear_scheduled_hook( YoOhw_COS_Customers::ORDER_SYNC_RETRY_HOOK, array( $order->get_id() ) );
+		do_action( YoOhw_COS_Customers::ORDER_SYNC_RETRY_HOOK, $order->get_id() );
+		$this->assert_single_contribution( $order, 73.0 );
+		$this->assertSame( 0, $this->retry_count( $order->get_id() ) );
+	}
+
+	public function test_aged_hpos_metadata_save_rejects_wrong_token_before_automatic_repair(): void {
+		$order = $this->paid_order(); $a = (int) $this->customer( $order )['id'];
+		$b = YoOhw_COS_Customers::create_customer( array( 'email' => 'wrong-token-' . wp_generate_uuid4() . '@example.test' ) );
+		$order->set_date_modified( '2000-01-01 00:00:00' ); $order->save();
+		$order = new WC_Order( $order->get_id() );
+		$hpos = \Automattic\WooCommerce\Utilities\OrderUtil::custom_orders_table_usage_is_enabled();
+		$this->assertSame( $hpos, $order->get_date_modified()->getTimestamp() < time() - 60, 'HPOS retains the explicit old timestamp; CPT refreshes it on save.' );
+		$seen = array();
+		$observe = static function ( $id ) use ( $order, &$seen ) {
+			if ( $id === $order->get_id() ) { $seen[] = YoOhw_COS_Customer_Identity::get_persisted_order_customer_id( new WC_Order( $id ) ); }
+		};
+		add_action( 'woocommerce_update_order', $observe, 19 );
+		try { $order->update_meta_data( YoOhw_COS_Customers::ORDER_CUSTOMER_META_KEY, $b ); $order->save_meta_data(); }
+		finally { remove_action( 'woocommerce_update_order', $observe, 19 ); }
+		$hpos = \Automattic\WooCommerce\Utilities\OrderUtil::custom_orders_table_usage_is_enabled();
+		if ( $hpos ) { $this->assertSame( 0, $seen[0] ?? null, 'The forced HPOS update sees the invalid token before repair.' ); }
+		else { $this->assertSame( array(), $seen ); }
+		$this->assertNotContains( $b, $seen, 'No callback may authorize the wrong customer.' );
+		if ( ! $hpos ) { $this->assertSame( 0, YoOhw_COS_Customer_Identity::get_persisted_order_customer_id( new WC_Order( $order->get_id() ) ) ); }
+		$this->assertSame( $a, YoOhw_COS_Customers::sync_from_order( new WC_Order( $order->get_id() ) ) );
+		$this->assert_single_contribution( $order, 20.0 );
+		$this->assertSame( 0.0, (float) YoOhw_COS_Customers::get_customer( $b )['total_spent'] );
+		$this->assertSame( 0, $this->retry_count( $order->get_id() ) );
+	}
+	public function test_aged_cit_link_persistence_does_not_reenter_or_schedule_retry(): void {
+		$order = $this->paid_order();
+		$order->set_date_modified( '2000-01-01 00:00:00' ); $order->save();
+		$hpos = \Automattic\WooCommerce\Utilities\OrderUtil::custom_orders_table_usage_is_enabled();
+		$this->assertSame( $hpos, ( new WC_Order( $order->get_id() ) )->get_date_modified()->getTimestamp() < time() - 60 );
+		YoOhw_COS_Customers::reset_data();
+		$calls = 0; $updates = 0;
+		$observe = static function ( $data ) use ( &$calls ) { ++$calls; return $data; };
+		$update = static function () use ( &$updates ) { ++$updates; };
+		add_filter( 'yoohw_cos_customer_sync_data', $observe );
+		add_action( 'woocommerce_update_order', $update, 19 );
+		try { $this->assertGreaterThan( 0, YoOhw_COS_Customers::sync_from_order( new WC_Order( $order->get_id() ) ) ); }
+		finally { remove_filter( 'yoohw_cos_customer_sync_data', $observe ); remove_action( 'woocommerce_update_order', $update, 19 ); }
+		$this->assertSame( 1, $calls, 'CIT-owned link persistence must not start another sync.' );
+		if ( $hpos ) { $this->assertGreaterThanOrEqual( 1, $updates, 'Exercise the real HPOS metadata-triggered full save.' ); }
+		else { $this->assertSame( 0, $updates ); }
+		$this->assert_single_contribution( $order, 20.0 );
+		$this->assertSame( 0, $this->retry_count( $order->get_id() ) );
+		$order = new WC_Order( $order->get_id() ); $order->set_total( '47.00' ); $order->save();
+		$this->assert_single_contribution( $order, 47.0 );
+	}
+	public function test_link_write_exception_clears_owned_write_suppression(): void {
+		$order = $this->paid_order();
+		YoOhw_COS_Customers::reset_data();
+		$throw = static function ( $meta_id, $id, $key ) use ( $order ) {
+			if ( $id === $order->get_id() && YoOhw_COS_Customers::ORDER_CUSTOMER_META_KEY === $key ) { throw new RuntimeException( 'Synthetic owned link write failure' ); }
+		};
+		add_action( 'added_order_meta', $throw, 10, 3 );
+		try {
+			YoOhw_COS_Customers::sync_from_order( new WC_Order( $order->get_id() ) );
+			$this->fail( 'Expected synthetic owned link write failure.' );
+		} catch ( RuntimeException $exception ) { $this->assertSame( 'Synthetic owned link write failure', $exception->getMessage() ); }
+		finally { remove_action( 'added_order_meta', $throw, 10 ); }
+		$order = new WC_Order( $order->get_id() ); $order->set_total( '64.00' ); $order->save();
+		$this->assert_single_contribution( $order, 64.0 );
 	}
 
 }
