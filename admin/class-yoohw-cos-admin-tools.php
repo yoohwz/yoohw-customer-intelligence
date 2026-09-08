@@ -162,8 +162,8 @@ final class YoOhw_COS_Admin_Tools {
 		$page  = self::normalize_sync_page( $page );
 		$limit = 200;
 
-		$result = YoOhw_COS_Customers::sync_existing_orders( $limit, $page );
-		self::update_sync_state( $page, $limit, $result );
+		$state = self::run_manual_sync_batch( $page, $limit );
+		$result = array( 'processed' => $state['last_processed'], 'next_page' => $state['next_page'], 'has_more' => $state['has_more'] );
 
 		wp_safe_redirect(
 			add_query_arg(
@@ -209,15 +209,17 @@ final class YoOhw_COS_Admin_Tools {
 		$page  = self::normalize_sync_page( $page );
 		$limit = 200;
 
-		$result = YoOhw_COS_Customers::sync_existing_orders( $limit, $page );
-		$state  = self::update_sync_state( $page, $limit, $result );
+		$state = self::run_manual_sync_batch( $page, $limit );
 
 		wp_send_json_success(
 			array(
-				'processed' => absint( $result['processed'] ?? 0 ),
-				'scanned'   => absint( $result['scanned'] ?? 0 ),
-				'hasMore'   => ! empty( $result['has_more'] ),
-				'nextPage'  => absint( $result['next_page'] ?? $page ),
+				'processed' => absint( $state['last_processed'] ),
+				'scanned'   => absint( $state['last_scanned'] ),
+				'hasMore'   => ! empty( $state['has_more'] ),
+				'nextPage'  => absint( $state['next_page'] ),
+				'retryable' => $state['last_retryable'],
+				'unresolved' => $state['last_unresolved'],
+				'issues' => $state['last_issues'],
 				'state'     => self::format_sync_state_for_response( $state ),
 			)
 		);
@@ -412,11 +414,24 @@ final class YoOhw_COS_Admin_Tools {
 
 		$sync_order = isset( $state['sync_order'] ) ? sanitize_key( (string) $state['sync_order'] ) : '';
 
-		if ( YoOhw_COS_Customers::SYNC_ORDER !== $sync_order ) {
+		if ( YoOhw_COS_Customers::SYNC_ORDER !== $sync_order || ! isset( $state['total_retryable'], $state['total_unresolved'] ) ) {
 			return 1;
 		}
 
-		return $page;
+		return min( $page, max( 1, absint( $state['next_page'] ?? 1 ) ) );
+	}
+
+	private static function run_manual_sync_batch( int $page, int $limit ): array {
+		$state = get_option( 'yoohw_cos_sync_state', array() );
+		if ( $page > 1 && is_array( $state ) && isset( $state['total_retryable'], $state['total_unresolved'] ) && $page <= absint( $state['last_page'] ?? 0 ) ) {
+			return $state; // A repeated page response must not add the same batch twice.
+		}
+		if ( 1 === $page ) {
+			// Publish an unfinished run before work so interruption cannot retain old success.
+			self::update_sync_state( 1, $limit, array( 'outcomes' => array(), 'has_more' => true, 'next_page' => 1 ) );
+		}
+		$result = YoOhw_COS_Customers::sync_existing_orders_with_outcomes( $limit, $page );
+		return self::update_sync_state( $page, $limit, $result );
 	}
 
 	private static function update_sync_state( int $page, int $limit, array $result ): array {
@@ -430,13 +445,26 @@ final class YoOhw_COS_Admin_Tools {
 				'started_at'      => $now,
 				'total_processed' => 0,
 				'total_scanned'   => 0,
+				'total_retryable' => 0,
+				'total_unresolved' => 0,
 				'total_orders'    => YoOhw_COS_Customers::get_sync_order_count(),
 				'sync_order'      => YoOhw_COS_Customers::SYNC_ORDER,
 			);
 		}
 
-		$total_processed = absint( $state['total_processed'] ?? 0 ) + absint( $result['processed'] ?? 0 );
-		$total_scanned   = absint( $state['total_scanned'] ?? 0 ) + absint( $result['scanned'] ?? 0 );
+		$counts = array( 'success' => 0, 'retry' => 0, 'unresolved' => 0 );
+		foreach ( (array) ( $result['outcomes'] ?? array() ) as $order_id => $outcome ) {
+			$status = (string) ( $outcome['status'] ?? 'retry' );
+			$status = isset( $counts[ $status ] ) ? $status : 'retry';
+			$counts[ $status ]++;
+			if ( 'retry' === $status ) {
+				YoOhw_COS_Customers::schedule_failed_order_sync( new RuntimeException( 'Manual order sync requires retry.' ), absint( $order_id ), 0 );
+			}
+		}
+		$total_processed = absint( $state['total_processed'] ?? 0 ) + $counts['success'];
+		$total_scanned = absint( $state['total_scanned'] ?? 0 ) + array_sum( $counts );
+		$total_retryable = absint( $state['total_retryable'] ?? 0 ) + $counts['retry'];
+		$total_unresolved = absint( $state['total_unresolved'] ?? 0 ) + $counts['unresolved'];
 		$total_orders    = absint( $state['total_orders'] ?? 0 );
 
 		if ( $total_orders <= 0 ) {
@@ -451,12 +479,18 @@ final class YoOhw_COS_Admin_Tools {
 		$state = array_merge(
 			$state,
 			array(
-				'status'          => $has_more ? 'in_progress' : 'completed',
+				'status'          => $has_more ? 'in_progress' : ( $total_retryable + $total_unresolved > 0 ? 'completed_with_issues' : 'completed' ),
 				'batch_size'      => $limit,
 				'last_page'       => $page,
 				'next_page'       => absint( $result['next_page'] ?? $page ),
-				'last_processed'  => absint( $result['processed'] ?? 0 ),
-				'last_scanned'    => absint( $result['scanned'] ?? 0 ),
+				'last_processed'  => $counts['success'],
+				'last_scanned'    => array_sum( $counts ),
+				'last_retryable'  => $counts['retry'],
+				'last_unresolved' => $counts['unresolved'],
+				'last_issues'     => $counts['retry'] + $counts['unresolved'],
+				'total_retryable' => $total_retryable,
+				'total_unresolved' => $total_unresolved,
+				'total_issues'    => $total_retryable + $total_unresolved,
 				'total_processed' => $total_processed,
 				'total_scanned'   => $total_scanned,
 				'total_orders'    => $total_orders,
@@ -486,7 +520,14 @@ final class YoOhw_COS_Admin_Tools {
 			'totalScanned'    => absint( $state['total_scanned'] ?? 0 ),
 			'totalOrders'     => absint( $state['total_orders'] ?? 0 ),
 			'totalItems'      => absint( $state['total_orders'] ?? 0 ),
-			'totalSkipped'    => 0,
+			// Compatibility alias: orders with a non-success outcome in this scan.
+			'totalSkipped'    => absint( $state['total_issues'] ?? 0 ),
+			'lastRetryable'   => absint( $state['last_retryable'] ?? 0 ),
+			'lastUnresolved'  => absint( $state['last_unresolved'] ?? 0 ),
+			'lastIssues'      => absint( $state['last_issues'] ?? 0 ),
+			'totalRetryable'  => absint( $state['total_retryable'] ?? 0 ),
+			'totalUnresolved' => absint( $state['total_unresolved'] ?? 0 ),
+			'totalIssues'     => absint( $state['total_issues'] ?? 0 ),
 			'percent'         => absint( $state['percent'] ?? 0 ),
 			'hasMore'         => ! empty( $state['has_more'] ),
 			'nextPage'        => absint( $state['next_page'] ?? 1 ),
