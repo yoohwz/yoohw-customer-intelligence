@@ -1,5 +1,8 @@
 <?php
 
+require_once dirname( __DIR__ ) . '/environment.php';
+yci_test_environment();
+
 if ( ! defined( 'ABSPATH' ) || ! class_exists( 'WP_UnitTestCase' ) ) {
 	return;
 }

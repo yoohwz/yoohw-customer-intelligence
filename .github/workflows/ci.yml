@@ -1,0 +1,71 @@
+name: YCI CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: yci-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  syntax:
+    name: Syntax and gate controls
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@bf6b4fbd49ca58e4608c9c89fba0b8d90bd2a39f # 2.35.5
+        with:
+          php-version: '7.4'
+          coverage: none
+      - name: Minimum PHP syntax, JavaScript, Python and gate rejection controls
+        run: |
+          git ls-files -z '*.php' | xargs -0 -n1 php -l
+          git ls-files -z '*.js' | xargs -0 -n1 node --check
+          python3 -m py_compile scripts/test-isolated.py .github/scripts/required-gate.py
+          python3 .github/scripts/required-gate.py --self-test
+  integration:
+    name: Integration (HPOS=${{ matrix.hpos }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        hpos: ['yes', 'no']
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@bf6b4fbd49ca58e4608c9c89fba0b8d90bd2a39f # 2.35.5
+        with:
+          php-version: '8.4'
+          extensions: mysqli, mbstring, xml, posix
+          tools: composer:2.9.5
+          coverage: none
+      - name: Locked development dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist --no-plugins --no-scripts
+      - name: Runtime versions and isolated safety/integration checks
+        env:
+          YCI_MODE: ${{ matrix.hpos }}
+        run: |
+          php --version
+          mysqld --version
+          python3 scripts/test-isolated.py --mysql-bin /usr/bin --mysqld /usr/sbin/mysqld --mode "$YCI_MODE"
+  required:
+    name: YCI Required CI
+    if: ${{ always() }}
+    needs: [syntax, integration]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Verify every required result (no skip lane)
+        env:
+          YCI_CLASSIFICATION: full
+          YCI_NEEDS: ${{ toJSON(needs) }}
+        run: python3 .github/scripts/required-gate.py
