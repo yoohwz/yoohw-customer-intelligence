@@ -8,10 +8,12 @@ final class YoOhw_COS_Customers {
 	public const RISK_SCORE_REFRESH_HOOK = 'yoohw_cos_refresh_risk_score_cache';
 	public const ORDER_SYNC_RETRY_HOOK = 'yoohw_cos_retry_order_sync';
 	private const RISK_SCORE_REFRESH_BATCH_SIZE = 250;
+	private static $updating_orders = array();
 
 	public static function init(): void {
 		add_action( 'woocommerce_checkout_order_processed', array( __CLASS__, 'sync_from_order_id' ), 20 );
 		add_action( 'woocommerce_order_status_changed', array( __CLASS__, 'sync_from_order_id' ), 20 );
+		add_action( 'woocommerce_update_order', array( __CLASS__, 'sync_persisted_order_update' ), 20 );
 		add_action( 'woocommerce_order_refunded', array( __CLASS__, 'sync_from_order_id' ), 20, 1 );
 		add_action( 'woocommerce_refund_deleted', array( __CLASS__, 'sync_after_refund_deleted' ), 20, 2 );
 		add_action( 'woocommerce_before_delete_order', array( __CLASS__, 'remove_deleted_order_contribution' ), 20, 2 );
@@ -21,6 +23,27 @@ final class YoOhw_COS_Customers {
 		add_action( self::RISK_SCORE_REFRESH_HOOK, array( __CLASS__, 'process_risk_score_cache_refresh' ), 10, 1 );
 		self::maybe_schedule_activity_semantics_recalculation();
 		self::maybe_schedule_risk_score_cache_refresh();
+	}
+
+	/** Observe persisted CRUD updates in both WooCommerce stores; never consume the saving object. */
+	public static function sync_persisted_order_update( int $order_id ): void {
+		if ( isset( self::$updating_orders[ $order_id ] ) ) {
+			// A nested save may contain new state. Coalesce it onto the existing bounded retry.
+			self::schedule_failed_order_sync( new RuntimeException( 'Nested order update deferred.' ), $order_id, 0 );
+			return;
+		}
+		self::$updating_orders[ $order_id ] = true;
+		try {
+			self::invalidate_order_object_cache( $order_id );
+			$order = wc_get_order( $order_id );
+			if ( $order instanceof WC_Order && 'shop_order' === $order->get_type() ) {
+				self::sync_from_order( $order );
+			}
+		} catch ( Throwable $exception ) {
+			self::schedule_failed_order_sync( $exception, $order_id, 0 );
+		} finally {
+			unset( self::$updating_orders[ $order_id ] );
+		}
 	}
 
 	public static function sync_from_order_id( int $order_id ): int {
