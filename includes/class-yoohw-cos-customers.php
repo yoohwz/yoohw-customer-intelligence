@@ -9,6 +9,7 @@ final class YoOhw_COS_Customers {
 	public const ORDER_SYNC_RETRY_HOOK = 'yoohw_cos_retry_order_sync';
 	private const RISK_SCORE_REFRESH_BATCH_SIZE = 250;
 	private static $updating_orders = array();
+	private static $persisting_order_links = array();
 
 	public static function init(): void {
 		add_action( 'woocommerce_checkout_order_processed', array( __CLASS__, 'sync_from_order_id' ), 20 );
@@ -27,6 +28,10 @@ final class YoOhw_COS_Customers {
 
 	/** Observe persisted CRUD updates in both WooCommerce stores; never consume the saving object. */
 	public static function sync_persisted_order_update( int $order_id ): void {
+		// HPOS may perform a full save between our link/epoch metadata writes.
+		if ( isset( self::$persisting_order_links[ $order_id ] ) ) {
+			return;
+		}
 		if ( isset( self::$updating_orders[ $order_id ] ) ) {
 			// A nested save may contain new state. Coalesce it onto the existing bounded retry.
 			self::schedule_failed_order_sync( new RuntimeException( 'Nested order update deferred.' ), $order_id, 0 );
@@ -420,7 +425,14 @@ final class YoOhw_COS_Customers {
 		$canonical_order->delete_meta_data( self::ORDER_CUSTOMER_META_KEY );
 		$canonical_order->add_meta_data( self::ORDER_CUSTOMER_META_KEY, $customer_id, true );
 		$canonical_order->update_meta_data( YoOhw_COS_Reset_Guard::META_KEY, YoOhw_COS_Reset_Guard::epoch() . ':' . $customer_id );
-		$canonical_order->save_meta_data();
+		$order_id = $canonical_order->get_id();
+		$already_writing = isset( self::$persisting_order_links[ $order_id ] );
+		self::$persisting_order_links[ $order_id ] = true;
+		try {
+			$canonical_order->save_meta_data();
+		} finally {
+			if ( ! $already_writing ) { unset( self::$persisting_order_links[ $order_id ] ); }
+		}
 		return array( $customer_id ) === YoOhw_COS_Customer_Identity::get_persisted_order_customer_ids( $canonical_order );
 	}
 
