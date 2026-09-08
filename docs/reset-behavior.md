@@ -127,6 +127,11 @@ this suite does not certify successful assigned-task delivery. This separate ema
 implementation defect is not repaired or suppressed in #9. Rejected reset/stale actions
 are checked before any such hook or mail attempt, and the existing task hooks remain.
 
+Resolution update (2026-09-08, [Issue #13](https://github.com/yoohwz/yoohw-customer-intelligence/issues/13)):
+the shared send prerequisite now uses WooCommerce transport/content APIs. CIT-A03 adds
+real-template intercepted transport regressions alongside recipient authorization; this
+resolution does not reclassify the older #9 evidence. See [recipient policy](notification-recipient-policy.md).
+
 
 The individual tag/segment delete warning preserves the validated selection epoch in
 its redirect and confirmation URL, including the explicit empty legacy epoch. Warning

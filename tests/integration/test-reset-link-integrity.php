@@ -413,6 +413,30 @@ final class YCI_Reset_Link_Integrity_Test extends WP_UnitTestCase {
 		$this->assertTrue( (bool) $this->ordinary_operation( $operation, $ids ), 'Valid current operation remains available.' );
 	}
 
+	public function test_current_guest_customer_message_requires_manager_nonce_and_selection(): void {
+		global $wpdb;
+		$ids = $this->ordinary_fixture();
+		WC_Install::create_roles();
+		$GLOBALS['wp_roles'] = new WP_Roles();
+		$user = self::factory()->user->create( array( 'role' => 'shop_manager' ) );
+		wp_set_current_user( $user );
+		$this->assertFalse( get_user_by( 'email', 'ordinary@example.test' ) );
+		$request = array( 'user' => $user, 'handler' => 'handle_send_customer_email', 'method' => 'POST', 'data' => array( 'customer_id' => $ids[0], 'security' => wp_create_nonce( 'yoohw_cos_send_customer_email' ), 'yoohw_cos_epoch' => YoOhw_COS_Reset_Guard::epoch(), 'email_subject' => 'Synthetic guest subject', 'email_message' => 'Synthetic guest message' ) );
+		$wpdb->query( 'COMMIT' );
+		$result = $this->fresh_action( $request );
+		$this->assertStringContainsString( '"success":true', $result['body'] );
+		$this->assertSame( 1, $result['mail'] );
+		$request['data']['security'] = 'invalid';
+		$result = $this->fresh_action( $request );
+		$this->assertSame( 0, $result['mail'] );
+		$this->assertSame( 403, $result['status'] );
+		$request['user'] = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		$wpdb->query( 'COMMIT' );
+		$result = $this->fresh_action( $request );
+		$this->assertSame( 0, $result['mail'] );
+		$this->assertStringContainsString( '"success":false', $result['body'] );
+	}
+
 	private function fresh_action( array $input ): array {
 		list( $process, $pipes ) = $this->worker( 'ordinary-request' );
 		try {
@@ -998,4 +1022,384 @@ final class YCI_CSV_Export_Safety_Test extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'Export CSV', $result['bytes'] );
 		$this->assertStringContainsString( 'protective TAB', $result['bytes'] );
 	}
+}
+
+final class YCI_Notification_Recipient_Test extends WP_UnitTestCase {
+	private $messages = array();
+	private $transport_result = true;
+
+	public function set_up(): void {
+		parent::set_up();
+		WC()->mailer();
+		// Reload role objects after the WC installer writes its role capabilities.
+		WC_Install::create_roles();
+		$GLOBALS['wp_roles'] = new WP_Roles();
+		$this->messages = array();
+		$this->transport_result = true;
+		$GLOBALS['yci_fixture_mail_observer'] = function( $to, $subject, $message ) {
+			$this->messages[] = array( 'to' => $to, 'subject' => $subject, 'message' => $message );
+			return $this->transport_result;
+		};
+		wp_set_current_user( 0 );
+	}
+
+	public function tear_down(): void {
+		unset( $GLOBALS['yci_fixture_mail_observer'] );
+		$this->messages = array();
+		wp_set_current_user( 0 );
+		parent::tear_down();
+	}
+
+	private function staff( string $role = 'shop_manager' ): int {
+		$id = self::factory()->user->create( array( 'role' => $role ) );
+		if ( 'subscriber' !== $role ) { $this->assertTrue( user_can( $id, 'manage_woocommerce' ), 'Fixture staff starts with effective CRM access.' ); }
+		return $id;
+	}
+
+	private function task(): array {
+		return array( 'id' => 13, 'title' => 'Synthetic confidential follow-up', 'customer_name' => 'Synthetic customer', 'due_date' => '2026-01-01 10:00:00', 'priority' => 'high', 'status' => 'open' );
+	}
+
+	private function delivered_to( array $ids, array $extra = array() ): void {
+		$expected = $extra;
+		foreach ( $ids as $id ) {
+			$expected[] = get_userdata( $id )->user_email;
+		}
+		$actual = array();
+		foreach ( $this->messages as $message ) {
+			$actual = array_merge( $actual, array_map( 'trim', explode( ',', $message['to'] ) ) );
+			$this->assertTrue( strpos( $message['message'], 'Synthetic confidential follow-up' ) !== false, 'Real template contains the synthetic task.' );
+		}
+		sort( $expected ); sort( $actual );
+		$this->assertTrue( $expected === $actual, 'Only expected synthetic destinations reach intercepted transport.' );
+	}
+
+	public function test_send_prerequisite_renders_and_reports_transport(): void {
+		$id = $this->staff();
+		$email = new YoOhw_COS_Email_Task_Assigned();
+		$this->assertTrue( $email->trigger( $this->task(), $id ) );
+		$this->delivered_to( array( $id ) );
+		$this->transport_result = false;
+		$this->assertFalse( $email->trigger( $this->task(), $id ) );
+		$this->assertCount( 2, $this->messages );
+		$email->enabled = 'no';
+		$this->assertFalse( $email->trigger( $this->task(), $id ) );
+		$this->assertCount( 2, $this->messages );
+	}
+
+	public function test_revoked_recipient_never_reaches_transport(): void {
+		$id = $this->staff();
+		( new WP_User( $id ) )->set_role( 'subscriber' );
+		$email = new YoOhw_COS_Email_Task_Assigned();
+		$result = $email->trigger( $this->task(), $id );
+		$this->assertCount( 0, $this->messages, 'Revoked staff must receive no task payload.' );
+		$this->assertFalse( $result );
+	}
+	public function test_every_family_reloads_capabilities_and_clears_reused_state(): void {
+		$a = $this->staff( 'administrator' );
+		$b = $this->staff( 'subscriber' );
+		( new WP_User( $b ) )->add_cap( 'manage_woocommerce' );
+		$actor = $this->staff( 'subscriber' );
+		foreach ( array( 'Task_Assigned', 'Task_Reassigned', 'Task_Due_Soon', 'Task_Completed', 'Task_Reopened', 'Task_Overdue', 'Daily_Followup_Summary' ) as $family ) {
+			$class = 'YoOhw_COS_Email_' . $family;
+			$email = new $class();
+			$email->enabled = 'yes';
+			$payload = $email instanceof YoOhw_COS_Email_Task_Digest ? array( $this->task() ) : $this->task();
+			( new WP_User( $a ) )->remove_cap( 'manage_woocommerce' );
+			$this->messages = array();
+			wp_set_current_user( 0 );
+			$this->assertTrue( $email->trigger( $payload, $a ), $family );
+			( new WP_User( $a ) )->add_cap( 'manage_woocommerce', false );
+			$this->assertContains( 'administrator', ( new WP_User( $a ) )->roles );
+			$this->assertFalse( $email->trigger( $payload, $a ), $family );
+			$this->assertSame( '', $email->recipient );
+			$this->assertFalse( $email->recipient_user );
+			$this->assertSame( array(), $email->task );
+			$this->assertSame( array(), $email->tasks );
+			wp_set_current_user( $actor );
+			$this->assertTrue( $email->trigger( $payload, $b ), $family );
+			$this->delivered_to( array( $a, $b ) );
+			$this->assertFalse( $email->trigger( array(), $b ) );
+			$this->assertSame( '', $email->recipient );
+		}
+	}
+
+	public function test_deleted_and_invalid_accounts_and_disabled_defaults(): void {
+		$email = new YoOhw_COS_Email_Task_Assigned();
+		$id = $this->staff();
+		wp_delete_user( $id );
+		$this->assertFalse( $email->trigger( $this->task(), $id ) );
+		$this->assertFalse( $email->trigger( $this->task(), 0 ) );
+		$id = $this->staff();
+		global $wpdb;
+		$wpdb->update( $wpdb->users, array( 'user_email' => 'invalid' ), array( 'ID' => $id ) );
+		clean_user_cache( $id );
+		$this->assertFalse( $email->trigger( $this->task(), $id ) );
+		$this->assertCount( 0, $this->messages );
+		$id = $this->staff();
+		$this->assertFalse( ( new YoOhw_COS_Email_Task_Completed() )->trigger( $this->task(), $id ) );
+		$this->assertFalse( ( new YoOhw_COS_Email_Task_Overdue_Escalation() )->trigger( array( $this->task() ), $id ) );
+		$this->assertCount( 0, $this->messages );
+	}
+
+	public function test_changes_during_render_and_final_parameters_reject_stale_payload(): void {
+		$id = $this->staff();
+		$email = new YoOhw_COS_Email_Task_Assigned();
+		foreach ( array( 'woocommerce_email_subject_' . $email->id, 'woocommerce_mail_content', 'woocommerce_mail_callback_params' ) as $hook ) {
+			( new WP_User( $id ) )->set_role( 'shop_manager' );
+			$revoke = static function( $value ) use ( $id ) { ( new WP_User( $id ) )->set_role( 'subscriber' ); return $value; };
+			add_filter( $hook, $revoke );
+			try {
+				$this->assertFalse( $email->trigger( $this->task(), $id ), $hook );
+			} finally { remove_filter( $hook, $revoke ); }
+			$this->assertCount( 0, $this->messages );
+			$this->assertSame( '', $email->recipient );
+		}
+		( new WP_User( $id ) )->set_role( 'shop_manager' );
+		$change_email = static function( $params ) use ( $id ) { wp_update_user( array( 'ID' => $id, 'user_email' => 'changed-staff@example.test' ) ); return $params; };
+		add_filter( 'send_email_change_email', '__return_false' );
+		add_filter( 'woocommerce_mail_callback_params', $change_email );
+		try { $this->assertFalse( $email->trigger( $this->task(), $id ) ); }
+		finally { remove_filter( 'woocommerce_mail_callback_params', $change_email ); remove_filter( 'send_email_change_email', '__return_false' ); }
+		$this->assertCount( 0, $this->messages );
+		$this->assertTrue( $email->trigger( $this->task(), $id ) );
+		$this->delivered_to( array( $id ) );
+	}
+
+	public function test_capability_filter_uses_recipient_and_current_site_and_rejects_site_movement(): void {
+		$id = $this->staff( 'subscriber' );
+		$site = get_current_blog_id();
+		$seen = 0;
+		$effective = static function( $caps, $required, $args, $user ) use ( $id, $site, &$seen ) {
+			if ( $user->ID === $id && in_array( 'manage_woocommerce', $required, true ) ) {
+				++$seen;
+				$caps['manage_woocommerce'] = $user->get_site_id() === $site && get_current_blog_id() === $site;
+			}
+			return $caps;
+		};
+		add_filter( 'user_has_cap', $effective, 10, 4 );
+		$email = new YoOhw_COS_Email_Task_Assigned();
+		try {
+			$this->assertTrue( $email->trigger( $this->task(), $id ) );
+			$this->assertGreaterThanOrEqual( 3, $seen );
+			$this->messages = array();
+			// Controlled site-context invalidation in the real single-site runtime.
+			$move = static function( $params ) use ( $site ) { $GLOBALS['blog_id'] = $site + 1; return $params; };
+			add_filter( 'woocommerce_mail_callback_params', $move );
+			try { $this->assertFalse( $email->trigger( $this->task(), $id ) ); }
+			finally { $GLOBALS['blog_id'] = $site; remove_filter( 'woocommerce_mail_callback_params', $move ); }
+			$this->assertCount( 0, $this->messages );
+		} finally { remove_filter( 'user_has_cap', $effective ); }
+		$this->assertFalse( $email->trigger( $this->task(), $id ) );
+	}
+
+	public function test_escalation_sources_remain_independent(): void {
+		$id = $this->staff();
+		$email = new YoOhw_COS_Email_Task_Overdue_Escalation();
+		$email->enabled = 'yes';
+		$email->settings['recipients'] = 'manager@example.test, manager@example.test, MANAGER@example.test, invalid';
+		$this->assertTrue( $email->trigger( array( $this->task() ), $id ) );
+		$this->delivered_to( array( $id ), array( 'MANAGER@example.test' ) );
+		( new WP_User( $id ) )->set_role( 'subscriber' );
+		$this->messages = array();
+		$this->assertTrue( $email->trigger( array( $this->task() ), $id ) );
+		$this->delivered_to( array(), array( 'MANAGER@example.test' ) );
+		$email->settings['recipients'] = get_userdata( $id )->user_email;
+		$this->messages = array();
+		$this->assertTrue( $email->trigger( array( $this->task() ), $id ) );
+		$this->delivered_to( array( $id ) );
+		$email->settings['recipients'] = '';
+		update_option( 'admin_email', 'site-admin@example.test' );
+		$this->messages = array();
+		$this->assertTrue( $email->trigger( array( $this->task() ), 0 ) );
+		$this->delivered_to( array(), array( 'site-admin@example.test' ) );
+		$email->settings['recipients'] = 'invalid, also-invalid';
+		$this->messages = array();
+		$this->assertFalse( $email->trigger( array( $this->task() ), $id ) );
+		$this->assertCount( 0, $this->messages );
+		( new WP_User( $id ) )->set_role( 'shop_manager' );
+		$this->assertTrue( $email->trigger( array( $this->task() ), $id ) );
+		$this->delivered_to( array( $id ) );
+		$this->messages = array();
+		$email->settings['recipients'] = '';
+		// Core rejects invalid admin_email writes; inject an invalid read explicitly.
+		$invalid_admin = static function() { return 'invalid'; };
+		add_filter( 'pre_option_admin_email', $invalid_admin );
+		( new WP_User( $id ) )->set_role( 'subscriber' );
+		try { $this->assertFalse( $email->trigger( array( $this->task() ), $id ) ); }
+		finally { remove_filter( 'pre_option_admin_email', $invalid_admin ); }
+		$this->assertCount( 0, $this->messages );
+	}
+
+	private function stored_task( int $assignee, int $creator, string $due ): int {
+		$customer = YoOhw_COS_Customers::create_customer( array( 'email' => 'notification-fixture@example.test' ) );
+		$id = YoOhw_COS_Tasks::create_task( array( 'customer_id' => $customer, 'title' => $this->task()['title'], 'assigned_user_id' => $assignee, 'created_by' => $creator, 'due_date' => $due ) );
+		$this->assertGreaterThan( 0, $id );
+		return $id;
+	}
+
+	public function test_actual_assignment_reassignment_completion_reopen_dispatch(): void {
+		$a = $this->staff(); $b = $this->staff(); $actor = $this->staff();
+		$emails = WC()->mailer()->get_emails();
+		$reassigned = $emails['YoOhw_COS_Email_Task_Reassigned'];
+		$completed = $emails['YoOhw_COS_Email_Task_Completed'];
+		$old_settings = $reassigned->settings;
+		$old_enabled = $completed->enabled;
+		$reassigned->settings['notify_previous_assignee'] = 'yes';
+		$completed->enabled = 'yes';
+		wp_set_current_user( $actor );
+		try {
+			$id = $this->stored_task( $a, $a, '' );
+			$this->delivered_to( array( $a ) );
+			$this->messages = array();
+			$this->assertTrue( YoOhw_COS_Tasks::update_task( $id, array( 'assigned_user_id' => $b ) ) );
+			$this->delivered_to( array( $a, $b ) );
+			$this->messages = array();
+			( new WP_User( $a ) )->set_role( 'subscriber' );
+			$this->assertTrue( YoOhw_COS_Tasks::complete_task( $id, $actor ) );
+			$this->delivered_to( array( $b ) );
+			$this->messages = array();
+			wp_set_current_user( $b );
+			$this->assertTrue( YoOhw_COS_Tasks::reopen_task( $id ) );
+			$this->assertCount( 0, $this->messages, 'Actor excluded and revoked creator denied.' );
+			wp_set_current_user( $actor );
+			( new WP_User( $a ) )->set_role( 'shop_manager' );
+			$this->assertTrue( YoOhw_COS_Tasks::complete_task( $id, $actor ) );
+			$this->messages = array();
+			$this->assertTrue( YoOhw_COS_Tasks::reopen_task( $id ) );
+			$this->delivered_to( array( $a, $b ) );
+			$this->messages = array();
+			( new WP_User( $b ) )->set_role( 'subscriber' );
+			$this->assertTrue( YoOhw_COS_Tasks::update_task( $id, array( 'assigned_user_id' => $a ) ) );
+			$this->delivered_to( array( $a ) );
+		} finally { $reassigned->settings = $old_settings; $completed->enabled = $old_enabled; }
+	}
+
+	public function test_due_soon_mixed_batch_failure_retry_and_dedupe(): void {
+		global $wpdb;
+		YoOhw_COS_Customers::reset_data();
+		$a = $this->staff(); $b = $this->staff();
+		$due = current_datetime()->modify( '+2 hours' )->format( 'Y-m-d H:i:s' );
+		$first = $this->stored_task( $a, $a, $due );
+		$second = $this->stored_task( $b, $b, $due );
+		( new WP_User( $a ) )->set_role( 'subscriber' );
+		$this->messages = array();
+		$this->transport_result = false;
+		YoOhw_COS_Email_Notifications::run_due_soon_notifications();
+		$this->delivered_to( array( $b ) );
+		$this->assertSame( '0', $wpdb->get_var( 'SELECT COUNT(*) FROM ' . YoOhw_COS_DB::notification_log_table() ) );
+		$this->messages = array();
+		$this->transport_result = true;
+		YoOhw_COS_Email_Notifications::run_due_soon_notifications();
+		$this->delivered_to( array( $b ) );
+		$this->messages = array();
+		YoOhw_COS_Email_Notifications::run_due_soon_notifications();
+		$this->assertCount( 0, $this->messages );
+		( new WP_User( $a ) )->set_role( 'shop_manager' );
+		YoOhw_COS_Email_Notifications::run_due_soon_notifications();
+		$this->delivered_to( array( $a ) );
+		$this->assertSame( '2', $wpdb->get_var( "SELECT COUNT(*) FROM " . YoOhw_COS_DB::notification_log_table() . " WHERE status = 'sent'" ) );
+		$this->assertSame( '0', $wpdb->get_var( "SELECT COUNT(*) FROM " . YoOhw_COS_DB::notification_log_table() . " WHERE status = 'pending'" ) );
+	}
+
+	public function test_daily_worker_denied_group_continues_and_keeps_configured_escalation(): void {
+		global $wpdb;
+		YoOhw_COS_Customers::reset_data();
+		$a = $this->staff(); $b = $this->staff();
+		$due = current_datetime()->modify( '-5 days' )->format( 'Y-m-d H:i:s' );
+		$this->stored_task( $a, $a, $due );
+		$this->stored_task( $b, $b, $due );
+		( new WP_User( $a ) )->set_role( 'subscriber' );
+		$email = WC()->mailer()->get_emails()['YoOhw_COS_Email_Task_Overdue_Escalation'];
+		$settings = $email->settings; $enabled = $email->enabled;
+		$email->settings['recipients'] = 'escalation@example.test'; $email->enabled = 'yes';
+		$this->messages = array();
+		try {
+			$this->transport_result = false;
+			YoOhw_COS_Email_Notifications::run_daily_notifications();
+			$this->delivered_to( array(), array( 'escalation@example.test' ) );
+			$this->assertSame( '0', $wpdb->get_var( 'SELECT COUNT(*) FROM ' . YoOhw_COS_DB::notification_log_table() ) );
+			$this->transport_result = true; $this->messages = array();
+			YoOhw_COS_Email_Notifications::run_daily_notifications();
+			$this->delivered_to( array(), array( 'escalation@example.test' ) );
+			$cursors = array_fill_keys( array( 'overdue', 'escalation', 'summary' ), array( 'user_id' => $a, 'task_id' => 0 ) );
+			$this->messages = array();
+			YoOhw_COS_Email_Notifications::run_daily_notifications( $cursors );
+			$this->delivered_to( array( $b, $b, $b ), array( 'escalation@example.test' ) );
+			$this->messages = array();
+			YoOhw_COS_Email_Notifications::run_daily_notifications( $cursors );
+			$this->assertCount( 0, $this->messages );
+			$this->assertSame( '4', $wpdb->get_var( "SELECT COUNT(*) FROM " . YoOhw_COS_DB::notification_log_table() . " WHERE status = 'sent'" ) );
+			$this->assertSame( '0', $wpdb->get_var( "SELECT COUNT(*) FROM " . YoOhw_COS_DB::notification_log_table() . " WHERE status = 'pending'" ) );
+			$scheduled = wp_next_scheduled( 'yoohw_cos_crm_email_daily', array( $cursors ) );
+			$this->assertNotFalse( $scheduled, 'Existing bounded continuation advances past denied group.' );
+			$this->assertGreaterThan( time(), $scheduled );
+		} finally { $email->settings = $settings; $email->enabled = $enabled; }
+	}
+
+	public function test_daily_summary_actual_transport_keeps_200_task_chunks(): void {
+		global $wpdb;
+		YoOhw_COS_Customers::reset_data();
+		$id = $this->staff();
+		$task_id = $this->stored_task( $id, $id, current_datetime()->modify( '-1 day' )->format( 'Y-m-d H:i:s' ) );
+		$row = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i WHERE id = %d', YoOhw_COS_DB::tasks_table(), $task_id ), ARRAY_A );
+		unset( $row['id'] );
+		for ( $i = 2; $i <= 201; ++$i ) {
+			$row['title'] = $this->task()['title'] . ' item-' . $i . '-end';
+			$this->assertSame( 1, $wpdb->insert( YoOhw_COS_DB::tasks_table(), $row ) );
+			if ( 200 === $i ) { $last = (int) $wpdb->insert_id; }
+		}
+		$emails = WC()->mailer()->get_emails();
+		$overdue = $emails['YoOhw_COS_Email_Task_Overdue']; $enabled = $overdue->enabled; $overdue->enabled = 'no';
+		$this->messages = array();
+		try {
+			YoOhw_COS_Email_Notifications::run_daily_notifications();
+			$this->assertCount( 1, $this->messages );
+			$this->assertTrue( strpos( $this->messages[0]['message'], 'item-200-end' ) !== false );
+			$this->assertTrue( strpos( $this->messages[0]['message'], 'item-201-end' ) === false );
+			$cursors = array( 'summary' => array( 'user_id' => $id, 'task_id' => $last ) );
+			YoOhw_COS_Email_Notifications::run_daily_notifications( $cursors );
+			$this->assertCount( 2, $this->messages );
+			$this->assertTrue( strpos( $this->messages[1]['message'], 'item-201-end' ) !== false );
+			$this->assertTrue( strpos( $this->messages[1]['message'], 'item-200-end' ) === false );
+			YoOhw_COS_Email_Notifications::run_daily_notifications( $cursors );
+			$this->assertCount( 2, $this->messages );
+			$this->delivered_to( array( $id, $id ) );
+		} finally { $overdue->enabled = $enabled; }
+	}
+
+	public function test_guest_customer_template_is_not_subject_to_staff_gate(): void {
+		$this->assertFalse( get_user_by( 'email', 'guest-message@example.test' ) );
+		$this->assertTrue( YoOhw_COS_Email_Notifications::send_customer_message( array( 'email' => 'guest-message@example.test', 'display_name' => 'Synthetic guest' ), 'Synthetic subject', 'Synthetic guest message' ) );
+		$this->assertCount( 1, $this->messages );
+		$this->assertTrue( $this->messages[0]['to'] === 'guest-message@example.test' );
+		$this->assertTrue( strpos( $this->messages[0]['message'], 'Synthetic guest message' ) !== false );
+	}
+
+	public function test_capability_hook_mutation_at_transport_is_not_a_cached_allow(): void {
+		$id = $this->staff();
+		$email = new YoOhw_COS_Email_Task_Assigned();
+		$at_transport = false;
+		$arm = static function( $params ) use ( &$at_transport ) { $at_transport = true; return $params; };
+		$revoke = static function( $caps, $required, $args, $user ) use ( $id, &$at_transport ) {
+			if ( $at_transport && $user->ID === $id && in_array( 'manage_woocommerce', $required, true ) ) {
+				$at_transport = false;
+				( new WP_User( $id ) )->add_cap( 'manage_woocommerce', false );
+			}
+			return $caps;
+		};
+		add_filter( 'woocommerce_mail_callback_params', $arm );
+		add_filter( 'user_has_cap', $revoke, 10, 4 );
+		try {
+			$this->assertFalse( $email->trigger( $this->task(), $id ) );
+			$this->assertCount( 0, $this->messages );
+		} finally {
+			remove_filter( 'woocommerce_mail_callback_params', $arm );
+			remove_filter( 'user_has_cap', $revoke );
+		}
+		( new WP_User( $id ) )->remove_cap( 'manage_woocommerce' );
+		$this->assertTrue( $email->trigger( $this->task(), $id ) );
+		$this->delivered_to( array( $id ) );
+	}
+
 }

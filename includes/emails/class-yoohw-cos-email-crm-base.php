@@ -6,6 +6,8 @@ abstract class YoOhw_COS_Email_CRM_Base extends WC_Email {
 	protected $default_enabled = 'yes';
 	protected $recipient_label = '';
 	protected $context = array();
+	private $notification_site_id = 0;
+	private $notification_user_id = 0;
 
 	public $task = array();
 	public $tasks = array();
@@ -98,16 +100,89 @@ abstract class YoOhw_COS_Email_CRM_Base extends WC_Email {
 		);
 	}
 
-	protected function prepare_recipient_user( int $user_id ): bool {
-		$this->recipient_user = get_userdata( absint( $user_id ) );
+	protected function reset_notification(): void {
+		$this->recipient = '';
+		$this->recipient_user = false;
+		$this->task = array();
+		$this->tasks = array();
+		$this->context = array();
+		$this->object = null;
+		$this->notification_site_id = 0;
+		$this->notification_user_id = 0;
+		$this->placeholders['{task_title}'] = '';
+		$this->placeholders['{customer_name}'] = '';
+		$this->placeholders['{due_date}'] = '';
+		$this->placeholders['{task_count}'] = '0';
+	}
 
-		if ( ! $this->recipient_user instanceof WP_User || ! is_email( $this->recipient_user->user_email ) ) {
-			$this->recipient = '';
+	protected function begin_notification( int $user_id ): void {
+		$this->reset_notification();
+		$this->notification_site_id = get_current_blog_id();
+		$this->notification_user_id = absint( $user_id );
+	}
+
+	protected function send_notification(): bool {
+		if ( ! $this->is_enabled() || get_current_blog_id() !== $this->notification_site_id
+			|| ! $this->prepare_recipient_user( $this->notification_user_id ) ) {
 			return false;
 		}
 
-		$this->recipient = $this->recipient_user->user_email;
+		$site_id = $this->notification_site_id;
+		$user_id = $this->notification_user_id;
+		$recipient = $this->recipient;
+		$rendered_user_id = $this->recipient_user instanceof WP_User ? $this->recipient_user->ID : 0;
+		// Wrap only this email's transport. WC rendering and callback-parameter hooks
+		// finish before this check; other emails and manual customer messages are untouched.
+		$guard = function( $callback, $email ) use ( $site_id, $user_id, $recipient, $rendered_user_id ) {
+			if ( $email !== $this ) {
+				return $callback;
+			}
+			return function( ...$args ) use ( $callback, $site_id, $user_id, $recipient, $rendered_user_id ) {
+				if ( ! $this->is_enabled() || get_current_blog_id() !== $site_id
+					|| $this->notification_site_id !== $site_id || $this->notification_user_id !== $user_id
+					|| ! $this->prepare_recipient_user( $user_id )
+					|| get_current_blog_id() !== $site_id || $this->recipient !== $recipient
+					|| ( $this->recipient_user instanceof WP_User ? $this->recipient_user->ID : 0 ) !== $rendered_user_id ) {
+					$this->reset_notification();
+					return false;
+				}
+				return (bool) call_user_func_array( $callback, $args );
+			};
+		};
+		add_filter( 'woocommerce_mail_callback', $guard, PHP_INT_MAX, 2 );
+		try {
+			return (bool) $this->send(
+				$this->get_recipient(),
+				$this->get_subject(),
+				$this->get_content(),
+				$this->get_headers(),
+				$this->get_attachments()
+			);
+		} finally {
+			remove_filter( 'woocommerce_mail_callback', $guard, PHP_INT_MAX );
+		}
+	}
 
+	protected function prepare_recipient_user( int $user_id ): bool {
+		$this->recipient = '';
+		$this->recipient_user = false;
+		// A new WP_User reloads current user metadata instead of retaining a prior
+		// invocation's effective capabilities. Use the selected site's capability map.
+		$user = new WP_User( absint( $user_id ), '', $this->notification_site_id );
+		$caps = $user->caps;
+		$allcaps = $user->allcaps;
+		$address = $user->user_email;
+		if ( ! $user->exists() || ! is_email( $address ) || ! user_can( $user, 'manage_woocommerce' ) ) {
+			return false;
+		}
+		// Capability hooks may update the very account being checked. Reject that
+		// unstable snapshot rather than trusting the hook's pre-change capability map.
+		$fresh = new WP_User( absint( $user_id ), '', $this->notification_site_id );
+		if ( ! $fresh->exists() || $fresh->user_email !== $address || $fresh->caps !== $caps || $fresh->allcaps !== $allcaps ) {
+			return false;
+		}
+		$this->recipient_user = $fresh;
+		$this->recipient = $user->user_email;
 		return true;
 	}
 

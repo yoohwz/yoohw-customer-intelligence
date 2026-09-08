@@ -13,20 +13,25 @@ abstract class YoOhw_COS_Email_Task_Digest extends YoOhw_COS_Email_CRM_Base {
 	}
 
 	public function trigger( array $tasks, int $recipient_user_id, array $context = array() ): bool {
-		$this->tasks   = array_values( $tasks );
-		$this->context = $context;
-		$this->object  = (object) array(
-			'tasks'             => $this->tasks,
-			'recipient_user_id' => $recipient_user_id,
-		);
+		$this->begin_notification( $recipient_user_id );
+		try {
+			$this->tasks   = array_values( $tasks );
+			$this->context = $context;
+			$this->object  = (object) array(
+				'tasks'             => $this->tasks,
+				'recipient_user_id' => $recipient_user_id,
+			);
 
-		if ( empty( $this->tasks ) || ! $this->prepare_recipient_user( $recipient_user_id ) ) {
-			return false;
+			if ( empty( $this->tasks ) || ! $this->prepare_recipient_user( $recipient_user_id ) ) {
+				return false;
+			}
+
+			$this->set_task_count_placeholder( count( $this->tasks ) );
+
+			return $this->send_notification();
+		} finally {
+			$this->reset_notification();
 		}
-
-		$this->set_task_count_placeholder( count( $this->tasks ) );
-
-		return $this->send_notification();
 	}
 
 	public function get_content_html() {
@@ -139,7 +144,7 @@ class YoOhw_COS_Email_Task_Overdue_Escalation extends YoOhw_COS_Email_Task_Diges
 			'title'       => __( 'Escalation recipient(s)', 'yoohw-customer-intelligence' ),
 			'type'        => 'text',
 			/* translators: %s: WP admin email. */
-			'description' => sprintf( __( 'Comma-separated manager/admin recipients. Defaults to %s.', 'yoohw-customer-intelligence' ), '<code>' . esc_html( get_option( 'admin_email' ) ) . '</code>' ),
+			'description' => sprintf( __( 'Comma-separated administrative recipients, independent of staff access. Removing staff access does not remove an address configured here. Defaults to %s.', 'yoohw-customer-intelligence' ), '<code>' . esc_html( get_option( 'admin_email' ) ) . '</code>' ),
 			'placeholder' => get_option( 'admin_email' ),
 			'default'     => '',
 			'desc_tip'    => true,
@@ -153,9 +158,7 @@ class YoOhw_COS_Email_Task_Overdue_Escalation extends YoOhw_COS_Email_Task_Diges
 	}
 
 	protected function prepare_recipient_user( int $user_id ): bool {
-		if ( ! parent::prepare_recipient_user( $user_id ) ) {
-			return false;
-		}
+		parent::prepare_recipient_user( $user_id );
 
 		$recipients = array_filter(
 			array_map(
@@ -165,7 +168,11 @@ class YoOhw_COS_Email_Task_Overdue_Escalation extends YoOhw_COS_Email_Task_Diges
 			'is_email'
 		);
 
-		$this->recipient = implode( ', ', array_unique( $recipients ) );
+		$unique = array();
+		foreach ( $recipients as $address ) {
+			$unique[ strtolower( $address ) ] = $address;
+		}
+		$this->recipient = implode( ', ', array_values( $unique ) );
 
 		return '' !== $this->recipient;
 	}
