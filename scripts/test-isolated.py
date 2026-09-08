@@ -104,8 +104,28 @@ def controls(root, env, php, sql, credentials):
             sql("UPDATE " + credentials['database'] + ".yci_environment_owner SET token='" + credentials['token'] + "'")
             if label == 'global grants':
                 sql("REVOKE SELECT ON *.* FROM '" + credentials['database'] + "'@'localhost'")
+        account = "'" + credentials['database'] + "'@'localhost'"
+        original_grants = sql('SHOW GRANTS FOR ' + account)
+        for scope, privilege in (('*.*', 'USAGE'), (credentials['database'] + '.*', 'ALL PRIVILEGES')):
+            sql('GRANT ' + privilege + ' ON ' + scope + ' TO ' + account + ' WITH GRANT OPTION')
+            try:
+                expected = 'GRANT ' + privilege + ' ON ' + ('*.*' if scope == '*.*' else '`' + credentials['database'] + '`.*') + ' TO '
+                rows = sql('SHOW GRANTS FOR ' + account).splitlines()
+                if not any(row.startswith(expected) and 'WITH GRANT OPTION' in row for row in rows):
+                    raise RuntimeError('Grant-option fixture did not establish the expected live privilege')
+                for entry in entrypoints:
+                    result = subprocess.run([php, str(entry)], env=env, capture_output=True)
+                    if result.returncode == 0 or marker.exists() or b'database privileges exceed owned database' not in result.stdout + result.stderr:
+                        raise RuntimeError('Grant-option rejection failed before bootstrap: ' + scope + ' / ' + entry.name)
+                print('PASS: live ' + scope + ' GRANT OPTION rejected at both entrypoints before bootstrap', flush=True)
+            finally:
+                sql('REVOKE GRANT OPTION ON ' + scope + ' FROM ' + account)
+                if sql('SHOW GRANTS FOR ' + account) != original_grants:
+                    raise RuntimeError('Fixture account privileges were not restored exactly')
+        if sql('SELECT value FROM synthetic_sentinel.untouched') != credentials['token']:
+            raise RuntimeError('Unrelated synthetic sentinel changed during rejection controls')
         run([php, '-r', "require " + repr(str(REPO / 'tests/environment.php')) + "; yci_test_environment(); wp_mail('fixture@example.test','probe','fixture'); if (($GLOBALS['yci_intercepted_mail'] ?? 0) !== 1) { exit(1); }"], env=env)
-        print('PASS: 30 entrypoint rejection controls; valid ownership/grants; early mail interception', flush=True)
+        print('PASS: 34 entrypoint rejection controls; valid ownership/grants; early mail interception', flush=True)
     finally:
         for p, original in zip(paths, originals):
             p.write_bytes(original)

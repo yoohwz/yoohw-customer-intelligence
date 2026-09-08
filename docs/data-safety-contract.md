@@ -36,8 +36,11 @@ profile, synthetic data and persisted-state checks, never an existing signed-in 
 
 Every integration invocation executes positive and negative controls: missing/false/
 mismatched root/token/paths/mode, wrong DB ownership, modified config, excessive grants
-and predefined DB mismatch. Synthetic bootstrap files mark any early execution; a
-separate synthetic DB sentinel is checked after each storage run. No customer data is
+and predefined DB mismatch. Live global USAGE and database-scoped ALL grants with
+GRANT OPTION must both be rejected before either entrypoint loads WordPress. Each
+case revokes only the fixture account's added grant option and verifies exact privilege
+restoration; the ordinary positive ownership check remains. Synthetic bootstrap files
+mark any early execution; a separate synthetic DB sentinel is checked after each storage run. No customer data is
 used to test rejection. The suite verifies actual HPOS state, and rejects skipped,
 risky, empty, failed or errored test runs. A mail probe executes in the plugin hook.
 

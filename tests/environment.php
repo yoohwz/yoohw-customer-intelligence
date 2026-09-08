@@ -49,10 +49,13 @@ function yci_test_environment(): array {
 	$scoped = false;
 	foreach ( $grants as $row ) {
 		$grant = $row[0];
+		if ( strpos( $grant, 'WITH GRANT OPTION' ) !== false ) {
+			$fail( 'database privileges exceed owned database' );
+		}
 		if ( preg_match( '/^GRANT USAGE ON \*\.\* TO /', $grant ) ) {
 			continue;
 		}
-		if ( strpos( $grant, 'GRANT ALL PRIVILEGES ON `' . $env['database'] . '`.* TO ' ) !== 0 || strpos( $grant, 'WITH GRANT OPTION' ) !== false ) {
+		if ( strpos( $grant, 'GRANT ALL PRIVILEGES ON `' . $env['database'] . '`.* TO ' ) !== 0 ) {
 			$fail( 'database privileges exceed owned database' );
 		}
 		$scoped = true;
