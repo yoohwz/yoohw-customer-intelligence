@@ -110,6 +110,17 @@ final class YoOhw_COS_Loyalty_Integration {
 	}
 
 	public static function handle_points_log_created( int $log_id, array $payload, array $context = array() ): void {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return;
+		}
+		try {
+			self::handle_points_log_created_guarded( $log_id, $payload, $context );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function handle_points_log_created_guarded( int $log_id, array $payload, array $context = array() ): void {
 		$user_id = absint( $payload['user_id'] ?? 0 );
 
 		if ( $user_id <= 0 || $log_id <= 0 ) {
@@ -127,6 +138,17 @@ final class YoOhw_COS_Loyalty_Integration {
 	}
 
 	public static function handle_loyalty_role_updated( int $user_id, string $new_role, string $old_role = '' ): void {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return;
+		}
+		try {
+			self::handle_loyalty_role_updated_guarded( $user_id, $new_role, $old_role );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function handle_loyalty_role_updated_guarded( int $user_id, string $new_role, string $old_role = '' ): void {
 		$user_id = absint( $user_id );
 
 		if ( $user_id <= 0 ) {
@@ -175,6 +197,17 @@ final class YoOhw_COS_Loyalty_Integration {
 	}
 
 	public static function handle_customer_intelligence_recalculated( int $customer_id, array $customer, array $previous_customer = array(), bool $updated = false ): void {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return;
+		}
+		try {
+			self::handle_customer_intelligence_recalculated_guarded( $customer_id, $customer, $previous_customer, $updated );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function handle_customer_intelligence_recalculated_guarded( int $customer_id, array $customer, array $previous_customer = array(), bool $updated = false ): void {
 		$customer_id = absint( $customer_id );
 
 		if ( $customer_id <= 0 ) {
@@ -185,6 +218,17 @@ final class YoOhw_COS_Loyalty_Integration {
 	}
 
 	public static function handle_points_reconciliation_issue_found( array $issue, array $context = array() ): void {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return;
+		}
+		try {
+			self::handle_points_reconciliation_issue_found_guarded( $issue, $context );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function handle_points_reconciliation_issue_found_guarded( array $issue, array $context = array() ): void {
 		$user_id = absint( $issue['user_id'] ?? 0 );
 
 		if ( $user_id <= 0 ) {
@@ -323,6 +367,17 @@ final class YoOhw_COS_Loyalty_Integration {
 	}
 
 	public static function backfill_legacy_points_logs( int $limit = 200, int $page = 1 ): array {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return array( 'processed' => 0, 'scanned' => 0, 'skipped' => 0, 'has_more' => true, 'next_page' => $page );
+		}
+		try {
+			return self::backfill_legacy_points_logs_guarded( $limit, $page );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function backfill_legacy_points_logs_guarded( int $limit = 200, int $page = 1 ): array {
 		global $wpdb;
 
 		$limit  = min( 500, max( 1, absint( $limit ) ) );
@@ -392,6 +447,18 @@ final class YoOhw_COS_Loyalty_Integration {
 	}
 
 	public static function process_legacy_points_backfill(): void {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			wp_schedule_single_event( time() + MINUTE_IN_SECONDS, self::BACKFILL_HOOK );
+			return;
+		}
+		try {
+			self::process_legacy_points_backfill_guarded(  );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function process_legacy_points_backfill_guarded(  ): void {
 		$state = get_option( self::BACKFILL_STATE_OPTION, array() );
 		$state = is_array( $state ) ? $state : array();
 

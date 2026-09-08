@@ -13,6 +13,8 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 
 	private $relationships_primed = false;
 
+	public $selection_epoch = 'invalid';
+
 	public function __construct() {
 		parent::__construct(
 			array(
@@ -84,6 +86,18 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 	}
 
 	public function prepare_items(): void {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return;
+		}
+		try {
+			$this->selection_epoch = YoOhw_COS_Reset_Guard::epoch();
+			$this->prepare_items_guarded(  );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private function prepare_items_guarded(): void {
 		$per_page   = 20;
 		$query_args = YoOhw_COS_Customer_Query::sanitize_args( wp_unslash( $_REQUEST ) );
 

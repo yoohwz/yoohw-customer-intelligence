@@ -29,6 +29,17 @@ final class YoOhw_COS_Blacklist_Manager_Integration {
 	}
 
 	public static function handle_order_suspected( $payload, $order = null ): void {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return;
+		}
+		try {
+			self::handle_order_suspected_guarded( $payload, $order );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function handle_order_suspected_guarded( $payload, $order = null ): void {
 		self::record_order_signal(
 			'blacklist_suspect',
 			'warning',
@@ -39,6 +50,17 @@ final class YoOhw_COS_Blacklist_Manager_Integration {
 	}
 
 	public static function handle_order_blocked( $payload, $order = null ): void {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return;
+		}
+		try {
+			self::handle_order_blocked_guarded( $payload, $order );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function handle_order_blocked_guarded( $payload, $order = null ): void {
 		self::record_order_signal(
 			'blacklist_blocked',
 			'error',
@@ -49,6 +71,17 @@ final class YoOhw_COS_Blacklist_Manager_Integration {
 	}
 
 	public static function handle_order_blacklist_removed( $payload, $order = null ): void {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return;
+		}
+		try {
+			self::handle_order_blacklist_removed_guarded( $payload, $order );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function handle_order_blacklist_removed_guarded( $payload, $order = null ): void {
 		self::record_order_signal(
 			'blacklist_removed',
 			'success',
@@ -59,6 +92,17 @@ final class YoOhw_COS_Blacklist_Manager_Integration {
 	}
 
 	public static function handle_order_suspect_detected( $payload, $order = null ): void {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return;
+		}
+		try {
+			self::handle_order_suspect_detected_guarded( $payload, $order );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function handle_order_suspect_detected_guarded( $payload, $order = null ): void {
 		self::record_order_signal(
 			'blacklist_match_detected',
 			'warning',
@@ -69,6 +113,17 @@ final class YoOhw_COS_Blacklist_Manager_Integration {
 	}
 
 	public static function handle_dashboard_row_changed( $event, $id, $row = array(), $record_type = 'main' ): void {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return;
+		}
+		try {
+			self::handle_dashboard_row_changed_guarded( $event, $id, $row, $record_type );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function handle_dashboard_row_changed_guarded( $event, $id, $row = array(), $record_type = 'main' ): void {
 		$row         = is_array( $row ) ? $row : array();
 		$event       = sanitize_key( (string) $event );
 		$id          = absint( $id );
@@ -110,6 +165,17 @@ final class YoOhw_COS_Blacklist_Manager_Integration {
 	}
 
 	public static function backfill_legacy_signals( int $limit = 300, int $page = 1 ): array {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return array( 'processed' => 0, 'scanned' => 0, 'skipped' => 0, 'has_more' => true, 'next_page' => $page );
+		}
+		try {
+			return self::backfill_legacy_signals_guarded( $limit, $page );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function backfill_legacy_signals_guarded( int $limit = 300, int $page = 1 ): array {
 		global $wpdb;
 
 		$limit  = min( 500, max( 1, absint( $limit ) ) );

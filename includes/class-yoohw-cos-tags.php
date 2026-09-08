@@ -56,9 +56,20 @@ final class YoOhw_COS_Tags {
 	}
 
 	public static function assign_tag( int $customer_id, int $tag_id, int $created_by = 0, bool $record_event = true ): bool {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return false;
+		}
+		try {
+			return self::assign_tag_guarded( $customer_id, $tag_id, $created_by, $record_event );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function assign_tag_guarded( int $customer_id, int $tag_id, int $created_by = 0, bool $record_event = true ): bool {
 		global $wpdb;
 
-		if ( $customer_id <= 0 || $tag_id <= 0 ) {
+		if ( $customer_id <= 0 || $tag_id <= 0 || ! YoOhw_COS_Customers::customer_exists( $customer_id ) || ! self::get_tag( $tag_id ) ) {
 			return false;
 		}
 
@@ -166,6 +177,17 @@ final class YoOhw_COS_Tags {
 	}
 
 	public static function remove_tag( int $customer_id, int $tag_id, bool $record_event = true ): bool {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return false;
+		}
+		try {
+			return self::remove_tag_guarded( $customer_id, $tag_id, $record_event );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function remove_tag_guarded( int $customer_id, int $tag_id, bool $record_event = true ): bool {
 		global $wpdb;
 
 		if ( $customer_id <= 0 || $tag_id <= 0 ) {
@@ -261,6 +283,17 @@ final class YoOhw_COS_Tags {
 	}
 
 	public static function delete_tag( int $tag_id, bool $force = false ): bool {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return false;
+		}
+		try {
+			return self::delete_tag_guarded( $tag_id, $force );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function delete_tag_guarded( int $tag_id, bool $force = false ): bool {
 		global $wpdb;
 
 		if ( $tag_id <= 0 ) {

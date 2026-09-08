@@ -63,6 +63,18 @@ final class YoOhw_COS_Migration_Runner {
 	}
 
 	public static function run_next_batch(): void {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			self::schedule_next();
+			return;
+		}
+		try {
+			self::run_next_batch_guarded(  );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function run_next_batch_guarded(  ): void {
 		if ( ! self::acquire_lock() ) {
 			self::schedule_next();
 			return;

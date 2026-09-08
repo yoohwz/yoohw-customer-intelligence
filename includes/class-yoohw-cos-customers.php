@@ -31,6 +31,10 @@ final class YoOhw_COS_Customers {
 		$order = wc_get_order( $order_id );
 
 		if ( ! $order || ! $order instanceof WC_Order ) {
+			// The existing retry hook also finishes cleanup after a contended delete.
+			if ( false === $order ) {
+				self::remove_deleted_order_contribution( $order_id, null );
+			}
 			return 0;
 		}
 
@@ -52,10 +56,17 @@ final class YoOhw_COS_Customers {
 			return;
 		}
 
-		$customer_id = YoOhw_COS_Commerce_Aggregates::remove_order( $order_id );
-
-		if ( $customer_id > 0 ) {
-			self::mark_customer_data_updated();
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			self::schedule_failed_order_sync( new RuntimeException( 'Order deletion cleanup deferred by Reset boundary.' ), $order_id, 0 );
+			return;
+		}
+		try {
+			$customer_id = YoOhw_COS_Commerce_Aggregates::remove_order( $order_id );
+			if ( $customer_id > 0 ) {
+				self::mark_customer_data_updated();
+			}
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
 		}
 	}
 
@@ -70,6 +81,18 @@ final class YoOhw_COS_Customers {
 	}
 
 	public static function sync_from_order( WC_Order $order ): int {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			self::schedule_failed_order_sync( new RuntimeException( 'Reset boundary busy or changed.' ), $order->get_id(), 0 );
+			return 0;
+		}
+		try {
+			return self::sync_from_order_guarded( $order );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function sync_from_order_guarded( WC_Order $order ): int {
 		$source_order = $order;
 		$order_id = absint( $order->get_id() );
 		self::invalidate_order_object_cache( $order_id );
@@ -153,7 +176,10 @@ final class YoOhw_COS_Customers {
 			self::refresh_derived_intelligence( $affected_customer_id, $affected_customer_id === $customer_id ? $order : null );
 		}
 
-		self::maybe_link_order_to_customer( $order, $customer_id );
+		if ( ! self::maybe_link_order_to_customer( $order, $customer_id ) ) {
+			self::schedule_failed_order_sync( new RuntimeException( 'CRM link persistence failed.' ), $order_id, $customer_id );
+			return 0;
+		}
 
 		if ( $source_order !== $order ) {
 			$source_order->read_meta_data( true );
@@ -276,6 +302,17 @@ final class YoOhw_COS_Customers {
 
 	/** Recalculate all persisted intelligence derived from customer commerce/activity. */
 	public static function refresh_derived_intelligence( int $customer_id, ?WC_Order $order = null ): bool {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return false;
+		}
+		try {
+			return self::refresh_derived_intelligence_guarded( $customer_id, $order );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function refresh_derived_intelligence_guarded( int $customer_id, ?WC_Order $order = null ): bool {
 		global $wpdb;
 
 		$customer_id = absint( $customer_id );
@@ -332,17 +369,17 @@ final class YoOhw_COS_Customers {
 		return $updated;
 	}
 
-	private static function maybe_link_order_to_customer( WC_Order $order, int $customer_id ): void {
+	private static function maybe_link_order_to_customer( WC_Order $order, int $customer_id ): bool {
 		$customer_id = absint( $customer_id );
 
 		if ( $customer_id <= 0 ) {
-			return;
+			return false;
 		}
 
 		$persisted_customer_ids = YoOhw_COS_Customer_Identity::get_persisted_order_customer_ids( $order );
 
 		if ( 1 === count( $persisted_customer_ids ) && $customer_id === absint( $persisted_customer_ids[0] ) ) {
-			return;
+			return true;
 		}
 
 		self::invalidate_order_object_cache( $order->get_id() );
@@ -354,7 +391,9 @@ final class YoOhw_COS_Customers {
 
 		$canonical_order->delete_meta_data( self::ORDER_CUSTOMER_META_KEY );
 		$canonical_order->add_meta_data( self::ORDER_CUSTOMER_META_KEY, $customer_id, true );
-		$canonical_order->save();
+		$canonical_order->update_meta_data( YoOhw_COS_Reset_Guard::META_KEY, YoOhw_COS_Reset_Guard::epoch() . ':' . $customer_id );
+		$canonical_order->save_meta_data();
+		return array( $customer_id ) === YoOhw_COS_Customer_Identity::get_persisted_order_customer_ids( $canonical_order );
 	}
 
 	private static function invalidate_order_object_cache( int $order_id ): void {
@@ -437,6 +476,17 @@ final class YoOhw_COS_Customers {
 	}
 
 	public static function create_customer( array $data ): int {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return 0;
+		}
+		try {
+			return self::create_customer_guarded( $data );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function create_customer_guarded( array $data ): int {
 		global $wpdb;
 
 		$table = YoOhw_COS_DB::customers_table();
@@ -455,6 +505,17 @@ final class YoOhw_COS_Customers {
 	}
 
 	public static function update_customer( int $customer_id, array $data ): bool {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return false;
+		}
+		try {
+			return self::update_customer_guarded( $customer_id, $data );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function update_customer_guarded( int $customer_id, array $data ): bool {
 		global $wpdb;
 
 		$table = YoOhw_COS_DB::customers_table();
@@ -660,6 +721,17 @@ final class YoOhw_COS_Customers {
 	 * migration retry and unresolved accounting.
 	 */
 	public static function sync_existing_orders_with_outcomes( int $limit = 200, int $page = 1 ): array {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return array( 'processed' => 0, 'scanned' => 0, 'has_more' => true, 'next_page' => $page, 'outcomes' => array() );
+		}
+		try {
+			return self::sync_existing_orders_with_outcomes_guarded( $limit, $page );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function sync_existing_orders_with_outcomes_guarded( int $limit = 200, int $page = 1 ): array {
 		if ( ! function_exists( 'wc_get_orders' ) ) {
 			return array(
 				'processed' => 0,
@@ -792,39 +864,77 @@ final class YoOhw_COS_Customers {
 		);
 	}
 
-	public static function reset_data(): void {
+	public static function reset_data( ?string $expected_epoch = null ): bool {
+		return YoOhw_COS_Reset_Guard::reset( static function(): void { self::clear_reset_tables(); }, $expected_epoch );
+	}
+
+	private static function clear_reset_tables(): void {
 		global $wpdb;
 
-		$wpdb->query( $wpdb->prepare( 'TRUNCATE TABLE %i', YoOhw_COS_DB::customers_table() ) );
-		$wpdb->query( $wpdb->prepare( 'TRUNCATE TABLE %i', YoOhw_COS_DB::events_table() ) );
-		$wpdb->query( $wpdb->prepare( 'TRUNCATE TABLE %i', YoOhw_COS_DB::notes_table() ) );
-		$wpdb->query( $wpdb->prepare( 'TRUNCATE TABLE %i', YoOhw_COS_DB::tasks_table() ) );
-		$wpdb->query( $wpdb->prepare( 'TRUNCATE TABLE %i', YoOhw_COS_DB::customer_tags_table() ) );
-		$wpdb->query( $wpdb->prepare( 'TRUNCATE TABLE %i', YoOhw_COS_DB::customer_segments_table() ) );
-		$wpdb->query( $wpdb->prepare( 'TRUNCATE TABLE %i', YoOhw_COS_DB::order_facts_table() ) );
-		$wpdb->query( $wpdb->prepare( 'TRUNCATE TABLE %i', YoOhw_COS_DB::notification_log_table() ) );
-		$wpdb->query( $wpdb->prepare( 'TRUNCATE TABLE %i', YoOhw_COS_DB::migration_issues_table() ) );
+		$tables = array(
+			YoOhw_COS_DB::customers_table(),
+			YoOhw_COS_DB::events_table(),
+			YoOhw_COS_DB::notes_table(),
+			YoOhw_COS_DB::tasks_table(),
+			YoOhw_COS_DB::customer_tags_table(),
+			YoOhw_COS_DB::customer_segments_table(),
+			YoOhw_COS_DB::order_facts_table(),
+			YoOhw_COS_DB::notification_log_table(),
+			YoOhw_COS_DB::migration_issues_table(),
+		);
+		foreach ( $tables as $table ) {
+			if ( false === $wpdb->query( $wpdb->prepare( 'TRUNCATE TABLE %i', $table ) ) || '0' !== (string) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i', $table ) ) ) {
+				throw new RuntimeException( 'Reset recovery required: customer tables were not fully cleared. Retry Reset.' );
+			}
+		}
 
-		delete_option( 'yoohw_cos_last_sync_page' );
-		delete_option( 'yoohw_cos_last_sync_at' );
-		delete_option( 'yoohw_cos_sync_state' );
-		delete_option( 'yoohw_cos_operation_sync_state_recalculate_intelligence' );
-		delete_option( 'yoohw_cos_operation_sync_state_backfill_first_orders' );
-		delete_option( 'yoohw_cos_operation_sync_state_blacklist_signals' );
-		delete_option( 'yoohw_cos_activity_semantics_recalculation' );
-		delete_option( 'yoohw_cos_customer_data_updated_at' );
-		delete_option( 'yoohw_cos_loyalty_backfill_state' );
-		delete_option( 'yoohw_cos_premium_reassociation_state' );
-		delete_option( 'yoohw_cos_data_migrations' );
-		delete_option( 'yoohw_cos_data_migration_lock' );
-		wp_clear_scheduled_hook( YoOhw_COS_Migration_Runner::HOOK );
-		wp_clear_scheduled_hook( self::ORDER_SYNC_RETRY_HOOK );
-		wp_clear_scheduled_hook( 'yoohw_cos_recalculate_activity_semantics' );
-		wp_clear_scheduled_hook( 'yoohw_cos_backfill_loyalty_history' );
-		wp_clear_scheduled_hook( 'yoohw_cos_reassociate_premium_checkout_events' );
+		$options = array(
+			'yoohw_cos_last_sync_page',
+			'yoohw_cos_last_sync_at',
+			'yoohw_cos_sync_state',
+			'yoohw_cos_operation_sync_state_recalculate_intelligence',
+			'yoohw_cos_operation_sync_state_backfill_first_orders',
+			'yoohw_cos_operation_sync_state_blacklist_signals',
+			'yoohw_cos_activity_semantics_recalculation',
+			'yoohw_cos_customer_data_updated_at',
+			'yoohw_cos_loyalty_backfill_state',
+			'yoohw_cos_premium_reassociation_state',
+			'yoohw_cos_data_migrations',
+			'yoohw_cos_data_migration_lock',
+		);
+		foreach ( $options as $option ) {
+			delete_option( $option );
+			if ( null !== $wpdb->get_var( $wpdb->prepare( 'SELECT option_id FROM %i WHERE option_name = %s', $wpdb->options, $option ) ) || '' !== $wpdb->last_error ) {
+				throw new RuntimeException( 'Reset recovery required: worker state was not cleared.' );
+			}
+		}
+
+		$hooks = array(
+			YoOhw_COS_Migration_Runner::HOOK,
+			self::ORDER_SYNC_RETRY_HOOK,
+			'yoohw_cos_recalculate_activity_semantics',
+			'yoohw_cos_backfill_loyalty_history',
+			'yoohw_cos_reassociate_premium_checkout_events',
+		);
+		foreach ( $hooks as $hook ) {
+			if ( false === wp_clear_scheduled_hook( $hook ) ) {
+				throw new RuntimeException( 'Reset recovery required: scheduled work was not cleared.' );
+			}
+		}
 	}
 
 	public static function recalculate_intelligence( int $limit = 500, int $page = 1 ): array {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return array( 'processed' => 0, 'has_more' => true, 'next_page' => $page );
+		}
+		try {
+			return self::recalculate_intelligence_guarded( $limit, $page );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function recalculate_intelligence_guarded( int $limit = 500, int $page = 1 ): array {
 		global $wpdb;
 
 		$table  = YoOhw_COS_DB::customers_table();
@@ -873,6 +983,17 @@ final class YoOhw_COS_Customers {
 	}
 
 	public static function refresh_risk_score_cache_batch( int $after_customer_id = 0, int $limit = self::RISK_SCORE_REFRESH_BATCH_SIZE ): array {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return array( 'processed' => 0, 'has_more' => true, 'last_customer_id' => $after_customer_id );
+		}
+		try {
+			return self::refresh_risk_score_cache_batch_guarded( $after_customer_id, $limit );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function refresh_risk_score_cache_batch_guarded( int $after_customer_id = 0, int $limit = self::RISK_SCORE_REFRESH_BATCH_SIZE ): array {
 		global $wpdb;
 
 		$table = YoOhw_COS_DB::customers_table();
@@ -940,6 +1061,18 @@ final class YoOhw_COS_Customers {
 	}
 
 	public static function process_activity_semantics_recalculation(): void {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			wp_schedule_single_event( time() + MINUTE_IN_SECONDS, 'yoohw_cos_recalculate_activity_semantics' );
+			return;
+		}
+		try {
+			self::process_activity_semantics_recalculation_guarded(  );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function process_activity_semantics_recalculation_guarded(  ): void {
 		$state = get_option( 'yoohw_cos_activity_semantics_recalculation', array() );
 		$state = is_array( $state ) ? $state : array();
 
@@ -1305,6 +1438,17 @@ final class YoOhw_COS_Customers {
 	}
 
 	public static function backfill_first_order_data( int $limit = 500, int $page = 1 ): array {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return array( 'processed' => 0, 'has_more' => true, 'next_page' => $page );
+		}
+		try {
+			return self::backfill_first_order_data_guarded( $limit, $page );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function backfill_first_order_data_guarded( int $limit = 500, int $page = 1 ): array {
 		global $wpdb;
 
 		$table  = YoOhw_COS_DB::customers_table();

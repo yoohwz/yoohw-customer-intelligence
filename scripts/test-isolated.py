@@ -59,7 +59,7 @@ def controls(root, env, php, sql, credentials):
     for p in paths:
         p.write_text('<?php file_put_contents(' + repr(str(marker)) + ', "mutated"); exit(0);')
     credential_file = root / 'environment.json'
-    entrypoints = [REPO / 'tests/bootstrap.php', REPO / 'tests/integration/test-yoohw-cos-smoke.php']
+    entrypoints = [REPO / path for path in ('tests/bootstrap.php', 'tests/integration/test-yoohw-cos-smoke.php', 'tests/integration/test-reset-link-integrity.php', 'tests/reset-worker.php')]
     cases = [({}, 'missing root'), ({'YCI_TEST_TOKEN': ''}, 'missing token'),
              ({'YCI_TEST_TOKEN': 'false'}, 'false token'), ({'YCI_TEST_TOKEN': '0' * 64}, 'wrong token'),
              ({'WP_TESTS_DIR': '/tmp/wordpress-tests-lib'}, 'wrong test path'),
@@ -117,7 +117,7 @@ def controls(root, env, php, sql, credentials):
                     result = subprocess.run([php, str(entry)], env=env, capture_output=True)
                     if result.returncode == 0 or marker.exists() or b'database privileges exceed owned database' not in result.stdout + result.stderr:
                         raise RuntimeError('Grant-option rejection failed before bootstrap: ' + scope + ' / ' + entry.name)
-                print('PASS: live ' + scope + ' GRANT OPTION rejected at both entrypoints before bootstrap', flush=True)
+                print('PASS: live ' + scope + ' GRANT OPTION rejected at all guarded entrypoints before bootstrap', flush=True)
             finally:
                 sql('REVOKE GRANT OPTION ON ' + scope + ' FROM ' + account)
                 if sql('SHOW GRANTS FOR ' + account) != original_grants:
@@ -125,13 +125,15 @@ def controls(root, env, php, sql, credentials):
         if sql('SELECT value FROM synthetic_sentinel.untouched') != credentials['token']:
             raise RuntimeError('Unrelated synthetic sentinel changed during rejection controls')
         run([php, '-r', "require " + repr(str(REPO / 'tests/environment.php')) + "; yci_test_environment(); wp_mail('fixture@example.test','probe','fixture'); if (($GLOBALS['yci_intercepted_mail'] ?? 0) !== 1) { exit(1); }"], env=env)
-        print('PASS: 34 entrypoint rejection controls; valid ownership/grants; early mail interception', flush=True)
+        print('PASS: 68 entrypoint rejection controls; valid ownership/grants; early mail interception', flush=True)
     finally:
         for p, original in zip(paths, originals):
             p.write_bytes(original)
 
 
 def main():
+    run(['node', '--version'])
+    run(['node', REPO / 'tests/reset-selector-smoke.js'])
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--mysql-bin', type=Path, required=True, help='Directory containing MySQL 8 mysqld and mysql')
     parser.add_argument('--mysqld', type=Path, help='Server binary when installed outside mysql-bin')

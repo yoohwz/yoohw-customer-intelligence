@@ -48,7 +48,9 @@
 						return {
 							action: 'yoohw_cos_json_search_customers',
 							security: params.searchNonce,
-							term: request.term
+							term: request.term,
+							selection: '1',
+							yoohw_cos_epoch: $field.closest('form').find('[name="yoohw_cos_link_epoch"]').val()
 						};
 					},
 					processResults: function(data) {
@@ -66,6 +68,12 @@
 						return {
 							results: results
 						};
+					},
+					error: function(xhr) {
+						if (xhr.status === 409) {
+							$field.prop('disabled', true);
+							$('<p class="notice notice-error"></p>').text(xhr.responseJSON.data.message).insertAfter($field);
+						}
 					},
 					cache: true
 				}
