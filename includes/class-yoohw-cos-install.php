@@ -12,6 +12,11 @@ final class YoOhw_COS_Install {
 	}
 
 	private static function upgrade_schema( string $from_version ): void {
+		// Protect every upgrade entrypoint, including activation after a plugin rollback.
+		if ( version_compare( $from_version, self::db_version(), '>' ) ) {
+			self::schema_is_ready();
+			return;
+		}
 		global $wpdb;
 		self::$ensure_failed = false;
 		$previous = $wpdb->suppress_errors();

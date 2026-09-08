@@ -1623,9 +1623,23 @@ final class YCI_Schema_Upgrade_Test extends WP_UnitTestCase {
 	}
 
 	public function test_runtime_does_not_downgrade_a_newer_schema_version(): void {
+		$this->assert_newer_schema_preserved( 'maybe_update' );
+	}
+
+	public function test_activation_does_not_downgrade_a_newer_schema_version(): void {
+		$this->assert_newer_schema_preserved( 'install' );
+	}
+
+	private function assert_newer_schema_preserved( string $entrypoint ): void {
 		global $wpdb;
 		$table = YoOhw_COS_DB::notes_table();
-		$state = YoOhw_COS_Migration_Runner::get_state();
+		$state = array(
+			'_schema' => array( 'from' => '0.2.1', 'to' => '0.2.2', 'updated_at' => YoOhw_COS_DB::now() ),
+			'identity_normalization_v1' => array( 'status' => 'pending', 'processed' => 7 ),
+			'identity_normalization_v2' => array( 'status' => 'pending', 'phase' => 'scan', 'last_customer_id' => 900000, 'processed' => 13, 'attempts' => 2 ),
+		);
+		update_option( 'yoohw_cos_data_migrations', $state, false );
+		$issues_before = $wpdb->get_results( 'SELECT * FROM ' . YoOhw_COS_DB::migration_issues_table() . ' ORDER BY id', ARRAY_A );
 		$this->assertNotFalse( $wpdb->query( "ALTER TABLE {$table} MODIFY visibility VARCHAR(100) NOT NULL DEFAULT 'private'" ) );
 		// Direct prepared SQL avoids wpdb's cached pre-ALTER column length for this DDL fixture.
 		$this->assertSame( 1, $wpdb->query( $wpdb->prepare(
@@ -1643,18 +1657,25 @@ final class YCI_Schema_Upgrade_Test extends WP_UnitTestCase {
 		wp_clear_scheduled_hook( YoOhw_COS_Migration_Runner::HOOK );
 		try {
 			add_filter( 'query', $observe );
-			YoOhw_COS_Install::maybe_update();
-			YoOhw_COS_Install::maybe_update();
+			YoOhw_COS_Install::$entrypoint();
+			YoOhw_COS_Install::$entrypoint();
 			remove_filter( 'query', $observe );
 			$this->assertSame( array(), $ddl, 'A rollback must not apply older schema DDL.' );
 			$this->assertSame( '0.2.2', get_option( 'yoohw_cos_db_version' ) );
 			$this->assertSame( 'varchar(100)', $wpdb->get_row( "SHOW COLUMNS FROM {$table} LIKE 'visibility'" )->Type );
 			$this->assertSame( $before, $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i WHERE id = %d', $table, $id ), ARRAY_A ) );
 			$this->assertSame( 'blocked', get_option( 'yoohw_cos_schema_status' )['status'] );
+			$this->assertSame( $state, YoOhw_COS_Migration_Runner::get_state(), 'No older-target registration or superseding is allowed.' );
 			YoOhw_COS_Migration_Runner::init();
+			$this->assertFalse( YoOhw_COS_Migration_Runner::register_upgrade( '0.2.2', YOOHW_COS_DB_VERSION ) );
 			do_action( YoOhw_COS_Migration_Runner::HOOK );
 			$this->assertSame( $state, YoOhw_COS_Migration_Runner::get_state() );
 			$this->assertFalse( wp_next_scheduled( YoOhw_COS_Migration_Runner::HOOK ) );
+			$this->assertSame( $issues_before, $wpdb->get_results( 'SELECT * FROM ' . YoOhw_COS_DB::migration_issues_table() . ' ORDER BY id', ARRAY_A ) );
+			$this->assertSame( $before, $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i WHERE id = %d', $table, $id ), ARRAY_A ) );
+			if ( 'install' === $entrypoint ) {
+				$this->assertSame( YOOHW_COS_VERSION, get_option( 'yoohw_cos_version' ) );
+			}
 		} finally {
 			remove_filter( 'query', $observe );
 			$wpdb->delete( $table, array( 'id' => $id ) );
