@@ -3,6 +3,55 @@ defined( 'ABSPATH' ) || exit;
 
 final class YoOhw_COS_DB {
 
+	private static $work_locks = array();
+	private static $work_lock_owners = array();
+
+	/** Connection-owned identity/migration locks; no expiring option lease or cache authority. */
+	public static function acquire_work_locks( array $keys ): string {
+		global $wpdb;
+		$names = array();
+		foreach ( $keys as $key ) {
+			if ( ! is_string( $key ) || ( 'migration' !== $key && 0 !== strpos( $key, 'identity|' ) ) ) { return ''; }
+			$names[] = 'yci-work-' . substr( hash( 'sha256', DB_NAME . '|' . $wpdb->prefix . '|' . $key ), 0, 55 );
+		}
+		$names = array_values( array_unique( $names ) );
+		sort( $names, SORT_STRING );
+		if ( empty( $names ) ) { return ''; }
+		$connection = (int) $wpdb->get_var( 'SELECT CONNECTION_ID()' );
+		if ( $connection <= 0 ) { return ''; }
+		$handle = bin2hex( random_bytes( 16 ) );
+		self::$work_locks[ $handle ] = array( 'connection' => $connection, 'names' => array() );
+		try {
+			foreach ( $names as $name ) {
+				// Refuse same-connection reentrancy as well as another connection's ownership.
+				if ( '1' !== (string) $wpdb->get_var( $wpdb->prepare( 'SELECT IS_FREE_LOCK(%s)', $name ) )
+					|| '1' !== (string) $wpdb->get_var( $wpdb->prepare( 'SELECT IF(CONNECTION_ID() = %d, GET_LOCK(%s, 0), 0)', $connection, $name ) ) ) {
+					self::release_work_locks( $handle );
+					return '';
+				}
+				self::$work_locks[ $handle ]['names'][] = $name;
+				self::$work_lock_owners[ $name ] = $handle;
+			}
+		} catch ( Throwable $exception ) {
+			self::release_work_locks( $handle );
+			throw $exception;
+		}
+		return $handle;
+	}
+
+	public static function release_work_locks( string $handle ): void {
+		global $wpdb;
+		$owned = self::$work_locks[ $handle ] ?? null;
+		if ( ! $owned ) { return; }
+		unset( self::$work_locks[ $handle ] );
+		foreach ( array_reverse( $owned['names'] ) as $name ) {
+			if ( ( self::$work_lock_owners[ $name ] ?? '' ) !== $handle ) { continue; }
+			unset( self::$work_lock_owners[ $name ] );
+			// RELEASE_LOCK itself refuses foreign connections; the saved connection also fences reconnects.
+			$wpdb->get_var( $wpdb->prepare( 'SELECT IF(CONNECTION_ID() = %d, RELEASE_LOCK(%s), 0)', $owned['connection'], $name ) );
+		}
+	}
+
 	public static function table( string $name ): string {
 		global $wpdb;
 
