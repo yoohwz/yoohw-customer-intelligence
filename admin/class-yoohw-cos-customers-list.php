@@ -612,6 +612,7 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 		echo ' <button type="submit" class="button" name="yoohw_cos_export_customers" value="1">';
 		echo esc_html__( 'Export CSV', 'yoohw-customer-intelligence' );
 		echo '</button>';
+		echo '<p class="description">' . esc_html__( 'Spreadsheet CSV adds a protective TAB to formula-like text and phone values. This preserves phone formatting but changes exported bytes for programmatic imports. Safety varies by spreadsheet and import settings; editing or resaving may remove protection.', 'yoohw-customer-intelligence' ) . '</p>';
 
 		echo '</div>';
 	}

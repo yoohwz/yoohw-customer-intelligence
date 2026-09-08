@@ -15,7 +15,48 @@ $GLOBALS['wp_filter'] = array(
 require ABSPATH . 'wp-settings.php';
 $mode = $argv[1] ?? '';
 
-if ( 'ordinary-request' === $mode ) {
+if ( 'csv-request' === $mode ) {
+	// Preserve the exporter's real exit; capture its bytes only when this owned process ends.
+	$input = json_decode( fgets( STDIN ), true );
+	wp_set_current_user( (int) $input['user'] );
+	$_SERVER['REQUEST_METHOD'] = 'GET';
+	$_SERVER['HTTP_HOST'] = 'example.test';
+	$_SERVER['REQUEST_URI'] = '/wp-admin/admin.php';
+	$_SERVER['SERVER_PORT'] = '80';
+	$_GET = $_REQUEST = wp_slash( $input['data'] );
+	$_POST = array();
+	$status = 200;
+	$message = '';
+	$before_mail = $GLOBALS['yci_intercepted_mail'] ?? 0;
+	add_filter( 'yoohw_cos_customer_csv_export_limit', static function() use ( $input ) { return $input['limit'] ?? 5000; } );
+	add_filter( 'gettext', static function( $translation, $text, $domain ) use ( $input ) {
+		return 'yoohw-customer-intelligence' === $domain ? ( $input['translations'][ $text ] ?? $translation ) : $translation;
+	}, 10, 3 );
+	add_filter( 'wp_die_handler', static function() {
+		return static function( $message ) { throw new RuntimeException( strip_tags( (string) $message ), 403 ); };
+	} );
+	set_error_handler( static function( $severity, $message, $file, $line ) { throw new ErrorException( $message, 500, $severity, $file, $line ); }, E_WARNING | E_NOTICE );
+	$bytes = '';
+	ob_start( static function( $chunk ) use ( &$bytes ) { $bytes .= $chunk; return ''; } );
+	register_shutdown_function( static function() use ( &$bytes, &$status, &$message, $before_mail ) {
+		while ( ob_get_level() > 0 ) { ob_end_flush(); }
+		echo json_encode( array( 'status' => $status, 'message' => $message, 'csv' => base64_encode( $bytes ), 'mail' => ( $GLOBALS['yci_intercepted_mail'] ?? 0 ) - $before_mail ) );
+	} );
+	try {
+		if ( ! empty( $input['help'] ) ) {
+			require_once ABSPATH . 'wp-admin/includes/admin.php';
+			set_current_screen( 'woocommerce_page_yoohw-customer-intelligence' );
+			YoOhw_COS_Admin_Menu::render_customers_page();
+		} else {
+			YoOhw_COS_Customer_Exporter::maybe_handle_request();
+			throw new RuntimeException( 'Requested export returned instead of terminating.', 500 );
+		}
+	} catch ( Throwable $exception ) {
+		$status = $exception->getCode();
+		$message = $exception->getMessage();
+	}
+	exit;
+} elseif ( 'ordinary-request' === $mode ) {
 	// Fresh PHP request with the actual handler/nonce/capability path; no existing site.
 	$input = json_decode( fgets( STDIN ), true );
 	wp_set_current_user( (int) $input['user'] );

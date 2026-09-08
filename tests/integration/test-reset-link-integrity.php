@@ -850,3 +850,152 @@ final class YCI_Reset_Link_Integrity_Test extends WP_UnitTestCase {
 	}
 
 }
+
+/** CSV producer checks use the admitted environment and an independent Python decoder. */
+final class YCI_CSV_Export_Safety_Test extends WP_UnitTestCase {
+	private function snapshot(): array {
+		global $wpdb;
+		$rows = array();
+		foreach ( array( 'customers', 'notes', 'tasks', 'tags', 'segments', 'customer_tags', 'customer_segments', 'events', 'order_facts' ) as $table ) {
+			$rows[ $table ] = $wpdb->get_results( 'SELECT * FROM `' . call_user_func( array( 'YoOhw_COS_DB', $table . '_table' ) ) . '` ORDER BY 1', ARRAY_A );
+		}
+		return $rows;
+	}
+
+	private function request( array $options = array(), array $data = array() ): array {
+		global $wpdb;
+		$user = self::factory()->user->create( array( 'role' => $options['role'] ?? 'administrator' ) );
+		wp_set_current_user( $user );
+		$data += array( 'yoohw_cos_export_customers' => '1', 'yoohw_cos_customers_export_nonce' => wp_create_nonce( 'yoohw_cos_export_customers' ), 'orderby' => 'display_name', 'order' => 'ASC' );
+		if ( ! empty( $options['missing_nonce'] ) ) { unset( $data['yoohw_cos_customers_export_nonce'] ); }
+		$wpdb->query( 'COMMIT' );
+		$before = $this->snapshot();
+		$process = proc_open( array( PHP_BINARY, '-d', 'disable_functions=mail', dirname( __DIR__ ) . '/reset-worker.php', 'csv-request' ), array( array( 'pipe', 'r' ), array( 'pipe', 'w' ), array( 'pipe', 'w' ) ), $pipes );
+		$this->assertIsResource( $process );
+		fwrite( $pipes[0], wp_json_encode( array( 'user' => $user, 'data' => $data ) + $options ) . "\n" );
+		fclose( $pipes[0] );
+		$output = stream_get_contents( $pipes[1] );
+		$error = stream_get_contents( $pipes[2] );
+		fclose( $pipes[1] ); fclose( $pipes[2] );
+		$this->assertSame( 0, proc_close( $process ), $error );
+		$this->assertSame( '', $error );
+		$result = json_decode( $output, true );
+		$this->assertIsArray( $result, $output );
+		$this->assertSame( 0, $result['mail'] );
+		$wpdb->query( 'COMMIT' );
+		$this->assertSame( $before, $this->snapshot(), 'Export must not mutate product rows or events.' );
+		$result['bytes'] = base64_decode( $result['csv'], true );
+		return $result;
+	}
+
+	private function decode( array $result ): array {
+		$this->assertSame( 200, $result['status'], $result['message'] );
+		$this->assertSame( "\xEF\xBB\xBF", substr( $result['bytes'], 0, 3 ) );
+		$process = proc_open( array( 'python3', '-c', 'import csv,io,json,sys; print(json.dumps(list(csv.reader(io.StringIO(sys.stdin.buffer.read().decode("utf-8-sig"), newline=""), strict=True)), ensure_ascii=False))' ), array( array( 'pipe', 'r' ), array( 'pipe', 'w' ), array( 'pipe', 'w' ) ), $pipes );
+		$this->assertIsResource( $process );
+		fwrite( $pipes[0], $result['bytes'] ); fclose( $pipes[0] );
+		$output = stream_get_contents( $pipes[1] ); $error = stream_get_contents( $pipes[2] );
+		fclose( $pipes[1] ); fclose( $pipes[2] );
+		$this->assertSame( 0, proc_close( $process ), $error );
+		$rows = json_decode( $output, true );
+		$this->assertIsArray( $rows );
+		foreach ( $rows as $row ) { $this->assertCount( 12, $row ); }
+		return $rows;
+	}
+
+	private function fixture( array $values = array() ): int {
+		global $wpdb;
+		YoOhw_COS_Customers::reset_data();
+		$id = YoOhw_COS_Customers::create_customer( array( 'display_name' => 'CSV fixture' ) );
+		$this->assertGreaterThan( 0, $id );
+		$this->assertNotFalse( $wpdb->update( YoOhw_COS_DB::customers_table(), $values + array( 'display_name' => 'CSV fixture', 'email' => 'csv@example.test', 'phone' => '', 'total_orders' => 2, 'total_spent' => '-12.50', 'average_order_value' => '-6.25', 'risk_score' => '0', 'trust_score' => '95.25' ), array( 'id' => $id ) ) );
+		return $id;
+	}
+
+	public static function text_cases(): array {
+		return array(
+			'equals' => array( '=1+1', "\t=1+1" ),
+			'plus' => array( '+1+1', "\t+1+1" ),
+			'minus' => array( '-1+1', "\t-1+1" ),
+			'at' => array( '@SUM(1)', "\t@SUM(1)" ),
+			'ascii whitespace' => array( " \t\r\n=1+1", "\t=1+1" ),
+			'control' => array( "\x01=1+1", "\t\x01=1+1" ),
+			'nbsp' => array( "\u{00A0}=1+1", "\t\u{00A0}=1+1" ),
+			'unicode space' => array( "\u{2003}＋1", "\t\u{2003}＋1" ),
+			'zero width' => array( "\u{FEFF}\u{200B}@SUM(1)", "\t\u{FEFF}\u{200B}@SUM(1)" ),
+			'fullwidth equals' => array( '＝1+1', "\t＝1+1" ),
+			'fullwidth minus' => array( '－1', "\t－1" ),
+			'fullwidth at' => array( '＠SUM(1)', "\t＠SUM(1)" ),
+			'quote slash delimiters' => array( '=1+1\\",@SUM(1);\'x', "\t=1+1\\\",@SUM(1);'x" ),
+			'normal slash quote' => array( 'Name\\",=1+1', 'Name\\",=1+1' ),
+			'vietnamese' => array( 'Nguyễn Bảo', 'Nguyễn Bảo' ),
+			'apostrophe' => array( "'Name", "'Name" ),
+			'ordinary number name' => array( '123', '123' ),
+			'line normalization' => array( "Normal\nname", 'Normal name' ),
+		);
+	}
+
+	/** @dataProvider text_cases */
+	public function test_real_export_text_matrix( string $input, string $expected ): void {
+		$id = $this->fixture( array( 'display_name' => $input ) );
+		$tag = YoOhw_COS_Tags::create_tag( 'CSV fixture tag ' . $id );
+		$segment = YoOhw_COS_Segments::create_segment( 'CSV fixture segment ' . $id );
+		global $wpdb;
+		$wpdb->update( YoOhw_COS_DB::tags_table(), array( 'name' => $input ), array( 'id' => $tag ) );
+		$wpdb->update( YoOhw_COS_DB::segments_table(), array( 'name' => $input ), array( 'id' => $segment ) );
+		YoOhw_COS_Tags::assign_tag( $id, $tag, 0, false );
+		YoOhw_COS_Segments::assign_customer( $id, $segment, 0, false );
+		$result = $this->request();
+		$rows = $this->decode( $result );
+		$this->assertCount( 2, $rows );
+		foreach ( array( 0, 10, 11 ) as $column ) { $this->assertSame( $expected, $rows[1][$column] ); }
+		$this->assertSame( array( '2', '-12.50', '-6.25', '0.00', '95.25' ), array_slice( $rows[1], 3, 5 ) );
+		if ( "\t" === substr( $expected, 0, 1 ) ) {
+			$this->assertStringContainsString( '"' . str_replace( '"', '""', $expected ) . '"', $result['bytes'], 'TAB must be inside the quoted field with enclosure doubling.' );
+		}
+	}
+
+	public function test_contacts_fallback_joined_and_translated_final_text(): void {
+		$id = $this->fixture( array( 'display_name' => null, 'first_name' => '=1', 'last_name' => 'Nguyễn', 'email' => '+csv@example.test', 'phone' => '+84901234567' ) );
+		$a = YoOhw_COS_Tags::create_tag( '=CSV' ); $b = YoOhw_COS_Tags::create_tag( 'Second; tag' );
+		YoOhw_COS_Tags::assign_tag( $id, $a, 0, false ); YoOhw_COS_Tags::assign_tag( $id, $b, 0, false );
+		$rows = $this->decode( $this->request( array( 'translations' => array( 'Name' => '=Header', 'New' => "\r\n=1+1", 'Standard' => '＠Tier' ) ) ) );
+		$this->assertSame( "\t=Header", $rows[0][0] );
+		$this->assertSame( "\t=1 Nguyễn", $rows[1][0] );
+		$this->assertSame( "\t+csv@example.test", $rows[1][1] );
+		$this->assertSame( "\t+84901234567", $rows[1][2] );
+		$this->assertSame( "\t＠Tier", $rows[1][8] );
+		$this->assertSame( "\t\r\n=1+1", $rows[1][9] );
+		$this->assertSame( "\t=CSV; Second; tag", $rows[1][10] );
+		global $wpdb;
+		$wpdb->update( YoOhw_COS_DB::customers_table(), array( 'first_name' => null, 'last_name' => '', 'phone' => '001234567890', 'email' => null ), array( 'id' => $id ) );
+		$rows = $this->decode( $this->request( array( 'translations' => array( '(No name)' => '-Unnamed' ) ) ) );
+		$this->assertSame( "\t-Unnamed", $rows[1][0] );
+		$this->assertSame( '', $rows[1][1] );
+		$this->assertSame( "\t001234567890", $rows[1][2] );
+	}
+
+	public function test_authorization_filters_limit_empty_and_help(): void {
+		$id = $this->fixture();
+		foreach ( array( array( 'missing_nonce' => true ), array( 'role' => 'subscriber' ) ) as $options ) {
+			$result = $this->request( $options );
+			$this->assertSame( 403, $result['status'] ); $this->assertSame( '', $result['bytes'] );
+		}
+		$result = $this->request( array(), array( 'yoohw_cos_customers_export_nonce' => 'bad' ) );
+		$this->assertSame( 403, $result['status'] ); $this->assertSame( '', $result['bytes'] );
+		YoOhw_COS_Customers::create_customer( array( 'display_name' => 'AAA second CSV' ) );
+		$rows = $this->decode( $this->request( array( 'limit' => 1 ) ) );
+		$this->assertCount( 2, $rows ); $this->assertSame( 'AAA second CSV', $rows[1][0] );
+		$rows = $this->decode( $this->request( array(), array( 's' => 'no matching CSV row' ) ) );
+		$this->assertCount( 1, $rows );
+		$this->assertSame( array( 'Name', 'Email', 'Phone', 'Orders', 'Spent', 'AOV', 'Risk score', 'Trust score', 'Value tier', 'Lifecycle', 'Tags', 'Segments' ), $rows[0] );
+		global $wpdb;
+		$wpdb->update( YoOhw_COS_DB::customers_table(), array( 'archived_at' => '2026-01-01 00:00:00' ), array( 'id' => $id ) );
+		$rows = $this->decode( $this->request( array(), array( 'customer_view' => 'archived' ) ) );
+		$this->assertCount( 2, $rows ); $this->assertSame( 'CSV fixture', $rows[1][0] );
+		$result = $this->request( array( 'help' => true ), array( 'page' => 'yoohw-customer-intelligence', 'yoohw_cos_export_customers' => '0' ) );
+		$this->assertSame( 200, $result['status'], $result['message'] );
+		$this->assertStringContainsString( 'Export CSV', $result['bytes'] );
+		$this->assertStringContainsString( 'protective TAB', $result['bytes'] );
+	}
+}
