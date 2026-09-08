@@ -5,7 +5,6 @@ defined( 'ABSPATH' ) || exit;
  * Canonical customer identity normalization and deterministic resolution.
  */
 final class YoOhw_COS_Customer_Identity {
-	private const LOCK_TTL = 60;
 
 	public static function normalize_email( string $email ): string {
 		return strtolower( sanitize_email( trim( $email ) ) );
@@ -114,33 +113,15 @@ final class YoOhw_COS_Customer_Identity {
 
 	public static function acquire_creation_lock( array $identity ): string {
 		$identity = self::normalize( $identity );
-		$basis = '';
-
+		$keys = array();
 		foreach ( array( 'wp_user_id', 'email', 'phone' ) as $kind ) {
-			if ( ! empty( $identity[ $kind ] ) ) {
-				$basis = $kind . '|' . (string) $identity[ $kind ];
-				break;
-			}
+			if ( ! empty( $identity[ $kind ] ) ) { $keys[] = 'identity|' . $kind . '|' . (string) $identity[ $kind ]; }
 		}
-
-		if ( '' === $basis ) {
-			return '';
-		}
-
-		$option = 'yoohw_cos_identity_lock_' . md5( $basis );
-		$expires = absint( get_option( $option, 0 ) );
-
-		if ( $expires > 0 && $expires < time() ) {
-			delete_option( $option );
-		}
-
-		return add_option( $option, time() + self::LOCK_TTL, '', false ) ? $option : '';
+		return YoOhw_COS_DB::acquire_work_locks( $keys );
 	}
 
-	public static function release_creation_lock( string $option ): void {
-		if ( 0 === strpos( $option, 'yoohw_cos_identity_lock_' ) ) {
-			delete_option( $option );
-		}
+	public static function release_creation_lock( string $handle ): void {
+		YoOhw_COS_DB::release_work_locks( $handle );
 	}
 
 	/**

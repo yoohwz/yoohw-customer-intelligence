@@ -15,7 +15,68 @@ $GLOBALS['wp_filter'] = array(
 require ABSPATH . 'wp-settings.php';
 $mode = $argv[1] ?? '';
 
-if ( 'csv-request' === $mode ) {
+if ( 'lock-probe' === $mode ) {
+	// Existing admitted process entrypoint; commands touch only synthetic owned fixtures.
+	$input = json_decode( fgets( STDIN ), true );
+	$kind = $input['kind'];
+	$identity = $input['identity'] ?? array();
+	$acquire = static function() use ( $kind, $identity ) {
+		if ( 'identity' === $kind ) { return YoOhw_COS_Customer_Identity::acquire_creation_lock( $identity ); }
+		$method = new ReflectionMethod( YoOhw_COS_Migration_Runner::class, 'acquire_lock' );
+		$method->setAccessible( true ); return $method->invoke( null );
+	};
+	$release = static function( $handle ) use ( $kind ) {
+		if ( 'identity' === $kind ) { YoOhw_COS_Customer_Identity::release_creation_lock( $handle ); return; }
+		$method = new ReflectionMethod( YoOhw_COS_Migration_Runner::class, 'release_lock' );
+		$method->setAccessible( true ); $method->invoke( null, $handle );
+	};
+	$handle = $acquire();
+	echo json_encode( array( 'acquired' => ! empty( $handle ), 'connection' => (int) $wpdb->get_var( 'SELECT CONNECTION_ID()' ) ) ) . "\n"; fflush( STDOUT );
+	try {
+		while ( false !== ( $line = fgets( STDIN ) ) ) {
+			$command = json_decode( $line, true );
+			$action = $command['action'];
+			$result = array();
+			if ( 'end-ownership' === $action ) {
+				// Simulate the native ownership ending while the old PHP handle is retained.
+				$result['ended'] = (int) $wpdb->get_var( 'SELECT RELEASE_ALL_LOCKS()' );
+			} elseif ( 'release' === $action ) {
+				$release( $handle ); $result['released'] = true;
+			} elseif ( 'try' === $action ) {
+				$next = $acquire(); $result['acquired'] = ! empty( $next );
+				if ( $next ) { $release( $next ); }
+			} elseif ( 'sync' === $action || 'retry' === $action ) {
+				$id = (int) $command['order'];
+				if ( 'retry' === $action ) {
+					wp_clear_scheduled_hook( YoOhw_COS_Customers::ORDER_SYNC_RETRY_HOOK, array( $id ) );
+					do_action( YoOhw_COS_Customers::ORDER_SYNC_RETRY_HOOK, $id );
+					$result['customer'] = YoOhw_COS_Customer_Identity::get_persisted_order_customer_id( wc_get_order( $id ) );
+				} else { $result['customer'] = YoOhw_COS_Customers::sync_from_order_id( $id ); }
+			} elseif ( 'migration' === $action ) {
+				wp_cache_delete( 'yoohw_cos_data_migrations', 'options' );
+				YoOhw_COS_Migration_Runner::run_next_batch();
+				$result['state'] = YoOhw_COS_Migration_Runner::get_state();
+			} elseif ( 'exit' === $action ) { break; }
+			echo json_encode( $result ) . "\n"; fflush( STDOUT );
+		}
+	} finally { if ( $handle ) { $release( $handle ); } }
+} elseif ( in_array( $mode, array( 'identity-sync-held', 'identity-sync-now', 'identity-retry' ), true ) ) {
+	$decisions = 0;
+	add_filter( 'yoohw_cos_customer_sync_data', static function( $data, $order, $customer_id ) use ( &$decisions, $mode ) {
+		if ( 0 === $customer_id ) {
+			$decisions++;
+			if ( 'identity-sync-held' === $mode ) { echo "CREATING\n"; fflush( STDOUT ); fgets( STDIN ); }
+		}
+		return $data;
+	}, 10, 3 );
+	$id = (int) $argv[2];
+	if ( 'identity-retry' === $mode ) {
+		wp_clear_scheduled_hook( YoOhw_COS_Customers::ORDER_SYNC_RETRY_HOOK, array( $id ) );
+		do_action( YoOhw_COS_Customers::ORDER_SYNC_RETRY_HOOK, $id );
+		$customer = YoOhw_COS_Customer_Identity::get_persisted_order_customer_id( wc_get_order( $id ) );
+	} else { $customer = YoOhw_COS_Customers::sync_from_order_id( $id ); }
+	echo json_encode( array( 'customer' => $customer, 'decisions' => $decisions, 'retry' => false !== wp_next_scheduled( YoOhw_COS_Customers::ORDER_SYNC_RETRY_HOOK, array( $id ) ) ) ) . "\n";
+} elseif ( 'csv-request' === $mode ) {
 	// Preserve the exporter's real exit; capture its bytes only when this owned process ends.
 	$input = json_decode( fgets( STDIN ), true );
 	wp_set_current_user( (int) $input['user'] );

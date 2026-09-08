@@ -115,49 +115,54 @@ final class YoOhw_COS_Customers {
 			self::record_identity_conflict( $resolution, $order_id );
 		}
 
-		if ( $customer_id <= 0 && empty( $resolution['conflicts'] ) ) {
-			$identity_lock = YoOhw_COS_Customer_Identity::acquire_creation_lock( $identity );
+		try {
+			if ( $customer_id <= 0 && empty( $resolution['conflicts'] ) ) {
+				$identity_lock = YoOhw_COS_Customer_Identity::acquire_creation_lock( $identity );
 
-			if ( '' === $identity_lock ) {
+				if ( '' === $identity_lock ) {
+					if ( $wp_user_id > 0 || '' !== $email || '' !== $phone ) {
+						self::schedule_failed_order_sync( new RuntimeException( 'Customer identity creation is busy.' ), $order_id, 0 );
+					}
+					return 0;
+				}
+
+				$resolution  = YoOhw_COS_Customer_Identity::resolve( $identity );
+				$customer_id = absint( $resolution['customer_id'] ?? 0 );
+
+				if ( ! empty( $resolution['conflicts'] ) ) {
+					self::record_identity_conflict( $resolution, $order_id );
+				}
+			}
+
+			$existing     = $customer_id > 0 ? self::get_customer( $customer_id ) : array();
+			$last_activity_date = self::get_last_activity_date_for_sync( $customer_id, $order_date );
+
+			if ( $customer_id <= 0 && ! empty( $resolution['conflicts'] ) ) {
 				return 0;
 			}
 
-			$resolution  = YoOhw_COS_Customer_Identity::resolve( $identity );
-			$customer_id = absint( $resolution['customer_id'] ?? 0 );
+			$data = array(
+				'first_name'          => sanitize_text_field( $order->get_billing_first_name() ),
+				'last_name'           => sanitize_text_field( $order->get_billing_last_name() ),
+				'display_name'        => trim( $order->get_formatted_billing_full_name() ),
+				'last_activity_date'  => $last_activity_date,
+				'updated_at'          => YoOhw_COS_DB::now(),
+			);
 
-			if ( ! empty( $resolution['conflicts'] ) ) {
-				self::record_identity_conflict( $resolution, $order_id );
+			$data = array_merge( $data, self::get_identity_updates_for_sync( $existing, $identity, (string) ( $resolution['matched_by'] ?? '' ) ) );
+
+			$data = apply_filters( 'yoohw_cos_customer_sync_data', $data, $order, $customer_id );
+			$data = is_array( $data ) ? $data : array();
+
+			if ( $customer_id > 0 ) {
+				self::update_customer( $customer_id, $data );
+			} else {
+				$customer_id = self::create_customer( $data );
 			}
-		}
 
-		$existing     = $customer_id > 0 ? self::get_customer( $customer_id ) : array();
-		$last_activity_date = self::get_last_activity_date_for_sync( $customer_id, $order_date );
-
-		if ( $customer_id <= 0 && ! empty( $resolution['conflicts'] ) ) {
+		} finally {
 			YoOhw_COS_Customer_Identity::release_creation_lock( $identity_lock );
-			return 0;
 		}
-
-		$data = array(
-			'first_name'          => sanitize_text_field( $order->get_billing_first_name() ),
-			'last_name'           => sanitize_text_field( $order->get_billing_last_name() ),
-			'display_name'        => trim( $order->get_formatted_billing_full_name() ),
-			'last_activity_date'  => $last_activity_date,
-			'updated_at'          => YoOhw_COS_DB::now(),
-		);
-
-		$data = array_merge( $data, self::get_identity_updates_for_sync( $existing, $identity, (string) ( $resolution['matched_by'] ?? '' ) ) );
-
-		$data = apply_filters( 'yoohw_cos_customer_sync_data', $data, $order, $customer_id );
-		$data = is_array( $data ) ? $data : array();
-
-		if ( $customer_id > 0 ) {
-			self::update_customer( $customer_id, $data );
-		} else {
-			$customer_id = self::create_customer( $data );
-		}
-
-		YoOhw_COS_Customer_Identity::release_creation_lock( $identity_lock );
 
 		if ( $customer_id <= 0 ) {
 			return 0;

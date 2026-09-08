@@ -8,7 +8,6 @@ final class YoOhw_COS_Migration_Runner {
 
 	public const HOOK = 'yoohw_cos_run_data_migrations';
 	private const STATE_OPTION = 'yoohw_cos_data_migrations';
-	private const LOCK_OPTION = 'yoohw_cos_data_migration_lock';
 	private const BATCH_SIZE = 100;
 	private const MAX_ITEM_ATTEMPTS = 3;
 
@@ -80,7 +79,8 @@ final class YoOhw_COS_Migration_Runner {
 	}
 
 	private static function run_next_batch_guarded(  ): void {
-		if ( ! self::acquire_lock() ) {
+		$lock = self::acquire_lock();
+		if ( '' === $lock ) {
 			self::schedule_next();
 			return;
 		}
@@ -120,7 +120,7 @@ final class YoOhw_COS_Migration_Runner {
 
 			do_action( 'yoohw_cos_data_migration_error', $exception, $migration_id ?? '' );
 		} finally {
-			self::release_lock();
+			self::release_lock( $lock );
 		}
 
 		self::maybe_schedule();
@@ -583,17 +583,11 @@ final class YoOhw_COS_Migration_Runner {
 		}
 	}
 
-	private static function acquire_lock(): bool {
-		$expires = absint( get_option( self::LOCK_OPTION, 0 ) );
-
-		if ( $expires > 0 && $expires < time() ) {
-			delete_option( self::LOCK_OPTION );
-		}
-
-		return add_option( self::LOCK_OPTION, time() + 5 * MINUTE_IN_SECONDS, '', false );
+	private static function acquire_lock(): string {
+		return YoOhw_COS_DB::acquire_work_locks( array( 'migration' ) );
 	}
 
-	private static function release_lock(): void {
-		delete_option( self::LOCK_OPTION );
+	private static function release_lock( string $handle ): void {
+		YoOhw_COS_DB::release_work_locks( $handle );
 	}
 }

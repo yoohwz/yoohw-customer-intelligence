@@ -1403,3 +1403,272 @@ final class YCI_Notification_Recipient_Test extends WP_UnitTestCase {
 	}
 
 }
+
+final class YCI_Identity_Lock_Test extends WP_UnitTestCase {
+	private $workers = array();
+	private $saved = array();
+
+	public function set_up(): void {
+		parent::set_up();
+		foreach ( array( 'cron', 'yoohw_cos_data_migrations' ) as $key ) { $this->saved[ $key ] = get_option( $key, false ); }
+	}
+	public function tear_down(): void {
+		global $wpdb;
+		foreach ( $this->workers as $worker ) {
+			foreach ( $worker[1] as $pipe ) { if ( is_resource( $pipe ) ) { fclose( $pipe ); } }
+			proc_terminate( $worker[0] ); proc_close( $worker[0] );
+		}
+		foreach ( $this->saved as $key => $value ) {
+			if ( false === $value ) { delete_option( $key ); } else { update_option( $key, $value ); }
+		}
+		$wpdb->query( 'COMMIT' );
+		parent::tear_down();
+	}
+	private function refresh(): void {
+		global $wpdb;
+		$wpdb->query( 'COMMIT' ); wp_cache_flush();
+	}
+	private function worker( string $mode, int $order = 0, array $input = array() ): int {
+		$process = proc_open( array( PHP_BINARY, '-d', 'disable_functions=mail', dirname( __DIR__ ) . '/reset-worker.php', $mode, (string) $order ), array( array( 'pipe', 'r' ), array( 'pipe', 'w' ), array( 'pipe', 'w' ) ), $pipes );
+		$this->assertIsResource( $process );
+		stream_set_timeout( $pipes[1], 15 ); stream_set_timeout( $pipes[2], 15 );
+		$id = (int) $process; $this->workers[ $id ] = array( $process, $pipes, $mode );
+		if ( $input ) { fwrite( $pipes[0], wp_json_encode( $input ) . "\n" ); }
+		return $id;
+	}
+	private function line( int $id ): string {
+		$line = fgets( $this->workers[ $id ][1][1] );
+		$this->assertNotFalse( $line, 'Owned worker must answer within its bounded read timeout.' );
+		return trim( $line );
+	}
+	private function command( int $id, string $action, array $extra = array() ): array {
+		fwrite( $this->workers[ $id ][1][0], wp_json_encode( array_merge( array( 'action' => $action ), $extra ) ) . "\n" );
+		$result = json_decode( $this->line( $id ), true ); $this->assertIsArray( $result ); return $result;
+	}
+	private function stop( int $id, bool $resume = false ): string {
+		list( $process, $pipes, $mode ) = $this->workers[ $id ];
+		if ( $resume ) { fwrite( $pipes[0], "CONTINUE\n" ); }
+		elseif ( 'lock-probe' === $mode ) { fwrite( $pipes[0], "{\"action\":\"exit\"}\n" ); }
+		fclose( $pipes[0] ); $output = stream_get_contents( $pipes[1] ); $error = stream_get_contents( $pipes[2] );
+		fclose( $pipes[1] ); fclose( $pipes[2] ); $code = proc_close( $process ); unset( $this->workers[ $id ] );
+		$this->assertSame( 0, $code, $error ); return $output;
+	}
+	private function sync( string $mode, int $order ): array {
+		$id = $this->worker( $mode, $order ); $result = json_decode( $this->stop( $id ), true );
+		$this->assertIsArray( $result ); $this->refresh(); return $result;
+	}
+	private function pair( string $overlap ): array {
+		YoOhw_COS_Customers::reset_data();
+		$tag = str_replace( '-', '', wp_generate_uuid4() );
+		$user = self::factory()->user->create( array( 'user_email' => $tag . '@example.test' ) );
+		$this->assertGreaterThan( 0, $user );
+		$a = array( 'wp_user_id' => 0, 'email' => 'a' . $tag . '@example.test', 'phone' => '' );
+		$b = array( 'wp_user_id' => $user, 'email' => 'b' . $tag . '@example.test', 'phone' => '' );
+		if ( in_array( $overlap, array( 'email', 'normalized-email' ), true ) ) { $b['email'] = 'normalized-email' === $overlap ? strtoupper( $a['email'] ) : $a['email']; }
+		if ( 'phone' === $overlap ) { $a['phone'] = '+84 (91) 234-5678'; $b['phone'] = '0084912345678'; }
+		if ( 'user' === $overlap ) { $a['wp_user_id'] = $user; }
+		$orders = array();
+		$callback = array( YoOhw_COS_Customers::class, 'sync_from_order_id' );
+		$priority = has_action( 'woocommerce_order_status_changed', $callback );
+		if ( false !== $priority ) { remove_action( 'woocommerce_order_status_changed', $callback, $priority ); }
+		try {
+			foreach ( array( $a, $b ) as $i => $identity ) {
+				$order = wc_create_order( array( 'customer_id' => $identity['wp_user_id'] ) );
+				$order->set_billing_email( $identity['email'] ); $order->set_billing_phone( $identity['phone'] );
+				$order->set_total( 0 === $i ? '11.00' : '19.00' ); $order->set_status( 'completed' );
+				$order->save(); $orders[] = $order;
+			}
+		} finally { if ( false !== $priority ) { add_action( 'woocommerce_order_status_changed', $callback, $priority, 1 ); } }
+		$this->refresh(); return $orders;
+	}
+	public static function overlapping_identities(): array {
+		return array( array( 'email' ), array( 'phone' ), array( 'user' ), array( 'normalized-email' ) );
+	}
+	/** @dataProvider overlapping_identities */
+	public function test_complete_identity_boundary_defers_real_sync_then_retry_converges( string $overlap ): void {
+		global $wpdb;
+		list( $a, $b ) = $this->pair( $overlap );
+		$holder = $this->worker( 'lock-probe', 0, array( 'kind' => 'identity', 'identity' => YoOhw_COS_Customer_Identity::from_order( $a ) ) );
+		$this->assertTrue( json_decode( $this->line( $holder ), true )['acquired'] );
+		foreach ( array( 1, 2 ) as $repeat ) {
+			$blocked = $this->sync( 'identity-sync-now', $b->get_id() );
+			$this->assertSame( 0, $blocked['customer'] ); $this->assertSame( 0, $blocked['decisions'] ); $this->assertTrue( $blocked['retry'] );
+		}
+		$this->assertSame( 0, (int) $wpdb->get_var( 'SELECT COUNT(*) FROM ' . YoOhw_COS_DB::customers_table() ) );
+		$events = 0;
+		foreach ( _get_cron_array() as $hooks ) {
+			foreach ( $hooks[ YoOhw_COS_Customers::ORDER_SYNC_RETRY_HOOK ] ?? array() as $event ) { if ( array( $b->get_id() ) === $event['args'] ) { $events++; } }
+		}
+		$this->assertSame( 1, $events );
+		$this->command( $holder, 'release' );
+		$winner = $this->command( $holder, 'sync', array( 'order' => $a->get_id() ) );
+		$this->assertGreaterThan( 0, $winner['customer'] ); $this->stop( $holder ); $this->refresh();
+		$retry = $this->sync( 'identity-retry', $b->get_id() );
+		$this->assertSame( $winner['customer'], $retry['customer'] );
+		$this->assertSame( $winner['customer'], $this->sync( 'identity-retry', $b->get_id() )['customer'] );
+		$this->assertSame( $winner['customer'], $this->sync( 'identity-sync-now', $a->get_id() )['customer'] );
+		$this->assertSame( 1, (int) $wpdb->get_var( 'SELECT COUNT(*) FROM ' . YoOhw_COS_DB::customers_table() ) );
+		foreach ( array( $a, $b ) as $order ) {
+			$fresh = wc_get_order( $order->get_id() );
+			$this->assertSame( $winner['customer'], YoOhw_COS_Customer_Identity::get_persisted_order_customer_id( $fresh ) );
+			$this->assertSame( $winner['customer'], (int) $wpdb->get_var( $wpdb->prepare( 'SELECT customer_id FROM %i WHERE order_id = %d', YoOhw_COS_DB::order_facts_table(), $order->get_id() ) ) );
+		}
+		$customer = YoOhw_COS_Customers::get_customer( $winner['customer'] );
+		$this->assertSame( 2, (int) $customer['total_orders'] ); $this->assertSame( 30.0, (float) $customer['total_spent'] );
+		$this->assertSame( 2, (int) $wpdb->get_var( "SELECT COUNT(*) FROM " . YoOhw_COS_DB::events_table() . " WHERE event_type = 'order_synced'" ) );
+	}
+	public function test_nonoverlapping_identity_does_not_wait_for_identity_holder(): void {
+		list( $a, $b ) = $this->pair( 'distinct' );
+		$holder = $this->worker( 'lock-probe', 0, array( 'kind' => 'identity', 'identity' => YoOhw_COS_Customer_Identity::from_order( $a ) ) );
+		$this->assertTrue( json_decode( $this->line( $holder ), true )['acquired'] );
+		$this->assertGreaterThan( 0, $this->sync( 'identity-sync-now', $b->get_id() )['customer'] );
+		$this->stop( $holder );
+	}
+	public function test_actual_sync_processes_remain_serialized_by_existing_reset_boundary(): void {
+		list( $a, $b ) = $this->pair( 'email' );
+		$holder = $this->worker( 'identity-sync-held', $a->get_id() );
+		$this->assertSame( 'CREATING', $this->line( $holder ) );
+		$blocked = $this->sync( 'identity-sync-now', $b->get_id() );
+		$this->assertSame( 0, $blocked['customer'] ); $this->assertSame( 0, $blocked['decisions'] ); $this->assertTrue( $blocked['retry'] );
+		$winner = json_decode( $this->stop( $holder, true ), true ); $this->refresh();
+		$this->assertGreaterThan( 0, $winner['customer'] );
+		$this->assertSame( $winner['customer'], $this->sync( 'identity-retry', $b->get_id() )['customer'] );
+	}
+	public static function lock_kinds(): array { return array( array( 'identity' ), array( 'migration' ) ); }
+	/** @dataProvider lock_kinds */
+	public function test_late_owner_cannot_release_replacement_and_third_worker_stays_out( string $kind ): void {
+		global $wpdb;
+		$state = array( 'identity_normalization_v2' => array( 'status' => 'pending', 'phase' => 'scan', 'last_customer_id' => 900000, 'processed' => 17, 'attempts' => 2 ) );
+		update_option( 'yoohw_cos_data_migrations', $state, false ); $this->refresh();
+		$input = array( 'kind' => $kind, 'identity' => array( 'email' => 'owner-' . wp_generate_uuid4() . '@example.test' ) );
+		$a = $this->worker( 'lock-probe', 0, $input ); $first = json_decode( $this->line( $a ), true ); $this->assertTrue( $first['acquired'] );
+		$this->assertGreaterThan( 0, $this->command( $a, 'end-ownership' )['ended'] );
+		$b = $this->worker( 'lock-probe', 0, $input ); $second = json_decode( $this->line( $b ), true ); $this->assertTrue( $second['acquired'] );
+		$this->assertNotSame( $first['connection'], $second['connection'] );
+		$this->command( $a, 'release' );
+		$c = $this->worker( 'lock-probe', 0, $input ); $third = json_decode( $this->line( $c ), true ); $this->assertFalse( $third['acquired'] );
+		$this->assertNotSame( $second['connection'], $third['connection'] );
+		$this->assertFalse( $this->command( $a, 'try' )['acquired'] );
+		if ( 'migration' === $kind ) {
+			$issues = $wpdb->get_results( 'SELECT * FROM ' . YoOhw_COS_DB::migration_issues_table() . ' ORDER BY id', ARRAY_A );
+			$this->assertSame( $state, $this->command( $c, 'migration' )['state'] ); $this->refresh();
+			$this->assertSame( $state, YoOhw_COS_Migration_Runner::get_state() );
+			$this->assertSame( $issues, $wpdb->get_results( 'SELECT * FROM ' . YoOhw_COS_DB::migration_issues_table() . ' ORDER BY id', ARRAY_A ) );
+		}
+		$this->command( $b, 'release' );
+		$this->assertTrue( $this->command( $c, 'try' )['acquired'] );
+		if ( 'migration' === $kind ) {
+			$resumed = $this->command( $c, 'migration' )['state']['identity_normalization_v2'];
+			$this->assertSame( 3, $resumed['attempts'] ); $this->assertSame( 17, $resumed['processed'] ); $this->assertSame( 900000, $resumed['last_customer_id'] );
+		}
+		$this->stop( $a ); $this->stop( $b ); $this->stop( $c );
+	}
+	public function test_partial_acquisition_and_same_connection_late_handle_are_owner_safe(): void {
+		global $wpdb;
+		$identity = array( 'wp_user_id' => 701, 'email' => 'partial@example.test', 'phone' => '+84911111222' );
+		$reflection = new ReflectionProperty( YoOhw_COS_DB::class, 'work_locks' ); $reflection->setAccessible( true );
+		$all = YoOhw_COS_Customer_Identity::acquire_creation_lock( $identity ); $this->assertNotSame( '', $all );
+		$names = $reflection->getValue()[ $all ]['names']; YoOhw_COS_Customer_Identity::release_creation_lock( $all );
+		$this->assertCount( 3, $names );
+		$wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK(%s, 0)', $names[1] ) );
+		try {
+			$this->assertSame( '', YoOhw_COS_Customer_Identity::acquire_creation_lock( $identity ) );
+			$this->assertSame( '1', (string) $wpdb->get_var( $wpdb->prepare( 'SELECT IS_FREE_LOCK(%s)', $names[0] ) ) );
+			$this->assertSame( (string) $wpdb->get_var( 'SELECT CONNECTION_ID()' ), (string) $wpdb->get_var( $wpdb->prepare( 'SELECT IS_USED_LOCK(%s)', $names[1] ) ) );
+		} finally { $wpdb->get_var( $wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', $names[1] ) ); }
+		$old = YoOhw_COS_Customer_Identity::acquire_creation_lock( $identity );
+		$this->assertSame( '', YoOhw_COS_Customer_Identity::acquire_creation_lock( $identity ), 'Same connection cannot re-enter a held set.' );
+		foreach ( $names as $name ) { $wpdb->get_var( $wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', $name ) ); }
+		$new = YoOhw_COS_Customer_Identity::acquire_creation_lock( $identity ); $this->assertNotSame( '', $new );
+		YoOhw_COS_Customer_Identity::release_creation_lock( $old );
+		$this->assertSame( '', YoOhw_COS_Customer_Identity::acquire_creation_lock( $identity ) );
+		YoOhw_COS_Customer_Identity::release_creation_lock( $new );
+	}
+	public function test_exception_during_partial_acquisition_and_sync_releases_owned_keys(): void {
+		$identity = array( 'email' => 'exception@example.test', 'phone' => '+84922222333' ); $gets = 0;
+		$throw = static function( $query ) use ( &$gets ) {
+			if ( false !== strpos( $query, 'GET_LOCK(' ) && false !== strpos( $query, 'yci-work-' ) && 2 === ++$gets ) { throw new RuntimeException( 'Synthetic acquisition exception' ); }
+			return $query;
+		};
+		add_filter( 'query', $throw );
+		try { YoOhw_COS_Customer_Identity::acquire_creation_lock( $identity ); $this->fail( 'Expected synthetic exception' ); }
+		catch ( RuntimeException $exception ) { $this->assertSame( 'Synthetic acquisition exception', $exception->getMessage() ); }
+		finally { remove_filter( 'query', $throw ); }
+		$handle = YoOhw_COS_Customer_Identity::acquire_creation_lock( $identity ); $this->assertNotSame( '', $handle ); YoOhw_COS_Customer_Identity::release_creation_lock( $handle );
+		list( $order ) = $this->pair( 'email' );
+		$throw = static function() { throw new RuntimeException( 'Synthetic sync exception' ); };
+		add_filter( 'yoohw_cos_customer_sync_data', $throw );
+		try { YoOhw_COS_Customers::sync_from_order( $order ); $this->fail( 'Expected synthetic exception' ); }
+		catch ( RuntimeException $exception ) { $this->assertSame( 'Synthetic sync exception', $exception->getMessage() ); }
+		finally { remove_filter( 'yoohw_cos_customer_sync_data', $throw ); }
+		$worker = $this->worker( 'lock-probe', 0, array( 'kind' => 'identity', 'identity' => YoOhw_COS_Customer_Identity::from_order( $order ) ) );
+		$this->assertTrue( json_decode( $this->line( $worker ), true )['acquired'] ); $this->stop( $worker );
+	}
+	public function test_legacy_expired_and_malformed_options_are_not_ownership_authority(): void {
+		global $wpdb;
+		$email = 'legacy-lock@example.test';
+		$keys = array( 'yoohw_cos_identity_lock_' . md5( 'email|' . $email ), 'yoohw_cos_data_migration_lock' );
+		foreach ( array( time() - 600, time() + 600, 'malformed' ) as $value ) {
+			foreach ( $keys as $key ) { update_option( $key, $value, false ); }
+			$this->refresh();
+			foreach ( array( 'identity', 'migration' ) as $kind ) {
+				$input = array( 'kind' => $kind, 'identity' => array( 'email' => $email ) );
+				$a = $this->worker( 'lock-probe', 0, $input ); $this->assertTrue( json_decode( $this->line( $a ), true )['acquired'] );
+				$b = $this->worker( 'lock-probe', 0, $input ); $this->assertFalse( json_decode( $this->line( $b ), true )['acquired'] );
+				$this->stop( $b ); $this->stop( $a );
+			}
+			$this->refresh(); foreach ( $keys as $key ) { $this->assertSame( (string) $value, (string) get_option( $key ) ); }
+		}
+		foreach ( $keys as $key ) { delete_option( $key ); } $wpdb->query( 'COMMIT' );
+	}
+	public function test_conflict_after_initial_resolution_releases_creation_boundary(): void {
+		global $wpdb;
+		list( $order ) = $this->pair( 'email' );
+		$identity = YoOhw_COS_Customer_Identity::from_order( $order );
+		$inserted = false;
+		$conflict = static function( $query ) use ( &$inserted, $identity ) {
+			if ( ! $inserted && false !== strpos( $query, 'GET_LOCK(' ) && false !== strpos( $query, 'yci-work-' ) ) {
+				$inserted = true;
+				YoOhw_COS_Customers::create_customer( array( 'email' => $identity['email'] ) );
+				YoOhw_COS_Customers::create_customer( array( 'email' => $identity['email'] ) );
+			}
+			return $query;
+		};
+		add_filter( 'query', $conflict );
+		try { $this->assertSame( 0, YoOhw_COS_Customers::sync_from_order( $order ) ); }
+		finally { remove_filter( 'query', $conflict ); }
+		$this->assertTrue( $inserted );
+		$this->assertSame( 2, (int) $wpdb->get_var( 'SELECT COUNT(*) FROM ' . YoOhw_COS_DB::customers_table() ) );
+		$this->assertSame( 0, YoOhw_COS_Customer_Identity::get_persisted_order_customer_id( $order ) );
+		$handle = YoOhw_COS_Customer_Identity::acquire_creation_lock( $identity ); $this->assertNotSame( '', $handle );
+		YoOhw_COS_Customer_Identity::release_creation_lock( $handle );
+		$empty = wc_create_order();
+		$this->assertSame( 0, YoOhw_COS_Customers::sync_from_order( $empty ) );
+		$this->assertFalse( wp_next_scheduled( YoOhw_COS_Customers::ORDER_SYNC_RETRY_HOOK, array( $empty->get_id() ) ) );
+	}
+	public function test_migration_error_and_empty_state_release_the_owned_lock(): void {
+		$state = array( 'identity_normalization_v2' => array( 'status' => 'pending', 'phase' => 'scan', 'last_customer_id' => 900000, 'processed' => 17, 'attempts' => 2 ) );
+		update_option( 'yoohw_cos_data_migrations', $state, false );
+		$throw = static function( $query ) {
+			if ( 0 === strpos( $query, 'SELECT id, email, phone FROM' ) ) { throw new RuntimeException( 'Synthetic batch exception' ); }
+			return $query;
+		};
+		$observed = false;
+		$error = static function() use ( &$observed ) { $observed = true; throw new RuntimeException( 'Synthetic error-hook exception' ); };
+		add_filter( 'query', $throw ); add_action( 'yoohw_cos_data_migration_error', $error );
+		try { YoOhw_COS_Migration_Runner::run_next_batch(); $this->fail( 'Expected error-hook exception' ); }
+		catch ( RuntimeException $exception ) { $this->assertSame( 'Synthetic error-hook exception', $exception->getMessage() ); }
+		finally { remove_filter( 'query', $throw ); remove_action( 'yoohw_cos_data_migration_error', $error ); }
+		$this->assertTrue( $observed );
+		$current = YoOhw_COS_Migration_Runner::get_state()['identity_normalization_v2'];
+		$this->assertSame( 900000, $current['last_customer_id'] ); $this->assertSame( 17, $current['processed'] ); $this->assertSame( 'pending', $current['status'] );
+		$this->refresh();
+		$worker = $this->worker( 'lock-probe', 0, array( 'kind' => 'migration' ) );
+		$this->assertTrue( json_decode( $this->line( $worker ), true )['acquired'] ); $this->stop( $worker );
+		update_option( 'yoohw_cos_data_migrations', array(), false );
+		YoOhw_COS_Migration_Runner::run_next_batch(); $this->refresh();
+		$worker = $this->worker( 'lock-probe', 0, array( 'kind' => 'migration' ) );
+		$this->assertTrue( json_decode( $this->line( $worker ), true )['acquired'] ); $this->stop( $worker );
+	}
+
+}
