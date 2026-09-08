@@ -19,7 +19,7 @@ proxy), never an in-memory fallback. After Reset, `_yoohw_cos_link_epoch` must m
 both the ready epoch and `_yoohw_cos_customer_id`. A partial metadata update cannot
 make a different numeric ID authoritative. Both link fields are saved with WooCommerce
 APIs. Bare explicit/manual links remain valid on a site with no Reset marker. The
-order editor includes its epoch; a stale form must be reloaded before selecting a
+order editor renders profile data and its epoch inside the same critical section; a stale form must be reloaded before selecting a
 profile. HPOS and legacy list filters apply the same epoch/ID binding. Existing
 identity precedence and ambiguity rules remain unchanged.
 
@@ -42,7 +42,9 @@ cursor, admin sync operations through cursor persistence, order-profile save/dis
 and the core/premium blacklist and loyalty adapter entrypoints/backfills. The wrappers
 start before identity resolution, so callbacks cannot carry a CRM ID across Reset.
 
-Order-sync contention queues the existing order retry hook. Scheduled migration,
+Order-sync and deletion-cleanup contention queue the existing order retry hook. If
+the order no longer exists when retried, the hook idempotently removes its persisted
+fact/contribution. If deletion did not complete, normal order sync reconciles it. Scheduled migration,
 activity, loyalty and reassociation jobs reschedule their existing hooks; batch callers
 retain their cursor. A blocked adapter cannot publish stale customer references. A
 payload-free operational warning is logged and shown to managers for one day, calling
@@ -63,6 +65,8 @@ explicit/email identity, missing contact, legacy manual links, stale order objec
 repeated sync, persisted facts/totals, retained definitions/orders/refunds/users, token
 mismatch and server-rendered admin field/save/list-query smoke. It uses a second PHP
 process and connection for Reset-versus-paused-sync, request resumption after Reset
-with an old transaction snapshot, and process exit between actual TRUNCATE statements.
+with an old transaction snapshot, process exit between actual TRUNCATE statements, Reset attempted between renderer
+profile resolution and epoch output, and contended permanent deletion followed by
+repeated cleanup retry.
 A query-hook exception separately exercises interruption handling. These are owned
 synthetic fixtures, not production tests or real-provider/browser certification.

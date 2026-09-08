@@ -22,6 +22,13 @@ if ( 'stale-sync' === $mode ) {
 	fgets( STDIN );
 	echo 'RESULT:' . YoOhw_COS_Customers::sync_from_order_id( (int) $argv[2] ) . "\n";
 	$wpdb->query( 'COMMIT' );
+} elseif ( 'hold-writer' === $mode ) {
+	if ( ! YoOhw_COS_Reset_Guard::enter() ) { exit( 3 ); }
+	echo "LOCKED\n";
+	fflush( STDOUT );
+	fgets( STDIN );
+	YoOhw_COS_Reset_Guard::leave();
+	echo "RELEASED\n";
 } elseif ( 'interrupt-reset' === $mode ) {
 	add_filter( 'query', static function( $query ) {
 		if ( false !== strpos( $query, 'TRUNCATE TABLE' ) && false !== strpos( $query, YoOhw_COS_DB::notes_table() ) ) {

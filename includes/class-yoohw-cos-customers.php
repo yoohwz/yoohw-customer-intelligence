@@ -31,6 +31,10 @@ final class YoOhw_COS_Customers {
 		$order = wc_get_order( $order_id );
 
 		if ( ! $order || ! $order instanceof WC_Order ) {
+			// The existing retry hook also finishes cleanup after a contended delete.
+			if ( false === $order ) {
+				self::remove_deleted_order_contribution( $order_id, null );
+			}
 			return 0;
 		}
 
@@ -52,10 +56,17 @@ final class YoOhw_COS_Customers {
 			return;
 		}
 
-		$customer_id = YoOhw_COS_Commerce_Aggregates::remove_order( $order_id );
-
-		if ( $customer_id > 0 ) {
-			self::mark_customer_data_updated();
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			self::schedule_failed_order_sync( new RuntimeException( 'Order deletion cleanup deferred by Reset boundary.' ), $order_id, 0 );
+			return;
+		}
+		try {
+			$customer_id = YoOhw_COS_Commerce_Aggregates::remove_order( $order_id );
+			if ( $customer_id > 0 ) {
+				self::mark_customer_data_updated();
+			}
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
 		}
 	}
 

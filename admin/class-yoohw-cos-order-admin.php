@@ -218,6 +218,17 @@ final class YoOhw_COS_Order_Admin {
 	}
 
 	public static function render_customer_field( WC_Order $order ): void {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return;
+		}
+		try {
+			self::render_customer_field_guarded( $order );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function render_customer_field_guarded( WC_Order $order ): void {
 		if ( ! current_user_can( 'manage_woocommerce' ) ) {
 			return;
 		}
@@ -352,6 +363,17 @@ final class YoOhw_COS_Order_Admin {
 	}
 
 	public static function render_customer_history_metabox( $order_or_post, array $metabox = array() ): void {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return;
+		}
+		try {
+			self::render_customer_history_metabox_guarded( $order_or_post, $metabox );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function render_customer_history_metabox_guarded( $order_or_post, array $metabox = array() ): void {
 		$order = self::resolve_order( $order_or_post );
 
 		if ( ! $order instanceof WC_Order || ! current_user_can( 'manage_woocommerce' ) ) {
@@ -470,6 +492,17 @@ final class YoOhw_COS_Order_Admin {
 	}
 
 	public static function render_task_metabox( $order_or_post, array $metabox = array() ): void {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return;
+		}
+		try {
+			self::render_task_metabox_guarded( $order_or_post, $metabox );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function render_task_metabox_guarded( $order_or_post, array $metabox = array() ): void {
 		$order = self::resolve_order( $order_or_post );
 
 		if ( ! $order instanceof WC_Order || ! current_user_can( 'manage_woocommerce' ) ) {

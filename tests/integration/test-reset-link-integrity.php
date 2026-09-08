@@ -257,6 +257,82 @@ final class YCI_Reset_Link_Integrity_Test extends WP_UnitTestCase {
 		$this->assertContains( $order->get_id(), ( 'yes' === getenv( 'WC_HPOS_ENABLED' ) ? wc_get_orders( $query ) : ( new WP_Query( array_merge( $query, array( 'post_type' => 'shop_order', 'post_status' => array_keys( wc_get_order_statuses() ), 'fields' => 'ids' ) ) ) )->posts ) );
 	}
 
+	public function test_rendered_selection_and_epoch_are_excluded_from_concurrent_reset(): void {
+		global $wpdb;
+		YoOhw_COS_Customers::reset_data();
+		$user_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		get_user_by( 'id', $user_id )->add_cap( 'manage_woocommerce' );
+		wp_set_current_user( $user_id );
+		$order = wc_create_order();
+		$order->set_billing_email( 'render-race@example.test' );
+		$order->save();
+		YoOhw_COS_Customers::sync_from_order( $order );
+		$epoch = YoOhw_COS_Reset_Guard::epoch();
+		$wpdb->query( 'COMMIT' );
+		$observed = '';
+		$pause = function( $translation, $text ) use ( &$observed ) {
+			if ( 'Uses customer profiles. WooCommerce customer user is synchronized when the selected profile has a WP user.' === $text ) {
+				global $wpdb;
+				$wpdb->query( 'COMMIT' ); // Model the ordinary autocommit renderer; keep only its named guard.
+				list( $process, $pipes ) = $this->worker( 'reset' );
+				fclose( $pipes[0] );
+				$observed = stream_get_contents( $pipes[1] );
+				$error = stream_get_contents( $pipes[2] );
+				fclose( $pipes[1] );
+				fclose( $pipes[2] );
+				$this->assertSame( 0, proc_close( $process ), $error );
+			}
+			return $translation;
+		};
+		add_filter( 'gettext', $pause, 10, 2 );
+		ob_start();
+		try {
+			YoOhw_COS_Order_Admin::render_customer_field( $order );
+			$html = ob_get_contents();
+		} finally {
+			ob_end_clean();
+			remove_filter( 'gettext', $pause, 10 );
+			wp_set_current_user( 0 );
+		}
+		$this->assertStringContainsString( 'BUSY', $observed );
+		$this->assertStringContainsString( $epoch, $html );
+		$this->assertSame( $epoch, YoOhw_COS_Reset_Guard::epoch() );
+	}
+
+	public function test_contended_permanent_delete_keeps_idempotent_cleanup_work(): void {
+		global $wpdb;
+		YoOhw_COS_Customers::reset_data();
+		$order = wc_create_order();
+		$order->set_billing_email( 'delete-race@example.test' );
+		$order->set_total( '55.00' );
+		$order->set_status( 'completed' );
+		$order->save();
+		$a = YoOhw_COS_Customers::sync_from_order( $order );
+		$order_id = $order->get_id();
+		$wpdb->query( 'COMMIT' );
+		list( $process, $pipes ) = $this->worker( 'hold-writer' );
+		try {
+			$this->assertSame( "LOCKED\n", fgets( $pipes[1] ) );
+			$order->delete( true );
+			$wpdb->query( 'COMMIT' );
+			fwrite( $pipes[0], "RELEASE\n" );
+			fclose( $pipes[0] );
+			$this->assertStringContainsString( 'RELEASED', stream_get_contents( $pipes[1] ) );
+			$error = stream_get_contents( $pipes[2] );
+		} finally {
+			foreach ( $pipes as $pipe ) { if ( is_resource( $pipe ) ) { fclose( $pipe ); } }
+			proc_terminate( $process );
+			proc_close( $process );
+		}
+		$this->assertFalse( wc_get_order( $order_id ) );
+		$this->assertNotFalse( wp_next_scheduled( YoOhw_COS_Customers::ORDER_SYNC_RETRY_HOOK, array( $order_id ) ), $error );
+		do_action( YoOhw_COS_Customers::ORDER_SYNC_RETRY_HOOK, $order_id );
+		do_action( YoOhw_COS_Customers::ORDER_SYNC_RETRY_HOOK, $order_id );
+		$this->assertSame( 0, (int) YoOhw_COS_Customers::get_customer( $a )['total_orders'] );
+		$this->assertSame( 0.0, (float) YoOhw_COS_Customers::get_customer( $a )['total_spent'] );
+		$this->assertSame( 0, (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE order_id = %d', YoOhw_COS_DB::order_facts_table(), $order_id ) ) );
+	}
+
 	private function worker( string $mode, int $order_id = 0 ): array {
 		$command = array( PHP_BINARY, '-d', 'disable_functions=mail', dirname( __DIR__ ) . '/reset-worker.php', $mode, (string) $order_id );
 		$process = proc_open( $command, array( array( 'pipe', 'r' ), array( 'pipe', 'w' ), array( 'pipe', 'w' ) ), $pipes );
