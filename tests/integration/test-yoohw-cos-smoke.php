@@ -1627,7 +1627,11 @@ final class YCI_Schema_Upgrade_Test extends WP_UnitTestCase {
 		$table = YoOhw_COS_DB::notes_table();
 		$state = YoOhw_COS_Migration_Runner::get_state();
 		$this->assertNotFalse( $wpdb->query( "ALTER TABLE {$table} MODIFY visibility VARCHAR(100) NOT NULL DEFAULT 'private'" ) );
-		$this->assertSame( 1, $wpdb->insert( $table, array( 'customer_id' => 0, 'author_id' => null, 'note_content' => 'Synthetic newer-schema sentinel', 'visibility' => str_repeat( 'v', 80 ), 'created_at' => YoOhw_COS_DB::now(), 'updated_at' => YoOhw_COS_DB::now() ) ) );
+		// Direct prepared SQL avoids wpdb's cached pre-ALTER column length for this DDL fixture.
+		$this->assertSame( 1, $wpdb->query( $wpdb->prepare(
+			'INSERT INTO %i (customer_id, note_content, visibility, created_at, updated_at) VALUES (0, %s, %s, %s, %s)',
+			$table, 'Synthetic newer-schema sentinel', str_repeat( 'v', 80 ), YoOhw_COS_DB::now(), YoOhw_COS_DB::now()
+		) ) );
 		$id = (int) $wpdb->insert_id;
 		$before = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i WHERE id = %d', $table, $id ), ARRAY_A );
 		$ddl = array();
