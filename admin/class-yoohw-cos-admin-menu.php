@@ -2645,10 +2645,11 @@ final class YoOhw_COS_Admin_Menu {
 		echo '<div class="yoohw-cos-operation-row yoohw-cos-operation-row--danger">';
 		echo '<div class="yoohw-cos-operation-row__content">';
 		echo '<h4>' . esc_html__( 'Reset customer data', 'yoohw-customer-intelligence' ) . '</h4>';
-		echo '<p>' . esc_html__( 'Clear normalized customer data. WooCommerce orders and WordPress users are not deleted.', 'yoohw-customer-intelligence' ) . '</p>';
+		echo '<p>' . esc_html__( 'Clear normalized customer data and invalidate old CRM order links. WooCommerce orders and WordPress users are not deleted. If interrupted, retry Reset before syncing again; then rebuild customer data using Sync orders.', 'yoohw-customer-intelligence' ) . '</p>';
 		echo '</div>';
 		echo '<form class="yoohw-cos-operation-form" method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" data-yoohw-cos-confirm="' . esc_attr__( 'Are you sure you want to reset customer data?', 'yoohw-customer-intelligence' ) . '">';
 		echo '<input type="hidden" name="action" value="yoohw_cos_reset_data" />';
+		echo '<input type="hidden" name="yoohw_cos_reset_epoch" value="' . esc_attr( YoOhw_COS_Reset_Guard::epoch() ) . '" />';
 		wp_nonce_field( 'yoohw_cos_reset_data' );
 
 		submit_button(

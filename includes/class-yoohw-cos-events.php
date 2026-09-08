@@ -8,6 +8,17 @@ final class YoOhw_COS_Events {
 	}
 
 	public static function record( array $args ): int {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return 0;
+		}
+		try {
+			return self::record_guarded( $args );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function record_guarded( array $args ): int {
 		global $wpdb;
 
 		$defaults = array(
@@ -291,6 +302,17 @@ final class YoOhw_COS_Events {
 	}
 
 	public static function assign_customer( int $event_id, int $customer_id, int $wp_user_id = 0 ): bool {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return false;
+		}
+		try {
+			return self::assign_customer_guarded( $event_id, $customer_id, $wp_user_id );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function assign_customer_guarded( int $event_id, int $customer_id, int $wp_user_id = 0 ): bool {
 		global $wpdb;
 
 		$event_id    = absint( $event_id );

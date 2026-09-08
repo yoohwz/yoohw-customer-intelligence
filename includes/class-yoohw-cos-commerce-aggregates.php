@@ -7,6 +7,17 @@ defined( 'ABSPATH' ) || exit;
 final class YoOhw_COS_Commerce_Aggregates {
 
 	public static function sync_order( WC_Order $order, int $customer_id ): array {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return array();
+		}
+		try {
+			return self::sync_order_guarded( $order, $customer_id );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function sync_order_guarded( WC_Order $order, int $customer_id ): array {
 		global $wpdb;
 
 		$order_id   = absint( $order->get_id() );
@@ -126,6 +137,17 @@ final class YoOhw_COS_Commerce_Aggregates {
 	 * @return int Affected customer ID, or 0 when no fact existed/the update failed.
 	 */
 	public static function remove_order( int $order_id ): int {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return 0;
+		}
+		try {
+			return self::remove_order_guarded( $order_id );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function remove_order_guarded( int $order_id ): int {
 		global $wpdb;
 
 		$order_id = absint( $order_id );
@@ -197,6 +219,17 @@ final class YoOhw_COS_Commerce_Aggregates {
 	}
 
 	public static function rebuild_customer( int $customer_id ): bool {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return false;
+		}
+		try {
+			return self::rebuild_customer_guarded( $customer_id );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function rebuild_customer_guarded( int $customer_id ): bool {
 		global $wpdb;
 
 		$customer_id = absint( $customer_id );

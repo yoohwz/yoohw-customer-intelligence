@@ -16,6 +16,9 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 		parent::set_up();
 
 		$this->load_plugin_classes();
+		// Each existing smoke case models a site with no prior Reset.
+		delete_option( YoOhw_COS_Reset_Guard::OPTION );
+		YoOhw_COS_Reset_Guard::init();
 	}
 
 	public function tear_down(): void {

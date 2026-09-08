@@ -63,9 +63,15 @@ final class YoOhw_COS_Customer_Identity {
 	public static function get_persisted_order_customer_ids( WC_Order $order ): array {
 		$data_store = $order->get_data_store();
 		$customer_ids = array();
+		$epochs = array();
+		$state = YoOhw_COS_Reset_Guard::state();
+		if ( 'ready' !== $state['status'] ) {
+			return array();
+		}
 
-		if ( $order->get_id() > 0 && is_object( $data_store ) && method_exists( $data_store, 'read_meta' ) ) {
+		if ( $order->get_id() > 0 && is_object( $data_store ) && is_callable( array( $data_store, 'read_meta' ) ) ) {
 			for ( $attempt = 0; $attempt < 2 && empty( $customer_ids ); $attempt++ ) {
+				$epochs = array();
 				$metadata = $data_store->read_meta( $order );
 
 				foreach ( is_array( $metadata ) ? $metadata : array() as $meta ) {
@@ -80,6 +86,9 @@ final class YoOhw_COS_Customer_Identity {
 						? ( $meta->meta_value ?? $meta->value ?? 0 )
 						: ( $meta['meta_value'] ?? $meta['value'] ?? 0 );
 
+					if ( YoOhw_COS_Reset_Guard::META_KEY === $meta_key ) {
+						$epochs[] = (string) maybe_unserialize( $meta_value );
+					}
 					if ( YoOhw_COS_Customers::ORDER_CUSTOMER_META_KEY === $meta_key ) {
 						$customer_ids[] = absint( maybe_unserialize( $meta_value ) );
 					}
@@ -87,17 +96,20 @@ final class YoOhw_COS_Customer_Identity {
 			}
 		}
 
+		if ( $state !== YoOhw_COS_Reset_Guard::state() || ( '' !== $state['epoch'] && ( 1 !== count( $customer_ids ) || array( $state['epoch'] . ':' . $customer_ids[0] ) !== $epochs ) ) ) {
+			return array();
+		}
 		return array_values( array_filter( $customer_ids ) );
 	}
 
-	private static function get_persisted_order_customer_id( WC_Order $order ): int {
+	public static function get_persisted_order_customer_id( WC_Order $order ): int {
 		$customer_ids = self::get_persisted_order_customer_ids( $order );
 
 		if ( ! empty( $customer_ids ) ) {
 			return absint( end( $customer_ids ) );
 		}
 
-		return absint( $order->get_meta( YoOhw_COS_Customers::ORDER_CUSTOMER_META_KEY, true ) );
+		return 0;
 	}
 
 	public static function acquire_creation_lock( array $identity ): string {

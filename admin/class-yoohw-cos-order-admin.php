@@ -160,6 +160,15 @@ final class YoOhw_COS_Order_Admin {
 			'value'   => (string) absint( $customer_id ),
 			'compare' => '=',
 		);
+		if ( '' !== YoOhw_COS_Reset_Guard::epoch() ) {
+			$profile_clause = array( 'relation' => 'AND', $profile_clause, array(
+				'key' => YoOhw_COS_Reset_Guard::META_KEY, 'value' => YoOhw_COS_Reset_Guard::epoch() . ':' . $customer_id, 'compare' => '=',
+			) );
+		}
+		if ( ! YoOhw_COS_Reset_Guard::ready() ) {
+			$query_args['post__in'] = array( 0 );
+			$query_args['include'] = array( 0 );
+		}
 		$existing_meta_query = isset( $query_args['meta_query'] ) && is_array( $query_args['meta_query'] )
 			? $query_args['meta_query']
 			: array();
@@ -218,6 +227,7 @@ final class YoOhw_COS_Order_Admin {
 
 		$customer_help_tip = __( 'Uses customer profiles. WooCommerce customer user is synchronized when the selected profile has a WP user.', 'yoohw-customer-intelligence' );
 
+		echo '<input type="hidden" name="yoohw_cos_link_epoch" value="' . esc_attr( YoOhw_COS_Reset_Guard::epoch() ) . '" />';
 		echo '<p class="form-field form-field-wide yoohw-cos-order-customer-field">';
 		echo '<span class="yoohw-cos-order-customer-heading">';
 		echo '<label for="yoohw_cos_customer_id">' . esc_html__( 'Customer:', 'yoohw-customer-intelligence' ) . '</label>';
@@ -251,6 +261,17 @@ final class YoOhw_COS_Order_Admin {
 	}
 
 	public static function save_customer_profile_link( int $order_id, $order = null ): void {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return;
+		}
+		try {
+			self::save_customer_profile_link_guarded( $order_id, $order );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function save_customer_profile_link_guarded( int $order_id, $order = null ): void {
 		if ( 'POST' !== sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ?? '' ) ) ) {
 			return;
 		}
@@ -263,6 +284,12 @@ final class YoOhw_COS_Order_Admin {
 			return;
 		}
 
+		if ( YoOhw_COS_Reset_Guard::epoch() !== sanitize_text_field( wp_unslash( $_POST['yoohw_cos_link_epoch'] ?? '' ) ) ) {
+			if ( class_exists( 'WC_Admin_Meta_Boxes' ) ) {
+				WC_Admin_Meta_Boxes::add_error( __( 'Customer data was reset. Reload the order before choosing its customer profile.', 'yoohw-customer-intelligence' ) );
+			}
+			return;
+		}
 		$customer_id = absint( wp_unslash( $_POST['yoohw_cos_customer_id'] ) );
 		$wc_order    = $order instanceof WC_Order ? $order : wc_get_order( $order_id );
 
@@ -287,6 +314,7 @@ final class YoOhw_COS_Order_Admin {
 			$wc_order->set_customer_id( 0 );
 		}
 
+		$wc_order->update_meta_data( YoOhw_COS_Reset_Guard::META_KEY, YoOhw_COS_Reset_Guard::epoch() . ':' . $customer_id );
 		$wc_order->save();
 		YoOhw_COS_Customers::sync_from_order( $wc_order );
 	}
@@ -571,7 +599,18 @@ final class YoOhw_COS_Order_Admin {
 	}
 
 	private static function get_order_customer_profile_id( WC_Order $order ): int {
-		$linked_customer_id = absint( $order->get_meta( YoOhw_COS_Customers::ORDER_CUSTOMER_META_KEY, true ) );
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return 0;
+		}
+		try {
+			return self::get_order_customer_profile_id_guarded( $order );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function get_order_customer_profile_id_guarded( WC_Order $order ): int {
+		$linked_customer_id = YoOhw_COS_Customer_Identity::get_persisted_order_customer_id( $order );
 
 		if ( $linked_customer_id > 0 && YoOhw_COS_Customers::customer_exists( $linked_customer_id ) ) {
 			return $linked_customer_id;

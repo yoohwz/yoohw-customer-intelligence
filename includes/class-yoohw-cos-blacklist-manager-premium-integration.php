@@ -70,6 +70,17 @@ final class YoOhw_COS_Blacklist_Manager_Premium_Integration {
 	}
 
 	public static function handle_after_risk_job( $order_id, $job_hook ): void {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return;
+		}
+		try {
+			self::handle_after_risk_job_guarded( $order_id, $job_hook );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function handle_after_risk_job_guarded( $order_id, $job_hook ): void {
 		$order_id = absint( $order_id );
 		$job_hook = sanitize_key( (string) $job_hook );
 
@@ -129,6 +140,17 @@ final class YoOhw_COS_Blacklist_Manager_Premium_Integration {
 	}
 
 	public static function handle_antibot_risk_failed( $decision, $context = '' ): void {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return;
+		}
+		try {
+			self::handle_antibot_risk_failed_guarded( $decision, $context );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function handle_antibot_risk_failed_guarded( $decision, $context = '' ): void {
 		$payload    = self::normalize_checkout_payload( $decision, 'antibot_risk_failed', $context );
 		$event_type = self::checkout_failure_event_type( $payload );
 
@@ -141,6 +163,17 @@ final class YoOhw_COS_Blacklist_Manager_Premium_Integration {
 	}
 
 	public static function handle_antibot_challenge_required( $decision, $context = '' ): void {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return;
+		}
+		try {
+			self::handle_antibot_challenge_required_guarded( $decision, $context );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function handle_antibot_challenge_required_guarded( $decision, $context = '' ): void {
 		$payload = self::normalize_checkout_payload( $decision, 'antibot_challenge_required', $context );
 
 		self::record_checkout_event(
@@ -152,6 +185,17 @@ final class YoOhw_COS_Blacklist_Manager_Premium_Integration {
 	}
 
 	public static function handle_js_proof_failed( $reason, $context = '', $details = array() ): void {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return;
+		}
+		try {
+			self::handle_js_proof_failed_guarded( $reason, $context, $details );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function handle_js_proof_failed_guarded( $reason, $context = '', $details = array() ): void {
 		$details             = is_array( $details ) ? $details : array();
 		$details['reason']   = sanitize_key( (string) $reason );
 		$payload             = self::normalize_checkout_payload( $details, 'js_proof_failed', $context );
@@ -166,6 +210,17 @@ final class YoOhw_COS_Blacklist_Manager_Premium_Integration {
 	}
 
 	public static function handle_session_continuity_failed( $reasons, $context = '', $details = array() ): void {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return;
+		}
+		try {
+			self::handle_session_continuity_failed_guarded( $reasons, $context, $details );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function handle_session_continuity_failed_guarded( $reasons, $context = '', $details = array() ): void {
 		$details            = is_array( $details ) ? $details : array();
 		$payload            = self::normalize_checkout_payload( $details, 'session_continuity_failed', $context );
 		$payload['reasons'] = array_values(
@@ -188,6 +243,17 @@ final class YoOhw_COS_Blacklist_Manager_Premium_Integration {
 	}
 
 	public static function handle_fp_anomalies_failed( $event, $context = '' ): void {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return;
+		}
+		try {
+			self::handle_fp_anomalies_failed_guarded( $event, $context );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function handle_fp_anomalies_failed_guarded( $event, $context = '' ): void {
 		$payload = self::normalize_checkout_payload( $event, 'fingerprint_anomalies_failed', $context );
 
 		self::record_checkout_event(
@@ -199,6 +265,17 @@ final class YoOhw_COS_Blacklist_Manager_Premium_Integration {
 	}
 
 	public static function handle_payment_abuse_event_recorded( int $event_id, $order = null, array $event_data = array() ): bool {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return false;
+		}
+		try {
+			return self::handle_payment_abuse_event_recorded_guarded( $event_id, $order, $event_data );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function handle_payment_abuse_event_recorded_guarded( int $event_id, $order = null, array $event_data = array() ): bool {
 		global $wpdb;
 
 		$event_id = absint( $event_id );
@@ -235,6 +312,17 @@ final class YoOhw_COS_Blacklist_Manager_Premium_Integration {
 	}
 
 	public static function reassociate_checkout_events_for_order( $order_or_id ): int {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return 0;
+		}
+		try {
+			return self::reassociate_checkout_events_for_order_guarded( $order_or_id );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function reassociate_checkout_events_for_order_guarded( $order_or_id ): int {
 		global $wpdb;
 
 		$order_id = $order_or_id instanceof WC_Order ? absint( $order_or_id->get_id() ) : absint( $order_or_id );
@@ -301,6 +389,17 @@ final class YoOhw_COS_Blacklist_Manager_Premium_Integration {
 	}
 
 	public static function reassociate_existing_unlinked_events( int $after_event_id = 0, int $limit = 500 ): array {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return array( 'processed' => 0, 'has_more' => true );
+		}
+		try {
+			return self::reassociate_existing_unlinked_events_guarded( $after_event_id, $limit );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function reassociate_existing_unlinked_events_guarded( int $after_event_id = 0, int $limit = 500 ): array {
 		global $wpdb;
 
 		$table = YoOhw_COS_DB::events_table();
@@ -374,6 +473,18 @@ final class YoOhw_COS_Blacklist_Manager_Premium_Integration {
 	}
 
 	public static function process_existing_event_reassociation(): void {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			wp_schedule_single_event( time() + MINUTE_IN_SECONDS, self::REASSOCIATION_HOOK );
+			return;
+		}
+		try {
+			self::process_existing_event_reassociation_guarded(  );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function process_existing_event_reassociation_guarded(  ): void {
 		$state = get_option( self::REASSOCIATION_STATE_OPTION, array() );
 		$state = is_array( $state ) ? $state : array();
 
@@ -540,6 +651,17 @@ final class YoOhw_COS_Blacklist_Manager_Premium_Integration {
 	}
 
 	public static function backfill_legacy_signals( int $limit = 300, int $page = 1 ): array {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			return array( 'processed' => 0, 'scanned' => 0, 'skipped' => 0, 'has_more' => true, 'next_page' => $page );
+		}
+		try {
+			return self::backfill_legacy_signals_guarded( $limit, $page );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function backfill_legacy_signals_guarded( int $limit = 300, int $page = 1 ): array {
 		$limit = min( 500, max( 1, absint( $limit ) ) );
 		$page  = max( 1, absint( $page ) );
 

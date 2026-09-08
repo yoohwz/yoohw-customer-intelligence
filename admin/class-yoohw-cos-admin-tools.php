@@ -135,6 +135,18 @@ final class YoOhw_COS_Admin_Tools {
 	}
 
 	public static function handle_sync_customers(): void {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			wp_die( esc_html__( 'Customer data is busy or Reset requires recovery. Retry this operation after Reset completes.', 'yoohw-customer-intelligence' ), '', array( 'response' => 409, 'back_link' => true ) );
+			return;
+		}
+		try {
+			self::handle_sync_customers_guarded(  );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function handle_sync_customers_guarded(  ): void {
 		if ( ! current_user_can( 'manage_woocommerce' ) ) {
 			wp_die( esc_html__( 'You do not have permission to perform this action.', 'yoohw-customer-intelligence' ) );
 		}
@@ -164,6 +176,18 @@ final class YoOhw_COS_Admin_Tools {
 	}
 
 	public static function handle_ajax_sync_customers(): void {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			self::send_operation_error( __( 'Customer data is busy or Reset requires recovery. Retry this operation after Reset completes.', 'yoohw-customer-intelligence' ), 409 );
+			return;
+		}
+		try {
+			self::handle_ajax_sync_customers_guarded(  );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function handle_ajax_sync_customers_guarded(  ): void {
 		if ( ! current_user_can( 'manage_woocommerce' ) ) {
 			wp_send_json_error(
 				array(
@@ -195,6 +219,18 @@ final class YoOhw_COS_Admin_Tools {
 	}
 
 	public static function handle_ajax_recalculate_intelligence(): void {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			self::send_operation_error( __( 'Customer data is busy or Reset requires recovery. Retry this operation after Reset completes.', 'yoohw-customer-intelligence' ), 409 );
+			return;
+		}
+		try {
+			self::handle_ajax_recalculate_intelligence_guarded(  );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function handle_ajax_recalculate_intelligence_guarded(  ): void {
 		if ( ! current_user_can( 'manage_woocommerce' ) ) {
 			self::send_operation_error( __( 'You do not have permission to perform this action.', 'yoohw-customer-intelligence' ), 403 );
 		}
@@ -220,6 +256,18 @@ final class YoOhw_COS_Admin_Tools {
 	}
 
 	public static function handle_ajax_backfill_first_orders(): void {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			self::send_operation_error( __( 'Customer data is busy or Reset requires recovery. Retry this operation after Reset completes.', 'yoohw-customer-intelligence' ), 409 );
+			return;
+		}
+		try {
+			self::handle_ajax_backfill_first_orders_guarded(  );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function handle_ajax_backfill_first_orders_guarded(  ): void {
 		if ( ! current_user_can( 'manage_woocommerce' ) ) {
 			self::send_operation_error( __( 'You do not have permission to perform this action.', 'yoohw-customer-intelligence' ), 403 );
 		}
@@ -245,6 +293,18 @@ final class YoOhw_COS_Admin_Tools {
 	}
 
 	public static function handle_ajax_sync_blacklist_signals(): void {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			self::send_operation_error( __( 'Customer data is busy or Reset requires recovery. Retry this operation after Reset completes.', 'yoohw-customer-intelligence' ), 409 );
+			return;
+		}
+		try {
+			self::handle_ajax_sync_blacklist_signals_guarded(  );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function handle_ajax_sync_blacklist_signals_guarded(  ): void {
 		if ( ! current_user_can( 'manage_woocommerce' ) ) {
 			self::send_operation_error( __( 'You do not have permission to perform this action.', 'yoohw-customer-intelligence' ), 403 );
 		}
@@ -580,7 +640,11 @@ final class YoOhw_COS_Admin_Tools {
 
 		check_admin_referer( 'yoohw_cos_reset_data' );
 
-		YoOhw_COS_Customers::reset_data();
+		try {
+			YoOhw_COS_Customers::reset_data( sanitize_text_field( wp_unslash( $_POST['yoohw_cos_reset_epoch'] ?? '' ) ) );
+		} catch ( RuntimeException $exception ) {
+			wp_die( esc_html( $exception->getMessage() ), esc_html__( 'Reset incomplete', 'yoohw-customer-intelligence' ), array( 'response' => 409, 'back_link' => true ) );
+		}
 
 		wp_safe_redirect(
 			add_query_arg(
@@ -799,6 +863,18 @@ final class YoOhw_COS_Admin_Tools {
 	}
 
 	public static function handle_recalculate_intelligence(): void {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			wp_die( esc_html__( 'Customer data is busy or Reset requires recovery. Retry this operation after Reset completes.', 'yoohw-customer-intelligence' ), '', array( 'response' => 409, 'back_link' => true ) );
+			return;
+		}
+		try {
+			self::handle_recalculate_intelligence_guarded(  );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function handle_recalculate_intelligence_guarded(  ): void {
 		if ( ! current_user_can( 'manage_woocommerce' ) ) {
 			wp_die( esc_html__( 'You do not have permission to perform this action.', 'yoohw-customer-intelligence' ) );
 		}
@@ -826,6 +902,18 @@ final class YoOhw_COS_Admin_Tools {
 	}
 
 	public static function handle_backfill_first_orders(): void {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			wp_die( esc_html__( 'Customer data is busy or Reset requires recovery. Retry this operation after Reset completes.', 'yoohw-customer-intelligence' ), '', array( 'response' => 409, 'back_link' => true ) );
+			return;
+		}
+		try {
+			self::handle_backfill_first_orders_guarded(  );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function handle_backfill_first_orders_guarded(  ): void {
 		if ( ! current_user_can( 'manage_woocommerce' ) ) {
 			wp_die( esc_html__( 'You do not have permission to perform this action.', 'yoohw-customer-intelligence' ) );
 		}
@@ -853,6 +941,18 @@ final class YoOhw_COS_Admin_Tools {
 	}
 
 	public static function handle_sync_blacklist_signals(): void {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			wp_die( esc_html__( 'Customer data is busy or Reset requires recovery. Retry this operation after Reset completes.', 'yoohw-customer-intelligence' ), '', array( 'response' => 409, 'back_link' => true ) );
+			return;
+		}
+		try {
+			self::handle_sync_blacklist_signals_guarded(  );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	private static function handle_sync_blacklist_signals_guarded(  ): void {
 		if ( ! current_user_can( 'manage_woocommerce' ) ) {
 			wp_die( esc_html__( 'You do not have permission to perform this action.', 'yoohw-customer-intelligence' ) );
 		}
