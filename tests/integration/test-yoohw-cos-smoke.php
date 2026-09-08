@@ -1622,4 +1622,41 @@ final class YCI_Schema_Upgrade_Test extends WP_UnitTestCase {
 		$this->assertTrue( YoOhw_COS_Install::schema_is_ready() );
 	}
 
+	public function test_runtime_does_not_downgrade_a_newer_schema_version(): void {
+		global $wpdb;
+		$table = YoOhw_COS_DB::notes_table();
+		$state = YoOhw_COS_Migration_Runner::get_state();
+		$this->assertNotFalse( $wpdb->query( "ALTER TABLE {$table} MODIFY visibility VARCHAR(100) NOT NULL DEFAULT 'private'" ) );
+		$this->assertSame( 1, $wpdb->insert( $table, array( 'customer_id' => 0, 'author_id' => null, 'note_content' => 'Synthetic newer-schema sentinel', 'visibility' => str_repeat( 'v', 80 ), 'created_at' => YoOhw_COS_DB::now(), 'updated_at' => YoOhw_COS_DB::now() ) ) );
+		$id = (int) $wpdb->insert_id;
+		$before = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i WHERE id = %d', $table, $id ), ARRAY_A );
+		$ddl = array();
+		$observe = static function ( $query ) use ( &$ddl ) {
+			if ( preg_match( '/^\s*(CREATE|ALTER|DROP|RENAME)\b/i', $query ) ) { $ddl[] = $query; }
+			return $query;
+		};
+		update_option( 'yoohw_cos_db_version', '0.2.2' );
+		wp_clear_scheduled_hook( YoOhw_COS_Migration_Runner::HOOK );
+		try {
+			add_filter( 'query', $observe );
+			YoOhw_COS_Install::maybe_update();
+			YoOhw_COS_Install::maybe_update();
+			remove_filter( 'query', $observe );
+			$this->assertSame( array(), $ddl, 'A rollback must not apply older schema DDL.' );
+			$this->assertSame( '0.2.2', get_option( 'yoohw_cos_db_version' ) );
+			$this->assertSame( 'varchar(100)', $wpdb->get_row( "SHOW COLUMNS FROM {$table} LIKE 'visibility'" )->Type );
+			$this->assertSame( $before, $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i WHERE id = %d', $table, $id ), ARRAY_A ) );
+			$this->assertSame( 'blocked', get_option( 'yoohw_cos_schema_status' )['status'] );
+			YoOhw_COS_Migration_Runner::init();
+			do_action( YoOhw_COS_Migration_Runner::HOOK );
+			$this->assertSame( $state, YoOhw_COS_Migration_Runner::get_state() );
+			$this->assertFalse( wp_next_scheduled( YoOhw_COS_Migration_Runner::HOOK ) );
+		} finally {
+			remove_filter( 'query', $observe );
+			$wpdb->delete( $table, array( 'id' => $id ) );
+			$this->assertNotFalse( $wpdb->query( "ALTER TABLE {$table} MODIFY visibility VARCHAR(30) NOT NULL DEFAULT 'private'" ) );
+			YoOhw_COS_Install::schema_is_ready();
+		}
+	}
+
 }

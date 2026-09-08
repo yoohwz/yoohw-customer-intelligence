@@ -30,7 +30,9 @@ progress and the original same-target schema metadata. Lock ownership is unchang
 
 Old-version upgrades retry on the next ordinary request. A current version also gets
 an actual readiness check: valid schema is a DDL-free no-op, while detected drift can
-retry the existing DDL. Partial successful changes remain for the next attempt. The
+retry the existing DDL. A stored version newer than this plugin target is never
+downgraded by `maybe_update()`: it checks readiness for migration gating but does not
+apply older DDL or reset registrations. Partial successful changes remain for the next attempt. The
 plugin never drops data/indexes to resolve a blocker. For example, duplicate non-null
 `source_key` rows block a required unique index; support must resolve the data blocker
 under a separately authorized policy. This change provides truthful status, not an

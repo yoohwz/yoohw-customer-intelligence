@@ -652,6 +652,11 @@ final class YoOhw_COS_Install {
 
 	public static function maybe_update(): void {
 		$current_db_version = (string) get_option( 'yoohw_cos_db_version', '' );
+		// A rollback must not apply older DDL or lower a newer stored schema version.
+		if ( version_compare( $current_db_version, self::db_version(), '>' ) ) {
+			self::schema_is_ready();
+			return;
+		}
 		if ( version_compare( $current_db_version, self::db_version(), '<' ) || ! self::schema_is_ready() ) {
 			self::upgrade_schema( $current_db_version );
 		}
