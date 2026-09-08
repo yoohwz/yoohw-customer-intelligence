@@ -2,6 +2,9 @@
 
 Use this checklist before packaging YoOhw Customer Intelligence for WooCommerce for WordPress.org.
 
+The evidence below certifies the historical `1.2.2` candidate only. Current-candidate
+validation belongs in its PR and CI; see [the workflow](workflow.md).
+
 ## Metadata
 
 - `readme.txt` exists and follows WordPress.org formatting.
@@ -10,7 +13,7 @@ Use this checklist before packaging YoOhw Customer Intelligence for WooCommerce 
 - `Contributors` contains the final WordPress.org username.
 - Tags are limited to five and do not keyword-stuff competitors.
 
-## Current Baseline
+## Historical 1.2.2 Baseline
 
 - Plugin version: `1.2.2`
 - Stable tag: `1.2.2`
@@ -28,7 +31,7 @@ Use this checklist before packaging YoOhw Customer Intelligence for WooCommerce 
 - Current DB version: `0.1.10`
 - Expected custom tables: `8`
 
-## RC Verification
+## Historical 1.2.2 RC Verification
 
 - Date: `2026-07-30`
 - Latest hardening refresh: `2026-07-30`

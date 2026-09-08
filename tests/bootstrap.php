@@ -1,6 +1,7 @@
 <?php
 
-defined( 'ABSPATH' ) || 'cli' === PHP_SAPI || exit;
+require_once __DIR__ . '/environment.php';
+yci_test_environment();
 
 $yoohw_cos_autoload = dirname( __DIR__ ) . '/vendor/autoload.php';
 
@@ -10,16 +11,19 @@ if ( file_exists( $yoohw_cos_autoload ) ) {
 
 $yoohw_cos_tests_dir = getenv( 'WP_TESTS_DIR' );
 
-if ( ! $yoohw_cos_tests_dir ) {
-	$yoohw_cos_tests_dir = '/tmp/wordpress-tests-lib';
-}
-
 if ( ! file_exists( $yoohw_cos_tests_dir . '/includes/functions.php' ) ) {
 	echo "WordPress test library not found. Set WP_TESTS_DIR.\n";
 	exit( 1 );
 }
 
 require_once $yoohw_cos_tests_dir . '/includes/functions.php';
+
+tests_add_filter(
+	'pre_http_request',
+	static function () {
+		return new WP_Error( 'yci_test_http_blocked', 'External HTTP is disabled in isolated tests.' );
+	}
+);
 
 $yoohw_cos_hpos_enabled = strtolower( (string) getenv( 'WC_HPOS_ENABLED' ) );
 
@@ -44,8 +48,14 @@ tests_add_filter(
 		}
 
 		require_once $woocommerce;
+		// Fresh databases need commerce tables before WooCommerce init reads them.
+		WC_Install::create_tables();
 
 		require dirname( __DIR__ ) . '/yoohw-customer-intelligence.php';
+		wp_mail( 'fixture@example.test', 'Interception probe', 'Synthetic fixture' );
+		if ( empty( $GLOBALS['yci_intercepted_mail'] ) ) {
+			throw new RuntimeException( 'Mail interception failed before fixture hooks.' );
+		}
 	}
 );
 

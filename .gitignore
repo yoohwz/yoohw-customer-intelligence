@@ -1,3 +1,5 @@
 .DS_Store
 /.phpunit.result.cache
 /vendor/
+
+__pycache__/
