@@ -28,7 +28,10 @@ reuse; it is not a sandbox against malicious code running as the same OS user. U
 PR code belongs only on disposable GitHub runners with read-only tokens and no secrets.
 
 A pluggable `wp_mail` replacement is installed before fixture/plugin hooks and counts
-attempts without storing recipients or bodies. The PHPUnit process also disables PHP
+attempts without storing recipients or bodies by default. Focused notification fixtures
+may opt into an in-memory observer of synthetic recipients/content and a controlled
+boolean transport result; they remove the observer after each test and never log or
+persist raw messages or addresses. The PHPUnit process also disables PHP
 `mail`. The WordPress HTTP API is blocked before plugin hooks. No browser is needed; if browser QA is later admitted, use a fresh disposable
 profile, synthetic data and persisted-state checks, never an existing signed-in profile.
 

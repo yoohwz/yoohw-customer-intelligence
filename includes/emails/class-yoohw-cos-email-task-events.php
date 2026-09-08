@@ -11,17 +11,22 @@ abstract class YoOhw_COS_Email_Task_Event extends YoOhw_COS_Email_CRM_Base {
 	}
 
 	public function trigger( array $task, int $recipient_user_id, array $context = array() ): bool {
-		$this->task    = $task;
-		$this->context = $context;
-		$this->object  = (object) $task;
+		$this->begin_notification( $recipient_user_id );
+		try {
+			$this->task    = $task;
+			$this->context = $context;
+			$this->object  = (object) $task;
 
-		if ( empty( $task ) || ! $this->prepare_recipient_user( $recipient_user_id ) ) {
-			return false;
+			if ( empty( $task ) || ! $this->prepare_recipient_user( $recipient_user_id ) ) {
+				return false;
+			}
+
+			$this->set_task_placeholders( $task );
+
+			return $this->send_notification();
+		} finally {
+			$this->reset_notification();
 		}
-
-		$this->set_task_placeholders( $task );
-
-		return $this->send_notification();
 	}
 
 	public function get_content_html() {

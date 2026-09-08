@@ -77,6 +77,9 @@ function yci_test_environment(): array {
 if ( ! function_exists( 'wp_mail' ) ) {
 	function wp_mail( $to, $subject, $message, $headers = '', $attachments = array() ) {
 		$GLOBALS['yci_intercepted_mail'] = ( $GLOBALS['yci_intercepted_mail'] ?? 0 ) + 1;
+		if ( isset( $GLOBALS['yci_fixture_mail_observer'] ) ) {
+			return (bool) call_user_func( $GLOBALS['yci_fixture_mail_observer'], $to, $subject, $message );
+		}
 		return true;
 	}
 } else {
