@@ -21,10 +21,30 @@ if ( 'ordinary-request' === $mode ) {
 	wp_set_current_user( (int) $input['user'] );
 	if ( 'handle_send_customer_email' === ( $input['handler'] ?? '' ) || ! empty( $input['search'] ) ) { define( 'DOING_AJAX', true ); }
 	$_SERVER['REQUEST_METHOD'] = $input['method'];
+	$_SERVER['HTTP_HOST'] = 'example.test';
+	$_SERVER['REQUEST_URI'] = '/wp-admin/admin.php';
+	$_SERVER['SERVER_PORT'] = '80';
 	$_POST = 'POST' === $input['method'] ? $input['data'] : array();
 	$_GET = 'GET' === $input['method'] ? $input['data'] : array();
 	$_REQUEST = $input['data'];
 	$before_mail = $GLOBALS['yci_intercepted_mail'] ?? 0;
+
+	$reset_during_warning = '';
+	if ( ! empty( $input['probe_reset_warning'] ) ) {
+		add_filter( 'gettext', static function( $translation, $text ) use ( &$reset_during_warning ) {
+			if ( '' === $reset_during_warning && in_array( $text, array( 'This tag is assigned to %s customers. Delete it anyway?', 'This segment is assigned to %s customers. Delete it anyway?' ), true ) ) {
+				$process = proc_open( array( PHP_BINARY, '-d', 'disable_functions=mail', __FILE__, 'reset' ), array( array( 'pipe', 'r' ), array( 'pipe', 'w' ), array( 'pipe', 'w' ) ), $pipes );
+				if ( ! is_resource( $process ) ) { throw new RuntimeException( 'Could not start owned reset probe.' ); }
+				fclose( $pipes[0] );
+				stream_set_timeout( $pipes[1], 15 );
+				$reset_during_warning = trim( stream_get_contents( $pipes[1] ) );
+				fclose( $pipes[1] ); fclose( $pipes[2] );
+				if ( 0 !== proc_close( $process ) ) { throw new RuntimeException( 'Owned reset probe failed.' ); }
+			}
+			return $translation;
+		}, 10, 2 );
+	}
+
 	add_filter( 'wp_die_handler', static function() {
 		return static function( $message, $title = '', $args = array() ) {
 			throw new RuntimeException( strip_tags( (string) $message ), (int) ( $args['response'] ?? 500 ) );
@@ -32,9 +52,14 @@ if ( 'ordinary-request' === $mode ) {
 	} );
 	add_filter( 'wp_die_ajax_handler', static function() { return apply_filters( 'wp_die_handler', null ); } );
 	add_filter( 'wp_redirect', static function( $url ) { throw new RuntimeException( $url, 302 ); } );
+	set_error_handler( static function( $severity, $message, $file, $line ) { throw new ErrorException( $message, 500, $severity, $file, $line ); }, E_WARNING | E_NOTICE );
 	ob_start();
 	try {
-		if ( isset( $input['bulk'] ) ) {
+		if ( isset( $input['render_kind'] ) ) {
+			require_once ABSPATH . 'wp-admin/includes/admin.php';
+			set_current_screen( 'woocommerce_page_yoohw-customer-intelligence' );
+			call_user_func( array( 'YoOhw_COS_Admin_Menu', 'render_' . $input['render_kind'] . 's_page' ) );
+		} elseif ( isset( $input['bulk'] ) ) {
 			$method = new ReflectionMethod( 'YoOhw_COS_Admin_Menu', 'maybe_handle_' . $input['bulk'] . '_bulk_action' );
 			$method->setAccessible( true );
 			$method->invoke( null );
@@ -43,12 +68,13 @@ if ( 'ordinary-request' === $mode ) {
 		}
 		$status = 200;
 		$message = '';
-	} catch ( RuntimeException $exception ) {
+	} catch ( Throwable $exception ) {
 		$status = $exception->getCode();
 		$message = $exception->getMessage();
 	}
+	restore_error_handler();
 	$output = ob_get_clean();
-	echo json_encode( array( 'status' => $status, 'message' => $message, 'body' => $output, 'mail' => ( $GLOBALS['yci_intercepted_mail'] ?? 0 ) - $before_mail ) ) . "\n";
+	echo json_encode( array( 'reset' => $reset_during_warning, 'status' => $status, 'message' => $message, 'body' => $output, 'mail' => ( $GLOBALS['yci_intercepted_mail'] ?? 0 ) - $before_mail ) ) . "\n";
 } elseif ( 'stale-ordinary' === $mode ) {
 	echo "READY\n";
 	fflush( STDOUT );

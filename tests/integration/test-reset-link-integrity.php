@@ -689,4 +689,164 @@ final class YCI_Reset_Link_Integrity_Test extends WP_UnitTestCase {
 		} finally { $_GET = $saved_get; $_POST = $saved_post; $_REQUEST = $saved_request; }
 	}
 
+	public static function segment_http_cases(): array {
+		return array_map( static function( $case ) { return array( $case ); }, array( 'named', 'nojs', 'id', 'mixed', 'limit', 'over' ) );
+	}
+
+	private function correction_user(): int {
+		$user = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		get_user_by( 'id', $user )->add_cap( 'manage_woocommerce' );
+		wp_set_current_user( $user );
+		return $user;
+	}
+
+	/** @dataProvider segment_http_cases */
+	public function test_segment_http_valid_inputs_and_atomic_name_limit( string $case ): void {
+		global $wpdb;
+		$ids = $this->ordinary_fixture();
+		$user = $this->correction_user();
+		$existing = YoOhw_COS_Segments::create_segment( 'Existing selection' );
+		$data = array( 'customer_id' => $ids[0], '_wpnonce' => wp_create_nonce( 'yoohw_cos_assign_customer_segment' ), 'yoohw_cos_epoch' => YoOhw_COS_Reset_Guard::epoch() );
+		$names = array( 'Round3 ' . $case . ' Alpha', 'Round3 ' . $case . ' Beta' );
+		if ( in_array( $case, array( 'limit', 'over' ), true ) ) {
+			$names = array_map( static function( $i ) use ( $case ) { return 'Bounded ' . $case . ' ' . $i; }, range( 1, 'limit' === $case ? 100 : 101 ) );
+		}
+		if ( 'id' !== $case ) { $data[ 'nojs' === $case ? 'segment_name_nojs' : 'segment_name' ] = implode( ',', $names ) . ',' . $names[0]; }
+		if ( in_array( $case, array( 'id', 'mixed', 'over' ), true ) ) { $data['segment_id'] = $existing; }
+		$wpdb->query( 'COMMIT' );
+		$before = $this->ordinary_rows();
+		$result = $this->fresh_action( array( 'user' => $user, 'handler' => 'handle_assign_customer_segment', 'method' => 'POST', 'data' => $data ) );
+		$this->assertSame( 0, $result['mail'] );
+		$this->assertSame( 'over' === $case ? 400 : 302, $result['status'], wp_json_encode( $result ) );
+		if ( 'over' === $case ) {
+			$this->assertSame( $before, $this->ordinary_rows(), 'Reject all input before assigning even the valid existing ID.' );
+			return;
+		}
+		$this->assertStringContainsString( 'segment_added=1', $result['message'] );
+		$after = $this->ordinary_rows();
+		$created = 'id' === $case ? 0 : count( $names );
+		$assigned = $created + ( isset( $data['segment_id'] ) ? 1 : 0 );
+		$this->assertCount( count( $before['segments'] ) + $created, $after['segments'] );
+		$this->assertCount( count( $before['customer_segments'] ) + $assigned, $after['customer_segments'] );
+		$this->assertCount( count( $before['events'] ) + $assigned, $after['events'] );
+		foreach ( array_slice( $after['events'], count( $before['events'] ) ) as $event ) {
+			$this->assertSame( 'segment_assigned', $event['event_type'] );
+			$this->assertSame( $ids[0], (int) $event['customer_id'] );
+		}
+	}
+
+	private function correction_link( string $html, string $action, bool $force ): array {
+		$dom = new DOMDocument();
+		@$dom->loadHTML( $html );
+		foreach ( ( new DOMXPath( $dom ) )->query( '//a[@href]' ) as $link ) {
+			parse_str( (string) parse_url( html_entity_decode( $link->getAttribute( 'href' ) ), PHP_URL_QUERY ), $args );
+			if ( $action === ( $args['action'] ?? '' ) && $force === ! empty( $args['force'] ) ) { return $args; }
+		}
+		return array();
+	}
+
+	private function correction_page( string $kind, int $user, array $data = array() ): array {
+		return $this->fresh_action( array( 'user' => $user, 'render_kind' => $kind, 'method' => 'GET', 'data' => $data ) );
+	}
+
+	private function correction_warning( string $kind, int $user ): array {
+		$page = $this->correction_page( $kind, $user, array( 's' => 'Ordinary ' . $kind ) );
+		$this->assertSame( 200, $page['status'], wp_json_encode( $page ) );
+		$row = $this->correction_link( $page['body'], 'yoohw_cos_delete_' . $kind, false );
+		$this->assertNotEmpty( $row );
+		$result = $this->fresh_action( array( 'user' => $user, 'handler' => 'handle_delete_' . $kind, 'method' => 'GET', 'data' => $row ) );
+		$this->assertSame( 302, $result['status'], wp_json_encode( $result ) );
+		parse_str( (string) parse_url( $result['message'], PHP_URL_QUERY ), $warning );
+		$this->assertArrayHasKey( 'yoohw_' . $kind . '_delete_block', $warning );
+		return $warning;
+	}
+
+	public static function confirmation_cases(): array {
+		$cases = array();
+		foreach ( array( 'tag', 'segment' ) as $kind ) {
+			foreach ( array( 'current', 'legacy', 'before_warning', 'after_warning', 'pending', 'missing', 'malformed' ) as $stage ) { $cases[] = array( $kind, $stage ); }
+		}
+		return $cases;
+	}
+
+	/** @dataProvider confirmation_cases */
+	public function test_real_force_confirmation_chain_preserves_original_generation( string $kind, string $stage ): void {
+		global $wpdb;
+		$ids = $this->ordinary_fixture();
+		$user = $this->correction_user();
+		if ( 'legacy' === $stage ) { delete_option( YoOhw_COS_Reset_Guard::OPTION ); YoOhw_COS_Reset_Guard::init(); }
+		$epoch = YoOhw_COS_Reset_Guard::epoch();
+		$wpdb->query( 'COMMIT' );
+		$warning = $this->correction_warning( $kind, $user );
+		if ( 'before_warning' === $stage ) {
+			$this->ordinary_fixture(); $wpdb->query( 'COMMIT' );
+		} elseif ( 'pending' === $stage ) {
+			update_option( YoOhw_COS_Reset_Guard::OPTION, array( 'epoch' => $epoch, 'status' => 'pending' ), false ); $wpdb->query( 'COMMIT' );
+		} elseif ( 'missing' === $stage ) {
+			unset( $warning['yoohw_cos_epoch'] );
+		} elseif ( 'malformed' === $stage ) {
+			$warning['yoohw_cos_epoch'] = array( 'bad' );
+		}
+		$before = $this->ordinary_rows();
+		$page = $this->correction_page( $kind, $user, $warning );
+		$this->assertSame( 0, $page['mail'] );
+		$force = $this->correction_link( $page['body'], 'yoohw_cos_delete_' . $kind, true );
+		if ( in_array( $stage, array( 'before_warning', 'pending', 'missing', 'malformed' ), true ) ) {
+			$this->assertEmpty( $force, 'Invalid warning context must not mint a destructive confirmation link.' );
+			$this->assertStringContainsString( 'Reload', $page['body'] . $page['message'] );
+			$this->assertSame( $before, $this->ordinary_rows() );
+			if ( 'pending' === $stage ) { YoOhw_COS_Customers::reset_data(); $this->ordinary_fixture(); $wpdb->query( 'COMMIT' ); }
+			// Genuine reload/reselection obtains its own row, warning and confirmation.
+			$warning = $this->correction_warning( $kind, $user );
+			$page = $this->correction_page( $kind, $user, $warning );
+			$force = $this->correction_link( $page['body'], 'yoohw_cos_delete_' . $kind, true );
+		} elseif ( 'after_warning' === $stage ) {
+			$this->ordinary_fixture(); $wpdb->query( 'COMMIT' );
+			$before = $this->ordinary_rows();
+			$result = $this->fresh_action( array( 'user' => $user, 'handler' => 'handle_delete_' . $kind, 'method' => 'GET', 'data' => $force ) );
+			$this->assertSame( 409, $result['status'] );
+			$this->assertSame( 0, $result['mail'] );
+			$this->assertSame( $before, $this->ordinary_rows() );
+			$warning = $this->correction_warning( $kind, $user );
+			$page = $this->correction_page( $kind, $user, $warning );
+			$force = $this->correction_link( $page['body'], 'yoohw_cos_delete_' . $kind, true );
+		}
+		$this->assertNotEmpty( $force );
+		$this->assertArrayHasKey( 'yoohw_cos_epoch', $force );
+		$this->assertSame( $warning['yoohw_cos_epoch'], $force['yoohw_cos_epoch'] );
+		$this->assertSame( YoOhw_COS_Reset_Guard::epoch(), $force['yoohw_cos_epoch'] );
+		$before = $this->ordinary_rows();
+		$result = $this->fresh_action( array( 'user' => $user, 'handler' => 'handle_delete_' . $kind, 'method' => 'GET', 'data' => $force ) );
+		$this->assertSame( 302, $result['status'], wp_json_encode( $result ) );
+		$this->assertStringContainsString( 'yoohw_' . $kind . '_deleted=1', $result['message'] );
+		$this->assertSame( 0, $result['mail'] );
+		$after = $this->ordinary_rows();
+		$this->assertCount( count( $before[ $kind . 's' ] ) - 1, $after[ $kind . 's' ] );
+		$this->assertEmpty( $after[ 'customer_' . $kind . 's' ] );
+		unset( $before[ $kind . 's' ], $before[ 'customer_' . $kind . 's' ], $after[ $kind . 's' ], $after[ 'customer_' . $kind . 's' ] );
+		$this->assertSame( $before, $after, 'Unrelated CRM records/events and other relationship family remain intact.' );
+	}
+
+	public static function confirmation_families(): array { return array( array( 'tag' ), array( 'segment' ) ); }
+
+	/** @dataProvider confirmation_families */
+	public function test_warning_reads_fresh_count_and_excludes_reset_during_render( string $kind ): void {
+		global $wpdb;
+		$this->ordinary_fixture();
+		$user = $this->correction_user();
+		$epoch = YoOhw_COS_Reset_Guard::epoch();
+		$wpdb->query( 'COMMIT' );
+		$warning = $this->correction_warning( $kind, $user );
+		$warning[ $kind . '_customer_count' ] = '999'; // A redirect's old/display count is not a fresh reference read.
+		$before = $this->ordinary_rows();
+		$result = $this->fresh_action( array( 'user' => $user, 'render_kind' => $kind, 'probe_reset_warning' => true, 'method' => 'GET', 'data' => $warning ) );
+		$this->assertSame( 'BUSY', $result['reset'] );
+		$this->assertSame( 200, $result['status'] );
+		$this->assertStringContainsString( 'assigned to 1 customers', $result['body'] );
+		$this->assertStringNotContainsString( 'assigned to 999 customers', $result['body'] );
+		$force = $this->correction_link( $result['body'], 'yoohw_cos_delete_' . $kind, true );
+		$this->assertSame( $epoch, $force['yoohw_cos_epoch'] );
+		$this->assertSame( $before, $this->ordinary_rows() );
+	}
+
 }

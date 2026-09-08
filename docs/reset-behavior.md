@@ -126,3 +126,24 @@ at the admitted baseline too. The rendering fixture assigns its synthetic row di
 this suite does not certify successful assigned-task delivery. This separate email
 implementation defect is not repaired or suppressed in #9. Rejected reset/stale actions
 are checked before any such hook or mail attempt, and the existing task hooks remain.
+
+
+The individual tag/segment delete warning preserves the validated selection epoch in
+its redirect and confirmation URL, including the explicit empty legacy epoch. Warning
+rendering validates that context under the existing reset guard before reading the
+selected definition and its current membership count; it does not trust an old count
+from a redirect or issue a force link for stale/pending/malformed/missing context.
+The final handler validates the same epoch again. Reload/reselection starts a new flow.
+Inline segment assignment parses and deduplicates all names, including the no-JavaScript
+fallback, and checks the 100-name bound before assigning an optional existing ID.
+
+Focused regressions follow real row links, warning redirects, rendered force URLs and
+protected final handlers in separate PHP requests for both relationship families.
+They cover Reset/rebuild before warning render and after confirmation render, rejected
+warning contexts, legacy-empty epochs and valid reload/cascades. A separate reset
+process attempts Reset during warning output and must observe busy; warning counts
+come from persistence. Current segment HTTP tests cover named/no-JS/ID/mixed input,
+deduplication, 100 names and over-limit atomic rejection, with definition/membership/
+event and mail assertions. The request probe treats meaningful PHP warnings/notices
+as failures rather than hiding them. These are synthetic CLI request/render tests,
+not browser or assigned-task mail delivery certification.

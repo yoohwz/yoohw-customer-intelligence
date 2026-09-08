@@ -1123,6 +1123,7 @@ final class YoOhw_COS_Admin_Tools {
 				? $segment_name
 				: sanitize_textarea_field( wp_unslash( $_POST['segment_name_nojs'] ) );
 			$assigned     = false;
+			$names        = self::parse_relationship_names( $segment_name );
 
 			if ( $customer_id && YoOhw_COS_Customers::customer_exists( $customer_id ) ) {
 				if ( $segment_id && YoOhw_COS_Segments::segment_exists( $segment_id ) ) {
@@ -1569,6 +1570,7 @@ final class YoOhw_COS_Admin_Tools {
 							'page'                    => 'yoohw-customer-intelligence-tags',
 							'yoohw_tag_delete_block'  => $tag_id,
 							'tag_customer_count'      => $count,
+							YoOhw_COS_Reset_Guard::FORM_FIELD => wp_unslash( $_GET[ YoOhw_COS_Reset_Guard::FORM_FIELD ] ),
 						),
 						admin_url( 'admin.php' )
 					)
@@ -1681,6 +1683,7 @@ final class YoOhw_COS_Admin_Tools {
 							'page'                       => 'yoohw-customer-intelligence-segments',
 							'yoohw_segment_delete_block' => $segment_id,
 							'segment_customer_count'     => $count,
+							YoOhw_COS_Reset_Guard::FORM_FIELD => wp_unslash( $_GET[ YoOhw_COS_Reset_Guard::FORM_FIELD ] ),
 						),
 						admin_url( 'admin.php' )
 					)

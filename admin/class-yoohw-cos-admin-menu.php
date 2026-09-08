@@ -1944,31 +1944,7 @@ final class YoOhw_COS_Admin_Menu {
 		}
 
 		if ( ! empty( $_GET['yoohw_tag_delete_block'] ) ) {
-			$tag_id = absint( wp_unslash( $_GET['yoohw_tag_delete_block'] ) );
-			$count  = isset( $_GET['tag_customer_count'] ) ? absint( wp_unslash( $_GET['tag_customer_count'] ) ) : 0;
-
-			$force_url = wp_nonce_url(
-				add_query_arg(
-					array(
-						'action' => 'yoohw_cos_delete_tag',
-						'tag_id' => $tag_id,
-						'force'  => 1,
-					),
-					admin_url( 'admin-post.php' )
-				),
-				'yoohw_cos_delete_tag'
-			);
-
-			echo '<div class="notice notice-warning"><p>';
-			printf(
-				/* translators: %s: number of customers assigned to this tag. */
-				esc_html__( 'This tag is assigned to %s customers. Delete it anyway?', 'yoohw-customer-intelligence' ),
-				esc_html( number_format_i18n( $count ) )
-			);
-			echo ' <a class="button button-small button-link-delete" href="' . esc_url( $force_url ) . '" data-yoohw-cos-confirm="' . esc_attr__( 'This will remove the tag from all assigned customers. Continue?', 'yoohw-customer-intelligence' ) . '">';
-			echo esc_html__( 'Force delete tag', 'yoohw-customer-intelligence' );
-			echo '</a>';
-			echo '</p></div>';
+			self::render_term_delete_warning( true, absint( wp_unslash( $_GET['yoohw_tag_delete_block'] ) ) );
 		}
 
 		echo '<div id="col-container" class="wp-clearfix yoohw-cos-term-layout">';
@@ -1993,6 +1969,44 @@ final class YoOhw_COS_Admin_Menu {
 		echo '</div>';
 
 		echo '</div>';
+	}
+
+	/** A warning redirect is still the original selection, not a fresh authorization. */
+	private static function render_term_delete_warning( bool $is_tag, int $term_id ): void {
+		YoOhw_COS_Reset_Guard::require_submission( $_GET );
+		try {
+			$term = $is_tag ? YoOhw_COS_Tags::get_tag( $term_id ) : YoOhw_COS_Segments::get_segment( $term_id );
+			if ( empty( $term ) ) {
+				echo '<div class="notice notice-warning"><p>' . esc_html( YoOhw_COS_Reset_Guard::rejection_message() ) . '</p></div>';
+				return;
+			}
+			$count = $is_tag ? YoOhw_COS_Tags::get_tag_customer_count( $term_id ) : YoOhw_COS_Segments::get_segment_customer_count( $term_id );
+			$kind = $is_tag ? 'tag' : 'segment';
+			$action = 'yoohw_cos_delete_' . $kind;
+			$force_url = wp_nonce_url(
+				add_query_arg(
+					array(
+						'action' => $action,
+						$kind . '_id' => $term_id,
+						'force' => 1,
+						YoOhw_COS_Reset_Guard::FORM_FIELD => wp_unslash( $_GET[ YoOhw_COS_Reset_Guard::FORM_FIELD ] ),
+					),
+					admin_url( 'admin-post.php' )
+				),
+				$action
+			);
+			echo '<div class="notice notice-warning"><p>';
+			printf(
+				/* translators: %s: number of customers assigned to this tag or segment. */
+				esc_html( $is_tag ? __( 'This tag is assigned to %s customers. Delete it anyway?', 'yoohw-customer-intelligence' ) : __( 'This segment is assigned to %s customers. Delete it anyway?', 'yoohw-customer-intelligence' ) ),
+				esc_html( number_format_i18n( $count ) )
+			);
+			echo ' <a class="button button-small button-link-delete" href="' . esc_url( $force_url ) . '" data-yoohw-cos-confirm="' . esc_attr( $is_tag ? __( 'This will remove the tag from all assigned customers. Continue?', 'yoohw-customer-intelligence' ) : __( 'This will remove the segment from all assigned customers. Continue?', 'yoohw-customer-intelligence' ) ) . '">';
+			echo esc_html( $is_tag ? __( 'Force delete tag', 'yoohw-customer-intelligence' ) : __( 'Force delete segment', 'yoohw-customer-intelligence' ) );
+			echo '</a></p></div>';
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
 	}
 
 	private static function maybe_handle_tags_bulk_action(): void {
@@ -2209,31 +2223,7 @@ final class YoOhw_COS_Admin_Menu {
 		}
 
 		if ( ! empty( $_GET['yoohw_segment_delete_block'] ) ) {
-			$segment_id = absint( wp_unslash( $_GET['yoohw_segment_delete_block'] ) );
-			$count      = isset( $_GET['segment_customer_count'] ) ? absint( wp_unslash( $_GET['segment_customer_count'] ) ) : 0;
-
-			$force_url = wp_nonce_url(
-				add_query_arg(
-					array(
-						'action'     => 'yoohw_cos_delete_segment',
-						'segment_id' => $segment_id,
-						'force'      => 1,
-					),
-					admin_url( 'admin-post.php' )
-				),
-				'yoohw_cos_delete_segment'
-			);
-
-			echo '<div class="notice notice-warning"><p>';
-			printf(
-				/* translators: %s: number of customers assigned to this segment. */
-				esc_html__( 'This segment is assigned to %s customers. Delete it anyway?', 'yoohw-customer-intelligence' ),
-				esc_html( number_format_i18n( $count ) )
-			);
-			echo ' <a class="button button-small button-link-delete" href="' . esc_url( $force_url ) . '" data-yoohw-cos-confirm="' . esc_attr__( 'This will remove the segment from all assigned customers. Continue?', 'yoohw-customer-intelligence' ) . '">';
-			echo esc_html__( 'Force delete segment', 'yoohw-customer-intelligence' );
-			echo '</a>';
-			echo '</p></div>';
+			self::render_term_delete_warning( false, absint( wp_unslash( $_GET['yoohw_segment_delete_block'] ) ) );
 		}
 
 		if ( isset( $_GET['yoohw_segment_updated'] ) ) {
