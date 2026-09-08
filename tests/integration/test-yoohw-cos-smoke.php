@@ -1333,3 +1333,293 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 		}
 	}
 }
+
+final class YCI_Schema_Upgrade_Test extends WP_UnitTestCase {
+	private $fixture_ids = array();
+	private $saved_options = array();
+
+	public function set_up(): void {
+		parent::set_up();
+		// This guarded suite needs real persistent DDL metadata, not WP's temporary-table rewriting.
+		remove_filter( 'query', array( $this, '_create_temporary_tables' ) );
+		remove_filter( 'query', array( $this, '_drop_temporary_tables' ) );
+		foreach ( array( 'yoohw_cos_db_version', 'yoohw_cos_version', 'yoohw_cos_schema_status', 'yoohw_cos_data_migrations', 'yoohw_cos_data_migration_lock', 'cron' ) as $option ) {
+			$this->saved_options[ $option ] = get_option( $option, false );
+		}
+	}
+
+	public function tear_down(): void {
+		global $wpdb;
+		foreach ( $this->saved_options as $option => $value ) {
+			if ( false === $value ) { delete_option( $option ); } else { update_option( $option, $value ); }
+		}
+		// DDL implicitly commits; commit the matching fixture cleanup before PHPUnit rolls back.
+		$wpdb->query( 'COMMIT' );
+		parent::tear_down();
+	}
+
+	private function tasks_inventory(): array {
+		global $wpdb;
+		$indexes = $wpdb->get_results( 'SHOW INDEX FROM ' . YoOhw_COS_DB::tasks_table(), ARRAY_A );
+		foreach ( $indexes as &$index ) { unset( $index['Cardinality'] ); }
+		unset( $index );
+		return array(
+			'columns' => $wpdb->get_results( 'SHOW COLUMNS FROM ' . YoOhw_COS_DB::tasks_table(), ARRAY_A ),
+			'indexes' => $indexes,
+		);
+	}
+
+	private function rows(): array {
+		global $wpdb;
+		return $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM %i WHERE id IN (%d, %d) ORDER BY id', YoOhw_COS_DB::tasks_table(), $this->fixture_ids[0], $this->fixture_ids[1] ), ARRAY_A );
+	}
+
+	private function duplicate_source_fixture(): void {
+		global $wpdb;
+		$this->assertNotFalse( $wpdb->query( 'ALTER TABLE ' . YoOhw_COS_DB::tasks_table() . ' DROP INDEX source_key' ) );
+		foreach ( array( 'First synthetic task', 'Second synthetic task' ) as $title ) {
+			$this->assertSame( 1, $wpdb->insert( YoOhw_COS_DB::tasks_table(), array( 'customer_id' => 0, 'title' => $title, 'source_key' => 'schema-fixture-duplicate', 'created_at' => YoOhw_COS_DB::now(), 'updated_at' => YoOhw_COS_DB::now() ) ) );
+			$this->fixture_ids[] = (int) $wpdb->insert_id;
+		}
+		$this->assertCount( 2, $this->rows() );
+	}
+
+	private function unique_source_index(): array {
+		global $wpdb;
+		return $wpdb->get_results( $wpdb->prepare( 'SHOW INDEX FROM %i WHERE Key_name = %s', YoOhw_COS_DB::tasks_table(), 'source_key' ), ARRAY_A );
+	}
+
+	public function test_real_duplicate_ddl_blocks_upgrade_and_retry_preserves_data(): void {
+		global $wpdb;
+		$this->duplicate_source_fixture();
+		$before = $this->rows();
+		$inventory = $this->tasks_inventory();
+		update_option( 'yoohw_cos_db_version', '0.1.10' );
+		delete_option( 'yoohw_cos_data_migrations' );
+		wp_clear_scheduled_hook( YoOhw_COS_Migration_Runner::HOOK );
+		$previous_suppression = $wpdb->suppress_errors();
+		try {
+			YoOhw_COS_Install::maybe_update();
+			$this->assertSame( array(), $this->unique_source_index(), 'Real duplicate rows prevent the required unique index.' );
+			$this->assertSame( $before, $this->rows(), 'Failed DDL must not remove or rewrite task data.' );
+			$this->assertSame( $inventory, $this->tasks_inventory(), 'Failed unique-index creation preserves all existing task schema definitions.' );
+			$this->assertSame( '0.1.10', get_option( 'yoohw_cos_db_version' ), 'Incomplete schema must not claim the target DB version.' );
+			$this->assertSame( array(), YoOhw_COS_Migration_Runner::get_state() );
+			$this->assertFalse( wp_next_scheduled( YoOhw_COS_Migration_Runner::HOOK ) );
+			$status = get_option( 'yoohw_cos_schema_status' );
+			$this->assertSame( 'blocked', $status['status'] );
+			$this->assertSame( YOOHW_COS_DB_VERSION, $status['target_version'] );
+			$this->assertContains( 'tasks.index.source_key', $status['requirements'] );
+			$this->assertNotEmpty( $status['last_attempt_at'] );
+			$this->assertSame( 1, $wpdb->update( YoOhw_COS_DB::tasks_table(), array( 'source_key' => 'schema-fixture-repaired' ), array( 'id' => $this->fixture_ids[1] ) ) );
+			$repaired = $this->rows();
+			YoOhw_COS_Install::maybe_update();
+			$this->assertSame( $repaired, $this->rows() );
+			$this->assertSame( YOOHW_COS_DB_VERSION, get_option( 'yoohw_cos_db_version' ), wp_json_encode( get_option( 'yoohw_cos_schema_status' ) ) );
+			$index = $this->unique_source_index();
+			$this->assertCount( 1, $index );
+			$this->assertSame( '0', $index[0]['Non_unique'] );
+			$this->assertSame( 'source_key', $index[0]['Column_name'] );
+			$this->assertNull( $index[0]['Sub_part'] );
+			$this->assertSame( 'ready', get_option( 'yoohw_cos_schema_status' )['status'] );
+			$state = YoOhw_COS_Migration_Runner::get_state();
+			$this->assertSame( 'pending', $state['identity_normalization_v2']['status'] );
+			$this->assertNotFalse( wp_next_scheduled( YoOhw_COS_Migration_Runner::HOOK ) );
+			YoOhw_COS_Install::maybe_update();
+			$this->assertSame( $state, YoOhw_COS_Migration_Runner::get_state() );
+			$this->assertCount( 1, $this->unique_source_index() );
+		} finally {
+			// Restore only this fixture, including after the expected baseline RED.
+			$wpdb->update( YoOhw_COS_DB::tasks_table(), array( 'source_key' => 'schema-fixture-repaired' ), array( 'id' => $this->fixture_ids[1] ) );
+			YoOhw_COS_Install::install();
+			foreach ( $this->fixture_ids as $id ) { $wpdb->delete( YoOhw_COS_DB::tasks_table(), array( 'id' => $id ) ); }
+			$wpdb->suppress_errors( $previous_suppression );
+		}
+	}
+	public function test_install_blocks_absent_version_and_persisted_migrations_then_resumes(): void {
+		global $wpdb;
+		$this->duplicate_source_fixture();
+		$before = $this->rows();
+		delete_option( 'yoohw_cos_db_version' );
+		$state = array(
+			'identity_normalization_v1' => array( 'status' => 'pending', 'processed' => 7 ),
+			'identity_normalization_v2' => array( 'status' => 'pending', 'phase' => 'scan', 'last_customer_id' => 900000, 'processed' => 13, 'attempts' => 2 ),
+			'commerce_facts_v2' => array( 'status' => 'pending', 'phase' => 'orders', 'next_page' => 4, 'processed' => 19 ),
+		);
+		update_option( 'yoohw_cos_data_migrations', $state, false );
+		wp_clear_scheduled_hook( YoOhw_COS_Migration_Runner::HOOK );
+		delete_option( 'yoohw_cos_data_migration_lock' );
+		$issues_before = $wpdb->get_results( 'SELECT * FROM ' . YoOhw_COS_DB::migration_issues_table() . ' ORDER BY id', ARRAY_A );
+		try {
+			YoOhw_COS_Install::install();
+			$this->assertFalse( get_option( 'yoohw_cos_db_version', false ) );
+			$this->assertSame( 'blocked', get_option( 'yoohw_cos_schema_status' )['status'] );
+			$this->assertSame( $state, YoOhw_COS_Migration_Runner::get_state(), 'Failure must not supersede old registrations or reset current progress.' );
+			YoOhw_COS_Migration_Runner::init();
+			YoOhw_COS_Migration_Runner::register_upgrade( '', YOOHW_COS_DB_VERSION );
+			do_action( YoOhw_COS_Migration_Runner::HOOK );
+			YoOhw_COS_Migration_Runner::run_next_batch();
+			$this->assertSame( $state, YoOhw_COS_Migration_Runner::get_state() );
+			$this->assertFalse( wp_next_scheduled( YoOhw_COS_Migration_Runner::HOOK ) );
+			$this->assertFalse( get_option( 'yoohw_cos_data_migration_lock', false ) );
+			$this->assertSame( $issues_before, $wpdb->get_results( 'SELECT * FROM ' . YoOhw_COS_DB::migration_issues_table() . ' ORDER BY id', ARRAY_A ) );
+			$this->assertSame( $before, $this->rows() );
+			$wpdb->update( YoOhw_COS_DB::tasks_table(), array( 'source_key' => 'schema-fixture-repaired' ), array( 'id' => $this->fixture_ids[1] ) );
+			$repaired = $this->rows();
+			YoOhw_COS_Install::install();
+			$this->assertSame( YOOHW_COS_DB_VERSION, get_option( 'yoohw_cos_db_version' ), wp_json_encode( get_option( 'yoohw_cos_schema_status' ) ) );
+			$this->assertSame( 'ready', get_option( 'yoohw_cos_schema_status' )['status'] );
+			$registered = YoOhw_COS_Migration_Runner::get_state();
+			$this->assertSame( $state['identity_normalization_v2'], $registered['identity_normalization_v2'] );
+			$this->assertSame( $state['commerce_facts_v2'], $registered['commerce_facts_v2'] );
+			$this->assertSame( 'superseded', $registered['identity_normalization_v1']['status'] );
+			$this->assertNotFalse( wp_next_scheduled( YoOhw_COS_Migration_Runner::HOOK ) );
+			YoOhw_COS_Install::install();
+			YoOhw_COS_Install::maybe_update();
+			$this->assertSame( $registered, YoOhw_COS_Migration_Runner::get_state() );
+			$this->assertSame( $repaired, $this->rows() );
+			YoOhw_COS_Migration_Runner::run_next_batch();
+			$resumed = YoOhw_COS_Migration_Runner::get_state();
+			$this->assertSame( 'retries', $resumed['identity_normalization_v2']['phase'] );
+			$this->assertSame( 900000, $resumed['identity_normalization_v2']['last_customer_id'] );
+			$this->assertSame( 13, $resumed['identity_normalization_v2']['processed'] );
+			$this->assertSame( 3, $resumed['identity_normalization_v2']['attempts'] );
+		} finally {
+			$wpdb->update( YoOhw_COS_DB::tasks_table(), array( 'source_key' => 'schema-fixture-repaired' ), array( 'id' => $this->fixture_ids[1] ) );
+			YoOhw_COS_Install::install();
+			foreach ( $this->fixture_ids as $id ) { $wpdb->delete( YoOhw_COS_DB::tasks_table(), array( 'id' => $id ) ); }
+		}
+	}
+
+	public function test_verifier_rejects_wrong_named_index_shape_and_current_version_is_not_authority(): void {
+		global $wpdb;
+		$table = YoOhw_COS_DB::tasks_table();
+		$state = YoOhw_COS_Migration_Runner::get_state();
+		foreach ( array( 'KEY source_key (source_key)', 'UNIQUE KEY source_key (source_key(10))', 'UNIQUE KEY source_key (source_key, id)', 'UNIQUE KEY source_key (id, source_key)', 'UNIQUE KEY source_key (source_key DESC)', 'UNIQUE KEY source_key (source_key) INVISIBLE' ) as $definition ) {
+			$this->assertNotFalse( $wpdb->query( "ALTER TABLE {$table} DROP INDEX source_key" ) );
+			$this->assertNotFalse( $wpdb->query( "ALTER TABLE {$table} ADD {$definition}" ) );
+			try {
+				if ( false !== strpos( $definition, 'INVISIBLE' ) ) {
+					$this->assertSame( 'NO', $this->unique_source_index()[0]['Visible'] );
+				}
+				$this->assertFalse( YoOhw_COS_Install::schema_is_ready(), $definition );
+				$this->assertContains( 'tasks.index.source_key', get_option( 'yoohw_cos_schema_status' )['requirements'] );
+				YoOhw_COS_Migration_Runner::run_next_batch();
+				$this->assertSame( $state, YoOhw_COS_Migration_Runner::get_state() );
+			} finally {
+				$this->assertNotFalse( $wpdb->query( "ALTER TABLE {$table} DROP INDEX source_key" ) );
+				$this->assertNotFalse( $wpdb->query( "ALTER TABLE {$table} ADD UNIQUE KEY source_key (source_key)" ) );
+			}
+		}
+		$this->assertTrue( YoOhw_COS_Install::schema_is_ready(), wp_json_encode( get_option( 'yoohw_cos_schema_status' ) ) );
+		$this->assertSame( array(), get_option( 'yoohw_cos_schema_status' )['requirements'] );
+	}
+
+	public function test_partial_column_and_table_inventory_and_retry(): void {
+		global $wpdb;
+		$table = YoOhw_COS_DB::notes_table();
+		$backup = $table . '_schema_fixture_backup';
+		$this->assertNotFalse( $wpdb->query( "RENAME TABLE {$table} TO {$backup}" ) );
+		try {
+			$this->assertFalse( YoOhw_COS_Install::schema_is_ready() );
+			$this->assertContains( 'notes.table', get_option( 'yoohw_cos_schema_status' )['requirements'] );
+			delete_option( 'yoohw_cos_db_version' );
+			YoOhw_COS_Install::install();
+			$this->assertTrue( YoOhw_COS_Install::schema_is_ready(), wp_json_encode( get_option( 'yoohw_cos_schema_status' ) ) );
+			$this->assertSame( YOOHW_COS_DB_VERSION, get_option( 'yoohw_cos_db_version' ), wp_json_encode( get_option( 'yoohw_cos_schema_status' ) ) );
+			$this->assertNotFalse( $wpdb->query( "ALTER TABLE {$table} DROP COLUMN visibility" ) );
+			$this->assertFalse( YoOhw_COS_Install::schema_is_ready() );
+			$this->assertContains( 'notes.column.visibility', get_option( 'yoohw_cos_schema_status' )['requirements'] );
+			// Already-current version with actual drift still retries; readiness is not cached.
+			YoOhw_COS_Install::maybe_update();
+			$this->assertTrue( YoOhw_COS_Install::schema_is_ready(), wp_json_encode( get_option( 'yoohw_cos_schema_status' ) ) );
+			$this->assertNotFalse( $wpdb->query( "ALTER TABLE {$table} MODIFY visibility VARCHAR(20) NULL DEFAULT NULL" ) );
+			$this->assertFalse( YoOhw_COS_Install::schema_is_ready() );
+			YoOhw_COS_Install::maybe_update();
+			$this->assertTrue( YoOhw_COS_Install::schema_is_ready(), wp_json_encode( get_option( 'yoohw_cos_schema_status' ) ) );
+		} finally {
+			// Only the empty table created by this fixture is dropped; original rows return intact.
+			$wpdb->query( "DROP TABLE IF EXISTS {$table}" );
+			$wpdb->query( "RENAME TABLE {$backup} TO {$table}" );
+			YoOhw_COS_Install::install();
+		}
+	}
+
+	public function test_current_ready_schema_has_no_ddl_or_registration_reset(): void {
+		YoOhw_COS_Install::install();
+		$state = YoOhw_COS_Migration_Runner::get_state();
+		$ddl = 0;
+		$count = static function( $sql ) use ( &$ddl ) { if ( preg_match( '/^\s*(CREATE|ALTER|DROP|RENAME)\b/i', $sql ) ) { ++$ddl; } return $sql; };
+		add_filter( 'query', $count );
+		try {
+			YoOhw_COS_Install::maybe_update();
+			YoOhw_COS_Install::maybe_update();
+		} finally { remove_filter( 'query', $count ); }
+		$this->assertSame( 0, $ddl );
+		$this->assertSame( $state, YoOhw_COS_Migration_Runner::get_state() );
+		$status = get_option( 'yoohw_cos_schema_status' );
+		$this->assertSame( array( 'status', 'target_version', 'requirements', 'last_attempt_at' ), array_keys( $status ) );
+		$this->assertSame( 'ready', $status['status'] );
+	}
+
+	public function test_fresh_install_builds_full_contract_and_preserves_unrelated_fixture(): void {
+		global $wpdb;
+		$tables = array();
+		foreach ( YoOhw_COS_Install::expected_table_keys() as $key ) {
+			$table = YoOhw_COS_DB::table( $key );
+			$tables[ $table ] = $table . '_schema_fresh_backup';
+		}
+		$renamed = array();
+		try {
+			foreach ( $tables as $table => $backup ) {
+				$this->assertNotFalse( $wpdb->query( "RENAME TABLE {$table} TO {$backup}" ) );
+				$renamed[ $table ] = $backup;
+			}
+			delete_option( 'yoohw_cos_db_version' );
+			delete_option( 'yoohw_cos_data_migrations' );
+			$this->assertFalse( YoOhw_COS_Install::schema_is_ready() );
+			$this->assertCount( 11, get_option( 'yoohw_cos_schema_status' )['requirements'] );
+			YoOhw_COS_Install::install();
+			$this->assertTrue( YoOhw_COS_Install::schema_is_ready() );
+			$this->assertSame( YOOHW_COS_DB_VERSION, get_option( 'yoohw_cos_db_version' ) );
+			$this->assertSame( YOOHW_COS_VERSION, get_option( 'yoohw_cos_version' ) );
+			$this->assertSame( 'pending', YoOhw_COS_Migration_Runner::get_state()['identity_normalization_v2']['status'] );
+			$manifest = new ReflectionMethod( 'YoOhw_COS_Install', 'schema_contract' );
+			$manifest->setAccessible( true );
+			$this->assertSame( YoOhw_COS_Install::expected_table_keys(), array_keys( $manifest->invoke( null ) ) );
+		} finally {
+			foreach ( $renamed as $table => $backup ) {
+				$wpdb->query( "DROP TABLE IF EXISTS {$table}" );
+				$wpdb->query( "RENAME TABLE {$backup} TO {$table}" );
+			}
+			YoOhw_COS_Install::install();
+		}
+	}
+
+	public function test_registration_recheck_cannot_advance_version_after_schema_changes(): void {
+		global $wpdb;
+		$table = YoOhw_COS_DB::tasks_table();
+		update_option( 'yoohw_cos_db_version', '0.1.10' );
+		delete_option( 'yoohw_cos_data_migrations' );
+		delete_option( 'yoohw_cos_schema_status' );
+		$dropped = false;
+		$invalidate = static function( $option, $value ) use ( &$dropped, $table, $wpdb ) {
+			if ( 'yoohw_cos_schema_status' === $option && 'ready' === ( $value['status'] ?? '' ) && ! $dropped ) {
+				$dropped = true;
+				$wpdb->query( "ALTER TABLE {$table} DROP INDEX source_key" );
+			}
+		};
+		add_action( 'added_option', $invalidate, 10, 2 );
+		try {
+			YoOhw_COS_Install::maybe_update();
+			$this->assertTrue( $dropped );
+			$this->assertSame( '0.1.10', get_option( 'yoohw_cos_db_version' ) );
+			$this->assertSame( array(), YoOhw_COS_Migration_Runner::get_state() );
+		} finally {
+			remove_action( 'added_option', $invalidate );
+			YoOhw_COS_Install::maybe_update();
+		}
+		$this->assertTrue( YoOhw_COS_Install::schema_is_ready() );
+	}
+
+}

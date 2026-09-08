@@ -17,7 +17,8 @@ final class YoOhw_COS_Migration_Runner {
 		self::maybe_schedule();
 	}
 
-	public static function register_upgrade( string $from_version, string $to_version ): void {
+	public static function register_upgrade( string $from_version, string $to_version ): bool {
+		if ( ! YoOhw_COS_Install::schema_is_ready() ) { return false; }
 		$state = self::get_state();
 
 		foreach ( array( 'commerce_facts_v1', 'identity_normalization_v1' ) as $superseded_id ) {
@@ -52,17 +53,21 @@ final class YoOhw_COS_Migration_Runner {
 			);
 		}
 
-		$state['_schema'] = array(
-			'from'       => sanitize_text_field( $from_version ),
-			'to'         => sanitize_text_field( $to_version ),
-			'updated_at' => YoOhw_COS_DB::now(),
-		);
+		if ( ( $state['_schema']['to'] ?? '' ) !== $to_version ) {
+			$state['_schema'] = array(
+				'from'       => sanitize_text_field( $from_version ),
+				'to'         => sanitize_text_field( $to_version ),
+				'updated_at' => YoOhw_COS_DB::now(),
+			);
+		}
 
 		update_option( self::STATE_OPTION, $state, false );
 		self::maybe_schedule();
+		return true;
 	}
 
 	public static function run_next_batch(): void {
+		if ( ! YoOhw_COS_Install::schema_is_ready() ) { return; }
 		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
 			self::schedule_next();
 			return;
@@ -572,6 +577,7 @@ final class YoOhw_COS_Migration_Runner {
 	}
 
 	private static function schedule_next(): void {
+		if ( ! YoOhw_COS_Install::schema_is_ready() ) { return; }
 		if ( ! wp_next_scheduled( self::HOOK ) ) {
 			wp_schedule_single_event( time() + 5, self::HOOK );
 		}
