@@ -119,7 +119,8 @@ final class YoOhw_COS_Customer_Exporter {
 					self::get_lifecycle_label( (string) ( $customer['lifecycle_stage'] ?? 'new' ) ),
 					implode( '; ', $tags[ $customer_id ] ?? array() ),
 					implode( '; ', $segments[ $customer_id ] ?? array() ),
-				)
+				),
+				true
 			);
 		}
 
@@ -127,8 +128,28 @@ final class YoOhw_COS_Customer_Exporter {
 		exit;
 	}
 
-	private static function write_csv_row( $output, array $row ): void {
-		fputcsv( $output, $row, ',', '"', '\\' );
+	private static function write_csv_row( $output, array $row, bool $customer_row = false ): void {
+		foreach ( $row as $column => $value ) {
+			// Only these five internally formatted customer metrics are numeric sources.
+			// Their headings and every other cell still pass through text protection.
+			if ( $customer_row && $column >= 3 && $column <= 7 ) {
+				continue;
+			}
+			$row[ $column ] = self::protect_text_cell( (string) $value, $customer_row && 2 === $column );
+		}
+		// A TAB forces enclosure; empty escape uses standard quote doubling, including after backslashes.
+		fputcsv( $output, $row, ',', '"', '' );
+	}
+
+	private static function protect_text_cell( string $text, bool $phone ): string {
+		if ( '' === $text ) {
+			return $text;
+		}
+
+		// Inspect final normalized/joined text without stripping its original prefix.
+		// Unicode separators and control/format characters can precede a formula marker.
+		$dangerous = preg_match( '/\A[\p{Z}\p{C}\s]*[=+\-@＝＋－＠]|\A[\p{C}]/u', $text );
+		return $phone || false === $dangerous || 1 === $dangerous ? "\t" . $text : $text;
 	}
 
 	private static function get_relationship_names( array $customer_ids, string $relationship ): array {
