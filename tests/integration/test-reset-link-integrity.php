@@ -1927,3 +1927,178 @@ final class YCI_Order_Change_Test extends WP_UnitTestCase {
 	}
 
 }
+
+final class YCI_Manual_Sync_Outcome_Test extends WP_UnitTestCase {
+	private $ids = array();
+	private $retry_id = 0;
+	private $conflict_customers = array();
+	private $saved = array();
+	public function set_up(): void {
+		parent::set_up();
+		foreach ( array( 'yoohw_cos_sync_state', 'yoohw_cos_last_sync_page', 'yoohw_cos_last_sync_at', 'cron' ) as $key ) { $this->saved[ $key ] = get_option( $key, false ); delete_option( $key ); }
+		$this->saved['user'] = get_current_user_id();
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		add_filter( 'woocommerce_order_query_args', array( $this, 'population' ) );
+		add_filter( 'query', array( $this, 'fail_retry_order' ) );
+	}
+	public function tear_down(): void {
+		remove_filter( 'woocommerce_order_query_args', array( $this, 'population' ) );
+		remove_filter( 'query', array( $this, 'fail_retry_order' ) );
+		wp_set_current_user( $this->saved['user'] ); unset( $this->saved['user'] );
+		foreach ( $this->saved as $key => $value ) { if ( false === $value ) { delete_option( $key ); } else { update_option( $key, $value ); } }
+		parent::tear_down();
+	}
+	public function population( array $args ): array { $args['post__in'] = $this->ids ?: array( PHP_INT_MAX ); return $args; }
+	public function fail_retry_order( string $sql ): string {
+		if ( $this->retry_id > 0 && false !== strpos( $sql, YoOhw_COS_DB::order_facts_table() ) && false !== strpos( $sql, 'WHERE order_id = ' . $this->retry_id . ' FOR UPDATE' ) ) { throw new RuntimeException( 'Synthetic transient aggregate failure' ); }
+		return $sql;
+	}
+	private function mixed(): void {
+		YoOhw_COS_Customers::reset_data();
+		$tag = wp_generate_uuid4();
+		$callbacks = array( 'woocommerce_update_order' => 'sync_persisted_order_update', 'woocommerce_order_status_changed' => 'sync_from_order_id' );
+		foreach ( $callbacks as $hook => $method ) { remove_action( $hook, array( YoOhw_COS_Customers::class, $method ), 20 ); }
+		try {
+			foreach ( array( 'ok', 'retry', 'conflict' ) as $i => $name ) {
+				$order = wc_create_order(); $order->set_billing_email( $name . '-' . $tag . '@example.test' );
+				$order->set_total( (string) ( 10 + $i ) ); $order->set_status( 'completed' ); $order->set_date_created( '2024-01-0' . ( $i + 1 ) . ' 12:00:00' ); $order->save();
+				$this->ids[] = $order->get_id();
+			}
+		} finally { foreach ( $callbacks as $hook => $method ) { add_action( $hook, array( YoOhw_COS_Customers::class, $method ), 20 ); } }
+		$this->retry_id = $this->ids[1];
+		foreach ( array( 1, 2 ) as $i ) { $this->conflict_customers[] = YoOhw_COS_Customers::create_customer( array( 'email' => 'conflict-' . $tag . '@example.test', 'display_name' => 'Conflict ' . $i ) ); }
+	}
+	private function request( string $kind = 'ajax', int $page = 1 ): array {
+		$post = $_POST; $request = $_REQUEST;
+		$_POST = array( 'sync_page' => $page, 'nonce' => wp_create_nonce( 'yoohw_cos_sync_customers' ), '_wpnonce' => wp_create_nonce( 'yoohw_cos_sync_customers' ) ); $_REQUEST = $_POST;
+		$ajax = static function () { return true; };
+		$die = static function () { return static function ( $message = '' ) { throw new RuntimeException( (string) $message ); }; };
+		$redirect = static function ( $url ) { throw new RuntimeException( $url, 302 ); };
+		add_filter( 'wp_doing_ajax', $ajax ); add_filter( 'wp_die_ajax_handler', $die ); add_filter( 'wp_die_handler', $die ); add_filter( 'wp_redirect', $redirect );
+		ob_start(); $message = '';
+		try { call_user_func( array( YoOhw_COS_Admin_Tools::class, 'ajax' === $kind ? 'handle_ajax_sync_customers' : 'handle_sync_customers' ) ); }
+		catch ( RuntimeException $e ) { $message = $e->getMessage(); }
+		finally { $body = ob_get_clean(); $_POST = $post; $_REQUEST = $request; remove_filter( 'wp_doing_ajax', $ajax ); remove_filter( 'wp_die_ajax_handler', $die ); remove_filter( 'wp_die_handler', $die ); remove_filter( 'wp_redirect', $redirect ); }
+		return array( 'json' => json_decode( $body, true ), 'redirect' => $message );
+	}
+	private function rendered(): string { require_once ABSPATH . 'wp-admin/includes/admin.php'; ob_start(); YoOhw_COS_Admin_Menu::render_settings_page(); return ob_get_clean(); }
+	public function test_actual_manual_ajax_exposes_mixed_outcome_truth(): void {
+		$this->mixed();
+		$outcomes = YoOhw_COS_Customers::sync_existing_orders_with_outcomes( 200, 1 );
+		$this->assertSame( array( 'success', 'retry', 'unresolved' ), array_column( $outcomes['outcomes'], 'status' ) );
+		$this->assertSame( 3, $outcomes['scanned'] ); $this->assertSame( 1, $outcomes['processed'] );
+		$response = $this->request()['json']; $this->assertTrue( $response['success'] );
+		$state = get_option( 'yoohw_cos_sync_state' );
+		$this->assertSame( 3, $state['total_scanned'] ); $this->assertSame( 1, $state['total_processed'] );
+		$this->assertFalse( $response['data']['hasMore'] );
+		$this->assertSame( 'completed_with_issues', $state['status'] );
+		$this->assertSame( 1, $state['total_retryable'] ); $this->assertSame( 1, $state['total_unresolved'] ); $this->assertSame( 2, $state['total_issues'] );
+		$this->assertSame( 100, $response['data']['state']['percent'] );
+		$this->assertSame( 1, $response['data']['state']['lastRetryable'] ); $this->assertSame( 1, $response['data']['state']['lastUnresolved'] );
+		$this->assertSame( 2, $response['data']['state']['totalIssues'] );
+		$html = $this->rendered();
+		$this->assertStringContainsString( 'Scan complete with issues.', $html );
+		$this->assertStringContainsString( 'Needs attention', $html );
+		$this->assertStringContainsString( 'Scan progress', $html );
+	}
+	private function retry_count( int $id ): int {
+		$count = 0;
+		foreach ( _get_cron_array() as $hooks ) { foreach ( $hooks[ YoOhw_COS_Customers::ORDER_SYNC_RETRY_HOOK ] ?? array() as $event ) { if ( array( $id ) === $event['args'] ) { ++$count; } } }
+		return $count;
+	}
+	private function reconcile( array $state, int $success, int $retry, int $unresolved ): void {
+		$this->assertSame( $success, $state['total_processed'] );
+		$this->assertSame( $retry, $state['total_retryable'] );
+		$this->assertSame( $unresolved, $state['total_unresolved'] );
+		$this->assertSame( $success + $retry + $unresolved, $state['total_scanned'] );
+		$this->assertSame( $retry + $unresolved, $state['total_issues'] );
+		$this->assertSame( $state['last_scanned'], $state['last_processed'] + $state['last_retryable'] + $state['last_unresolved'] );
+		$this->assertSame( $state['last_issues'], $state['last_retryable'] + $state['last_unresolved'] );
+	}
+	public function test_retry_and_fresh_replay_keep_conflict_visible_until_resolved(): void {
+		global $wpdb;
+		$this->mixed(); $this->request();
+		$this->reconcile( get_option( 'yoohw_cos_sync_state' ), 1, 1, 1 );
+		$this->assertSame( 1, $this->retry_count( $this->ids[1] ) );
+		$this->assertSame( 0, $this->retry_count( $this->ids[2] ) );
+		$this->assertInstanceOf( WC_Order::class, new WC_Order( $this->ids[1] ) );
+		$this->assertSame( 0, YoOhw_COS_Customer_Identity::get_persisted_order_customer_id( new WC_Order( $this->ids[2] ) ) );
+		$this->retry_id = 0;
+		wp_clear_scheduled_hook( YoOhw_COS_Customers::ORDER_SYNC_RETRY_HOOK, array( $this->ids[1] ) );
+		do_action( YoOhw_COS_Customers::ORDER_SYNC_RETRY_HOOK, $this->ids[1] );
+		$this->assertGreaterThan( 0, YoOhw_COS_Customer_Identity::get_persisted_order_customer_id( new WC_Order( $this->ids[1] ) ) );
+		$this->reconcile( get_option( 'yoohw_cos_sync_state' ), 1, 1, 1 ); // Counters describe the completed scan, not background retry.
+		$this->request(); $state = get_option( 'yoohw_cos_sync_state' );
+		$this->reconcile( $state, 2, 0, 1 ); $this->assertSame( 'completed_with_issues', $state['status'] );
+		YoOhw_COS_Customers::update_customer( $this->conflict_customers[1], array( 'email' => 'resolved-' . wp_generate_uuid4() . '@example.test' ) );
+		$response = $this->request()['json']; $state = get_option( 'yoohw_cos_sync_state' );
+		$this->reconcile( $state, 3, 0, 0 ); $this->assertSame( 'completed', $state['status'] );
+		$this->assertSame( 0, $response['data']['state']['totalIssues'] );
+		$this->assertNotEmpty( $state['completed_at'] );
+		foreach ( $this->ids as $i => $id ) {
+			$customer = YoOhw_COS_Customer_Identity::get_persisted_order_customer_id( new WC_Order( $id ) );
+			$this->assertGreaterThan( 0, $customer );
+			$fact = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i WHERE order_id = %d', YoOhw_COS_DB::order_facts_table(), $id ), ARRAY_A );
+			$this->assertSame( $customer, (int) $fact['customer_id'] );
+			$this->assertSame( (float) ( 10 + $i ), (float) $fact['revenue_amount'] );
+			$this->assertSame( (float) ( 10 + $i ), (float) YoOhw_COS_Customers::get_customer( $customer )['total_spent'] );
+			$this->assertSame( 1, (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM %i WHERE event_type = 'order_synced' AND object_id = %d AND customer_id = %d", YoOhw_COS_DB::table( 'events' ), $id, $customer ) ) );
+		}
+		$this->assertSame( 0, $this->retry_count( $this->ids[1] ) );
+	}
+	public function test_non_ajax_redirect_and_settings_use_persisted_outcome_counts(): void {
+		$this->mixed(); $response = $this->request( 'post' );
+		$this->assertStringContainsString( 'yoohw_cos_processed=1', $response['redirect'] );
+		$this->reconcile( get_option( 'yoohw_cos_sync_state' ), 1, 1, 1 );
+		$get = $_GET;
+		parse_str( wp_parse_url( $response['redirect'], PHP_URL_QUERY ), $_GET );
+		try { $html = $this->rendered(); } finally { $_GET = $get; }
+		$this->assertStringContainsString( 'notice-warning is-dismissible', $html );
+		$this->assertStringContainsString( 'Last batch: 1 successful, 1 retryable, 1 unresolved.', $html );
+		$this->assertStringContainsString( 'Scan complete with issues.', $html );
+		$this->assertStringContainsString( 'yoohw-cos-sync-total-issues">2</strong>', $html );
+		$this->assertStringContainsString( 'data-yoohw-cos-order-sync-summary', $html );
+	}
+	public function test_bounded_pages_resume_without_duplicate_accounting_and_reset_rejection(): void {
+		$this->mixed();
+		$batch = new ReflectionMethod( YoOhw_COS_Admin_Tools::class, 'run_manual_sync_batch' ); $batch->setAccessible( true );
+		$state = $batch->invoke( null, 1, 2 ); // Same handler batch path, real outcome scans with a bounded two-order page.
+		$this->reconcile( $state, 1, 1, 0 ); $this->assertSame( 'in_progress', $state['status'] ); $this->assertSame( '', $state['completed_at'] );
+		$boundary = get_option( YoOhw_COS_Reset_Guard::OPTION );
+		update_option( YoOhw_COS_Reset_Guard::OPTION, array( 'epoch' => $boundary['epoch'], 'status' => 'pending' ) );
+		try { $response = $this->request( 'ajax', 2 )['json']; $this->assertFalse( $response['success'] ); }
+		finally { update_option( YoOhw_COS_Reset_Guard::OPTION, $boundary ); }
+		$this->assertSame( $state, get_option( 'yoohw_cos_sync_state' ) );
+		$state = $batch->invoke( null, 2, 2 );
+		$this->reconcile( $state, 1, 1, 1 ); $this->assertSame( 'completed_with_issues', $state['status'] );
+		$this->assertSame( $state, $batch->invoke( null, 2, 2 ), 'Repeated page must return the saved response without adding counters.' );
+		$this->assertSame( 1, $this->retry_count( $this->ids[1] ) );
+	}
+	public function test_zero_orders_and_interrupted_fresh_scan_do_not_invent_success(): void {
+		$response = $this->request()['json']; $state = get_option( 'yoohw_cos_sync_state' );
+		$this->reconcile( $state, 0, 0, 0 ); $this->assertSame( 'completed', $state['status'] ); $this->assertSame( 100, $state['percent'] );
+		$this->mixed();
+		$throw = static function () { throw new RuntimeException( 'Synthetic interrupted scan' ); };
+		add_filter( 'yoohw_cos_customer_sync_data', $throw );
+		try { $this->request(); } finally { remove_filter( 'yoohw_cos_customer_sync_data', $throw ); }
+		$state = get_option( 'yoohw_cos_sync_state' );
+		$this->assertSame( 'in_progress', $state['status'] ); $this->assertSame( '', $state['completed_at'] );
+		$this->assertSame( 1, $state['next_page'] ); $this->assertSame( 0, $state['total_processed'] );
+		$this->request(); $this->reconcile( get_option( 'yoohw_cos_sync_state' ), 1, 1, 1 );
+	}
+
+	public function test_legacy_counts_require_fresh_scan_and_permission_rejection_preserves_state(): void {
+		$this->mixed();
+		update_option( 'yoohw_cos_sync_state', array( 'status' => 'completed', 'total_processed' => 1, 'total_scanned' => 3, 'sync_order' => YoOhw_COS_Customers::SYNC_ORDER, 'last_run_at' => '2024-01-01 12:00:00', 'next_page' => 9 ) );
+		$html = $this->rendered(); $this->assertStringContainsString( 'Previous scan has no outcome counts. Run a new scan.', $html );
+		$this->assertStringNotContainsString( 'Order sync has not run yet.', $html );
+		$this->request( 'ajax', 9 );
+		$state = get_option( 'yoohw_cos_sync_state' ); $this->reconcile( $state, 1, 1, 1 );
+		$this->assertSame( 1, $state['last_page'] );
+		$user = get_current_user_id(); wp_set_current_user( 0 );
+		try { $response = $this->request()['json']; $this->assertFalse( $response['success'] ); }
+		finally { wp_set_current_user( $user ); }
+		$this->assertSame( $state, get_option( 'yoohw_cos_sync_state' ) );
+	}
+
+}

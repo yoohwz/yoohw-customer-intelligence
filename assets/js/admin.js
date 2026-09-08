@@ -348,7 +348,7 @@
 		}
 
 		var statusValue = container.querySelector('.yoohw-cos-sync-status-value');
-		var statusType = state && state.hasMore ? 'warning' : 'good';
+		var statusType = state && (state.hasMore || state.status === 'completed_with_issues' || state.totalIssues > 0) ? 'warning' : 'good';
 		var statusText = message;
 
 		if (statusValue && statusText) {
@@ -364,6 +364,10 @@
 		setSyncProgress(container, state.percent);
 		setSyncStatus(container, state, message);
 		setSyncText(container, '[data-yoohw-cos-sync-message]', message);
+		['Processed', 'Retryable', 'Unresolved', 'Issues'].forEach(function(key) {
+			setSyncText(container, '.yoohw-cos-sync-last-' + key.toLowerCase(), formatNumber(state['last' + key]));
+			setSyncText(container, '.yoohw-cos-sync-total-' + key.toLowerCase(), formatNumber(state['total' + key]));
+		});
 		setSyncText(container, '.yoohw-cos-sync-last-scanned', formatNumber(state.lastScanned));
 		setSyncText(container, '.yoohw-cos-sync-total-scanned', formatNumber(state.totalScanned));
 		setSyncText(container, '.yoohw-cos-sync-total-processed', formatNumber(state.totalProcessed));
@@ -417,6 +421,10 @@
 		}
 
 		setSyncText(container, '[data-yoohw-cos-sync-message]', runningText);
+		if (ajaxAction === 'yoohw_cos_ajax_sync_customers') {
+			setSyncStatus(container, { hasMore: true }, runningText);
+			setSyncStatus(document.querySelector('[data-yoohw-cos-order-sync-summary]'), { hasMore: true }, runningText);
+		}
 
 		function runPage(page) {
 			var data = new FormData(form);
@@ -443,7 +451,7 @@
 					var result = response.data;
 					var state = result.state || {};
 					var nextPage = parseInt(result.nextPage, 10) || page + 1;
-					var message = result.hasMore ? runningText : completeText;
+					var message = result.hasMore ? runningText : (state.status === 'completed_with_issues' || state.totalIssues > 0 ? (admin.syncIssuesText || 'Scan complete with issues.') : completeText);
 
 					if (pageInput) {
 						pageInput.value = result.hasMore ? nextPage : 1;
@@ -454,6 +462,11 @@
 					}
 
 					updateSyncCenter(container, state, message);
+					if (ajaxAction === 'yoohw_cos_ajax_sync_customers') {
+						var summary = document.querySelector('[data-yoohw-cos-order-sync-summary]');
+						setSyncStatus(summary, state, message);
+						setSyncText(summary, '[data-yoohw-cos-sync-message]', message);
+					}
 
 					if (result.hasMore) {
 						return runPage(nextPage);
@@ -466,6 +479,12 @@
 		runPage(startPage)
 			.catch(function(error) {
 				setSyncText(container, '[data-yoohw-cos-sync-message]', error.message || errorText);
+				if (ajaxAction === 'yoohw_cos_ajax_sync_customers') {
+					setSyncStatus(container, { hasMore: true }, error.message || errorText);
+					var summary = document.querySelector('[data-yoohw-cos-order-sync-summary]');
+					setSyncStatus(summary, { hasMore: true }, error.message || errorText);
+					setSyncText(summary, '[data-yoohw-cos-sync-message]', error.message || errorText);
+				}
 			})
 			.finally(function() {
 				form.removeAttribute('data-yoohw-cos-syncing');

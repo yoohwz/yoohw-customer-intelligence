@@ -85,6 +85,7 @@ final class YoOhw_COS_Admin_Menu {
 				'syncErrorText'             => __( 'Sync could not be completed. Please try again.', 'yoohw-customer-intelligence' ),
 				'syncNonce'                 => wp_create_nonce( 'yoohw_cos_sync_customers' ),
 				'syncRunningText'           => __( 'Syncing orders...', 'yoohw-customer-intelligence' ),
+				'syncIssuesText'            => __( 'Scan complete with issues.', 'yoohw-customer-intelligence' ),
 				'syncCompleteText'          => __( 'Sync complete.', 'yoohw-customer-intelligence' ),
 			)
 		);
@@ -2437,22 +2438,15 @@ final class YoOhw_COS_Admin_Menu {
 		self::render_setup_panel( $readiness, $sync_state, $stats );
 
 		if ( isset( $_GET['yoohw_cos_processed'] ) ) {
-			$processed = absint( wp_unslash( $_GET['yoohw_cos_processed'] ) );
-			$has_more  = ! empty( $_GET['yoohw_cos_has_more'] );
-
-			echo '<div class="notice notice-success is-dismissible"><p>';
+			$summary = self::get_sync_status_summary( $sync_state );
+			echo '<div class="notice notice-' . ( 'good' === $summary['type'] ? 'success' : 'warning' ) . ' is-dismissible"><p>';
+			echo esc_html( $summary['detail'] ) . ' ';
 			printf(
-				/* translators: %s: number of orders processed by customer sync. */
-				esc_html__( 'Customer sync completed. %s orders processed in this batch.', 'yoohw-customer-intelligence' ),
-				esc_html( number_format_i18n( $processed ) )
+				/* translators: 1: successful orders, 2: retryable orders, 3: unresolved orders in this batch. */
+				esc_html__( 'Last batch: %1$d successful, %2$d retryable, %3$d unresolved.', 'yoohw-customer-intelligence' ),
+				$sync_state['last_processed'], $sync_state['last_retryable'], $sync_state['last_unresolved']
 			);
 			echo '</p></div>';
-
-			if ( ! $has_more ) {
-				echo '<div class="notice notice-info is-dismissible"><p>';
-				echo esc_html__( 'No more orders found. Customer sync appears to be complete.', 'yoohw-customer-intelligence' );
-				echo '</p></div>';
-			}
 		}
 
 		if ( ! empty( $_GET['yoohw_cos_reset'] ) ) {
@@ -2547,13 +2541,11 @@ final class YoOhw_COS_Admin_Menu {
 		echo '<div class="yoohw-cos-operation__body">';
 		echo '<h3>' . esc_html__( 'Sync center', 'yoohw-customer-intelligence' ) . '</h3>';
 
-		$query_next_page = isset( $_GET['yoohw_cos_next_page'] ) ? absint( wp_unslash( $_GET['yoohw_cos_next_page'] ) ) : 1;
 		$query_has_more  = ! empty( $_GET['yoohw_cos_has_more'] );
-		$stored_has_more = ! empty( $sync_state['has_more'] );
-		$has_more        = $query_has_more || $stored_has_more;
-		$next_page       = $query_has_more ? $query_next_page : absint( $sync_state['next_page'] ?? 1 );
+		$has_more        = ! empty( $sync_state['has_more'] );
+		$next_page       = absint( $sync_state['next_page'] ?? 1 );
 		$next_page       = $has_more ? max( 1, $next_page ) : 1;
-		$sync_auto_submit = $query_has_more && ! empty( $_GET['yoohw_cos_auto_sync'] );
+		$sync_auto_submit = $has_more && $query_has_more && ! empty( $_GET['yoohw_cos_auto_sync'] );
 		$sync_percent    = absint( $sync_state['percent'] ?? 0 );
 
 		if ( 'completed' === $sync_state['status'] && empty( $sync_state['has_more'] ) && ! empty( $sync_state['last_run_at'] ) ) {
@@ -2973,9 +2965,13 @@ final class YoOhw_COS_Admin_Menu {
 			$state = array();
 		}
 
+		// Legacy scans did not record outcome counts; require a fresh run rather than infer success.
+		$legacy_outcomes = ! isset( $state['total_retryable'], $state['total_unresolved'] ) && ( ! empty( $state['last_run_at'] ) || get_option( 'yoohw_cos_last_sync_at', '' ) );
+		if ( ! isset( $state['total_retryable'], $state['total_unresolved'] ) ) { $state = array(); }
+
 		$status = isset( $state['status'] ) ? sanitize_key( (string) $state['status'] ) : 'not_started';
 
-		if ( ! in_array( $status, array( 'not_started', 'in_progress', 'completed' ), true ) ) {
+		if ( ! in_array( $status, array( 'not_started', 'in_progress', 'completed', 'completed_with_issues' ), true ) ) {
 			$status = 'not_started';
 		}
 
@@ -2993,17 +2989,24 @@ final class YoOhw_COS_Admin_Menu {
 			$state['last_scanned']   = 0;
 		}
 
-		$legacy_last_sync_at = get_option( 'yoohw_cos_last_sync_at', '' );
+		$legacy_last_sync_at = ''; // An old timestamp alone is not outcome evidence.
 
 		return array(
 			'status'          => $status,
+			'legacy_outcomes' => (bool) $legacy_outcomes,
 			'sync_order'      => YoOhw_COS_Customers::SYNC_ORDER === $sync_order ? $sync_order : '',
 			'batch_size'      => absint( $state['batch_size'] ?? 200 ),
 			'last_page'       => absint( $state['last_page'] ?? 0 ),
 			'next_page'       => absint( $state['next_page'] ?? 1 ),
 			'last_processed'  => absint( $state['last_processed'] ?? 0 ),
+			'last_retryable' => absint( $state['last_retryable'] ?? 0 ),
+			'last_unresolved' => absint( $state['last_unresolved'] ?? 0 ),
+			'last_issues' => absint( $state['last_issues'] ?? 0 ),
 			'last_scanned'    => absint( $state['last_scanned'] ?? 0 ),
 			'total_processed' => absint( $state['total_processed'] ?? 0 ),
+			'total_retryable' => absint( $state['total_retryable'] ?? 0 ),
+			'total_unresolved' => absint( $state['total_unresolved'] ?? 0 ),
+			'total_issues' => absint( $state['total_issues'] ?? 0 ),
 			'total_scanned'   => absint( $state['total_scanned'] ?? 0 ),
 			'total_orders'    => absint( $state['total_orders'] ?? 0 ),
 			'percent'         => absint( $state['percent'] ?? 0 ),
@@ -3108,6 +3111,10 @@ final class YoOhw_COS_Admin_Menu {
 	}
 
 	private static function get_sync_status_summary( array $sync_state ): array {
+		if ( ! empty( $sync_state['legacy_outcomes'] ) ) {
+			return array( 'label' => __( 'Needs new scan', 'yoohw-customer-intelligence' ), 'type' => 'warning', 'detail' => __( 'Previous scan has no outcome counts. Run a new scan.', 'yoohw-customer-intelligence' ) );
+		}
+
 		if ( empty( $sync_state['last_run_at'] ) ) {
 			return array(
 				'label'  => __( 'Not synced', 'yoohw-customer-intelligence' ),
@@ -3122,6 +3129,10 @@ final class YoOhw_COS_Admin_Menu {
 				'type'   => 'warning',
 				'detail' => __( 'More orders are ready to process', 'yoohw-customer-intelligence' ),
 			);
+		}
+
+		if ( 'completed_with_issues' === $sync_state['status'] || ! empty( $sync_state['total_issues'] ) ) {
+			return array( 'label' => __( 'Needs attention', 'yoohw-customer-intelligence' ), 'type' => 'warning', 'detail' => __( 'Scan complete with issues.', 'yoohw-customer-intelligence' ) );
 		}
 
 		return array(
@@ -3157,7 +3168,7 @@ final class YoOhw_COS_Admin_Menu {
 		self::render_readiness_item( __( 'WooCommerce', 'yoohw-customer-intelligence' ), $readiness['woocommerce'] );
 		self::render_readiness_item( __( 'HPOS', 'yoohw-customer-intelligence' ), $readiness['hpos'] );
 		self::render_readiness_item( __( 'Database', 'yoohw-customer-intelligence' ), $readiness['database'] );
-		self::render_readiness_item( __( 'Order sync', 'yoohw-customer-intelligence' ), $sync_status );
+		self::render_readiness_item( __( 'Order sync', 'yoohw-customer-intelligence' ), $sync_status, true );
 		echo '</div>';
 
 		if ( empty( $sync_state['last_run_at'] ) && empty( $stats['total_customers'] ) ) {
@@ -3174,13 +3185,13 @@ final class YoOhw_COS_Admin_Menu {
 		echo '</div>';
 	}
 
-	private static function render_readiness_item( string $label, array $status ): void {
-		echo '<div class="yoohw-cos-readiness-item">';
+	private static function render_readiness_item( string $label, array $status, bool $order_sync = false ): void {
+		echo '<div class="yoohw-cos-readiness-item"' . ( $order_sync ? ' data-yoohw-cos-order-sync-summary' : '' ) . '>';
 		echo '<div class="yoohw-cos-readiness-item__label">' . esc_html( $label ) . '</div>';
-		echo wp_kses_post( self::render_status_pill( (string) ( $status['label'] ?? '' ), (string) ( $status['type'] ?? 'info' ) ) );
+		echo '<span class="yoohw-cos-sync-status-value">' . wp_kses_post( self::render_status_pill( (string) ( $status['label'] ?? '' ), (string) ( $status['type'] ?? 'info' ) ) ) . '</span>';
 
 		if ( ! empty( $status['detail'] ) ) {
-			echo '<div class="yoohw-cos-readiness-item__detail">' . esc_html( (string) $status['detail'] ) . '</div>';
+			echo '<div class="yoohw-cos-readiness-item__detail"' . ( $order_sync ? ' data-yoohw-cos-sync-message' : '' ) . '>' . esc_html( (string) $status['detail'] ) . '</div>';
 		}
 
 		echo '</div>';
@@ -3192,7 +3203,7 @@ final class YoOhw_COS_Admin_Menu {
 
 		echo '<p>' . esc_html__( 'Import and normalize customer data from existing WooCommerce orders.', 'yoohw-customer-intelligence' ) . '</p>';
 
-		if ( empty( $sync_state['last_run_at'] ) ) {
+		if ( empty( $sync_state['last_run_at'] ) && empty( $sync_state['legacy_outcomes'] ) ) {
 			echo '<div class="notice notice-warning inline"><p>';
 			echo esc_html__( 'Order sync has not run yet. Start sync to create customer profiles from existing WooCommerce orders.', 'yoohw-customer-intelligence' );
 			echo '</p></div>';
@@ -3207,13 +3218,13 @@ final class YoOhw_COS_Admin_Menu {
 		}
 
 		$progress_message = empty( $sync_state['last_run_at'] )
-			? __( 'Ready to sync.', 'yoohw-customer-intelligence' )
-			: ( $has_more ? __( 'Sync is in progress.', 'yoohw-customer-intelligence' ) : __( 'Sync complete.', 'yoohw-customer-intelligence' ) );
+			? ( ! empty( $sync_state['legacy_outcomes'] ) ? $summary['detail'] : __( 'Ready to sync.', 'yoohw-customer-intelligence' ) )
+			: ( $has_more ? __( 'Sync is in progress.', 'yoohw-customer-intelligence' ) : ( ! empty( $sync_state['total_issues'] ) ? __( 'Scan complete with issues.', 'yoohw-customer-intelligence' ) : __( 'Sync complete.', 'yoohw-customer-intelligence' ) ) );
 
 		echo '<div class="yoohw-cos-sync-progress" data-yoohw-cos-sync-progress aria-live="polite">';
 		echo '<div class="yoohw-cos-progress-header">';
 		echo '<span data-yoohw-cos-sync-message>' . esc_html( $progress_message ) . '</span>';
-		echo '<strong data-yoohw-cos-sync-percent>' . esc_html( number_format_i18n( $sync_percent ) ) . '%</strong>';
+		echo '<span>' . esc_html__( 'Scan progress:', 'yoohw-customer-intelligence' ) . ' <strong data-yoohw-cos-sync-percent>' . esc_html( number_format_i18n( $sync_percent ) ) . '%</strong></span>';
 		echo '</div>';
 		echo '<div class="yoohw-cos-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' . esc_attr( $sync_percent ) . '" data-yoohw-cos-progress-track>';
 		echo '<span class="yoohw-cos-progress-bar" data-yoohw-cos-progress-bar style="width:' . esc_attr( $sync_percent ) . '%;"></span>';
@@ -3221,7 +3232,10 @@ final class YoOhw_COS_Admin_Menu {
 		echo '<div class="yoohw-cos-progress-counts">';
 		echo '<span>' . esc_html__( 'Orders scanned:', 'yoohw-customer-intelligence' ) . ' <strong class="yoohw-cos-sync-total-scanned">' . esc_html( number_format_i18n( absint( $sync_state['total_scanned'] ) ) ) . '</strong></span>';
 		echo '<span>' . esc_html__( 'Total orders:', 'yoohw-customer-intelligence' ) . ' <strong class="yoohw-cos-sync-total-orders">' . ( $sync_state['total_orders'] > 0 ? esc_html( number_format_i18n( absint( $sync_state['total_orders'] ) ) ) : '&mdash;' ) . '</strong></span>';
-		echo '<span>' . esc_html__( 'Profiles updated:', 'yoohw-customer-intelligence' ) . ' <strong class="yoohw-cos-sync-total-processed">' . esc_html( number_format_i18n( absint( $sync_state['total_processed'] ) ) ) . '</strong></span>';
+		echo '<span>' . esc_html__( 'Orders successful:', 'yoohw-customer-intelligence' ) . ' <strong class="yoohw-cos-sync-total-processed">' . esc_html( number_format_i18n( absint( $sync_state['total_processed'] ) ) ) . '</strong></span>';
+		foreach ( array( 'retryable' => __( 'Retryable:', 'yoohw-customer-intelligence' ), 'unresolved' => __( 'Unresolved:', 'yoohw-customer-intelligence' ), 'issues' => __( 'Total issues:', 'yoohw-customer-intelligence' ) ) as $key => $label ) {
+			echo '<span>' . esc_html( $label ) . ' <strong class="yoohw-cos-sync-total-' . esc_attr( $key ) . '">' . esc_html( number_format_i18n( $sync_state[ 'total_' . $key ] ) ) . '</strong></span>';
+		}
 		echo '</div>';
 		echo '</div>';
 
@@ -3229,8 +3243,11 @@ final class YoOhw_COS_Admin_Menu {
 		self::render_status_table_row( __( 'Status', 'yoohw-customer-intelligence' ), '<span class="yoohw-cos-sync-status-value">' . self::render_status_pill( (string) $summary['label'], (string) $summary['type'] ) . '</span>' );
 		self::render_status_table_row( __( 'Batch size', 'yoohw-customer-intelligence' ), number_format_i18n( absint( $sync_state['batch_size'] ) ) );
 		self::render_status_table_row( __( 'Last batch scanned', 'yoohw-customer-intelligence' ), '<span class="yoohw-cos-sync-last-scanned">' . esc_html( number_format_i18n( absint( $sync_state['last_scanned'] ) ) ) . '</span>' );
+		foreach ( array( 'processed' => __( 'Last batch successful', 'yoohw-customer-intelligence' ), 'retryable' => __( 'Last batch retryable', 'yoohw-customer-intelligence' ), 'unresolved' => __( 'Last batch unresolved', 'yoohw-customer-intelligence' ), 'issues' => __( 'Last batch issues', 'yoohw-customer-intelligence' ) ) as $key => $label ) {
+			self::render_status_table_row( $label, '<span class="yoohw-cos-sync-last-' . esc_attr( $key ) . '">' . esc_html( number_format_i18n( $sync_state[ 'last_' . $key ] ) ) . '</span>' );
+		}
 		self::render_status_table_row( __( 'Orders scanned', 'yoohw-customer-intelligence' ), '<span class="yoohw-cos-sync-total-scanned">' . esc_html( number_format_i18n( absint( $sync_state['total_scanned'] ) ) ) . '</span>' );
-		self::render_status_table_row( __( 'Customer profiles updated', 'yoohw-customer-intelligence' ), '<span class="yoohw-cos-sync-total-processed">' . esc_html( number_format_i18n( absint( $sync_state['total_processed'] ) ) ) . '</span>' );
+		self::render_status_table_row( __( 'Orders successful', 'yoohw-customer-intelligence' ), '<span class="yoohw-cos-sync-total-processed">' . esc_html( number_format_i18n( absint( $sync_state['total_processed'] ) ) ) . '</span>' );
 		self::render_status_table_row( __( 'Total orders', 'yoohw-customer-intelligence' ), '<span class="yoohw-cos-sync-total-orders">' . ( $sync_state['total_orders'] > 0 ? esc_html( number_format_i18n( absint( $sync_state['total_orders'] ) ) ) : '&mdash;' ) . '</span>' );
 		self::render_status_table_row( __( 'Resume page', 'yoohw-customer-intelligence' ), '<span class="yoohw-cos-sync-resume-page">' . ( $has_more ? esc_html( number_format_i18n( $next_page ) ) : '&mdash;' ) . '</span>' );
 		self::render_status_table_row( __( 'Last sync run', 'yoohw-customer-intelligence' ), YoOhw_COS_DB::format_admin_date( $sync_state['last_run_at'], '&mdash;' ) );
