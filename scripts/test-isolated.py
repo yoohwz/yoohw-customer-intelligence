@@ -127,16 +127,18 @@ def main():
     with tempfile.TemporaryDirectory(prefix='yci-test-', dir='/tmp') as directory:
         root = Path(directory).resolve()
         root.chmod(0o700)
+        # MySQL 8.0 reads login files even with --no-defaults; use only our private path.
+        env['MYSQL_TEST_LOGIN_FILE'] = str(root / 'no-login.cnf')
         server = None
         try:
             unpack(root, args.inputs)
             mysql = args.mysql_bin.resolve() / 'mysql'
             mysqld = args.mysqld.resolve() if args.mysqld else args.mysql_bin.resolve() / 'mysqld'
-            run([mysqld, '--no-defaults', '--initialize-insecure', '--datadir=' + str(root / 'data')], stdout=subprocess.DEVNULL)
+            run([mysqld, '--no-defaults', '--initialize-insecure', '--datadir=' + str(root / 'data')], stdout=subprocess.DEVNULL, env=env)
             log = (root / 'mysql.log').open('w')
-            server = subprocess.Popen([str(mysqld), '--no-defaults', '--datadir=' + str(root / 'data'), '--socket=' + str(root / 'mysql.sock'), '--pid-file=' + str(root / 'mysql.pid'), '--skip-networking', '--mysqlx=OFF'], stdout=log, stderr=log)
+            server = subprocess.Popen([str(mysqld), '--no-defaults', '--datadir=' + str(root / 'data'), '--socket=' + str(root / 'mysql.sock'), '--pid-file=' + str(root / 'mysql.pid'), '--skip-networking', '--mysqlx=OFF'], stdout=log, stderr=log, env=env)
             def sql(query):
-                return run([mysql, '--no-defaults', '--no-login-paths', '--protocol=SOCKET', '--socket=' + str(root / 'mysql.sock'), '-uroot', '-N', '-B'], input=query, text=True, capture_output=True).stdout.strip()
+                return run([mysql, '--no-defaults', '--protocol=SOCKET', '--socket=' + str(root / 'mysql.sock'), '-uroot', '-N', '-B'], input=query, text=True, capture_output=True, env=env).stdout.strip()
             for attempt in range(100):
                 if server.poll() is not None:
                     raise RuntimeError((root / 'mysql.log').read_text())

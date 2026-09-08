@@ -11,7 +11,8 @@ Run as a regular user. `--mode yes|no|both` chooses storage; default runs both. 
 ## Ownership and rejection
 
 The runner creates a private random temporary directory, initializes a new MySQL data
-directory without reading system defaults, disables TCP/MySQL X and uses only its own
+directory without reading system defaults, redirects MySQL login-file lookup into that
+private directory, disables TCP/MySQL X and uses only its own
 Unix socket. It creates a random DB/user with privileges restricted to that DB and no
 grant option, plus a random ownership token inside that DB. Root is used only by the
 provisioner on its new server, never passed to WordPress. Ephemeral `environment.json`
@@ -55,6 +56,9 @@ check of tracked PHP, not installed-runtime coverage. This small test set does n
 certify every declared WordPress/WooCommerce/PHP combination or change the plugin's
 support contract. Action revisions are pinned; runner OS/MySQL/PHP patch provisioning
 remains provider-managed and actual versions belong in CI logs.
+
+CI installs the existing lock with a private Composer home and empty explicit auth,
+so inherited runner authentication cannot select credentials for public dependencies.
 
 All PRs, including drafts and docs/test/helper/workflow changes, run the full checks.
 `YCI Required CI` accepts only the full classification and success from both syntax and

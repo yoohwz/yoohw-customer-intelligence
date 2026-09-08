@@ -46,6 +46,9 @@ jobs:
           tools: composer:2.9.5
           coverage: none
       - name: Locked development dependencies
+        env:
+          COMPOSER_HOME: ${{ runner.temp }}/yci-composer
+          COMPOSER_AUTH: '{}'
         run: composer install --no-interaction --no-progress --prefer-dist --no-plugins --no-scripts
       - name: Runtime versions and isolated safety/integration checks
         env:
