@@ -2102,3 +2102,197 @@ final class YCI_Manual_Sync_Outcome_Test extends WP_UnitTestCase {
 	}
 
 }
+
+final class YCI_Intelligence_Freshness_Test extends WP_UnitTestCase {
+	private $saved = array();
+	private $clock_days = 0;
+	public function set_up(): void {
+		parent::set_up();
+		foreach ( array( 'cron', 'yoohw_cos_scoring_settings', 'yoohw_cos_intelligence_generation', 'yoohw_cos_intelligence_freshness' ) as $key ) { $this->saved[ $key ] = get_option( $key, false ); delete_option( $key ); }
+		YoOhw_COS_Customers::reset_data();
+		$this->saved['user'] = get_current_user_id();
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		add_filter( 'pre_option_gmt_offset', array( $this, 'clock' ) );
+	}
+	public function tear_down(): void {
+		remove_filter( 'pre_option_gmt_offset', array( $this, 'clock' ) );
+		wp_set_current_user( $this->saved['user'] ); unset( $this->saved['user'] );
+		foreach ( $this->saved as $key => $value ) { if ( false === $value ) { delete_option( $key ); } else { update_option( $key, $value ); } }
+		parent::tear_down();
+	}
+	// WordPress current_time('timestamp') has this existing option seam. No source dates change.
+	public function clock() { return $this->clock_days * 24; }
+	private function customer( int $days, float $spent = 100 ): int {
+		$id = YoOhw_COS_Customers::create_customer( array( 'email' => wp_generate_uuid4() . '@example.test', 'phone' => '555-0123', 'display_name' => 'Freshness fixture', 'total_orders' => 2, 'total_spent' => $spent ) );
+		YoOhw_COS_Events::record( array( 'customer_id' => $id, 'event_source' => 'wc_loyalty', 'event_type' => 'fixture_activity', 'created_at' => gmdate( 'Y-m-d H:i:s', time() - $days * DAY_IN_SECONDS - HOUR_IN_SECONDS ) ) );
+		$this->assertTrue( YoOhw_COS_Customers::refresh_derived_intelligence( $id ) );
+		return $id;
+	}
+	private function reads( int $id, string $status, string $lifecycle ): void {
+		$row = YoOhw_COS_Customers::get_customer( $id ); // Same persisted profile source.
+		$this->assertSame( $status, $row['customer_status'] ); $this->assertSame( $lifecycle, $row['lifecycle_stage'] );
+		foreach ( array( 'customer_status' => $status, 'lifecycle_stage' => $lifecycle ) as $key => $value ) {
+			$result = YoOhw_COS_Customer_Query::query( array( $key => $value, 'per_page' => 100 ) );
+			$this->assertContains( $id, array_map( 'absint', array_column( $result['items'], 'id' ) ) );
+			$this->assertGreaterThan( 0, $result['total_items'] );
+		}
+		$this->assertGreaterThan( 0, YoOhw_COS_Customers::get_status_counts()[ $status ] );
+	}
+	private function snapshot( int $id ): void {
+		$row = YoOhw_COS_Customers::get_customer( $id );
+		$fields = array_intersect_key( $row, array_flip( array( 'customer_status', 'lifecycle_stage', 'vip_status', 'risk_score' ) ) );
+		$counts = array();
+		foreach ( array( 'active', 'at_risk', 'inactive', 'vip' ) as $status ) { $counts[ $status ] = YoOhw_COS_Customer_Query::query( array( 'customer_status' => $status ) )['total_items']; }
+		fwrite( STDERR, 'FRESHNESS SNAPSHOT ' . wp_json_encode( array( 'row' => $fields, 'filters' => $counts, 'views' => YoOhw_COS_Customers::get_status_counts() ) ) . "\n" );
+	}
+	public static function boundaries(): array { return array( array( 44, 'active', 'at_risk', 'repeat' ), array( 89, 'at_risk', 'inactive', 'repeat' ), array( 179, 'inactive', 'inactive', 'dormant' ) ); }
+	/** @dataProvider boundaries */
+	public function test_clock_crossing_refreshes_persisted_reads( int $days, string $old_status, string $status, string $lifecycle ): void {
+		$id = $this->customer( $days );
+		$this->reads( $id, $old_status, 'repeat' );
+		$before = YoOhw_COS_Customers::get_customer( $id );
+		$this->clock_days = 1;
+		$this->assertSame( $status, YoOhw_COS_Intelligence::calculate_customer_status( $before ) );
+		$this->assertSame( $lifecycle, YoOhw_COS_Intelligence::calculate_lifecycle_stage( $before ) );
+		if ( 179 === $days ) { $this->assertSame( 10.0, YoOhw_COS_Intelligence::calculate_risk_score( $before ) ); }
+		do_action_ref_array( YoOhw_COS_Customers::RISK_SCORE_REFRESH_HOOK, array() );
+		$this->snapshot( $id );
+		$this->reads( $id, $status, $lifecycle );
+		$after = YoOhw_COS_Customers::get_customer( $id );
+		$this->assertSame( 179 === $days ? 10.0 : 0.0, (float) $after['risk_score'] );
+		$this->assertSame( $before['last_activity_date'], $after['last_activity_date'] );
+	}
+	private function save( array $settings ): void {
+		$post = $_POST; $request = $_REQUEST;
+		$_POST = array( 'scoring' => $settings, '_wpnonce' => wp_create_nonce( 'yoohw_cos_save_scoring_settings' ) ); $_REQUEST = $_POST;
+		$redirect = static function ( $url ) { throw new RuntimeException( $url, 302 ); };
+		add_filter( 'wp_redirect', $redirect );
+		try { YoOhw_COS_Admin_Tools::handle_save_scoring_settings(); $this->fail( 'Expected settings redirect' ); }
+		catch ( RuntimeException $e ) { $this->assertSame( 302, $e->getCode() ); }
+		finally { remove_filter( 'wp_redirect', $redirect ); $_POST = $post; $_REQUEST = $request; }
+	}
+	public static function settings_cases(): array { return array( array( 'at_risk' ), array( 'inactive' ), array( 'dormant' ), array( 'value' ) ); }
+	/** @dataProvider settings_cases */
+	public function test_settings_save_schedules_persisted_refresh( string $case ): void {
+		$id = $this->customer( 20, 500 );
+		$this->reads( $id, 'active', 'repeat' );
+		$settings = YoOhw_COS_Intelligence::get_scoring_settings_defaults();
+		if ( 'at_risk' === $case ) { $settings['customer_status']['at_risk_days'] = 10; }
+		if ( 'inactive' === $case ) { $settings['customer_status']['at_risk_days'] = 5; $settings['customer_status']['inactive_days'] = 10; }
+		if ( 'dormant' === $case ) { $settings['lifecycle']['dormant_days'] = 10; }
+		if ( 'value' === $case ) { $settings['lifecycle']['loyal_spent'] = 400.0; $settings['value_tiers']['high_value_spent'] = 400.0; $settings['customer_status']['vip_spent'] = 400.0; }
+		$this->save( $settings );
+		$this->assertSame( $settings, YoOhw_COS_Intelligence::get_scoring_settings() );
+		// Execute actual scheduled work, never substitute a manual recalculation.
+		foreach ( _get_cron_array() as $time => $hooks ) { foreach ( $hooks[ YoOhw_COS_Customers::RISK_SCORE_REFRESH_HOOK ] ?? array() as $event ) { wp_unschedule_event( $time, YoOhw_COS_Customers::RISK_SCORE_REFRESH_HOOK, $event['args'] ); do_action_ref_array( YoOhw_COS_Customers::RISK_SCORE_REFRESH_HOOK, $event['args'] ); } }
+		$row = YoOhw_COS_Customers::get_customer( $id );
+		$this->snapshot( $id );
+		$this->reads( $id, 'value' === $case ? 'vip' : ( in_array( $case, array( 'at_risk', 'inactive' ), true ) ? $case : 'active' ), 'dormant' === $case ? 'dormant' : ( 'value' === $case ? 'loyal' : 'repeat' ) );
+		$this->assertSame( 'value' === $case ? 'silver' : 'none', $row['vip_status'] );
+	}
+	private function wake(): void {
+		$hook = YoOhw_COS_Customers::RISK_SCORE_REFRESH_HOOK;
+		$time = wp_next_scheduled( $hook, array( -1 ) );
+		$this->assertNotFalse( $time );
+		wp_unschedule_event( $time, $hook, array( -1 ) );
+		do_action( $hook, -1 );
+	}
+	private function state(): array { return get_option( 'yoohw_cos_intelligence_freshness', array() ); }
+	public function test_multiple_batches_latest_settings_and_legacy_continuation(): void {
+		global $wpdb;
+		$ids = array();
+		for ( $i = 0; $i < 251; $i++ ) { $ids[] = $this->customer( 20, 500 ); }
+		$settings = YoOhw_COS_Intelligence::get_scoring_settings_defaults();
+		$settings['customer_status']['at_risk_days'] = 10;
+		$this->save( $settings ); $this->wake();
+		$state = $this->state();
+		$this->assertSame( 'in_progress', $state['status'] );
+		$this->assertSame( $ids[249], $state['cursor'] );
+		$this->assertSame( 250, YoOhw_COS_Customer_Query::query( array( 'customer_status' => 'at_risk' ) )['total_items'] );
+		$this->assertSame( 'active', YoOhw_COS_Customers::get_customer( $ids[250] )['customer_status'] );
+		$settings['customer_status']['inactive_days'] = 15;
+		$this->save( $settings );
+		$this->assertNotSame( $state['generation'], YoOhw_COS_Intelligence::get_scoring_generation() );
+		// Old scheduled cursors are never trusted to skip rows after invalidation.
+		do_action( YoOhw_COS_Customers::RISK_SCORE_REFRESH_HOOK, $ids[249] );
+		$this->assertSame( 250, YoOhw_COS_Customer_Query::query( array( 'customer_status' => 'inactive' ) )['total_items'] );
+		$this->wake();
+		$this->assertSame( 'completed', $this->state()['status'] );
+		$this->assertSame( $ids[250], $this->state()['cursor'] );
+		$this->assertSame( 251, YoOhw_COS_Customer_Query::query( array( 'customer_status' => 'inactive' ) )['total_items'] );
+		$this->assertSame( 0, YoOhw_COS_Customer_Query::query( array( 'customer_status' => 'at_risk' ) )['total_items'] );
+		$this->assertSame( 251, YoOhw_COS_Customers::get_status_counts()['inactive'] );
+		$order = wc_create_order();
+		$order->set_billing_email( YoOhw_COS_Customers::get_customer( $ids[0] )['email'] );
+		$order->set_total( '75' ); $order->set_status( 'completed' ); $order->save();
+		$this->assertSame( $ids[0], YoOhw_COS_Customers::sync_from_order( $order ) );
+		$order_before = wc_get_order( $order->get_id() )->get_data();
+		$events = $wpdb->get_results( 'SELECT * FROM ' . YoOhw_COS_DB::events_table(), ARRAY_A );
+		$facts = $wpdb->get_results( 'SELECT * FROM ' . YoOhw_COS_DB::order_facts_table(), ARRAY_A );
+		$rows = $wpdb->get_results( 'SELECT * FROM ' . YoOhw_COS_DB::customers_table() . ' ORDER BY id', ARRAY_A );
+		do_action_ref_array( YoOhw_COS_Customers::RISK_SCORE_REFRESH_HOOK, array() ); $this->wake();
+		$after = $wpdb->get_results( 'SELECT * FROM ' . YoOhw_COS_DB::customers_table() . ' ORDER BY id', ARRAY_A );
+		foreach ( $rows as &$row ) { unset( $row['updated_at'] ); } unset( $row );
+		foreach ( $after as &$row ) { unset( $row['updated_at'] ); } unset( $row );
+		$this->assertSame( $rows, $after );
+		$this->assertSame( $events, $wpdb->get_results( 'SELECT * FROM ' . YoOhw_COS_DB::events_table(), ARRAY_A ) );
+		$this->assertSame( $facts, $wpdb->get_results( 'SELECT * FROM ' . YoOhw_COS_DB::order_facts_table(), ARRAY_A ) );
+		$this->assertCount( 1, $facts );
+		$this->assertEquals( $order_before, wc_get_order( $order->get_id() )->get_data() );
+		foreach ( _get_cron_array() as $hooks ) { $this->assertArrayNotHasKey( YoOhw_COS_Customers::ORDER_SYNC_RETRY_HOOK, $hooks ); }
+	}
+	public function test_settings_changed_inside_batch_restart_even_for_aba_values(): void {
+		$id = $this->customer( 20 );
+		$original = YoOhw_COS_Intelligence::get_scoring_settings_defaults();
+		$this->save( $original );
+		$changed = $original; $changed['customer_status']['at_risk_days'] = 10;
+		$once = false;
+		$change = function ( $customer ) use ( &$once, $changed, $original ) {
+			if ( ! $once ) { $once = true; YoOhw_COS_Intelligence::update_scoring_settings( $changed ); YoOhw_COS_Intelligence::update_scoring_settings( $original ); }
+			return $customer;
+		};
+		add_filter( 'yoohw_cos_customer_recalculate_intelligence_data', $change );
+		try { $this->wake(); } finally { remove_filter( 'yoohw_cos_customer_recalculate_intelligence_data', $change ); }
+		$this->assertSame( 'pending', $this->state()['status'] ); $this->assertSame( 0, $this->state()['cursor'] );
+		$this->wake(); $this->assertSame( 'completed', $this->state()['status'] );
+		$this->reads( $id, 'active', 'repeat' );
+	}
+	public function test_reset_contention_failure_zero_and_archived_rows(): void {
+		global $wpdb;
+		$id = $this->customer( 20 );
+		$settings = YoOhw_COS_Intelligence::get_scoring_settings_defaults(); $settings['customer_status']['at_risk_days'] = 10;
+		$this->save( $settings );
+		$reset = get_option( YoOhw_COS_Reset_Guard::OPTION );
+		$blocked = $reset; $blocked['status'] = 'pending'; update_option( YoOhw_COS_Reset_Guard::OPTION, $blocked );
+		$before = $this->state();
+		try { $this->wake(); $this->assertSame( $before, $this->state() ); $this->assertNotFalse( wp_next_scheduled( YoOhw_COS_Customers::RISK_SCORE_REFRESH_HOOK, array( -1 ) ) ); }
+		finally { update_option( YoOhw_COS_Reset_Guard::OPTION, $reset ); }
+		$fail = static function ( $sql ) use ( $wpdb ) { if ( 0 === strpos( $sql, 'UPDATE `' . YoOhw_COS_DB::customers_table() . '`' ) ) { throw new RuntimeException( 'Synthetic freshness write interruption' ); } return $sql; };
+		add_filter( 'query', $fail );
+		try { $this->wake(); } finally { remove_filter( 'query', $fail ); }
+		$this->assertSame( 'in_progress', $this->state()['status'] ); $this->assertSame( 0, $this->state()['cursor'] );
+		$this->wake(); $this->reads( $id, 'at_risk', 'repeat' );
+		YoOhw_COS_Customers::update_customer( $id, array( 'archived_at' => YoOhw_COS_DB::now() ) );
+		$settings['customer_status']['inactive_days'] = 15; $this->save( $settings ); $this->wake();
+		$this->assertSame( 'inactive', YoOhw_COS_Customers::get_customer( $id )['customer_status'] );
+		$this->assertSame( 1, YoOhw_COS_Customer_Query::query( array( 'customer_view' => 'archived', 'customer_status' => 'inactive' ) )['total_items'] );
+		$this->assertTrue( YoOhw_COS_Customers::reset_data() );
+		$this->assertSame( array(), $this->state() );
+		do_action( YoOhw_COS_Customers::RISK_SCORE_REFRESH_HOOK, $id );
+		$this->assertSame( 'completed', $this->state()['status'] ); $this->assertSame( 0, $this->state()['cursor'] );
+	}
+	public function test_first_settings_save_in_another_request_bypasses_negative_option_cache(): void {
+		global $wpdb;
+		$id = $this->customer( 20 ); // Primes this request's absent-settings cache.
+		$this->assertFalse( get_option( 'yoohw_cos_scoring_settings', false ) );
+		$settings = YoOhw_COS_Intelligence::get_scoring_settings_defaults();
+		$settings['customer_status']['at_risk_days'] = 10;
+		// Model committed options from another request without purging this request's local cache.
+		$wpdb->insert( $wpdb->options, array( 'option_name' => 'yoohw_cos_scoring_settings', 'option_value' => maybe_serialize( $settings ), 'autoload' => 'off' ) );
+		$wpdb->insert( $wpdb->options, array( 'option_name' => 'yoohw_cos_intelligence_generation', 'option_value' => wp_generate_uuid4(), 'autoload' => 'off' ) );
+		YoOhw_COS_Customers::request_intelligence_refresh(); $this->wake();
+		$this->reads( $id, 'at_risk', 'repeat' );
+		$this->assertSame( 'completed', $this->state()['status'] );
+		$this->assertSame( YoOhw_COS_Intelligence::get_scoring_generation(), $this->state()['generation'] );
+	}
+}
