@@ -1081,8 +1081,8 @@ final class YoOhw_COS_Customers {
 	}
 
 	/** Wake the existing hook without replacing its daily recurrence. */
-	public static function request_intelligence_refresh(): void {
-		$args = array( -1 );
+	public static function request_intelligence_refresh( bool $daily = false ): void {
+		$args = array( $daily ? 0 : -1 );
 		if ( ! wp_next_scheduled( self::RISK_SCORE_REFRESH_HOOK, $args ) ) {
 			wp_schedule_single_event( time() + MINUTE_IN_SECONDS, self::RISK_SCORE_REFRESH_HOOK, $args );
 		}
@@ -1091,14 +1091,14 @@ final class YoOhw_COS_Customers {
 	/** Legacy cursor arguments are wakeups only; persisted state owns the cursor. */
 	public static function process_risk_score_cache_refresh( int $after_customer_id = 0 ): void {
 		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
-			self::request_intelligence_refresh();
+			self::request_intelligence_refresh( 0 === $after_customer_id );
 			return;
 		}
 		try {
 			self::process_intelligence_freshness_guarded( 0 === $after_customer_id );
 		} catch ( Throwable $exception ) {
 			// Leave the last acknowledged cursor unfinished and retry the bounded batch.
-			self::request_intelligence_refresh();
+			self::request_intelligence_refresh( 0 === $after_customer_id );
 		} finally {
 			YoOhw_COS_Reset_Guard::leave();
 		}
@@ -1119,7 +1119,7 @@ final class YoOhw_COS_Customers {
 			return;
 		}
 		$state['status'] = 'in_progress';
-		update_option( $option, $state, false );
+		self::save_intelligence_freshness_state( $state );
 		// Settings may have been read before a concurrent request saved new values.
 		wp_cache_delete( 'yoohw_cos_scoring_settings', 'options' );
 		wp_cache_delete( 'alloptions', 'options' );
@@ -1142,9 +1142,19 @@ final class YoOhw_COS_Customers {
 		} else {
 			$state['status'] = count( $ids ) < self::RISK_SCORE_REFRESH_BATCH_SIZE ? 'completed' : 'in_progress';
 		}
-		update_option( $option, $state, false );
+		self::save_intelligence_freshness_state( $state );
 		if ( 'completed' !== $state['status'] ) {
 			self::request_intelligence_refresh();
+		}
+	}
+
+	private static function save_intelligence_freshness_state( array $state ): void {
+		global $wpdb;
+		$option = 'yoohw_cos_intelligence_freshness';
+		update_option( $option, $state, false );
+		$stored = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, $option ) );
+		if ( '' !== $wpdb->last_error || $state !== maybe_unserialize( $stored ) ) {
+			throw new RuntimeException( 'Intelligence refresh checkpoint was not persisted.' );
 		}
 	}
 

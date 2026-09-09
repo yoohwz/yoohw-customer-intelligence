@@ -9,8 +9,10 @@ existing callers; the automatic hook uses the broader derived refresh.
 Each invocation scans at most 250 customers in ascending ID order, including archived
 rows so archived queries and later restores do not retain obsolete classifications.
 The existing daily event starts a new pass after completion and resumes unfinished
-passes. A single deduplicated wakeup on the same hook, with argument `-1`, continues
-pending work after one minute. Actual execution depends on WordPress cron traffic;
+passes. A deduplicated wakeup on the same hook, with argument `-1`, continues pending
+work after one minute. A daily invocation deferred before starting retains argument
+`0` in its retry, so a completed prior pass cannot swallow the new daily request.
+There is at most one pending wakeup per intent on the existing hook. Actual execution depends on WordPress cron traffic;
 this is eventual convergence, not immediate read-time freshness or a fixed SLA.
 Long passes continue across daily ticks instead of repeatedly restarting at ID zero.
 
@@ -26,8 +28,9 @@ wakeups while preserving the daily recurrence.
 Only generation, cursor and status (`pending`, `in_progress`, `completed`) are retained
 in one freshness option, plus the settings generation option; no per-customer ledger
 or PII. Existing Reset serialization covers each batch and state acknowledgement.
-Contention defers even the initial zero cursor. Exceptions/read/write failures retain
-an unfinished acknowledged cursor and request another bounded attempt. Successfully
+Contention defers even the initial zero cursor. Checkpoints are read back before processing or acknowledging a batch. Exceptions
+or failed persistence do not acknowledge that batch and request another bounded
+attempt, preserving daily intent even if the previous checkpoint is completed. Successfully
 processed rows may be replayed after interruption; existing derived updates and
 integration idempotency apply. Reset clears this worker's cursor along with other
 owned worker state; the settings generation and daily recurrence remain applicable.
@@ -44,6 +47,7 @@ calculators by one day, with fixed source activity rows; it does not wait real d
 change production formulas. Scheduled callbacks are dispatched as WP-Cron does, and
 settings tests invoke the real authorized save handler. A 251-customer population
 crosses the production batch boundary. Coverage includes persisted query/view counts,
-latest-generation restart, interrupted writes, Reset deferral, archived/zero rows and
+latest-generation restart, interrupted/failed checkpoint writes, actual Reset-lock
+contention after a completed pass, archived/zero rows and
 idempotency. This does not certify real-time cron delivery, arbitrary extension side
 effects, browser layout or every supported dependency version.

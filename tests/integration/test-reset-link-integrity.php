@@ -1912,15 +1912,17 @@ final class YCI_Order_Change_Test extends WP_UnitTestCase {
 	}
 	public function test_link_write_exception_clears_owned_write_suppression(): void {
 		$order = $this->paid_order();
+		$order->set_date_modified( '2000-01-01 00:00:00' ); $order->save();
+		// A nested WC full save catches Exception; Error keeps this fault observable in both stores.
 		YoOhw_COS_Customers::reset_data();
 		$throw = static function ( $meta_id, $id, $key ) use ( $order ) {
-			if ( $id === $order->get_id() && YoOhw_COS_Customers::ORDER_CUSTOMER_META_KEY === $key ) { throw new RuntimeException( 'Synthetic owned link write failure' ); }
+			if ( $id === $order->get_id() && YoOhw_COS_Customers::ORDER_CUSTOMER_META_KEY === $key ) { throw new Error( 'Synthetic owned link write failure' ); }
 		};
 		add_action( 'added_order_meta', $throw, 10, 3 );
 		try {
 			YoOhw_COS_Customers::sync_from_order( new WC_Order( $order->get_id() ) );
 			$this->fail( 'Expected synthetic owned link write failure.' );
-		} catch ( RuntimeException $exception ) { $this->assertSame( 'Synthetic owned link write failure', $exception->getMessage() ); }
+		} catch ( Throwable $exception ) { $this->assertSame( 'Synthetic owned link write failure', $exception->getMessage() ); }
 		finally { remove_action( 'added_order_meta', $throw, 10 ); }
 		$order = new WC_Order( $order->get_id() ); $order->set_total( '64.00' ); $order->save();
 		$this->assert_single_contribution( $order, 64.0 );
@@ -2190,12 +2192,12 @@ final class YCI_Intelligence_Freshness_Test extends WP_UnitTestCase {
 		$this->reads( $id, 'value' === $case ? 'vip' : ( in_array( $case, array( 'at_risk', 'inactive' ), true ) ? $case : 'active' ), 'dormant' === $case ? 'dormant' : ( 'value' === $case ? 'loyal' : 'repeat' ) );
 		$this->assertSame( 'value' === $case ? 'silver' : 'none', $row['vip_status'] );
 	}
-	private function wake(): void {
+	private function wake( array $args = array( -1 ) ): void {
 		$hook = YoOhw_COS_Customers::RISK_SCORE_REFRESH_HOOK;
-		$time = wp_next_scheduled( $hook, array( -1 ) );
+		$time = wp_next_scheduled( $hook, $args );
 		$this->assertNotFalse( $time );
-		wp_unschedule_event( $time, $hook, array( -1 ) );
-		do_action( $hook, -1 );
+		wp_unschedule_event( $time, $hook, $args );
+		do_action_ref_array( $hook, $args );
 	}
 	private function state(): array { return get_option( 'yoohw_cos_intelligence_freshness', array() ); }
 	public function test_multiple_batches_latest_settings_and_legacy_continuation(): void {
@@ -2295,4 +2297,49 @@ final class YCI_Intelligence_Freshness_Test extends WP_UnitTestCase {
 		$this->assertSame( 'completed', $this->state()['status'] );
 		$this->assertSame( YoOhw_COS_Intelligence::get_scoring_generation(), $this->state()['generation'] );
 	}
+	public static function checkpoint_failures(): array { return array( array( 'exception' ), array( 'sql_failure' ) ); }
+	/** @dataProvider checkpoint_failures */
+	public function test_daily_state_write_interruption_retries_the_failed_pass( string $failure ): void {
+		global $wpdb;
+		$id = $this->customer( 44 );
+		do_action_ref_array( YoOhw_COS_Customers::RISK_SCORE_REFRESH_HOOK, array() );
+		$this->assertSame( 'completed', $this->state()['status'] );
+		$this->reads( $id, 'active', 'repeat' );
+		$this->clock_days = 1;
+		$failed = false;
+		$fail = static function ( $sql ) use ( &$failed, $failure ) {
+			if ( ! $failed && 0 === strpos( $sql, 'UPDATE ' ) && false !== strpos( $sql, 'yoohw_cos_intelligence_freshness' ) ) {
+				$failed = true;
+				if ( 'exception' === $failure ) { throw new RuntimeException( 'Synthetic initial daily state write interrupted' ); }
+				return 'UPDATE yci_missing_freshness_fixture SET unavailable = 1';
+			}
+			return $sql;
+		};
+		$suppressed = $wpdb->suppress_errors();
+		add_filter( 'query', $fail );
+		try { do_action_ref_array( YoOhw_COS_Customers::RISK_SCORE_REFRESH_HOOK, array() ); }
+		finally { remove_filter( 'query', $fail ); $wpdb->suppress_errors( $suppressed ); }
+		$this->assertTrue( $failed );
+		$this->wake( array( 0 ) );
+		fwrite( STDERR, 'DAILY RETRY ' . wp_json_encode( array( 'state' => $this->state()['status'], 'persisted' => YoOhw_COS_Customers::get_customer( $id )['customer_status'], 'live' => YoOhw_COS_Intelligence::calculate_customer_status( YoOhw_COS_Customers::get_customer( $id ) ), 'next_retry' => wp_next_scheduled( YoOhw_COS_Customers::RISK_SCORE_REFRESH_HOOK, array( 0 ) ) ) ) . "\n" );
+		$this->reads( $id, 'at_risk', 'repeat' );
+	}
+
+
+	public function test_daily_real_lock_contention_retries_the_failed_pass(): void {
+		$id = $this->customer( 44 );
+		do_action_ref_array( YoOhw_COS_Customers::RISK_SCORE_REFRESH_HOOK, array() );
+		$this->assertSame( 'completed', $this->state()['status'] );
+		$this->clock_days = 1;
+		$other = new mysqli( 'localhost', DB_USER, DB_PASSWORD, DB_NAME, 0, getenv( 'YCI_TEST_ROOT' ) . '/mysql.sock' );
+		$name = $other->real_escape_string( YoOhw_COS_Reset_Guard::lock_name() );
+		$this->assertSame( '1', (string) $other->query( "SELECT GET_LOCK('" . $name . "', 0)" )->fetch_row()[0] );
+		try { do_action_ref_array( YoOhw_COS_Customers::RISK_SCORE_REFRESH_HOOK, array() ); }
+		finally { $other->query( "SELECT RELEASE_LOCK('" . $name . "')" ); $other->close(); }
+		$this->assertNotFalse( wp_next_scheduled( YoOhw_COS_Customers::RISK_SCORE_REFRESH_HOOK, array( 0 ) ) );
+		$this->wake( array( 0 ) );
+		fwrite( STDERR, 'LOCK RETRY ' . wp_json_encode( array( 'state' => $this->state()['status'], 'persisted' => YoOhw_COS_Customers::get_customer( $id )['customer_status'], 'live' => YoOhw_COS_Intelligence::calculate_customer_status( YoOhw_COS_Customers::get_customer( $id ) ), 'next_retry' => wp_next_scheduled( YoOhw_COS_Customers::RISK_SCORE_REFRESH_HOOK, array( 0 ) ) ) ) . "\n" );
+		$this->reads( $id, 'at_risk', 'repeat' );
+	}
+
 }
