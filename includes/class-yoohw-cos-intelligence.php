@@ -67,8 +67,16 @@ final class YoOhw_COS_Intelligence {
 		$settings = self::sanitize_scoring_settings( $source );
 
 		update_option( self::SCORING_SETTINGS_OPTION, $settings, false );
+		update_option( 'yoohw_cos_intelligence_generation', wp_generate_uuid4(), false );
+		YoOhw_COS_Customers::request_intelligence_refresh();
 
 		return $settings;
+	}
+
+	/** Read uncached so an in-flight worker observes another request's invalidation. */
+	public static function get_scoring_generation(): string {
+		global $wpdb;
+		return (string) $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, 'yoohw_cos_intelligence_generation' ) );
 	}
 
 	public static function get_scoring_settings_defaults(): array {

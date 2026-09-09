@@ -936,6 +936,7 @@ final class YoOhw_COS_Customers {
 			'yoohw_cos_operation_sync_state_backfill_first_orders',
 			'yoohw_cos_operation_sync_state_blacklist_signals',
 			'yoohw_cos_activity_semantics_recalculation',
+			'yoohw_cos_intelligence_freshness',
 			'yoohw_cos_customer_data_updated_at',
 			'yoohw_cos_loyalty_backfill_state',
 			'yoohw_cos_premium_reassociation_state',
@@ -1079,24 +1080,91 @@ final class YoOhw_COS_Customers {
 		);
 	}
 
-	public static function process_risk_score_cache_refresh( int $after_customer_id = 0 ): void {
-		$result = self::refresh_risk_score_cache_batch( $after_customer_id );
+	/** Wake the existing hook without replacing its daily recurrence. */
+	public static function request_intelligence_refresh( bool $daily = false ): void {
+		$args = array( $daily ? 0 : -1 );
+		if ( ! wp_next_scheduled( self::RISK_SCORE_REFRESH_HOOK, $args ) ) {
+			wp_schedule_single_event( time() + MINUTE_IN_SECONDS, self::RISK_SCORE_REFRESH_HOOK, $args );
+		}
+	}
 
-		if ( empty( $result['has_more'] ) ) {
+	/** Legacy cursor arguments are wakeups only; persisted state owns the cursor. */
+	public static function process_risk_score_cache_refresh( int $after_customer_id = 0 ): void {
+		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+			self::request_intelligence_refresh( 0 === $after_customer_id );
 			return;
 		}
+		try {
+			self::process_intelligence_freshness_guarded( 0 === $after_customer_id );
+		} catch ( Throwable $exception ) {
+			// Leave the last acknowledged cursor unfinished and retry the bounded batch.
+			self::request_intelligence_refresh( 0 === $after_customer_id );
+		} finally {
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
 
-		$next_customer_id = absint( $result['last_customer_id'] ?? 0 );
-		$args             = array( $next_customer_id );
+	private static function process_intelligence_freshness_guarded( bool $daily ): void {
+		global $wpdb;
+		$option = 'yoohw_cos_intelligence_freshness';
+		wp_cache_delete( 'notoptions', 'options' );
+		wp_cache_delete( $option, 'options' );
+		$state = get_option( $option, array() );
+		$state = is_array( $state ) ? $state : array();
+		$generation = YoOhw_COS_Intelligence::get_scoring_generation();
+		if ( empty( $state ) || ( $state['generation'] ?? null ) !== $generation || ( $daily && 'completed' === ( $state['status'] ?? '' ) ) ) {
+			$state = array( 'generation' => $generation, 'cursor' => 0, 'status' => 'pending' );
+		}
+		if ( 'completed' === ( $state['status'] ?? '' ) ) {
+			return;
+		}
+		$state['status'] = 'in_progress';
+		self::save_intelligence_freshness_state( $state );
+		// Settings may have been read before a concurrent request saved new values.
+		wp_cache_delete( 'yoohw_cos_scoring_settings', 'options' );
+		wp_cache_delete( 'alloptions', 'options' );
+		$ids = $wpdb->get_col( $wpdb->prepare(
+			'SELECT id FROM %i WHERE id > %d ORDER BY id ASC LIMIT %d',
+			YoOhw_COS_DB::customers_table(), absint( $state['cursor'] ), self::RISK_SCORE_REFRESH_BATCH_SIZE
+		) );
+		if ( '' !== $wpdb->last_error ) {
+			throw new RuntimeException( 'Intelligence refresh read failed.' );
+		}
+		foreach ( $ids as $id ) {
+			if ( ! self::refresh_derived_intelligence( absint( $id ) ) ) {
+				throw new RuntimeException( 'Intelligence refresh write failed.' );
+			}
+			$state['cursor'] = absint( $id );
+		}
+		$latest = YoOhw_COS_Intelligence::get_scoring_generation();
+		if ( $generation !== $latest ) {
+			$state = array( 'generation' => $latest, 'cursor' => 0, 'status' => 'pending' );
+		} else {
+			$state['status'] = count( $ids ) < self::RISK_SCORE_REFRESH_BATCH_SIZE ? 'completed' : 'in_progress';
+		}
+		self::save_intelligence_freshness_state( $state );
+		if ( 'completed' !== $state['status'] ) {
+			self::request_intelligence_refresh();
+		}
+	}
 
-		if ( $next_customer_id > 0 && ! wp_next_scheduled( self::RISK_SCORE_REFRESH_HOOK, $args ) ) {
-			wp_schedule_single_event( time() + 5, self::RISK_SCORE_REFRESH_HOOK, $args );
+	private static function save_intelligence_freshness_state( array $state ): void {
+		global $wpdb;
+		$option = 'yoohw_cos_intelligence_freshness';
+		update_option( $option, $state, false );
+		$stored = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, $option ) );
+		if ( '' !== $wpdb->last_error || $state !== maybe_unserialize( $stored ) ) {
+			throw new RuntimeException( 'Intelligence refresh checkpoint was not persisted.' );
 		}
 	}
 
 	private static function maybe_schedule_risk_score_cache_refresh(): void {
 		if ( ! wp_next_scheduled( self::RISK_SCORE_REFRESH_HOOK ) ) {
 			wp_schedule_event( time() + HOUR_IN_SECONDS, 'daily', self::RISK_SCORE_REFRESH_HOOK );
+		}
+		$state = get_option( 'yoohw_cos_intelligence_freshness', array() );
+		if ( ! is_array( $state ) || 'completed' !== ( $state['status'] ?? '' ) || ( $state['generation'] ?? null ) !== YoOhw_COS_Intelligence::get_scoring_generation() ) {
+			self::request_intelligence_refresh();
 		}
 	}
 
