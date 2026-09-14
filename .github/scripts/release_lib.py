@@ -307,7 +307,15 @@ class GitHubAPI:
         require(bool(self.token), "GitHub token is required for release authentication")
         self.base = f"https://api.github.com/repos/{REPOSITORY}"
 
-    def _request(self, method: str, url: str, data: bytes | None = None, headers: dict[str, str] | None = None):
+    def _request(
+        self,
+        method: str,
+        url: str,
+        data: bytes | None = None,
+        headers: dict[str, str] | None = None,
+        *,
+        decode_json: bool = True,
+    ):
         request_headers = {
             "Accept": "application/vnd.github+json",
             "Authorization": f"Bearer {self.token}",
@@ -321,7 +329,7 @@ class GitHubAPI:
             with urllib.request.urlopen(request, timeout=30) as response:
                 body = response.read()
                 content_type = response.headers.get("Content-Type", "")
-                if "application/json" in content_type or body.startswith((b"{", b"[")):
+                if decode_json and ("application/json" in content_type or body.startswith((b"{", b"["))):
                     return json.loads(body.decode("utf-8"))
                 return body
         except urllib.error.HTTPError as error:
@@ -433,6 +441,7 @@ class GitHubAPI:
             "GET",
             self.base + f"/releases/assets/{asset_id}",
             headers={"Accept": "application/octet-stream"},
+            decode_json=False,
         )
 
     def _upload_asset(self, release_id: int, name: str, data: bytes, content_type: str) -> None:
@@ -574,6 +583,15 @@ class SVNWorkspace:
                 not (relative == "assets" or relative.startswith("assets/")),
                 "WordPress.org assets are immutable in normal publication",
             )
+        has_trunk_delta = any(path == "trunk" or path.startswith("trunk/") for path in paths)
+        has_target_tag_delta = any(
+            path == f"tags/{version}" or path.startswith(f"tags/{version}/") for path in paths
+        )
+        require(
+            has_trunk_delta,
+            "tag-only release is unsupported; publication requires a trunk delta before mutation",
+        )
+        require(has_target_tag_delta, "publication staging did not create the target tag")
         return {"before": before, "changed_paths": sorted(paths)}
 
     def atomic_commit(

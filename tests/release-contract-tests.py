@@ -126,6 +126,8 @@ def implementation_contract() -> None:
         '"git/tags"',
         '"tagger"',
         "existing release tag is not annotated",
+        "decode_json=False",
+        "tag-only release is unsupported",
         "--password-from-stdin",
         "--no-auth-cache",
         'remove_env={"WPORG_SVN_PASSWORD"}',
@@ -244,6 +246,76 @@ def credential_environment_contract() -> None:
             os.environ["WPORG_SVN_PASSWORD"] = old
 
 
+def release_asset_bytes_contract() -> None:
+    rel = load_release_lib()
+    payload = b'{"schema_version":1,"state":"manifest"}\n'
+
+    class FakeResponse:
+        status = 200
+        headers = {"Content-Type": "application/octet-stream"}
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def read(self):
+            return payload
+
+    original_urlopen = rel.urllib.request.urlopen
+    rel.urllib.request.urlopen = lambda request, timeout=30: FakeResponse()
+    try:
+        result = rel.GitHubAPI("contract-token")._release_asset_bytes(123)
+        assert isinstance(result, bytes)
+        assert result == payload
+    finally:
+        rel.urllib.request.urlopen = original_urlopen
+
+
+def existing_release_manifest_asset_contract() -> None:
+    rel = load_release_lib()
+    candidate = "c" * 40
+    version = "1.3.1"
+    with tempfile.TemporaryDirectory(prefix="yci-existing-release-") as temporary:
+        prepared = Path(temporary)
+        package_name = f"{rel.SLUG}-{version}.zip"
+        package = prepared / package_name
+        manifest_path = prepared / "release-manifest.json"
+        package.write_bytes(b"package-bytes")
+        manifest_path.write_bytes(b'{"schema_version":1,"existing":true}\n')
+        manifest = {
+            "version": version,
+            "candidate_sha": candidate,
+            "package_name": package_name,
+        }
+
+        api = rel.GitHubAPI("contract-token")
+        api.resolve_tag_commit = lambda requested: candidate
+        api.get_optional = lambda path: {"id": 77, "draft": False, "prerelease": False}
+
+        asset_bytes = {
+            101: package.read_bytes(),
+            102: manifest_path.read_bytes(),
+        }
+
+        def fake_get(path: str):
+            assert path == "releases/77/assets?per_page=100"
+            return [
+                {"name": package_name, "id": 101},
+                {"name": "release-manifest.json", "id": 102},
+            ]
+
+        api.get = fake_get
+        api._release_asset_bytes = lambda asset_id: asset_bytes[asset_id]
+
+        def unexpected_upload(*args, **kwargs):
+            raise AssertionError("existing release assets must be reconciled, not re-uploaded")
+
+        api._upload_asset = unexpected_upload
+        assert api.create_or_reconcile_release(manifest, prepared) == 77
+
+
 def full_prepare_contract() -> None:
     rel = load_release_lib()
     candidate_sha = rel.git_head(ROOT)
@@ -281,6 +353,56 @@ def svn_snapshot_scope_contract() -> None:
     changed = dict(current)
     changed["trunk_revision"] = "3695000"
     assert rel.svn_approval_identity(approved) != rel.svn_approval_identity(changed)
+
+
+def svn_stage_tag_only_contract() -> None:
+    rel = load_release_lib()
+    version = "1.3.1"
+    with tempfile.TemporaryDirectory(prefix="yci-svn-stage-") as temporary:
+        root = Path(temporary)
+        workspace = root / "svn"
+        payload = root / "payload"
+        (workspace / "trunk").mkdir(parents=True)
+        (workspace / "tags").mkdir(parents=True)
+        payload.mkdir()
+        (payload / "readme.txt").write_text("payload\n", encoding="utf-8")
+
+        def snapshot(_version: str):
+            return {
+                "trunk_revision": "1",
+                "trunk_tree_sha256": "a" * 64,
+                "assets_revision": None,
+                "assets_tree_sha256": None,
+                "target_tag_exists": False,
+            }
+
+        original_run = rel.run
+        rel.run = lambda args, **kwargs: subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+        try:
+            repo = rel.SVNWorkspace(workspace)
+            repo.snapshot = snapshot
+            status_calls = iter([[], [f"A       tags/{version}"]])
+            repo._status = lambda: next(status_calls)
+            try:
+                repo.stage(payload, version)
+            except rel.ReleaseError as error:
+                assert "tag-only release is unsupported" in str(error)
+            else:
+                raise AssertionError("tag-only SVN staging was not rejected before mutation")
+
+            repo = rel.SVNWorkspace(workspace)
+            repo.snapshot = snapshot
+            status_calls = iter(
+                [
+                    [],
+                    ["M       trunk/readme.txt", f"A       tags/{version}"],
+                ]
+            )
+            repo._status = lambda: next(status_calls)
+            staged = repo.stage(payload, version)
+            assert staged["changed_paths"] == [f"tags/{version}", "trunk/readme.txt"]
+        finally:
+            rel.run = original_run
 
 
 def svn_log_namespace_contract() -> None:
@@ -369,8 +491,11 @@ def main() -> None:
     documentation_contract()
     deterministic_package_contract()
     credential_environment_contract()
+    release_asset_bytes_contract()
+    existing_release_manifest_asset_contract()
     full_prepare_contract()
     svn_snapshot_scope_contract()
+    svn_stage_tag_only_contract()
     svn_log_namespace_contract()
     print("release-contracts-ok")
 
