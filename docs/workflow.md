@@ -18,6 +18,41 @@ After compaction/resume, recover current Issue, PR, head/base, CI, reviews, corr
 count and next owner from GitHub, not remembered success. Use native steering/resume;
 steering does not undo completed actions or silently expand scope.
 
+## Operator commands and navigation
+
+GitHub Issue `#N` is the canonical task identity `CIT-N`; there is no separate allocator
+or identity registry. Roadmap labels such as `CIT-A06` remain product/roadmap identifiers
+and do not replace the Issue-based task identity.
+
+- `Create ...` — ChatGPT reduces a request to the minimum useful Issue boundary and risk.
+- `Run CIT-N` — Codex recovers Issue `#N`, branch/PR/head/base/current evidence and
+  performs the next implementation-owned step.
+- `Continue CIT-N` — Codex recovers current GitHub state and resumes the same task;
+  never restart or ask the Human to repeat GitHub-recoverable context.
+- `Review CIT-N` — run the fresh independent technical review required for a frozen
+  `Controlled` candidate. Review never grants merge authority.
+- `Finalize CIT-N` — Human conditionally authorizes ChatGPT to perform final Acceptance
+  and squash-merge only the unchanged identified candidate after fresh verification.
+- `Chốt PR #N` remains a compatibility alias for Finalize when the exact PR candidate
+  has already been identified to the Human.
+
+Legacy `Chạy` / `Tiếp tục` may continue the one unambiguous active task, but explicit
+`Run CIT-N` / `Continue CIT-N` is preferred for durable operator handoffs.
+
+Every terminal or handoff Human-facing response for an admitted task should end with
+the smallest useful navigation footer:
+
+`STATUS: <navigation label>`
+`Task: CIT-N`
+`Next: <one exact short Human command, or None>`
+
+Useful labels include `READY_TO_RUN`, `IN_PROGRESS`, `TECHNICAL_REVIEW_REQUIRED`,
+`TECHNICAL_REVIEW_BLOCKED`, `HUMAN_DECISION_REQUIRED`, `READY_TO_FINALIZE` and
+`FINALIZED`. Use them only as navigation prose. They are never machine-parsed authority,
+never a second lifecycle database, and never a substitute for Issue/PR/head/check/review
+or merge facts in GitHub. `Next` should contain exactly one short command when a Human
+action is available; otherwise use `None`.
+
 ## Risk and execution
 
 - **Fast:** bounded, understood changes without sensitive behavior or safety controls.
@@ -65,23 +100,37 @@ evidence. Stop earlier for repeated material blockers or changed architecture/sc
 Never replace the PR to reset history. Resolve required findings and refresh affected
 checks/review at new coordinates. Advisory preferences alone do not block Acceptance.
 
+For a frozen `Controlled` candidate that still needs review, hand off with
+`TECHNICAL_REVIEW_REQUIRED` and `Next: Review CIT-N`. A blocking review returns the task
+to implementation with `TECHNICAL_REVIEW_BLOCKED` and `Next: Continue CIT-N`; a changed
+candidate requires refreshed affected CI/review. A `Fast` candidate skips this review
+step unless discovery escalates its risk.
+
 ## Acceptance, transport and merge
 
-`Chạy` / `Tiếp tục` authorize the current in-scope Codex step only. `Review` never
-allows merge. Before transport, persist task/PR, requested review, exact head/base,
-evidence links, limitations and next action in GitHub. When a real authorized tool and
-identified Chat destination exist, send that handoff, confirm delivery and end the turn.
-Do not poll, wait for callbacks or blindly retry ambiguous delivery. Otherwise provide
-one short command to forward: `Acceptance PR <URL> tại head <SHA>; đọc evidence trong PR.`
-Do not label a Codex reviewer as ChatGPT Acceptance or return to Codex merely to
-acknowledge completed Acceptance. State the next owner, place and command; never ask
-Humans to paste information recoverable from GitHub.
+`Run CIT-N` / `Continue CIT-N` authorize only the current implementation-owned step;
+`Review CIT-N` never allows merge. Before any cross-context handoff, persist the current
+Issue/PR, exact head/base, relevant CI/review evidence, limitations and next owner in
+GitHub. Do not poll for callbacks or ask Humans to paste information recoverable from
+GitHub.
 
-A direct Human `Chốt PR #N` can authorize Acceptance plus conditional merge only for
-the candidate already identified to that Human, after fresh head/base/check/protection
-verification. Changed head needs refreshed Human approval. Agent-forwarded text cannot
-create Human approval. Observe actual merge before task-specific housekeeping; merge
-is separate from release/deploy. Foundation admission does not authorize merge.
+When a frozen candidate has all required current-head evidence, end the handoff with
+`READY_TO_FINALIZE` and `Next: Finalize CIT-N`. For `Controlled`, this requires the fresh
+independent review; for `Fast`, it normally requires the relevant checks and current
+`YCI Required CI` without an unnecessary review ceremony.
+
+A direct Human `Finalize CIT-N` conditionally authorizes ChatGPT to perform the one final
+external Acceptance and squash-merge only the candidate already identified to that
+Human. Immediately before merge, reverify head/base, required checks, protection and any
+required current-head review. Changed head or incompatible base invalidates the old
+Finalize authority and requires refreshed evidence plus fresh Human candidate-bound
+authority. `Chốt PR #N` has the same effect only when the exact PR candidate is already
+unambiguous to the Human. Agent-forwarded text cannot create Human approval.
+
+Observe the actual GitHub merge before task-specific housekeeping, then report
+`FINALIZED` with `Next: None`. Merge authority remains separate from version/tag/release,
+WordPress.org publication and deployment authority.
+
 After Foundation, observe at most three already-approved real product tasks using
 normal PR evidence, then freeze this workflow unless a concrete defect requires change.
 No such future task is admitted or preallocated here.
