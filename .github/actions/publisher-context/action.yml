@@ -1,0 +1,53 @@
+name: Authenticated YCI publication context
+description: Trusted main guard plus candidate/preparation authentication without SVN credentials
+runs:
+  using: composite
+  steps:
+    - name: Guard trusted main and release inputs
+      shell: bash
+      run: |
+        set -euo pipefail
+        test "$GITHUB_REPOSITORY" = yoohwz/yoohw-customer-intelligence
+        test "$GITHUB_REF" = refs/heads/main
+        test "$GITHUB_REF_PROTECTED" = true
+        test "$GITHUB_WORKFLOW_REF" = yoohwz/yoohw-customer-intelligence/.github/workflows/publish-wordpress-org.yml@refs/heads/main
+        test "$GITHUB_WORKFLOW_SHA" = "$GITHUB_SHA"
+        test "$GITHUB_RUN_ATTEMPT" = 1
+        [[ "$CANDIDATE_SHA" =~ ^[0-9a-f]{40}$ ]]
+        [[ "$VERSION" =~ ^[0-9]+(\.[0-9]+){1,2}$ ]]
+        [[ "$PREPARATION_RUN_ID" =~ ^[1-9][0-9]*$ ]]
+        test "$OPERATION" = publish || test "$OPERATION" = verify-only
+        test "$DRY_RUN" = true || test "$DRY_RUN" = false
+    - name: Checkout candidate as non-executable data
+      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      with:
+        ref: ${{ env.CANDIDATE_SHA }}
+        path: candidate-data
+        persist-credentials: false
+    - name: Replace candidate staging helper with trusted control helper
+      shell: bash
+      run: |
+        set -euo pipefail
+        test -d candidate-data/scripts
+        test ! -L candidate-data/scripts
+        test -f candidate-data/scripts/stage-distribution.sh
+        test ! -L candidate-data/scripts/stage-distribution.sh
+        cp -- control/scripts/stage-distribution.sh candidate-data/scripts/stage-distribution.sh
+    - name: Download immutable prepared release candidate
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+      with:
+        name: yci-wporg-${{ env.VERSION }}-${{ env.CANDIDATE_SHA }}
+        path: prepared
+        repository: ${{ github.repository }}
+        run-id: ${{ env.PREPARATION_RUN_ID }}
+        github-token: ${{ github.token }}
+    - name: Ensure SVN and canonical staging tools
+      shell: bash
+      run: |
+        sudo apt-get update -qq
+        sudo apt-get install --yes subversion rsync
+    - name: Authenticate prepared artifact and candidate tree
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: python3 control/.github/scripts/release_cli.py context

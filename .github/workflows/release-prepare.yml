@@ -1,0 +1,93 @@
+name: Prepare Customer Intelligence WordPress.org Release Candidate
+
+'on':
+  workflow_dispatch:
+    inputs:
+      candidate_sha:
+        description: Exact current protected-main candidate (full 40-character SHA)
+        required: true
+        type: string
+      version:
+        description: Exact numeric plugin Version and Stable tag
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  checks: read
+  contents: read
+
+concurrency:
+  group: yci-release-prepare-${{ inputs.candidate_sha }}
+  cancel-in-progress: false
+
+env:
+  CANDIDATE_SHA: ${{ inputs.candidate_sha }}
+  CANDIDATE_DIR: ${{ github.workspace }}/candidate-data
+  PREPARED_DIR: ${{ github.workspace }}/prepared
+  VERSION: ${{ inputs.version }}
+  PREPARATION_RUN_ID: '0'
+  PYTHONDONTWRITEBYTECODE: '1'
+
+jobs:
+  prepare:
+    name: Prepare immutable WordPress.org candidate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Assert trusted protected-main control plane
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = yoohwz/yoohw-customer-intelligence
+          test "$GITHUB_REF" = refs/heads/main
+          test "$GITHUB_REF_PROTECTED" = true
+          test "$GITHUB_WORKFLOW_REF" = yoohwz/yoohw-customer-intelligence/.github/workflows/release-prepare.yml@refs/heads/main
+          test "$GITHUB_WORKFLOW_SHA" = "$GITHUB_SHA"
+          test "$GITHUB_RUN_ATTEMPT" = 1
+          test "$CANDIDATE_SHA" = "$GITHUB_SHA"
+          [[ "$CANDIDATE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$VERSION" =~ ^[0-9]+(\.[0-9]+){1,2}$ ]]
+      - name: Checkout trusted release control plane
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          ref: ${{ github.sha }}
+          path: control
+          persist-credentials: false
+      - name: Checkout candidate as release data
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          ref: ${{ inputs.candidate_sha }}
+          path: candidate-data
+          persist-credentials: false
+      - name: Replace candidate staging helper with trusted control helper
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -d candidate-data/scripts
+          test ! -L candidate-data/scripts
+          test -f candidate-data/scripts/stage-distribution.sh
+          test ! -L candidate-data/scripts/stage-distribution.sh
+          cp -- control/scripts/stage-distribution.sh candidate-data/scripts/stage-distribution.sh
+      - name: Install canonical staging dependency
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install --yes rsync
+      - name: Build exact staged payload twice and deterministic package
+        id: prepare
+        run: python3 control/.github/scripts/release_cli.py prepare
+      - name: Plugin Check exact prepared WordPress.org payload
+        uses: wordpress/plugin-check-action@10857da14b6c2246d15402b3e69f777edcf8c12e # v1.1.9
+        with:
+          build-dir: ${{ runner.temp }}/yci-release/rc/payload
+          slug: yoohw-customer-intelligence
+          strict: false
+      - name: Upload immutable prepared release candidate
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ steps.prepare.outputs.artifact_name }}
+          path: ${{ runner.temp }}/yci-release/rc/*
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 90
+          overwrite: false

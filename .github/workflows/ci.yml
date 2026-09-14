@@ -25,8 +25,30 @@ jobs:
         run: |
           git ls-files -z '*.php' | xargs -0 -n1 php -l
           git ls-files -z '*.js' | xargs -0 -n1 node --check
-          python3 -m py_compile scripts/test-isolated.py .github/scripts/required-gate.py
+          python3 -m py_compile scripts/test-isolated.py .github/scripts/required-gate.py .github/scripts/release_cli.py .github/scripts/release_lib.py
           python3 .github/scripts/required-gate.py --self-test
+      - name: Release publisher identity and exact distribution staging
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -R -E 'yoohw-support-portal|ysp-(release|wporg)' \
+            .github/actions/publisher-context \
+            .github/scripts/release_cli.py \
+            .github/scripts/release_lib.py \
+            .github/workflows/release-prepare.yml \
+            .github/workflows/publish-wordpress-org.yml \
+            scripts/stage-distribution.sh; then
+            echo "Support Portal publication identity leaked into YCI publisher" >&2
+            exit 1
+          fi
+          command -v rsync >/dev/null
+          bash scripts/stage-distribution.sh . "$RUNNER_TEMP/staged/yoohw-customer-intelligence"
+          test -f "$RUNNER_TEMP/staged/yoohw-customer-intelligence/yoohw-customer-intelligence.php"
+          test -f "$RUNNER_TEMP/staged/yoohw-customer-intelligence/readme.txt"
+          test ! -e "$RUNNER_TEMP/staged/yoohw-customer-intelligence/.github"
+          test ! -e "$RUNNER_TEMP/staged/yoohw-customer-intelligence/tests"
+          test ! -e "$RUNNER_TEMP/staged/yoohw-customer-intelligence/docs"
+          test ! -e "$RUNNER_TEMP/staged/yoohw-customer-intelligence/scripts"
   integration:
     name: Integration (HPOS=${{ matrix.hpos }})
     runs-on: ubuntu-24.04
