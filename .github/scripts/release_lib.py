@@ -113,7 +113,7 @@ def git_head(path: Path) -> str:
 def version_from_tree(source: Path) -> str:
     plugin = (source / PLUGIN_FILE).read_text(encoding="utf-8")
     readme = (source / "readme.txt").read_text(encoding="utf-8")
-    header = re.search(r"^Version:\s*([^\s]+)", plugin, re.MULTILINE)
+    header = re.search(r"^\s*\*?\s*Version:\s*([^\s]+)", plugin, re.MULTILINE)
     stable = re.search(r"^Stable tag:\s*([^\s]+)", readme, re.MULTILINE)
     constant = re.search(
         r"define\(\s*['\"]YOOHW_COS_VERSION['\"]\s*,\s*['\"]([^'\"]+)['\"]\s*\)",
