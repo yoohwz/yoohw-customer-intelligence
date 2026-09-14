@@ -25,9 +25,9 @@ jobs:
         run: |
           git ls-files -z '*.php' | xargs -0 -n1 php -l
           git ls-files -z '*.js' | xargs -0 -n1 node --check
-          python3 -m py_compile scripts/test-isolated.py .github/scripts/required-gate.py .github/scripts/release_cli.py .github/scripts/release_lib.py
+          python3 -m py_compile scripts/test-isolated.py .github/scripts/required-gate.py .github/scripts/release_cli.py .github/scripts/release_lib.py tests/release-contract-tests.py
           python3 .github/scripts/required-gate.py --self-test
-      - name: Release publisher identity and exact distribution staging
+      - name: Release publisher contracts and exact distribution staging
         shell: bash
         run: |
           set -euo pipefail
@@ -37,7 +37,9 @@ jobs:
             .github/scripts/release_lib.py \
             .github/workflows/release-prepare.yml \
             .github/workflows/publish-wordpress-org.yml \
-            scripts/stage-distribution.sh; then
+            scripts/stage-distribution.sh \
+            docs/releasing.md \
+            tests/release-contract-tests.py; then
             echo "Support Portal publication identity leaked into YCI publisher" >&2
             exit 1
           fi
@@ -49,6 +51,7 @@ jobs:
           test ! -e "$RUNNER_TEMP/staged/yoohw-customer-intelligence/tests"
           test ! -e "$RUNNER_TEMP/staged/yoohw-customer-intelligence/docs"
           test ! -e "$RUNNER_TEMP/staged/yoohw-customer-intelligence/scripts"
+          python3 tests/release-contract-tests.py
   integration:
     name: Integration (HPOS=${{ matrix.hpos }})
     runs-on: ubuntu-24.04
