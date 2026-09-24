@@ -31,6 +31,15 @@ correction count and next owner from GitHub, not remembered success.
 GitHub Issue `#N` is the canonical task identity `CIT-N`; roadmap labels such as
 `CIT-A06` remain product/roadmap identifiers and do not replace Issue identity.
 
+For `Run CIT-N` and `Continue CIT-N` in a known repository, use the numeric `N` as the
+GitHub Issue number and open Issue `#N` directly first. From that Issue and current
+GitHub state, recover admitted scope/risk, acceptance boundary, base, existing branch
+and PR, exact head/base, CI/review evidence and the next implementation-owned step or
+handoff. Do not start by searching source/repository text for `CIT-N`. Search by task
+code only if the Issue is missing or unreadable, repository identity is uncertain, or
+GitHub Issue/branch/PR facts materially conflict and source inspection can reconcile
+them. A fallback search never supersedes an existing, consistent Issue as task authority.
+
 - `Create ...` — ChatGPT creates the minimum useful Issue boundary and risk.
 - `Run CIT-N` — Codex recovers Issue/branch/PR/head/base/current evidence and performs
   the next implementation-owned step. For Controlled work, the same run should delegate
