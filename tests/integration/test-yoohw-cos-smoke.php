@@ -62,8 +62,41 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 		$this->assertStringNotContainsString( 'yoohw-cos-profile-summary', $html );
 		$this->assertStringNotContainsString( 'Commerce summary', $html );
 		$this->assertStringContainsString( 'R · Days since last recognized order', $html );
+		$ancient_id = YoOhw_COS_Tasks::create_task( array(
+			'customer_id' => $customer_id,
+			'title'       => 'Synthetic historical overdue task',
+			'due_date'    => '1899-12-31 12:00:00',
+		) );
+		$this->assertGreaterThan( 0, $ancient_id );
+		$this->assertSame( 2, YoOhw_COS_Tasks::get_customer_overdue_task_count( $customer_id ) );
+		YoOhw_COS_Tasks::complete_task( $ancient_id );
+		$this->assertSame( 1, YoOhw_COS_Tasks::get_customer_overdue_task_count( $customer_id ) );
 		YoOhw_COS_Tasks::complete_task( $overdue_id );
 		$this->assertSame( 0, YoOhw_COS_Tasks::get_customer_overdue_task_count( $customer_id ) );
+	}
+
+	public function test_profile_preserves_linked_user_id_when_edit_link_is_unavailable(): void {
+		$admin_id  = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		$viewer_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		$linked_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		$customer_id = YoOhw_COS_Customers::create_customer( array(
+			'email'      => 'linked-user@example.test',
+			'wp_user_id' => $linked_id,
+		) );
+		$this->assertGreaterThan( 0, $customer_id );
+		wp_set_current_user( $admin_id );
+		$edit_url = get_edit_user_link( $linked_id );
+		$this->assertNotEmpty( $edit_url );
+		ob_start();
+		YoOhw_COS_Customer_Profile::render( $customer_id );
+		$admin_html = ob_get_clean();
+		$this->assertStringContainsString( '<a href="' . esc_url( $edit_url ) . '">#' . $linked_id . '</a>', $admin_html );
+		wp_set_current_user( $viewer_id );
+		$this->assertEmpty( get_edit_user_link( $linked_id ) );
+		ob_start();
+		YoOhw_COS_Customer_Profile::render( $customer_id );
+		$html = ob_get_clean();
+		$this->assertStringContainsString( '<th class="yoohw-cos-detail-label">WP User ID</th><td>#' . $linked_id . '</td>', $html );
 	}
 
 	public function test_saved_views_are_private_canonical_and_explicitly_updated(): void {

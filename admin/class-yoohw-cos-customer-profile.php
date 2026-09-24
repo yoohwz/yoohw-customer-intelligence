@@ -353,6 +353,11 @@ final class YoOhw_COS_Customer_Profile {
 	}
 
 	private static function render_identity_panel( array $customer ): void {
+		$wp_user_id = absint( $customer['wp_user_id'] ?? 0 );
+		$user_url   = $wp_user_id > 0 ? get_edit_user_link( $wp_user_id ) : '';
+		$user_label = $wp_user_id > 0 ? '#' . $wp_user_id : '—';
+		$user_value = $user_url ? '<a href="' . esc_url( $user_url ) . '">' . esc_html( $user_label ) . '</a>' : $user_label;
+
 		echo '<div class="postbox" id="yoohw-cos-profile-identity">';
 		echo '<div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Contact & identity', 'yoohw-customer-intelligence' ) . '</h2></div>';
 		echo '<div class="inside">';
@@ -366,9 +371,7 @@ final class YoOhw_COS_Customer_Profile {
 
 		self::render_detail_row(
 			__( 'WP User ID', 'yoohw-customer-intelligence' ),
-			! empty( $customer['wp_user_id'] ) && get_edit_user_link( absint( $customer['wp_user_id'] ) )
-				? '<a href="' . esc_url( get_edit_user_link( absint( $customer['wp_user_id'] ) ) ) . '">#' . absint( $customer['wp_user_id'] ) . '</a>'
-				: '—',
+			$user_value,
 			true
 		);
 

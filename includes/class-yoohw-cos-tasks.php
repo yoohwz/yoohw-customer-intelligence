@@ -744,11 +744,10 @@ final class YoOhw_COS_Tasks {
 
 		return (int) $wpdb->get_var(
 			$wpdb->prepare(
-				'SELECT COUNT(*) FROM %i WHERE customer_id = %d AND status <> %s AND due_date IS NOT NULL AND due_date >= %s AND due_date < %s',
+				'SELECT COUNT(*) FROM %i WHERE customer_id = %d AND status <> %s AND due_date IS NOT NULL AND due_date < %s',
 				YoOhw_COS_DB::tasks_table(),
 				$customer_id,
 				self::STATUS_COMPLETED,
-				'1900-01-01 00:00:00',
 				YoOhw_COS_DB::now()
 			)
 		);
