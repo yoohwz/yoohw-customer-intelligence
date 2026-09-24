@@ -136,7 +136,7 @@ final class YoOhw_COS_Customer_Profile {
 
 		self::render_card(
 			__( 'Total spent', 'yoohw-customer-intelligence' ),
-			function_exists( 'wc_price' ) ? wc_price( (float) $customer['total_spent'] ) : esc_html( $customer['total_spent'] )
+			YoOhw_COS_Commerce_Metrics_Policy::format_money( $customer, 'total_spent' )
 		);
 
 		self::render_card(
@@ -146,7 +146,7 @@ final class YoOhw_COS_Customer_Profile {
 
 		self::render_card(
 			__( 'Average order value', 'yoohw-customer-intelligence' ),
-			function_exists( 'wc_price' ) ? wc_price( (float) $customer['average_order_value'] ) : esc_html( $customer['average_order_value'] )
+			YoOhw_COS_Commerce_Metrics_Policy::format_money( $customer, 'average_order_value' )
 		);
 
 		self::render_card(
@@ -272,17 +272,13 @@ final class YoOhw_COS_Customer_Profile {
 
 		self::render_detail_row(
 			__( 'Total spent', 'yoohw-customer-intelligence' ),
-			function_exists( 'wc_price' )
-				? wc_price( (float) ( $customer['total_spent'] ?? 0 ) )
-				: number_format_i18n( (float) ( $customer['total_spent'] ?? 0 ), 2 ),
+			YoOhw_COS_Commerce_Metrics_Policy::format_money( $customer, 'total_spent' ),
 			true
 		);
 
 		self::render_detail_row(
 			__( 'Average order value', 'yoohw-customer-intelligence' ),
-			function_exists( 'wc_price' )
-				? wc_price( (float) ( $customer['average_order_value'] ?? 0 ) )
-				: number_format_i18n( (float) ( $customer['average_order_value'] ?? 0 ), 2 ),
+			YoOhw_COS_Commerce_Metrics_Policy::format_money( $customer, 'average_order_value' ),
 			true
 		);
 

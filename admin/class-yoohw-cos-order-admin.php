@@ -466,12 +466,12 @@ final class YoOhw_COS_Order_Admin {
 		);
 		self::render_customer_history_metric(
 			__( 'Lifetime value', 'yoohw-customer-intelligence' ),
-			wc_price( $total_spent ),
+			YoOhw_COS_Commerce_Metrics_Policy::format_money( $customer, 'total_spent' ),
 			__( 'Total value recorded across this customer profile.', 'yoohw-customer-intelligence' )
 		);
 		self::render_customer_history_metric(
 			__( 'Average order', 'yoohw-customer-intelligence' ),
-			wc_price( $average_value )
+			YoOhw_COS_Commerce_Metrics_Policy::format_money( $customer, 'average_order_value' )
 		);
 		self::render_customer_history_metric(
 			__( 'Open tasks', 'yoohw-customer-intelligence' ),

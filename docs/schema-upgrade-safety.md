@@ -1,6 +1,6 @@
 # Schema upgrade safety
 
-The database target remains `0.2.1`. Both `install()` and `maybe_update()` attempt the
+The database target is `0.2.2`. Both `install()` and `maybe_update()` attempt the
 existing idempotent DDL and use the same current-schema postcondition verifier before
 registering data migrations or recording `yoohw_cos_db_version`. A failed attempt keeps
 the previous (or absent) DB version. `yoohw_cos_version` retains its separate plugin
@@ -38,6 +38,15 @@ plugin never drops data/indexes to resolve a blocker. For example, duplicate non
 `source_key` rows block a required unique index; support must resolve the data blocker
 under a separately authorized policy. This change provides truthful status, not an
 automatic duplicate repair or historical rewrite.
+
+The 0.2.2 schema adds nullable order-fact currency and explicit customer monetary state
+and currency columns. Existing rows default to unknown; they are never assigned the
+current store currency. The existing bounded migration worker runs
+`commerce_currency_v3` after earlier migrations: it reloads orders through WooCommerce,
+retries failed items, then rebuilds customers. Revenue and AOV remain unavailable while
+backfill is incomplete or has unresolved issues. A successful order/customer repair can
+resolve its recorded issue; once all issues resolve, the worker's state becomes complete
+and the bounded intelligence refresh recalculates money-derived decisions.
 
 Tests use the guarded owned MySQL runner, synthetic duplicate rows, and metadata/data
 snapshots. They cover blocked activation/upgrade, persisted migrations, retry,

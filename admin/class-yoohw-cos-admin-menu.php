@@ -656,8 +656,8 @@ final class YoOhw_COS_Admin_Menu {
 		$sync_state         = self::get_sync_state();
 		$refresh_state      = get_option( 'yoohw_cos_activity_semantics_recalculation', array() );
 		$refresh_state      = is_array( $refresh_state ) ? $refresh_state : array();
-		$revenue            = self::format_overview_money( (float) ( $summary['total_spent'] ?? 0 ) );
-		$average_order      = self::format_overview_money( (float) ( $summary['average_order_value'] ?? 0 ) );
+		$revenue            = YoOhw_COS_Commerce_Metrics_Policy::format_money( $summary, 'total_spent' );
+		$average_order      = YoOhw_COS_Commerce_Metrics_Policy::format_money( $summary, 'average_order_value' );
 		$customers_url      = self::get_overview_customers_url();
 
 		echo '<div class="wrap yoohw-cos-admin yoohw-cos-overview-page">';
@@ -3588,7 +3588,7 @@ final class YoOhw_COS_Admin_Menu {
 				echo '</div>';
 				echo '</div>';
 				echo '<div class="yoohw-cos-priority-customer__commerce">';
-				echo '<strong>' . wp_kses_post( self::format_overview_money( (float) ( $customer['total_spent'] ?? 0 ) ) ) . '</strong>';
+				echo '<strong>' . wp_kses_post( YoOhw_COS_Commerce_Metrics_Policy::format_money( $customer, 'total_spent' ) ) . '</strong>';
 				echo '<span>' . esc_html( sprintf(
 					/* translators: %s: number of customer orders. */
 					_n( '%s order', '%s orders', absint( $customer['total_orders'] ?? 0 ), 'yoohw-customer-intelligence' ),

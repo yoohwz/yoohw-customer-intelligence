@@ -936,7 +936,7 @@ final class YCI_CSV_Export_Safety_Test extends WP_UnitTestCase {
 		YoOhw_COS_Customers::reset_data();
 		$id = YoOhw_COS_Customers::create_customer( array( 'display_name' => 'CSV fixture' ) );
 		$this->assertGreaterThan( 0, $id );
-		$this->assertNotFalse( $wpdb->update( YoOhw_COS_DB::customers_table(), $values + array( 'display_name' => 'CSV fixture', 'email' => 'csv@example.test', 'phone' => '', 'total_orders' => 2, 'total_spent' => '-12.50', 'average_order_value' => '-6.25', 'risk_score' => '0', 'trust_score' => '95.25' ), array( 'id' => $id ) ) );
+		$this->assertNotFalse( $wpdb->update( YoOhw_COS_DB::customers_table(), $values + array( 'display_name' => 'CSV fixture', 'email' => 'csv@example.test', 'phone' => '', 'total_orders' => 2, 'total_spent' => '-12.50', 'average_order_value' => '-6.25', 'money_state' => 'comparable', 'money_currency' => get_woocommerce_currency(), 'commerce_metrics_version' => YoOhw_COS_Commerce_Metrics_Policy::VERSION, 'risk_score' => '0', 'trust_score' => '95.25' ), array( 'id' => $id ) ) );
 		return $id;
 	}
 
@@ -2125,7 +2125,7 @@ final class YCI_Intelligence_Freshness_Test extends WP_UnitTestCase {
 	// WordPress current_time('timestamp') has this existing option seam. No source dates change.
 	public function clock() { return $this->clock_days * 24; }
 	private function customer( int $days, float $spent = 100 ): int {
-		$id = YoOhw_COS_Customers::create_customer( array( 'email' => wp_generate_uuid4() . '@example.test', 'phone' => '555-0123', 'display_name' => 'Freshness fixture', 'total_orders' => 2, 'total_spent' => $spent ) );
+		$id = YoOhw_COS_Customers::create_customer( array( 'email' => wp_generate_uuid4() . '@example.test', 'phone' => '555-0123', 'display_name' => 'Freshness fixture', 'total_orders' => 2, 'total_spent' => $spent, 'money_state' => 'comparable', 'money_currency' => get_woocommerce_currency(), 'commerce_metrics_version' => YoOhw_COS_Commerce_Metrics_Policy::VERSION ) );
 		YoOhw_COS_Events::record( array( 'customer_id' => $id, 'event_source' => 'wc_loyalty', 'event_type' => 'fixture_activity', 'created_at' => gmdate( 'Y-m-d H:i:s', time() - $days * DAY_IN_SECONDS - HOUR_IN_SECONDS ) ) );
 		$this->assertTrue( YoOhw_COS_Customers::refresh_derived_intelligence( $id ) );
 		return $id;

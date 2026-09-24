@@ -618,6 +618,8 @@ final class YoOhw_COS_Customers {
 			'total_orders'        => '%d',
 			'total_spent'         => '%f',
 			'average_order_value' => '%f',
+			'money_state'       => '%s',
+			'money_currency'    => '%s',
 			'commerce_metrics_version' => '%d',
 			'risk_score'          => '%f',
 			'trust_score'         => '%f',
@@ -881,26 +883,13 @@ final class YoOhw_COS_Customers {
 	}
 
 	public static function get_stats(): array {
-		global $wpdb;
-
-		$table = YoOhw_COS_DB::customers_table();
-
-		$total_customers = (int) $wpdb->get_var(
-			$wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE archived_at IS NULL', $table )
-		);
-
-		$total_orders = (int) $wpdb->get_var(
-			$wpdb->prepare( 'SELECT SUM(total_orders) FROM %i WHERE archived_at IS NULL', $table )
-		);
-
-		$total_spent = (float) $wpdb->get_var(
-			$wpdb->prepare( 'SELECT SUM(total_spent) FROM %i WHERE archived_at IS NULL', $table )
-		);
-
+		$summary = YoOhw_COS_Overview::get_summary();
 		return array(
-			'total_customers' => $total_customers,
-			'total_orders'    => $total_orders,
-			'total_spent'     => $total_spent,
+			'total_customers' => $summary['total_customers'],
+			'total_orders'    => $summary['total_orders'],
+			'total_spent'     => $summary['total_spent'],
+			'money_state'     => $summary['money_state'],
+			'money_currency'  => $summary['money_currency'],
 		);
 	}
 
