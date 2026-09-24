@@ -734,6 +734,26 @@ final class YoOhw_COS_Tasks {
 		);
 	}
 
+	public static function get_customer_overdue_task_count( int $customer_id ): int {
+		global $wpdb;
+
+		$customer_id = absint( $customer_id );
+		if ( $customer_id <= 0 ) {
+			return 0;
+		}
+
+		return (int) $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT COUNT(*) FROM %i WHERE customer_id = %d AND status <> %s AND due_date IS NOT NULL AND due_date >= %s AND due_date < %s',
+				YoOhw_COS_DB::tasks_table(),
+				$customer_id,
+				self::STATUS_COMPLETED,
+				'1900-01-01 00:00:00',
+				YoOhw_COS_DB::now()
+			)
+		);
+	}
+
 	public static function get_counts(): array {
 		global $wpdb;
 

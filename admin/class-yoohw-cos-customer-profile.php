@@ -45,12 +45,17 @@ final class YoOhw_COS_Customer_Profile {
 			'limit'  => 8,
 			'status' => 'open',
 		) );
+		$open_tasks    = YoOhw_COS_Tasks::get_customer_task_count( $customer_id, 'open' );
+		$overdue_tasks = YoOhw_COS_Tasks::get_customer_overdue_task_count( $customer_id );
 
 		echo '<div class="wrap yoohw-cos-admin yoohw-cos-profile">';
 
 		self::render_profile_header( $customer );
-		self::render_summary_cards( $customer );
-		self::render_profile_grid( $customer, $events, $tags, $notes, $risk_factors, $trust_factors, $lifecycle_factors, $orders, $segments, $tasks );
+		self::render_kpi_strip( $customer, $open_tasks, $overdue_tasks );
+		self::render_profile_grid( $customer, $events, $tags, $notes, $risk_factors, $trust_factors, $lifecycle_factors, $orders, $segments, $tasks, $open_tasks, $overdue_tasks );
+		if ( is_email( sanitize_email( (string) ( $customer['email'] ?? '' ) ) ) ) {
+			self::render_customer_email_composer( $customer, sanitize_email( (string) $customer['email'] ) );
+		}
 
 		echo '</div>';
 	}
@@ -68,7 +73,6 @@ final class YoOhw_COS_Customer_Profile {
 
 		echo '<div class="yoohw-cos-profile-heading">';
 		echo '<h1 class="wp-heading-inline">' . esc_html( $name ) . '</h1>';
-		echo ' <a class="page-title-action" href="' . esc_url( $list_url ) . '">' . esc_html__( 'Back to customers', 'yoohw-customer-intelligence' ) . '</a>';
 		echo '<hr class="wp-header-end">';
 
 		echo '<div class="yoohw-cos-profile-toolbar">';
@@ -125,36 +129,32 @@ final class YoOhw_COS_Customer_Profile {
 		echo '</div>';
 
 		echo '</div>';
+		echo '<div class="yoohw-cos-profile-actions">';
+		echo '<a class="button" href="' . esc_url( $list_url ) . '">' . esc_html__( 'Back to customers', 'yoohw-customer-intelligence' ) . '</a>';
+		if ( $phone ) {
+			echo '<a class="button" href="tel:' . esc_attr( $phone ) . '">' . esc_html__( 'Call customer', 'yoohw-customer-intelligence' ) . '</a>';
+		}
+		if ( is_email( sanitize_email( (string) $email ) ) ) {
+			echo '<button type="button" class="button yoohw-cos-email-composer-open" data-yoohw-cos-email-open aria-haspopup="dialog" aria-controls="yoohw-cos-email-composer">' . esc_html__( 'Email customer', 'yoohw-customer-intelligence' ) . '</button>';
+		}
+		echo '<a class="button button-primary" href="#yoohw_cos_profile_task_title">' . esc_html__( 'Add task', 'yoohw-customer-intelligence' ) . '</a>';
+		echo '</div>';
 		echo '</div>';
 	}
 
-	private static function render_summary_cards( array $customer ): void {
-		$rfm = YoOhw_COS_RFM::summary( $customer );
-		echo '<div class="postbox yoohw-cos-profile-summary">';
-		echo '<div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Customer summary', 'yoohw-customer-intelligence' ) . '</h2></div>';
-		echo '<div class="inside">';
-		echo '<div class="yoohw-cos-summary-cards">';
-		self::render_card( __( 'R · Days since last recognized order', 'yoohw-customer-intelligence' ), $rfm['r'] );
-		self::render_card( __( 'F · Lifetime recognized orders', 'yoohw-customer-intelligence' ), $rfm['f'] );
-		self::render_card( __( 'M · Lifetime net revenue in recorded currency', 'yoohw-customer-intelligence' ), $rfm['m'] );
-
-		self::render_card(
-			__( 'Average order value', 'yoohw-customer-intelligence' ),
-			YoOhw_COS_Commerce_Metrics_Policy::format_money( $customer, 'average_order_value' )
-		);
-
-		self::render_card(
-			__( 'Risk score', 'yoohw-customer-intelligence' ),
-			number_format_i18n( (float) $customer['risk_score'], 2 )
-		);
-
-		self::render_card(
-			__( 'Trust score', 'yoohw-customer-intelligence' ),
-			number_format_i18n( (float) $customer['trust_score'], 2 )
-		);
-
-		echo '</div>';
-		echo '</div>';
+	private static function render_kpi_strip( array $customer, int $open_tasks, int $overdue_tasks ): void {
+		echo '<div class="yoohw-cos-profile-kpis" aria-label="' . esc_attr__( 'Customer operational summary', 'yoohw-customer-intelligence' ) . '">';
+		self::render_card( __( 'Total spent', 'yoohw-customer-intelligence' ), YoOhw_COS_Commerce_Metrics_Policy::format_money( $customer, 'total_spent' ) );
+		self::render_card( __( 'Orders', 'yoohw-customer-intelligence' ), number_format_i18n( absint( $customer['total_orders'] ?? 0 ) ) );
+		self::render_card( __( 'Average order value', 'yoohw-customer-intelligence' ), YoOhw_COS_Commerce_Metrics_Policy::format_money( $customer, 'average_order_value' ) );
+		$last_order = self::render_order_link( absint( $customer['last_order_id'] ?? 0 ) );
+		$last_date  = self::format_date( $customer['last_order_date'] ?? '' );
+		self::render_card( __( 'Last order', 'yoohw-customer-intelligence' ), $last_order . ( '—' !== $last_date ? '<small>' . esc_html( $last_date ) . '</small>' : '' ) );
+		$task_value = esc_html( number_format_i18n( $open_tasks ) );
+		if ( $overdue_tasks > 0 ) {
+			$task_value .= '<small class="yoohw-cos-task-overdue">' . esc_html( sprintf( _n( '%s overdue', '%s overdue', $overdue_tasks, 'yoohw-customer-intelligence' ), number_format_i18n( $overdue_tasks ) ) ) . '</small>';
+		}
+		self::render_card( __( 'Open tasks', 'yoohw-customer-intelligence' ), $task_value );
 		echo '</div>';
 	}
 
@@ -175,127 +175,96 @@ final class YoOhw_COS_Customer_Profile {
 		array $lifecycle_factors,
 		array $orders,
 		array $segments,
-		array $tasks
+		array $tasks,
+		int $open_tasks,
+		int $overdue_tasks
 	): void {
-		echo '<div class="yoohw-cos-profile-sections">';
-
-		self::render_profile_section_header( __( 'Overview', 'yoohw-customer-intelligence' ) );
-		$loyalty_active = self::is_loyalty_integration_active();
-		echo '<div class="yoohw-cos-profile-section-grid yoohw-cos-profile-section-grid--overview ' . esc_attr( $loyalty_active ? 'yoohw-cos-profile-section-grid--overview-with-loyalty' : 'yoohw-cos-profile-section-grid--overview-without-loyalty' ) . '">';
-		self::render_commerce_summary( $customer );
-
-		if ( $loyalty_active ) {
-			self::render_loyalty_panel( $customer );
-		}
-
-		self::render_identity_panel( $customer );
-		echo '</div>';
-
-		self::render_profile_section_header( __( 'Commerce', 'yoohw-customer-intelligence' ) );
-		echo '<div class="yoohw-cos-profile-section-grid yoohw-cos-profile-section-grid--commerce">';
-		self::render_customer_orders( $orders, $customer );
-		self::render_address_panel( $customer );
-		self::render_acquisition_panel( $customer );
-		echo '</div>';
-
-		self::render_profile_section_header( __( 'Operations', 'yoohw-customer-intelligence' ) );
-		echo '<div class="yoohw-cos-profile-section-grid yoohw-cos-profile-section-grid--operations">';
-		echo '<div>';
+		echo '<div class="yoohw-cos-profile-layout">';
+		echo '<div class="yoohw-cos-profile-main">';
+		self::render_needs_attention( $customer, $open_tasks, $overdue_tasks );
 		self::render_customer_tasks( (int) $customer['id'], $tasks );
+		self::render_customer_orders( $orders, $customer );
+		echo '<div class="yoohw-cos-profile-notes-activity">';
 		self::render_customer_notes( (int) $customer['id'], $notes );
-		echo '</div>';
+		self::render_timeline( (int) $customer['id'], $events );
+		echo '</div></div>';
 
-		echo '<div>';
+		echo '<aside class="yoohw-cos-profile-side">';
+		self::render_identity_panel( $customer );
+		echo '<div class="yoohw-cos-profile-terms postbox"><div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Tags & segments', 'yoohw-customer-intelligence' ) . '</h2></div><div class="inside">';
 		self::render_customer_tags( (int) $customer['id'], $tags );
 		self::render_customer_segments( (int) $customer['id'], $segments );
 		echo '</div>';
 		echo '</div>';
+		if ( self::is_loyalty_integration_active() ) {
+			self::render_loyalty_panel( $customer );
+		}
 
-		self::render_profile_section_header( __( 'Customer', 'yoohw-customer-intelligence' ) );
-		echo '<div class="yoohw-cos-profile-section-grid yoohw-cos-profile-section-grid--intelligence">';
+		echo '<div class="postbox yoohw-cos-profile-intelligence"><div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Customer Intelligence', 'yoohw-customer-intelligence' ) . '</h2></div><div class="inside">';
+		self::render_intelligence_summary( $customer );
 		self::render_risk_panel( $customer, $risk_factors );
 		self::render_trust_panel( $customer, $trust_factors );
 		self::render_lifecycle_panel( $customer, $lifecycle_factors );
-		echo '</div>';
+		echo '</div></div>';
 
 		if ( self::is_blacklist_manager_premium_integration_active() ) {
-			self::render_profile_section_header( __( 'Security', 'yoohw-customer-intelligence' ) );
+			echo '<details class="yoohw-cos-profile-details"><summary>' . esc_html__( 'Security signals', 'yoohw-customer-intelligence' ) . '</summary>';
 			self::render_security_signals_panel( (int) $customer['id'] );
+			echo '</details>';
 		}
 
-		self::render_profile_section_header( __( 'Activity', 'yoohw-customer-intelligence' ) );
-		self::render_timeline( (int) $customer['id'], $events );
-
-		echo '</div>';
+		echo '<details class="yoohw-cos-profile-details"><summary>' . esc_html__( 'Address & Acquisition', 'yoohw-customer-intelligence' ) . '</summary>';
+		self::render_address_panel( $customer );
+		self::render_acquisition_panel( $customer );
+		echo '</details>';
+		echo '</aside></div>';
 	}
 
-	private static function render_profile_section_header( string $title ): void {
-		echo '<div class="yoohw-cos-profile-section-header">';
-		echo '<h2>' . esc_html( $title ) . '</h2>';
-		echo '</div>';
+	private static function render_needs_attention( array $customer, int $open_tasks, int $overdue_tasks ): void {
+		$status     = sanitize_key( (string) ( $customer['customer_status'] ?? '' ) );
+		$high_value = ! in_array( sanitize_key( (string) ( $customer['vip_status'] ?? 'none' ) ), array( '', 'none' ), true );
+		$email      = sanitize_email( (string) ( $customer['email'] ?? '' ) );
+		$phone      = trim( (string) ( $customer['phone'] ?? '' ) );
+		$action_url = '#yoohw_cos_profile_task_title';
+		$action     = __( 'Add task', 'yoohw-customer-intelligence' );
+
+		if ( $overdue_tasks > 0 ) {
+			$message    = sprintf( _n( '%s open follow-up task is overdue.', '%s open follow-up tasks are overdue.', $overdue_tasks, 'yoohw-customer-intelligence' ), number_format_i18n( $overdue_tasks ) );
+			$action_url = '#yoohw-cos-add-task';
+			$action     = __( 'Review open tasks', 'yoohw-customer-intelligence' );
+		} elseif ( $high_value && in_array( $status, array( 'at_risk', 'inactive' ), true ) ) {
+			$message = __( 'This high-value customer is at risk or inactive.', 'yoohw-customer-intelligence' );
+		} elseif ( in_array( $status, array( 'at_risk', 'inactive' ), true ) ) {
+			$message = __( 'This customer is at risk or inactive.', 'yoohw-customer-intelligence' );
+		} elseif ( ! is_email( $email ) || '' === $phone ) {
+			$message = __( 'Contact details are incomplete. Check the customer identity before following up.', 'yoohw-customer-intelligence' );
+			$action_url = '#yoohw-cos-profile-identity';
+			$action     = __( 'Review contact details', 'yoohw-customer-intelligence' );
+		} elseif ( $high_value && 0 === $open_tasks ) {
+			$message = __( 'This high-value customer has no open follow-up task.', 'yoohw-customer-intelligence' );
+		} else {
+			$message = __( 'No current attention reason is recorded for this customer.', 'yoohw-customer-intelligence' );
+			$action_url = '';
+		}
+
+		echo '<section class="postbox yoohw-cos-profile-attention' . ( '' === $action_url ? ' yoohw-cos-profile-attention--quiet' : '' ) . '"><div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Needs attention', 'yoohw-customer-intelligence' ) . '</h2></div><div class="inside">';
+		echo '<p>' . esc_html( $message ) . '</p>';
+		if ( '' !== $action_url ) {
+			echo '<p><a class="button" href="' . esc_url( $action_url ) . '">' . esc_html( $action ) . '</a></p>';
+		}
+		echo '</div></section>';
 	}
 
-	private static function render_commerce_summary( array $customer ): void {
-		echo '<div class="postbox">';
-		echo '<div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Commerce summary', 'yoohw-customer-intelligence' ) . '</h2></div>';
-		echo '<div class="inside">';
-
+	private static function render_intelligence_summary( array $customer ): void {
+		$rfm = YoOhw_COS_RFM::summary( $customer );
 		echo '<table class="widefat striped">';
-
-		self::render_detail_row(
-			__( 'Status', 'yoohw-customer-intelligence' ),
-			self::render_status_badge( $customer['customer_status'] ?? '' ),
-			true
-		);
-
-		self::render_detail_row(
-			__( 'Lifecycle stage', 'yoohw-customer-intelligence' ),
-			self::render_lifecycle_badge( $customer['lifecycle_stage'] ?? 'new' ),
-			true
-		);
-
-		self::render_detail_row(
-			__( 'Value tier', 'yoohw-customer-intelligence' ),
-			YoOhw_COS_Intelligence::get_value_tier_label( (string) ( $customer['vip_status'] ?? 'none' ) )
-		);
-
-		self::render_detail_row(
-			__( 'Total orders', 'yoohw-customer-intelligence' ),
-			number_format_i18n( (int) ( $customer['total_orders'] ?? 0 ) )
-		);
-
-		self::render_detail_row(
-			__( 'Total spent', 'yoohw-customer-intelligence' ),
-			YoOhw_COS_Commerce_Metrics_Policy::format_money( $customer, 'total_spent' ),
-			true
-		);
-
-		self::render_detail_row(
-			__( 'Average order value', 'yoohw-customer-intelligence' ),
-			YoOhw_COS_Commerce_Metrics_Policy::format_money( $customer, 'average_order_value' ),
-			true
-		);
-
-		self::render_detail_row(
-			__( 'Last order', 'yoohw-customer-intelligence' ),
-			self::render_order_link( absint( $customer['last_order_id'] ?? 0 ) ),
-			true
-		);
-
-		self::render_detail_row(
-			__( 'Last order date', 'yoohw-customer-intelligence' ),
-			self::format_date( $customer['last_order_date'] ?? '' )
-		);
-
-		self::render_detail_row(
-			__( 'Last activity', 'yoohw-customer-intelligence' ),
-			self::format_date( $customer['last_activity_date'] ?? '' )
-		);
-
+		self::render_detail_row( __( 'Status', 'yoohw-customer-intelligence' ), self::render_status_badge( $customer['customer_status'] ?? '' ), true );
+		self::render_detail_row( __( 'Value tier', 'yoohw-customer-intelligence' ), YoOhw_COS_Intelligence::get_value_tier_label( (string) ( $customer['vip_status'] ?? 'none' ) ) );
+		self::render_detail_row( __( 'Last activity', 'yoohw-customer-intelligence' ), self::format_date( $customer['last_activity_date'] ?? '' ) );
+		self::render_detail_row( __( 'R · Days since last recognized order', 'yoohw-customer-intelligence' ), $rfm['r'] );
+		self::render_detail_row( __( 'F · Lifetime recognized orders', 'yoohw-customer-intelligence' ), $rfm['f'] );
+		self::render_detail_row( __( 'M · Lifetime net revenue in recorded currency', 'yoohw-customer-intelligence' ), $rfm['m'], true );
 		echo '</table>';
-
-		echo '</div>';
-		echo '</div>';
 	}
 
 	private static function render_loyalty_panel( array $customer ): void {
@@ -384,10 +353,8 @@ final class YoOhw_COS_Customer_Profile {
 	}
 
 	private static function render_identity_panel( array $customer ): void {
-		$customer_email = sanitize_email( (string) ( $customer['email'] ?? '' ) );
-
-		echo '<div class="postbox">';
-		echo '<div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Identity', 'yoohw-customer-intelligence' ) . '</h2></div>';
+		echo '<div class="postbox" id="yoohw-cos-profile-identity">';
+		echo '<div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Contact & identity', 'yoohw-customer-intelligence' ) . '</h2></div>';
 		echo '<div class="inside">';
 
 		echo '<table class="widefat striped">';
@@ -399,7 +366,10 @@ final class YoOhw_COS_Customer_Profile {
 
 		self::render_detail_row(
 			__( 'WP User ID', 'yoohw-customer-intelligence' ),
-			! empty( $customer['wp_user_id'] ) ? '#' . absint( $customer['wp_user_id'] ) : '—'
+			! empty( $customer['wp_user_id'] ) && get_edit_user_link( absint( $customer['wp_user_id'] ) )
+				? '<a href="' . esc_url( get_edit_user_link( absint( $customer['wp_user_id'] ) ) ) . '">#' . absint( $customer['wp_user_id'] ) . '</a>'
+				: '—',
+			true
 		);
 
 		self::render_detail_row(
@@ -431,26 +401,6 @@ final class YoOhw_COS_Customer_Profile {
 		);
 
 		echo '</table>';
-
-		echo '<p class="yoohw-cos-action-row">';
-
-		if ( is_email( $customer_email ) ) {
-			echo '<button type="button" class="button yoohw-cos-email-composer-open" data-yoohw-cos-email-open aria-haspopup="dialog" aria-controls="yoohw-cos-email-composer">';
-			echo esc_html__( 'Email customer', 'yoohw-customer-intelligence' );
-			echo '</button>';
-		}
-
-		if ( ! empty( $customer['phone'] ) ) {
-			echo '<a class="button" href="tel:' . esc_attr( $customer['phone'] ) . '">';
-			echo esc_html__( 'Call customer', 'yoohw-customer-intelligence' );
-			echo '</a>';
-		}
-
-		echo '</p>';
-
-		if ( is_email( $customer_email ) ) {
-			self::render_customer_email_composer( $customer, $customer_email );
-		}
 
 		echo '</div>';
 		echo '</div>';
@@ -976,7 +926,7 @@ final class YoOhw_COS_Customer_Profile {
 		);
 
 		echo '<div class="postbox">';
-		echo '<div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Timeline', 'yoohw-customer-intelligence' ) . '</h2></div>';
+		echo '<div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Recent activity', 'yoohw-customer-intelligence' ) . '</h2></div>';
 		echo '<div class="inside">';
 
 		if ( empty( $events ) ) {
@@ -1208,7 +1158,7 @@ final class YoOhw_COS_Customer_Profile {
 		);
 
 		echo '<div class="postbox" id="yoohw-cos-add-tag">';
-		echo '<div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Tags', 'yoohw-customer-intelligence' ) . '</h2></div>';
+		echo '<div class="postbox-header"><h3 class="hndle">' . esc_html__( 'Tags', 'yoohw-customer-intelligence' ) . '</h3></div>';
 		echo '<div class="inside">';
 
 		if ( ! empty( $_GET['tag_added'] ) ) {
@@ -1262,7 +1212,7 @@ final class YoOhw_COS_Customer_Profile {
 		);
 
 		echo '<div class="postbox" id="yoohw-cos-add-segment">';
-		echo '<div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Segments', 'yoohw-customer-intelligence' ) . '</h2></div>';
+		echo '<div class="postbox-header"><h3 class="hndle">' . esc_html__( 'Segments', 'yoohw-customer-intelligence' ) . '</h3></div>';
 		echo '<div class="inside">';
 
 		if ( ! empty( $_GET['segment_added'] ) ) {
@@ -1316,7 +1266,7 @@ final class YoOhw_COS_Customer_Profile {
 		$profile_url = self::get_profile_url( $customer_id, 'yoohw-cos-add-task' );
 
 		echo '<div class="postbox" id="yoohw-cos-add-task">';
-		echo '<div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Tasks', 'yoohw-customer-intelligence' ) . '</h2></div>';
+		echo '<div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Open tasks', 'yoohw-customer-intelligence' ) . '</h2></div>';
 		echo '<div class="inside">';
 
 		if ( ! empty( $_GET['yoohw_task_created'] ) ) {
@@ -1444,6 +1394,13 @@ final class YoOhw_COS_Customer_Profile {
 			),
 			$nonce
 		);
+		$edit_url = add_query_arg(
+			array(
+				'page'    => 'yoohw-customer-intelligence-tasks',
+				'task_id' => $task_id,
+			),
+			admin_url( 'admin.php' )
+		);
 
 		$due_date   = YoOhw_COS_DB::format_admin_date( $task['due_date'] ?? '', '&mdash;' );
 		$is_overdue = ! $is_complete
@@ -1452,7 +1409,7 @@ final class YoOhw_COS_Customer_Profile {
 
 		echo '<div class="yoohw-cos-profile-task-item">';
 		echo '<div class="yoohw-cos-profile-task-item__main">';
-		echo '<strong>' . esc_html( $task['title'] ?? '' ) . '</strong>';
+		echo '<strong><a href="' . esc_url( $edit_url ) . '">' . esc_html( $task['title'] ?? '' ) . '</a></strong>';
 		echo '<div class="yoohw-cos-profile-task-meta">';
 		echo '<span class="yoohw-cos-badge yoohw-cos-badge--task-priority-' . esc_attr( sanitize_html_class( YoOhw_COS_Tasks::normalize_priority( (string) ( $task['priority'] ?? 'normal' ) ) ) ) . '">';
 		echo esc_html( YoOhw_COS_Tasks::get_priorities()[ YoOhw_COS_Tasks::normalize_priority( (string) ( $task['priority'] ?? 'normal' ) ) ] ?? __( 'Normal', 'yoohw-customer-intelligence' ) );
@@ -1794,9 +1751,8 @@ final class YoOhw_COS_Customer_Profile {
 	private static function render_risk_panel( array $customer, array $risk_factors ): void {
 		$risk_score = (float) ( $customer['risk_score'] ?? 0 );
 
-		echo '<div class="postbox">';
-		echo '<div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Risk score', 'yoohw-customer-intelligence' ) . '</h2></div>';
-		echo '<div class="inside">';
+		echo '<section class="yoohw-cos-profile-intelligence-group">';
+		echo '<h3>' . esc_html__( 'Risk score', 'yoohw-customer-intelligence' ) . '</h3>';
 
 		echo '<p>';
 		echo wp_kses_post( self::render_risk_badge( $risk_score ) );
@@ -1833,8 +1789,7 @@ final class YoOhw_COS_Customer_Profile {
 
 		echo '</ul>';
 
-		echo '</div>';
-		echo '</div>';
+		echo '</section>';
 	}
 
 	private static function render_trust_badge( float $trust_score ): string {
@@ -1858,9 +1813,8 @@ final class YoOhw_COS_Customer_Profile {
 	private static function render_trust_panel( array $customer, array $trust_factors ): void {
 		$trust_score = (float) ( $customer['trust_score'] ?? 0 );
 
-		echo '<div class="postbox">';
-		echo '<div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Trust score', 'yoohw-customer-intelligence' ) . '</h2></div>';
-		echo '<div class="inside">';
+		echo '<section class="yoohw-cos-profile-intelligence-group">';
+		echo '<h3>' . esc_html__( 'Trust score', 'yoohw-customer-intelligence' ) . '</h3>';
 
 		echo '<p>';
 		echo wp_kses_post( self::render_trust_badge( $trust_score ) );
@@ -1897,8 +1851,7 @@ final class YoOhw_COS_Customer_Profile {
 
 		echo '</ul>';
 
-		echo '</div>';
-		echo '</div>';
+		echo '</section>';
 	}
 
 	private static function render_order_link( int $order_id ): string {
@@ -1941,9 +1894,8 @@ final class YoOhw_COS_Customer_Profile {
 	}
 
 	private static function render_lifecycle_panel( array $customer, array $lifecycle_factors ): void {
-		echo '<div class="postbox">';
-		echo '<div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Lifecycle', 'yoohw-customer-intelligence' ) . '</h2></div>';
-		echo '<div class="inside">';
+		echo '<section class="yoohw-cos-profile-intelligence-group">';
+		echo '<h3>' . esc_html__( 'Lifecycle', 'yoohw-customer-intelligence' ) . '</h3>';
 
 		echo '<p>';
 		echo wp_kses_post( self::render_lifecycle_badge( $customer['lifecycle_stage'] ?? 'new' ) );
@@ -1966,7 +1918,6 @@ final class YoOhw_COS_Customer_Profile {
 
 		echo '</ul>';
 
-		echo '</div>';
-		echo '</div>';
+		echo '</section>';
 	}
 }
