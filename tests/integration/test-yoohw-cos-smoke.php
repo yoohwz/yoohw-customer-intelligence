@@ -514,6 +514,31 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 		}
 	}
 
+	public function test_store_currency_change_in_another_request_ignores_stale_option_cache(): void {
+		global $wpdb;
+		$previous_migrations = get_option( 'yoohw_cos_data_migrations', array() );
+		update_option( 'yoohw_cos_data_migrations', array( 'commerce_currency_v3' => array( 'status' => 'completed' ) ), false );
+		$currency = get_woocommerce_currency();
+		$other_currency = 'USD' === $currency ? 'EUR' : 'USD';
+		try {
+			$first = $this->create_order( 'remote-currency-change@example.test', 'completed', '3000.00' );
+			$second = $this->create_order( 'remote-currency-change@example.test', 'completed', '3000.00' );
+			$id = YoOhw_COS_Customers::sync_from_order( $first );
+			YoOhw_COS_Customers::sync_from_order( $second );
+			$this->assertSame( 'platinum', YoOhw_COS_Customers::get_customer( $id )['vip_status'] );
+			$this->assertSame( $currency, get_option( 'woocommerce_currency' ) );
+			$wpdb->update( $wpdb->options, array( 'option_value' => $other_currency ), array( 'option_name' => 'woocommerce_currency' ) );
+			YoOhw_COS_Intelligence::invalidate_monetary_decisions();
+			$this->assertSame( 'none', YoOhw_COS_Customers::get_customer( $id )['vip_status'] );
+			$this->assertSame( 0, YoOhw_COS_Customer_Query::query( array( 'vip_status' => 'high_value' ) )['total_items'] );
+		} finally {
+			$wpdb->update( $wpdb->options, array( 'option_value' => $currency ), array( 'option_name' => 'woocommerce_currency' ) );
+			wp_cache_delete( 'woocommerce_currency', 'options' );
+			wp_cache_delete( 'alloptions', 'options' );
+			update_option( 'yoohw_cos_data_migrations', $previous_migrations, false );
+		}
+	}
+
 	public function test_reset_then_scoring_change_hides_old_money_decisions_during_interrupted_refresh(): void {
 		global $wpdb;
 		YoOhw_COS_Customers::reset_data();

@@ -11,6 +11,7 @@ defined( 'ABSPATH' ) || exit;
 final class YoOhw_COS_Commerce_Metrics_Policy {
 
 	public const VERSION = 2;
+	private static $store_currency_generation = null;
 
 	public static function currency( WC_Order $order ): ?string {
 		$currency = strtoupper( trim( (string) $order->get_currency() ) );
@@ -25,9 +26,18 @@ final class YoOhw_COS_Commerce_Metrics_Policy {
 	}
 
 	public static function money_matches_store( array $customer ): bool {
-		return self::money_is_comparable( $customer )
-			&& function_exists( 'get_woocommerce_currency' )
-			&& $customer['money_currency'] === get_woocommerce_currency();
+		if ( ! self::money_is_comparable( $customer ) || ! function_exists( 'get_woocommerce_currency' ) ) {
+			return false;
+		}
+		$generation = YoOhw_COS_Intelligence::get_scoring_generation();
+		if ( self::$store_currency_generation !== $generation ) {
+			// A currency update in another request does not invalidate this request's option cache.
+			wp_cache_delete( 'woocommerce_currency', 'options' );
+			wp_cache_delete( 'notoptions', 'options' );
+			wp_cache_delete( 'alloptions', 'options' );
+			self::$store_currency_generation = $generation;
+		}
+		return $customer['money_currency'] === get_woocommerce_currency();
 	}
 
 	public static function format_money( array $source, string $key ): string {

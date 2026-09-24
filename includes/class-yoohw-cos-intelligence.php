@@ -4,6 +4,7 @@ defined( 'ABSPATH' ) || exit;
 final class YoOhw_COS_Intelligence {
 
 	private const SCORING_SETTINGS_OPTION = 'yoohw_cos_scoring_settings';
+	private static $settings_cache_generation = null;
 
 	public static function init(): void {
 		add_action( 'update_option_woocommerce_currency', array( __CLASS__, 'currency_changed' ), 10, 2 );
@@ -89,6 +90,14 @@ final class YoOhw_COS_Intelligence {
 	}
 
 	public static function get_scoring_settings(): array {
+		$generation = self::get_scoring_generation();
+		if ( self::$settings_cache_generation !== $generation ) {
+			// Another request may have changed settings without invalidating this request's option cache.
+			wp_cache_delete( self::SCORING_SETTINGS_OPTION, 'options' );
+			wp_cache_delete( 'notoptions', 'options' );
+			wp_cache_delete( 'alloptions', 'options' );
+			self::$settings_cache_generation = $generation;
+		}
 		$saved = get_option( self::SCORING_SETTINGS_OPTION, array() );
 		$saved = is_array( $saved ) ? $saved : array();
 

@@ -2327,6 +2327,35 @@ final class YCI_Intelligence_Freshness_Test extends WP_UnitTestCase {
 		$this->wake(); $this->assertSame( 'completed', $this->state()['status'] );
 		$this->reads( $id, 'active', 'repeat' );
 	}
+	public function test_concurrent_scoring_change_inside_batch_uses_current_thresholds(): void {
+		global $wpdb;
+		$first = $this->customer( 20 );
+		$second = $this->customer( 20 );
+		$original = YoOhw_COS_Intelligence::get_scoring_settings_defaults();
+		YoOhw_COS_Intelligence::update_scoring_settings( $original );
+		$changed = $original;
+		$changed['customer_status']['at_risk_days'] = 10;
+		$generation = wp_generate_uuid4();
+		$once = false;
+		$change = static function ( $customer ) use ( &$once, $wpdb, $changed, $generation ) {
+			if ( ! $once ) {
+				$once = true;
+				get_option( 'yoohw_cos_scoring_settings' ); // Keep this request's option cache stale.
+				$wpdb->update( $wpdb->options, array( 'option_value' => maybe_serialize( $changed ) ), array( 'option_name' => 'yoohw_cos_scoring_settings' ) );
+				$wpdb->update( $wpdb->options, array( 'option_value' => $generation ), array( 'option_name' => 'yoohw_cos_intelligence_generation' ) );
+			}
+			return $customer;
+		};
+		add_filter( 'yoohw_cos_customer_recalculate_intelligence_data', $change );
+		try { $this->wake(); } finally { remove_filter( 'yoohw_cos_customer_recalculate_intelligence_data', $change ); }
+		$this->assertSame( 'pending', $this->state()['status'] );
+		foreach ( array( $first, $second ) as $id ) {
+			$this->assertSame( $generation, $wpdb->get_var( $wpdb->prepare( 'SELECT intelligence_generation FROM %i WHERE id = %d', YoOhw_COS_DB::customers_table(), $id ) ) );
+			$this->assertSame( 'at_risk', $wpdb->get_var( $wpdb->prepare( 'SELECT customer_status FROM %i WHERE id = %d', YoOhw_COS_DB::customers_table(), $id ) ) );
+			$this->assertSame( 'at_risk', YoOhw_COS_Customers::get_customer( $id )['customer_status'] );
+		}
+		$this->assertSame( 2, YoOhw_COS_Customer_Query::query( array( 'customer_status' => 'at_risk' ) )['total_items'] );
+	}
 	public function test_reset_contention_failure_zero_and_archived_rows(): void {
 		global $wpdb;
 		$id = $this->customer( 20 );
