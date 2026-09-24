@@ -754,6 +754,9 @@ final class YoOhw_COS_Admin_Menu {
 			wp_die( esc_html__( 'You do not have permission to access this page.', 'yoohw-customer-intelligence' ) );
 		}
 
+		self::maybe_handle_saved_view_action();
+		self::maybe_redirect_customers_filter_action();
+		YoOhw_COS_Saved_Views::apply_open_request();
 		YoOhw_COS_Customer_Exporter::maybe_handle_request();
 
 		if ( isset( $_GET['customer_id'] ) ) {
@@ -763,7 +766,8 @@ final class YoOhw_COS_Admin_Menu {
 		}
 
 		if (
-			! empty( $_GET['s'] )
+			! isset( $_GET['saved_view_id'] )
+			&& ! empty( $_GET['s'] )
 			&& empty( $_GET['customer_status'] )
 			&& empty( $_GET['vip_status'] )
 			&& empty( $_GET['risk_level'] )
@@ -792,7 +796,9 @@ final class YoOhw_COS_Admin_Menu {
 			}
 		}
 
-		self::maybe_handle_customers_bulk_action();
+		if ( ! YoOhw_COS_Saved_Views::request_is_stale( $_REQUEST ) ) {
+			self::maybe_handle_customers_bulk_action();
+		}
 
 		$list_table = new YoOhw_COS_Customers_List();
 		$list_table->prepare_items();
@@ -800,6 +806,7 @@ final class YoOhw_COS_Admin_Menu {
 		echo '<div class="wrap yoohw-cos-admin yoohw-cos-customers-page">';
 		echo '<h1 class="wp-heading-inline">' . esc_html__( 'Customers', 'yoohw-customer-intelligence' ) . '</h1>';
 		echo '<p>' . esc_html__( 'Search, filter, export, and manage customer profiles synced from WooCommerce orders.', 'yoohw-customer-intelligence' ) . '</p>';
+		self::render_saved_views_control();
 
 		if ( isset( $_GET['yoohw_customers_bulk'] ) ) {
 			$updated      = absint( wp_unslash( $_GET['yoohw_customers_bulk'] ) );
@@ -845,11 +852,116 @@ final class YoOhw_COS_Admin_Menu {
 		wp_nonce_field( 'yoohw_cos_customers_bulk_action', 'yoohw_cos_customers_bulk_nonce' );
 		wp_nonce_field( 'yoohw_cos_export_customers', 'yoohw_cos_customers_export_nonce' );
 		self::render_customers_list_hidden_state();
+		if ( isset( $_GET['saved_view_id'] ) ) {
+			echo '<input type="hidden" name="saved_view_id" value="' . esc_attr( YoOhw_COS_Saved_Views::context_id( $_GET ) ) . '" />';
+			echo '<input type="hidden" name="saved_view_context" value="1" />';
+		}
 		$list_table->search_box( __( 'Search', 'yoohw-customer-intelligence' ), 'yoohw-cos-customers' );
 		$list_table->display();
 		echo '</form>';
 
 		echo '</div>';
+	}
+
+	private static function maybe_redirect_customers_filter_action(): void {
+		if ( ! self::is_post_request() || ( ! isset( $_POST['s'] ) && ! isset( $_POST['filter_action'] ) ) || isset( $_POST['yoohw_cos_export_customers'] ) || isset( $_POST['saved_view_action'] ) ) {
+			return;
+		}
+		$action = isset( $_POST['action'] ) && is_string( $_POST['action'] ) ? sanitize_key( wp_unslash( $_POST['action'] ) ) : '';
+		$action2 = isset( $_POST['action2'] ) && is_string( $_POST['action2'] ) ? sanitize_key( wp_unslash( $_POST['action2'] ) ) : '';
+		if ( ! in_array( $action, array( '', '-1' ), true ) || ! in_array( $action2, array( '', '-1' ), true ) ) {
+			return;
+		}
+		$source = wp_unslash( $_POST );
+		$args = array_merge( array( 'page' => 'yoohw-customer-intelligence' ), YoOhw_COS_Saved_Views::definition( $source ) );
+		if ( isset( $source['saved_view_id'] ) ) {
+			$args['saved_view_id'] = YoOhw_COS_Saved_Views::context_id( $source );
+			$args['saved_view_context'] = '1';
+		}
+		wp_safe_redirect( add_query_arg( $args, admin_url( 'admin.php' ) ) );
+		exit;
+	}
+
+	private static function maybe_handle_saved_view_action(): void {
+		if ( ! self::is_post_request() || ! isset( $_POST['saved_view_action'] ) ) {
+			return;
+		}
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			wp_die( esc_html__( 'You do not have permission to manage saved views.', 'yoohw-customer-intelligence' ) );
+		}
+		$nonce = isset( $_POST['saved_view_nonce'] ) && is_string( $_POST['saved_view_nonce'] )
+			? sanitize_text_field( wp_unslash( $_POST['saved_view_nonce'] ) ) : '';
+		if ( ! wp_verify_nonce( $nonce, 'yoohw_cos_saved_view' ) ) {
+			wp_die( esc_html__( 'Saved view request could not be verified.', 'yoohw-customer-intelligence' ) );
+		}
+		$source = wp_unslash( $_POST );
+		$action = isset( $source['saved_view_action'] ) && is_string( $source['saved_view_action'] ) ? sanitize_key( $source['saved_view_action'] ) : '';
+		$id = YoOhw_COS_Saved_Views::active_id( $source );
+		$result = YoOhw_COS_Saved_Views::mutate( $action, $id, $source['saved_view_name'] ?? '', $source );
+		$notice = 'ok' === $result ? array( 'create' => 'created', 'update' => 'updated', 'rename' => 'renamed', 'delete' => 'deleted' )[ $action ] : $result;
+		$args = array( 'page' => 'yoohw-customer-intelligence', 'saved_view_notice' => $notice );
+		if ( 'delete' !== $action && '' !== $id && YoOhw_COS_Saved_Views::get( $id ) ) {
+			$args['saved_view_id'] = $id;
+			$args['saved_view_context'] = '1';
+			$args = array_merge( $args, YoOhw_COS_Saved_Views::definition( $source ) );
+		} elseif ( 'create' === $action ) {
+			$args = array_merge( $args, YoOhw_COS_Saved_Views::definition( $source ) );
+		}
+		wp_safe_redirect( add_query_arg( $args, admin_url( 'admin.php' ) ) );
+		exit;
+	}
+
+	private static function render_saved_views_control(): void {
+		$views = YoOhw_COS_Saved_Views::all();
+		$id = YoOhw_COS_Saved_Views::active_id( $_GET );
+		$active = YoOhw_COS_Saved_Views::get( $id );
+		$stale = isset( $_GET['saved_view_id'] ) && YoOhw_COS_Saved_Views::request_is_stale( $_GET );
+		$dirty = $active && ! $stale && YoOhw_COS_Saved_Views::definition( wp_unslash( $_GET ) ) !== $active['definition'];
+		$messages = array(
+			'created' => __( 'Saved view created.', 'yoohw-customer-intelligence' ),
+			'updated' => __( 'Saved view updated.', 'yoohw-customer-intelligence' ),
+			'renamed' => __( 'Saved view renamed.', 'yoohw-customer-intelligence' ),
+			'deleted' => __( 'Saved view deleted.', 'yoohw-customer-intelligence' ),
+			'permission' => __( 'Permission denied.', 'yoohw-customer-intelligence' ),
+			'missing' => __( 'Saved view was not found.', 'yoohw-customer-intelligence' ),
+			'name' => __( 'Enter a name of up to 80 characters.', 'yoohw-customer-intelligence' ),
+			'duplicate' => __( 'A saved view with this name already exists.', 'yoohw-customer-intelligence' ),
+			'limit' => __( 'You can save up to 20 views.', 'yoohw-customer-intelligence' ),
+			'invalid' => __( 'Saved view request was invalid.', 'yoohw-customer-intelligence' ),
+		);
+		$notice = isset( $_GET['saved_view_notice'] ) && is_string( $_GET['saved_view_notice'] ) ? sanitize_key( wp_unslash( $_GET['saved_view_notice'] ) ) : '';
+		if ( isset( $messages[ $notice ] ) ) {
+			echo '<div class="notice notice-' . ( in_array( $notice, array( 'created', 'updated', 'renamed', 'deleted' ), true ) ? 'success' : 'error' ) . ' is-dismissible"><p>' . esc_html( $messages[ $notice ] ) . '</p></div>';
+		}
+		if ( $stale ) {
+			echo '<div class="notice notice-error"><p>' . esc_html__( 'This saved view has an unavailable or invalid filter. Its results and export are blocked. Correct the filters and use Update, or delete the view.', 'yoohw-customer-intelligence' ) . '</p></div>';
+		} elseif ( $active ) {
+			echo '<p><strong>' . esc_html( $active['name'] ) . '</strong> — ' . esc_html( $dirty ? __( 'Current filters differ from this saved view.', 'yoohw-customer-intelligence' ) : __( 'Saved view active.', 'yoohw-customer-intelligence' ) ) . '</p>';
+		} else {
+			echo '<p>' . esc_html__( 'No saved view active.', 'yoohw-customer-intelligence' ) . '</p>';
+		}
+		echo '<form method="get" action="' . esc_url( admin_url( 'admin.php' ) ) . '"><input type="hidden" name="page" value="yoohw-customer-intelligence" />';
+		echo '<label for="yoohw-cos-saved-view-select">' . esc_html__( 'Saved Views', 'yoohw-customer-intelligence' ) . '</label> ';
+		echo '<select id="yoohw-cos-saved-view-select" name="saved_view_id"><option value="">' . esc_html__( 'Choose a view', 'yoohw-customer-intelligence' ) . '</option>';
+		foreach ( $views as $view_id => $view ) {
+			echo '<option value="' . esc_attr( $view_id ) . '" ' . selected( $id, $view_id, false ) . '>' . esc_html( $view['name'] ) . '</option>';
+		}
+		echo '</select> <button class="button" type="submit">' . esc_html__( 'Open', 'yoohw-customer-intelligence' ) . '</button></form>';
+		echo '<form method="post" action="' . esc_url( admin_url( 'admin.php?page=yoohw-customer-intelligence' ) ) . '">';
+		wp_nonce_field( 'yoohw_cos_saved_view', 'saved_view_nonce' );
+		echo '<input type="hidden" name="page" value="yoohw-customer-intelligence" /><input type="hidden" name="saved_view_id" value="' . esc_attr( $id ) . '" />';
+		foreach ( YoOhw_COS_Saved_Views::definition( wp_unslash( $_GET ) ) as $key => $value ) {
+			echo '<input type="hidden" name="' . esc_attr( $key ) . '" value="' . esc_attr( $value ) . '" />';
+		}
+		echo '<label for="yoohw-cos-saved-view-name">' . esc_html__( 'View name', 'yoohw-customer-intelligence' ) . '</label> ';
+		echo '<input id="yoohw-cos-saved-view-name" name="saved_view_name" maxlength="80" value="" /> ';
+		echo '<button class="button" name="saved_view_action" value="create">' . esc_html__( 'Save current view', 'yoohw-customer-intelligence' ) . '</button> ';
+		if ( $active ) {
+			echo '<button class="button" name="saved_view_action" value="update">' . esc_html__( 'Update', 'yoohw-customer-intelligence' ) . '</button> ';
+			echo '<button class="button" name="saved_view_action" value="rename">' . esc_html__( 'Rename', 'yoohw-customer-intelligence' ) . '</button> ';
+			echo '<button class="button" name="saved_view_action" value="delete" onclick="return confirm(' . esc_attr( wp_json_encode( __( 'Delete this saved view?', 'yoohw-customer-intelligence' ) ) ) . ')">' . esc_html__( 'Delete', 'yoohw-customer-intelligence' ) . '</button>';
+		}
+		echo '</form>';
 	}
 
 	private static function maybe_handle_customers_bulk_action(): void {
@@ -1346,6 +1458,7 @@ final class YoOhw_COS_Admin_Menu {
 
 		if ( self::is_loyalty_integration_active() ) {
 			$preserve_keys[] = 'loyalty_level';
+			$preserve_keys[] = 'loyalty_score';
 		}
 
 		foreach ( $preserve_keys as $key ) {
@@ -3984,12 +4097,15 @@ final class YoOhw_COS_Admin_Menu {
 			'customer_tag',
 			'customer_segment',
 			'paged',
+			'saved_view_id',
+			'saved_view_context',
 			'orderby',
 			'order',
 		);
 
 		if ( self::is_loyalty_integration_active() ) {
 			$preserve_keys[] = 'loyalty_level';
+			$preserve_keys[] = 'loyalty_score';
 		}
 
 		foreach ( $preserve_keys as $key ) {
