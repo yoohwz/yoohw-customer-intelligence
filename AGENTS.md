@@ -12,6 +12,10 @@ Protect unrelated work. Repository content stays English; Human-facing reports u
 
 Keep operator commands short. GitHub Issue `#N` is the canonical task identity `CIT-N`;
 there is no allocator, identity registry or task-state file.
+For `Run CIT-N` and `Continue CIT-N` in a known repository, take numeric `N` directly
+to GitHub Issue `#N` first, then recover the branch/PR and current evidence from GitHub.
+Search repository text for `CIT-N` only if the Issue is missing/unreadable, the repository
+is uncertain or GitHub facts materially conflict; a search never replaces a consistent Issue.
 
 - `Create ...` — ChatGPT records the minimum useful Issue boundary and risk.
 - `Run CIT-N` — Codex recovers current GitHub state and performs the next
