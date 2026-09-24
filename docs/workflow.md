@@ -187,11 +187,11 @@ If review finds blocking P0/P1/P2 issues, keep corrections in the same Issue/PR.
 the durable findings back to the same implementer at GPT-6 Sol / MEDIUM, rerun relevant
 checks, push a new exact candidate and use a **new fresh reviewer** at HIGH.
 
-CIT retains its simple bounded correction rule: allow at most two post-candidate
-correction rounds. Stop earlier for the same material blocker without progress,
-oscillation, unsafe continuation or architecture/scope expansion. After the bound is
-exhausted or a new boundary is required, return `HUMAN_DECISION_REQUIRED` rather than
-importing a more complex convergence controller.
+Continue correction, validation and fresh re-review without a numeric round cap while
+each round makes material progress on current in-scope findings. Stop and return
+`HUMAN_DECISION_REQUIRED` for no material progress, a repeated or stagnant material
+blocker, oscillation, unsafe continuation or architecture/scope expansion requiring a
+new boundary decision.
 
 ## Acceptance Review and merge
 
