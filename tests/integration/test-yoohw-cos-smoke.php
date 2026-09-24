@@ -72,6 +72,8 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 		YoOhw_COS_Tags::delete_tag( $tag, true );
 		$this->assertSame( 'tag', YoOhw_COS_Saved_Views::stale_reason( YoOhw_COS_Saved_Views::get( $id )['definition'] ) );
 		$this->assertTrue( YoOhw_COS_Saved_Views::request_is_stale( array( 'saved_view_id' => $id ) ) );
+		$this->assertSame( 'not-a-valid-id', YoOhw_COS_Saved_Views::context_id( array( 'saved_view_id' => 'not-a-valid-id' ) ) );
+		$this->assertTrue( YoOhw_COS_Saved_Views::request_is_stale( array( 'saved_view_id' => 'not-a-valid-id' ) ) );
 		$bad = YoOhw_COS_Saved_Views::get( $id )['definition'];
 		$bad['customer_status'] = 'unrecognized';
 		$this->assertSame( 'invalid', YoOhw_COS_Saved_Views::stale_reason( $bad ) );

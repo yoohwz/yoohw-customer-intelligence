@@ -111,6 +111,16 @@ final class YoOhw_COS_Saved_Views {
 		return 'ok';
 	}
 
+	public static function context_id( array $source ): string {
+		if ( ! isset( $source['saved_view_id'] ) ) {
+			return '';
+		}
+		if ( ! is_string( $source['saved_view_id'] ) ) {
+			return 'invalid';
+		}
+		return substr( sanitize_text_field( wp_unslash( $source['saved_view_id'] ) ), 0, 80 );
+	}
+
 	public static function active_id( array $source ): string {
 		$id = $source['saved_view_id'] ?? '';
 		return is_string( $id ) && preg_match( '/^[a-f0-9-]{36}$/', $id ) ? $id : '';

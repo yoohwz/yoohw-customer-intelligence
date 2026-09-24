@@ -766,7 +766,7 @@ final class YoOhw_COS_Admin_Menu {
 		}
 
 		if (
-			'' === YoOhw_COS_Saved_Views::active_id( $_GET )
+			! isset( $_GET['saved_view_id'] )
 			&& ! empty( $_GET['s'] )
 			&& empty( $_GET['customer_status'] )
 			&& empty( $_GET['vip_status'] )
@@ -853,7 +853,7 @@ final class YoOhw_COS_Admin_Menu {
 		wp_nonce_field( 'yoohw_cos_export_customers', 'yoohw_cos_customers_export_nonce' );
 		self::render_customers_list_hidden_state();
 		if ( isset( $_GET['saved_view_id'] ) ) {
-			echo '<input type="hidden" name="saved_view_id" value="' . esc_attr( YoOhw_COS_Saved_Views::active_id( $_GET ) ) . '" />';
+			echo '<input type="hidden" name="saved_view_id" value="' . esc_attr( YoOhw_COS_Saved_Views::context_id( $_GET ) ) . '" />';
 			echo '<input type="hidden" name="saved_view_context" value="1" />';
 		}
 		$list_table->search_box( __( 'Search', 'yoohw-customer-intelligence' ), 'yoohw-cos-customers' );
@@ -875,7 +875,7 @@ final class YoOhw_COS_Admin_Menu {
 		$source = wp_unslash( $_POST );
 		$args = array_merge( array( 'page' => 'yoohw-customer-intelligence' ), YoOhw_COS_Saved_Views::definition( $source ) );
 		if ( isset( $source['saved_view_id'] ) ) {
-			$args['saved_view_id'] = YoOhw_COS_Saved_Views::active_id( $source );
+			$args['saved_view_id'] = YoOhw_COS_Saved_Views::context_id( $source );
 			$args['saved_view_context'] = '1';
 		}
 		wp_safe_redirect( add_query_arg( $args, admin_url( 'admin.php' ) ) );
@@ -898,7 +898,8 @@ final class YoOhw_COS_Admin_Menu {
 		$action = isset( $source['saved_view_action'] ) && is_string( $source['saved_view_action'] ) ? sanitize_key( $source['saved_view_action'] ) : '';
 		$id = YoOhw_COS_Saved_Views::active_id( $source );
 		$result = YoOhw_COS_Saved_Views::mutate( $action, $id, $source['saved_view_name'] ?? '', $source );
-		$args = array( 'page' => 'yoohw-customer-intelligence', 'saved_view_notice' => $result );
+		$notice = 'ok' === $result ? array( 'create' => 'created', 'update' => 'updated', 'rename' => 'renamed', 'delete' => 'deleted' )[ $action ] : $result;
+		$args = array( 'page' => 'yoohw-customer-intelligence', 'saved_view_notice' => $notice );
 		if ( 'delete' !== $action && '' !== $id && YoOhw_COS_Saved_Views::get( $id ) ) {
 			$args['saved_view_id'] = $id;
 			$args['saved_view_context'] = '1';
@@ -917,7 +918,10 @@ final class YoOhw_COS_Admin_Menu {
 		$stale = isset( $_GET['saved_view_id'] ) && YoOhw_COS_Saved_Views::request_is_stale( $_GET );
 		$dirty = $active && ! $stale && YoOhw_COS_Saved_Views::definition( wp_unslash( $_GET ) ) !== $active['definition'];
 		$messages = array(
-			'ok' => __( 'Saved view updated.', 'yoohw-customer-intelligence' ),
+			'created' => __( 'Saved view created.', 'yoohw-customer-intelligence' ),
+			'updated' => __( 'Saved view updated.', 'yoohw-customer-intelligence' ),
+			'renamed' => __( 'Saved view renamed.', 'yoohw-customer-intelligence' ),
+			'deleted' => __( 'Saved view deleted.', 'yoohw-customer-intelligence' ),
 			'permission' => __( 'Permission denied.', 'yoohw-customer-intelligence' ),
 			'missing' => __( 'Saved view was not found.', 'yoohw-customer-intelligence' ),
 			'name' => __( 'Enter a name of up to 80 characters.', 'yoohw-customer-intelligence' ),
@@ -927,7 +931,7 @@ final class YoOhw_COS_Admin_Menu {
 		);
 		$notice = isset( $_GET['saved_view_notice'] ) && is_string( $_GET['saved_view_notice'] ) ? sanitize_key( wp_unslash( $_GET['saved_view_notice'] ) ) : '';
 		if ( isset( $messages[ $notice ] ) ) {
-			echo '<div class="notice notice-' . ( 'ok' === $notice ? 'success' : 'error' ) . ' is-dismissible"><p>' . esc_html( $messages[ $notice ] ) . '</p></div>';
+			echo '<div class="notice notice-' . ( in_array( $notice, array( 'created', 'updated', 'renamed', 'deleted' ), true ) ? 'success' : 'error' ) . ' is-dismissible"><p>' . esc_html( $messages[ $notice ] ) . '</p></div>';
 		}
 		if ( $stale ) {
 			echo '<div class="notice notice-error"><p>' . esc_html__( 'This saved view has an unavailable or invalid filter. Its results and export are blocked. Correct the filters and use Update, or delete the view.', 'yoohw-customer-intelligence' ) . '</p></div>';
