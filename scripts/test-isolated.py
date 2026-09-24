@@ -141,9 +141,9 @@ def main():
     parser.add_argument('--php', default=shutil.which('php'))
     parser.add_argument('--mode', choices=['yes', 'no', 'both'], default='both')
     args = parser.parse_args()
-    run([args.php, REPO / 'tests/migration-woocommerce-availability.php'])
     # Do not propagate WordPress/database settings or PHP auto-prepend configuration.
     env = {k: v for k, v in os.environ.items() if not k.startswith(('WP_', 'WC_', 'YCI_', 'DB_', 'MYSQL', 'PHPRC', 'PHP_INI_SCAN_DIR'))}
+    run([args.php, '-n', REPO / 'tests/migration-woocommerce-availability.php'], env=env)
     def interrupted(signum, frame):
         raise RuntimeError('Interrupted; cleaning owned test resources')
     signal.signal(signal.SIGTERM, interrupted)

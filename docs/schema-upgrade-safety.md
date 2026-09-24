@@ -49,6 +49,9 @@ resolve its recorded issue; once all issues resolve, the worker's state becomes 
 and the bounded intelligence refresh recalculates money-derived decisions.
 Commerce migrations pause without WooCommerce order APIs and resume when WooCommerce
 becomes available; an unavailable order source cannot count as an empty completed scan.
+On a fresh install, the existing `commerce_facts_v2` import is the currency source;
+monetary consumers remain unavailable until that import completes without unresolved
+issues, and its completion or final repair restarts money-derived intelligence.
 
 Tests use the guarded owned MySQL runner, synthetic duplicate rows, and metadata/data
 snapshots. They cover blocked activation/upgrade, persisted migrations, retry,
