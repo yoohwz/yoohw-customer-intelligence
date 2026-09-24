@@ -387,6 +387,7 @@ final class YoOhw_COS_Customers {
 		$data = array(
 			'last_activity_date' => $last_activity ?: null,
 			'intelligence_currency_ready' => 1,
+			'intelligence_generation' => YoOhw_COS_Intelligence::get_scoring_generation(),
 			'customer_status'    => YoOhw_COS_Intelligence::calculate_customer_status( $customer ),
 			'lifecycle_stage'    => YoOhw_COS_Intelligence::calculate_lifecycle_stage( $customer ),
 			'vip_status'         => YoOhw_COS_Intelligence::calculate_vip_status( $customer ),
@@ -630,6 +631,7 @@ final class YoOhw_COS_Customers {
 			'money_currency'    => '%s',
 			'commerce_metrics_version' => '%d',
 			'intelligence_currency_ready' => '%d',
+			'intelligence_generation' => '%s',
 			'risk_score'          => '%f',
 			'trust_score'         => '%f',
 			'loyalty_score'       => '%f',
@@ -935,7 +937,6 @@ final class YoOhw_COS_Customers {
 			'yoohw_cos_operation_sync_state_blacklist_signals',
 			'yoohw_cos_activity_semantics_recalculation',
 			'yoohw_cos_intelligence_freshness',
-			'yoohw_cos_currency_decision_generation',
 			'yoohw_cos_customer_data_updated_at',
 			'yoohw_cos_loyalty_backfill_state',
 			'yoohw_cos_premium_reassociation_state',
@@ -1242,15 +1243,15 @@ final class YoOhw_COS_Customers {
 		global $wpdb;
 
 		$table = YoOhw_COS_DB::customers_table();
-		$generation_current = YoOhw_COS_Intelligence::persisted_generation_is_current() ? 1 : 0;
+		$generation = YoOhw_COS_Intelligence::get_scoring_generation();
 
 		$rows = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT CASE WHEN %d = 1 AND intelligence_currency_ready = 1 THEN customer_status ELSE 'unavailable' END AS safe_status, COUNT(*) as total
+				"SELECT CASE WHEN intelligence_currency_ready = 1 AND intelligence_generation = %s THEN customer_status ELSE 'unavailable' END AS safe_status, COUNT(*) as total
 				FROM %i
 				WHERE archived_at IS NULL
 				GROUP BY safe_status",
-				$generation_current,
+				$generation,
 				$table
 			),
 			ARRAY_A
@@ -1282,16 +1283,16 @@ final class YoOhw_COS_Customers {
 		global $wpdb;
 
 		$table = YoOhw_COS_DB::customers_table();
-		$generation_current = YoOhw_COS_Intelligence::persisted_generation_is_current() ? 1 : 0;
+		$generation = YoOhw_COS_Intelligence::get_scoring_generation();
 
 		$rows = $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT vip_status, COUNT(*) as total
 				FROM %i
-				WHERE archived_at IS NULL AND ( %d = 1 AND intelligence_currency_ready = 1 )
+				WHERE archived_at IS NULL AND ( intelligence_currency_ready = 1 AND intelligence_generation = %s )
 				GROUP BY vip_status",
 				$table,
-				$generation_current
+				$generation
 			),
 			ARRAY_A
 		);
@@ -1320,7 +1321,7 @@ final class YoOhw_COS_Customers {
 		global $wpdb;
 
 		$table = YoOhw_COS_DB::customers_table();
-		$generation_current = YoOhw_COS_Intelligence::persisted_generation_is_current() ? 1 : 0;
+		$generation = YoOhw_COS_Intelligence::get_scoring_generation();
 
 		$counts = array(
 			'none'   => 0,
@@ -1337,9 +1338,9 @@ final class YoOhw_COS_Customers {
 				SUM(CASE WHEN risk_score >= 40 AND risk_score < 70 THEN 1 ELSE 0 END) AS medium_count,
 				SUM(CASE WHEN risk_score >= 70 THEN 1 ELSE 0 END) AS high_count
 				FROM %i
-				WHERE archived_at IS NULL AND ( %d = 1 AND intelligence_currency_ready = 1 )",
+				WHERE archived_at IS NULL AND ( intelligence_currency_ready = 1 AND intelligence_generation = %s )",
 				$table,
-				$generation_current
+				$generation
 			),
 			ARRAY_A
 		);
@@ -1625,16 +1626,16 @@ final class YoOhw_COS_Customers {
 		global $wpdb;
 
 		$table = YoOhw_COS_DB::customers_table();
-		$generation_current = YoOhw_COS_Intelligence::persisted_generation_is_current() ? 1 : 0;
+		$generation = YoOhw_COS_Intelligence::get_scoring_generation();
 
 		$rows = $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT lifecycle_stage, COUNT(*) as total
 				FROM %i
-				WHERE archived_at IS NULL AND ( %d = 1 AND intelligence_currency_ready = 1 )
+				WHERE archived_at IS NULL AND ( intelligence_currency_ready = 1 AND intelligence_generation = %s )
 				GROUP BY lifecycle_stage",
 				$table,
-				$generation_current
+				$generation
 			),
 			ARRAY_A
 		);

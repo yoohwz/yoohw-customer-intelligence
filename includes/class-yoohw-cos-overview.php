@@ -9,7 +9,7 @@ final class YoOhw_COS_Overview {
 		global $wpdb;
 
 		$table = YoOhw_COS_DB::customers_table();
-		$generation_current = YoOhw_COS_Intelligence::persisted_generation_is_current() ? 1 : 0;
+		$generation = YoOhw_COS_Intelligence::get_scoring_generation();
 
 		if ( ! self::table_exists( $table ) ) {
 			return self::empty_summary();
@@ -27,10 +27,10 @@ final class YoOhw_COS_Overview {
 					MAX(CASE WHEN total_orders > 0 THEN money_currency END) AS max_currency,
 					SUM(CASE WHEN total_orders > 0 THEN 1 ELSE 0 END) AS purchasing_customers,
 					SUM(CASE WHEN total_orders >= 2 THEN 1 ELSE 0 END) AS repeat_customers,
-					SUM(CASE WHEN ( %d = 1 AND intelligence_currency_ready = 1 ) AND vip_status <> %s THEN 1 ELSE 0 END) AS high_value_customers
+					SUM(CASE WHEN ( intelligence_currency_ready = 1 AND intelligence_generation = %s ) AND vip_status <> %s THEN 1 ELSE 0 END) AS high_value_customers
 				FROM %i
 				WHERE archived_at IS NULL",
-				$generation_current,
+				$generation,
 				'none',
 				$table
 			),
@@ -72,7 +72,7 @@ final class YoOhw_COS_Overview {
 
 	public static function get_attention_counts(): array {
 		global $wpdb;
-		$generation_current = YoOhw_COS_Intelligence::persisted_generation_is_current() ? 1 : 0;
+		$generation = YoOhw_COS_Intelligence::get_scoring_generation();
 
 		$counts = array(
 			'overdue_tasks'              => 0,
@@ -91,11 +91,11 @@ final class YoOhw_COS_Overview {
 					"SELECT
 						SUM(
 							CASE
-								WHEN ( %d = 1 AND intelligence_currency_ready = 1 ) AND vip_status <> %s AND customer_status IN (%s, %s)
+								WHEN ( intelligence_currency_ready = 1 AND intelligence_generation = %s ) AND vip_status <> %s AND customer_status IN (%s, %s)
 								THEN 1 ELSE 0
 							END
 						) AS high_value_retention_risk,
-						SUM(CASE WHEN ( %d = 1 AND intelligence_currency_ready = 1 ) AND risk_score >= 70 THEN 1 ELSE 0 END) AS high_risk_customers,
+						SUM(CASE WHEN ( intelligence_currency_ready = 1 AND intelligence_generation = %s ) AND risk_score >= 70 THEN 1 ELSE 0 END) AS high_risk_customers,
 						SUM(
 							CASE
 								WHEN email IS NULL OR email = '' OR phone IS NULL OR phone = ''
@@ -104,11 +104,11 @@ final class YoOhw_COS_Overview {
 						) AS missing_contact_customers
 					FROM %i
 					WHERE archived_at IS NULL",
-					$generation_current,
+					$generation,
 					'none',
 					'at_risk',
 					'inactive',
-					$generation_current,
+					$generation,
 					$customers_table
 				),
 				ARRAY_A
@@ -167,7 +167,7 @@ final class YoOhw_COS_Overview {
 
 		$table = YoOhw_COS_DB::customers_table();
 		$limit = min( 10, max( 1, absint( $limit ) ) );
-		$generation_current = YoOhw_COS_Intelligence::persisted_generation_is_current() ? 1 : 0;
+		$generation = YoOhw_COS_Intelligence::get_scoring_generation();
 
 		if ( ! self::table_exists( $table ) ) {
 			return array();
@@ -186,6 +186,7 @@ final class YoOhw_COS_Overview {
 					money_currency,
 					commerce_metrics_version,
 					intelligence_currency_ready,
+					intelligence_generation,
 					customer_status,
 					vip_status,
 					risk_score,
@@ -193,7 +194,7 @@ final class YoOhw_COS_Overview {
 				FROM %i
 				WHERE archived_at IS NULL
 					AND (
-						( ( %d = 1 AND intelligence_currency_ready = 1 ) AND ( ( vip_status <> %s AND customer_status IN (%s, %s) ) OR risk_score >= 70 ) )
+						( ( intelligence_currency_ready = 1 AND intelligence_generation = %s ) AND ( ( vip_status <> %s AND customer_status IN (%s, %s) ) OR risk_score >= 70 ) )
 						OR email IS NULL
 						OR email = ''
 						OR phone IS NULL
@@ -201,28 +202,28 @@ final class YoOhw_COS_Overview {
 					)
 				ORDER BY
 					CASE
-						WHEN ( %d = 1 AND intelligence_currency_ready = 1 ) AND vip_status <> %s AND customer_status = %s THEN 0
-						WHEN ( %d = 1 AND intelligence_currency_ready = 1 ) AND vip_status <> %s AND customer_status = %s THEN 1
-						WHEN ( %d = 1 AND intelligence_currency_ready = 1 ) AND risk_score >= 70 THEN 2
+						WHEN ( intelligence_currency_ready = 1 AND intelligence_generation = %s ) AND vip_status <> %s AND customer_status = %s THEN 0
+						WHEN ( intelligence_currency_ready = 1 AND intelligence_generation = %s ) AND vip_status <> %s AND customer_status = %s THEN 1
+						WHEN ( intelligence_currency_ready = 1 AND intelligence_generation = %s ) AND risk_score >= 70 THEN 2
 						WHEN email IS NULL OR email = '' OR phone IS NULL OR phone = '' THEN 3
 						ELSE 4
 					END ASC,
-					CASE WHEN %d = 1 THEN total_spent ELSE 0 END DESC,
+					CASE WHEN intelligence_currency_ready = 1 AND intelligence_generation = %s AND money_state = 'comparable' THEN total_spent ELSE 0 END DESC,
 					id DESC
 				LIMIT %d",
 				$table,
-				$generation_current,
+				$generation,
 				'none',
 				'at_risk',
 				'inactive',
-				$generation_current,
+				$generation,
 				'none',
 				'inactive',
-				$generation_current,
+				$generation,
 				'none',
 				'at_risk',
-				$generation_current,
-				$generation_current,
+				$generation,
+				$generation,
 				$limit
 			),
 			ARRAY_A

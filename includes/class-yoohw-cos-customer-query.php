@@ -91,9 +91,8 @@ final class YoOhw_COS_Customer_Query {
 			|| '' !== $args['risk_level'] || '' !== $args['lifecycle_stage']
 			|| 'high_value_retention' === $args['customer_attention'];
 		if ( $classification_filter ) {
-			$where .= YoOhw_COS_Intelligence::persisted_generation_is_current()
-				? ' AND intelligence_currency_ready = 1'
-				: ' AND 1 = 0';
+			$where .= ' AND intelligence_currency_ready = 1 AND intelligence_generation = %s';
+			$params[] = YoOhw_COS_Intelligence::get_scoring_generation();
 		}
 
 		if ( 'archived' === $args['customer_view'] ) {

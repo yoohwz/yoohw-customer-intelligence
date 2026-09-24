@@ -17,38 +17,14 @@ final class YoOhw_COS_Intelligence {
 
 	/** Restart the bounded persisted refresh, including a completed or partial pass. */
 	public static function invalidate_monetary_decisions(): void {
-		$generation = wp_generate_uuid4();
-		// Publish the gate before the worker generation so concurrent readers fail closed.
-		update_option( 'yoohw_cos_currency_decision_generation', $generation, false );
-		update_option( 'yoohw_cos_intelligence_generation', $generation, false );
+		update_option( 'yoohw_cos_intelligence_generation', wp_generate_uuid4(), false );
 		YoOhw_COS_Customers::request_intelligence_refresh();
 	}
 
 	/** Old persisted classifications may have used mixed-currency spend before migration. */
 	public static function persisted_decisions_are_safe( array $customer ): bool {
 		return 1 === absint( $customer['intelligence_currency_ready'] ?? 0 )
-			&& self::persisted_generation_is_current();
-	}
-
-	/** A currency or scoring change must finish its persisted refresh before SQL reads use cached decisions. */
-	public static function persisted_generation_is_current(): bool {
-		global $wpdb;
-		$currency_generation = (string) $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, 'yoohw_cos_currency_decision_generation' ) );
-		if ( '' !== $wpdb->last_error ) {
-			return false;
-		}
-		if ( '' === $currency_generation ) {
-			return true;
-		}
-		$generation = self::get_scoring_generation();
-		if ( '' === $generation || $generation !== $currency_generation ) {
-			return false;
-		}
-		$stored = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, 'yoohw_cos_intelligence_freshness' ) );
-		$state = maybe_unserialize( $stored );
-		return '' === $wpdb->last_error && is_array( $state )
-			&& 'completed' === ( $state['status'] ?? '' )
-			&& $generation === ( $state['generation'] ?? '' );
+			&& (string) ( $customer['intelligence_generation'] ?? '' ) === self::get_scoring_generation();
 	}
 
 	public static function safe_customer_decisions( array $customer ): array {
@@ -123,11 +99,7 @@ final class YoOhw_COS_Intelligence {
 		$settings = self::sanitize_scoring_settings( $source );
 
 		update_option( self::SCORING_SETTINGS_OPTION, $settings, false );
-		$generation = wp_generate_uuid4();
-		if ( false !== get_option( 'yoohw_cos_currency_decision_generation', false ) ) {
-			update_option( 'yoohw_cos_currency_decision_generation', $generation, false );
-		}
-		update_option( 'yoohw_cos_intelligence_generation', $generation, false );
+		update_option( 'yoohw_cos_intelligence_generation', wp_generate_uuid4(), false );
 		YoOhw_COS_Customers::request_intelligence_refresh();
 
 		return $settings;
