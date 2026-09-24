@@ -53,7 +53,7 @@ final class YoOhw_COS_Customer_Query {
 		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Filter SQL fragments are hardcoded; sort direction is whitelisted and all dynamic values are prepared.
 		$total_items = (int) $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT COUNT(*) FROM %i {$where}",
+				"SELECT COUNT(*) FROM %i c {$where}",
 				...array_merge( array( $table ), $params )
 			)
 		);
@@ -61,7 +61,7 @@ final class YoOhw_COS_Customer_Query {
 		$items = $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT *
-				FROM %i
+				FROM %i c
 				{$where}
 				ORDER BY %i {$args['order']}, id DESC
 				LIMIT %d OFFSET %d",
@@ -89,7 +89,7 @@ final class YoOhw_COS_Customer_Query {
 		$normalized_search_id    = self::normalize_search_id( $search );
 		$classification_filter = '' !== $args['customer_status'] || '' !== $args['vip_status']
 			|| '' !== $args['risk_level'] || '' !== $args['lifecycle_stage']
-			|| 'high_value_retention' === $args['customer_attention'];
+			|| in_array( $args['customer_attention'], array( 'high_value_retention', 'high_value_needs_follow_up' ), true );
 		if ( $classification_filter ) {
 			$where .= ' AND intelligence_currency_ready = 1 AND intelligence_generation = %s';
 			$params[] = YoOhw_COS_Intelligence::get_scoring_generation();
@@ -231,13 +231,27 @@ final class YoOhw_COS_Customer_Query {
 			$where .= ' AND total_orders <= 1';
 		}
 
-		if ( 'high_value_retention' === $args['customer_attention'] ) {
+		if ( in_array( $args['customer_attention'], array( 'high_value_retention', 'high_value_needs_follow_up' ), true ) ) {
 			$where   .= ' AND vip_status <> %s AND customer_status IN (%s, %s)';
 			$params[] = 'none';
 			$params[] = 'at_risk';
 			$params[] = 'inactive';
-		} elseif ( 'missing_contact' === $args['customer_attention'] ) {
+		}
+		if ( 'missing_contact' === $args['customer_attention'] ) {
 			$where .= " AND (email IS NULL OR email = '' OR phone IS NULL OR phone = '')";
+		}
+
+		if ( in_array( $args['customer_attention'], array( 'open_follow_up', 'overdue_follow_up', 'high_value_needs_follow_up' ), true ) ) {
+			$has_open_task = 'high_value_needs_follow_up' !== $args['customer_attention'];
+			$where .= $has_open_task ? ' AND EXISTS (' : ' AND NOT EXISTS (';
+			$where .= 'SELECT 1 FROM %i t WHERE t.customer_id = c.id AND t.status = %s';
+			$params[] = YoOhw_COS_DB::tasks_table();
+			$params[] = YoOhw_COS_Tasks::STATUS_OPEN;
+			if ( 'overdue_follow_up' === $args['customer_attention'] ) {
+				$where .= ' AND t.due_date IS NOT NULL AND t.due_date < %s';
+				$params[] = YoOhw_COS_DB::now();
+			}
+			$where .= ')';
 		}
 
 		return array(
@@ -345,7 +359,7 @@ final class YoOhw_COS_Customer_Query {
 	private static function sanitize_customer_attention( string $attention ): string {
 		$attention = sanitize_key( $attention );
 
-		return in_array( $attention, array( 'high_value_retention', 'missing_contact' ), true ) ? $attention : '';
+		return in_array( $attention, array( 'high_value_retention', 'missing_contact', 'open_follow_up', 'overdue_follow_up', 'high_value_needs_follow_up' ), true ) ? $attention : '';
 	}
 
 	private static function sanitize_loyalty_score_range( string $range ): string {
