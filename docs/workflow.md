@@ -5,6 +5,9 @@ technical design, implementation, validation, PR upkeep and bounded corrections.
 ChatGPT owns framing, unresolved boundary decisions, Plan Review when required and
 external Acceptance Review. Human owns merge and release authority.
 Tool capability never transfers another role's authority.
+Risk lane does not transfer role authority: Fast may omit independent Technical Review,
+but Codex still owns implementation. GitHub write access does not authorize ChatGPT to
+implement a Codex-owned task.
 
 ## Start and recover
 
@@ -13,6 +16,11 @@ anything. Use one Issue, one admitted branch and one PR to `main`. If main moved
 inspect the delta; conflicting or material overlap needs a boundary decision. Never
 overwrite unrelated work, push directly to main, force-push, reset/clean destructively
 or delete unrelated branches.
+
+For any workflow-governance amendment, the workflow accepted on the task's admitted
+base governs admission, implementation, review, Acceptance and merge. Proposed or
+unmerged text cannot grant, waive, downgrade or redefine authority for its own task.
+The amendment takes effect only after Human-authorized merge.
 
 No task document, allocator, state JSON, ledger, identity ref, digest chain or approval
 parser exists. After compaction/resume, recover current Issue, PR, head/base, CI, reviews,
@@ -39,7 +47,8 @@ GitHub Issue `#N` is the canonical task identity `CIT-N`; roadmap labels such as
   in GitHub.
 - `Merge CIT-N` — Human authorizes merge of the unchanged accepted candidate.
 - `Finalize CIT-N` — shortcut that conditionally authorizes Acceptance plus squash
-  merge in one turn when every prerequisite is already current.
+  merge in one turn when every prerequisite is already current. It is unavailable for
+  workflow-governance amendments, which require separate Acceptance and Human Merge.
 - `Chốt PR #N` remains a compatibility alias for Finalize when the exact PR candidate
   is already unambiguous to the Human.
 
@@ -68,12 +77,24 @@ Useful labels are navigation prose only, not machine state:
   Require one fresh independent Technical Reviewer for every exact candidate that
   reaches review.
 
+Workflow-governance semantic changes are always Controlled. This includes changes to
+`AGENTS.md` or this canonical workflow that alter authority or execution semantics,
+role ownership/separation, risk routing, compute/delegation policy, Technical Review,
+Plan Review/Acceptance/Merge authority, operator-command semantics or release/deployment
+authority boundaries. Classify by semantics, not file type. Proven typo, formatting or
+link fixes with no semantic change may remain Fast. Neither lane changes role ownership.
+
 Separate Plan Review is required only when discovery exposes a genuinely unresolved
 product, architecture, data, permission or compatibility boundary. A fully bounded
 Controlled bug/fix may implement directly without a Plan Review.
 
 If Fast discovery reveals a Controlled trigger, stop before the sensitive change,
 keep the same Issue/PR, escalate risk and continue under the Controlled rules.
+
+A governance amendment follows `Create/admit` then `Run CIT-N` for Codex implementation,
+fresh independent Technical Review, exact-head `YCI Required CI`,
+`Acceptance Review CIT-N` by ChatGPT, then separate Human `Merge CIT-N`. Use Plan Review only for a
+genuinely unresolved boundary. Tool availability does not replace any of these gates.
 
 ## Compute policy
 
@@ -140,7 +161,8 @@ per-role delegation. The reviewer must:
   tests as applicable;
 - bind findings or PASS to the exact reviewed SHA in GitHub PR review/comment evidence.
 
-A changed candidate invalidates the old review and requires a new fresh reviewer.
+A changed candidate invalidates the old review, including for documentation-only edits,
+and requires a new fresh reviewer.
 
 If native fresh delegation is unavailable or cannot complete independently, do not lower
 the requirement. Preserve the candidate and return:
@@ -189,13 +211,14 @@ On Acceptance PASS:
 A direct Human `Merge CIT-N` authorizes only merge of the unchanged accepted
 candidate. Immediately before merge, reverify head/base, required checks, branch
 protection, no unresolved blockers and the exact Acceptance head. Any head movement
-invalidates the prior Acceptance; executable/test movement also invalidates the
-applicable Technical Review.
+invalidates the prior Acceptance. Any candidate movement invalidates the applicable
+Technical Review, regardless of file type.
 
 `Finalize CIT-N` remains a convenience shortcut. It may perform Acceptance Review plus
 conditional squash merge in one turn only when the candidate already identified to the
 Human is unchanged and every current-head prerequisite is satisfied. It never skips
-Technical Review, CI or fresh pre-merge verification.
+Technical Review, CI or fresh pre-merge verification. A workflow-governance amendment
+must instead use separate `Acceptance Review CIT-N` and Human `Merge CIT-N` commands.
 
 Observe the actual GitHub merge before reporting `FINALIZED`. Merge authority remains
 separate from version bumps, Git tags, GitHub Releases, WordPress.org publication,
