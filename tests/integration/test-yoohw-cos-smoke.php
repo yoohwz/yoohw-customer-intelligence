@@ -115,7 +115,7 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 			$this->assertSame( 1, YoOhw_COS_Customer_Query::query( array( 'rfm_monetary_min' => '125.5' ) )['total_items'] );
 			update_option( 'woocommerce_currency', $currency );
 			$this->assertSame( '125.5', YoOhw_COS_Customer_Query::sanitize_args( array( 'rfm_monetary_min' => '125.500000' ) )['rfm_monetary_min'] );
-			foreach ( array( -1, 'NaN', '3651', array( 1 ) ) as $bad ) {
+			foreach ( array( -1, 'NaN', '3651', array( 1 ), false, null ) as $bad ) {
 				$this->assertSame( 0, YoOhw_COS_Customer_Query::query( array( 'rfm_recency_max_days' => $bad ) )['total_items'] );
 			}
 			$this->assertSame( 0, YoOhw_COS_Customer_Query::query( array( 'rfm_monetary_min' => '100000000000000' ) )['total_items'] );
@@ -141,7 +141,10 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 		YoOhw_COS_Customers::update_customer( $customer_id, array( 'total_spent' => 100 ) );
 		$this->assertSame( 0, YoOhw_COS_Customer_Query::query( $definition )['total_items'] );
 		$this->assertSame( 'invalid', YoOhw_COS_Saved_Views::stale_reason( array_merge( $definition, array( 'rfm_frequency_min' => array( '2' ) ) ) ) );
+		$this->assertSame( 'invalid', YoOhw_COS_Saved_Views::stale_reason( array_merge( $definition, array( 'rfm_frequency_min' => false ) ) ) );
+		$this->assertSame( 'invalid', YoOhw_COS_Saved_Views::stale_reason( array_merge( $definition, array( 'rfm_monetary_min' => false ) ) ) );
 		$this->assertSame( 'invalid', YoOhw_COS_Saved_Views::mutate( 'create', '', 'Bad RFM', array( 'rfm_monetary_min' => '1e9' ) ) );
+		$this->assertSame( 'invalid', YoOhw_COS_Saved_Views::mutate( 'create', '', 'Bad boolean', array( 'rfm_recency_max_days' => false ) ) );
 		$this->assertSame( 'invalid', YoOhw_COS_Saved_Views::mutate( 'create', '', 'Bad array', array( 'rfm_recency_max_days' => array( '30' ) ) ) );
 		$old = $definition;
 		unset( $old['rfm_recency_max_days'], $old['rfm_frequency_min'], $old['rfm_monetary_min'] );
