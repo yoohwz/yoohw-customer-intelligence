@@ -9,6 +9,7 @@ final class YoOhw_COS_Overview {
 		global $wpdb;
 
 		$table = YoOhw_COS_DB::customers_table();
+		$generation = YoOhw_COS_Intelligence::get_scoring_generation();
 
 		if ( ! self::table_exists( $table ) ) {
 			return self::empty_summary();
@@ -20,11 +21,16 @@ final class YoOhw_COS_Overview {
 					COUNT(*) AS total_customers,
 					COALESCE(SUM(total_orders), 0) AS total_orders,
 					COALESCE(SUM(total_spent), 0) AS total_spent,
+					SUM(CASE WHEN total_orders > 0 AND (money_state NOT IN ('comparable', 'mixed') OR commerce_metrics_version < 2 OR (money_state = 'comparable' AND (money_currency IS NULL OR money_currency = ''))) THEN 1 ELSE 0 END) AS unknown_customers,
+					SUM(CASE WHEN total_orders > 0 AND money_state = 'mixed' THEN 1 ELSE 0 END) AS mixed_customers,
+					MIN(CASE WHEN total_orders > 0 THEN money_currency END) AS min_currency,
+					MAX(CASE WHEN total_orders > 0 THEN money_currency END) AS max_currency,
 					SUM(CASE WHEN total_orders > 0 THEN 1 ELSE 0 END) AS purchasing_customers,
 					SUM(CASE WHEN total_orders >= 2 THEN 1 ELSE 0 END) AS repeat_customers,
-					SUM(CASE WHEN vip_status <> %s THEN 1 ELSE 0 END) AS high_value_customers
+					SUM(CASE WHEN ( intelligence_currency_ready = 1 AND intelligence_generation = %s ) AND vip_status <> %s THEN 1 ELSE 0 END) AS high_value_customers
 				FROM %i
 				WHERE archived_at IS NULL",
+				$generation,
 				'none',
 				$table
 			),
@@ -39,11 +45,21 @@ final class YoOhw_COS_Overview {
 		$purchasing_customers = absint( $row['purchasing_customers'] ?? 0 );
 		$total_orders         = absint( $row['total_orders'] ?? 0 );
 		$total_spent          = (float) ( $row['total_spent'] ?? 0 );
+		$money_state = ! YoOhw_COS_Migration_Runner::currency_backfill_is_complete() || absint( $row['unknown_customers'] ?? 0 ) > 0
+			? 'unknown'
+			: ( 0 === $total_orders ? 'none' : ( absint( $row['mixed_customers'] ?? 0 ) > 0 || ( $row['min_currency'] ?? null ) !== ( $row['max_currency'] ?? null ) ? 'mixed' : 'comparable' ) );
+		$money_currency = 'comparable' === $money_state ? $row['min_currency'] : null;
+		if ( 'comparable' !== $money_state ) {
+			$total_spent = 0.0;
+		}
 
 		return array(
 			'total_customers'      => $total_customers,
 			'total_orders'         => $total_orders,
 			'total_spent'          => $total_spent,
+			'money_state'          => $money_state,
+			'money_currency'       => $money_currency,
+			'commerce_metrics_version' => YoOhw_COS_Commerce_Metrics_Policy::VERSION,
 			'average_order_value'  => $total_orders > 0 ? $total_spent / $total_orders : 0.0,
 			'purchasing_customers' => $purchasing_customers,
 			'repeat_customers'     => absint( $row['repeat_customers'] ?? 0 ),
@@ -56,6 +72,7 @@ final class YoOhw_COS_Overview {
 
 	public static function get_attention_counts(): array {
 		global $wpdb;
+		$generation = YoOhw_COS_Intelligence::get_scoring_generation();
 
 		$counts = array(
 			'overdue_tasks'              => 0,
@@ -74,11 +91,11 @@ final class YoOhw_COS_Overview {
 					"SELECT
 						SUM(
 							CASE
-								WHEN vip_status <> %s AND customer_status IN (%s, %s)
+								WHEN ( intelligence_currency_ready = 1 AND intelligence_generation = %s ) AND vip_status <> %s AND customer_status IN (%s, %s)
 								THEN 1 ELSE 0
 							END
 						) AS high_value_retention_risk,
-						SUM(CASE WHEN risk_score >= 70 THEN 1 ELSE 0 END) AS high_risk_customers,
+						SUM(CASE WHEN ( intelligence_currency_ready = 1 AND intelligence_generation = %s ) AND risk_score >= 70 THEN 1 ELSE 0 END) AS high_risk_customers,
 						SUM(
 							CASE
 								WHEN email IS NULL OR email = '' OR phone IS NULL OR phone = ''
@@ -87,9 +104,11 @@ final class YoOhw_COS_Overview {
 						) AS missing_contact_customers
 					FROM %i
 					WHERE archived_at IS NULL",
+					$generation,
 					'none',
 					'at_risk',
 					'inactive',
+					$generation,
 					$customers_table
 				),
 				ARRAY_A
@@ -148,6 +167,7 @@ final class YoOhw_COS_Overview {
 
 		$table = YoOhw_COS_DB::customers_table();
 		$limit = min( 10, max( 1, absint( $limit ) ) );
+		$generation = YoOhw_COS_Intelligence::get_scoring_generation();
 
 		if ( ! self::table_exists( $table ) ) {
 			return array();
@@ -162,6 +182,11 @@ final class YoOhw_COS_Overview {
 					phone,
 					total_orders,
 					total_spent,
+					money_state,
+					money_currency,
+					commerce_metrics_version,
+					intelligence_currency_ready,
+					intelligence_generation,
 					customer_status,
 					vip_status,
 					risk_score,
@@ -169,8 +194,7 @@ final class YoOhw_COS_Overview {
 				FROM %i
 				WHERE archived_at IS NULL
 					AND (
-						( vip_status <> %s AND customer_status IN (%s, %s) )
-						OR risk_score >= 70
+						( ( intelligence_currency_ready = 1 AND intelligence_generation = %s ) AND ( ( vip_status <> %s AND customer_status IN (%s, %s) ) OR risk_score >= 70 ) )
 						OR email IS NULL
 						OR email = ''
 						OR phone IS NULL
@@ -178,29 +202,34 @@ final class YoOhw_COS_Overview {
 					)
 				ORDER BY
 					CASE
-						WHEN vip_status <> %s AND customer_status = %s THEN 0
-						WHEN vip_status <> %s AND customer_status = %s THEN 1
-						WHEN risk_score >= 70 THEN 2
+						WHEN ( intelligence_currency_ready = 1 AND intelligence_generation = %s ) AND vip_status <> %s AND customer_status = %s THEN 0
+						WHEN ( intelligence_currency_ready = 1 AND intelligence_generation = %s ) AND vip_status <> %s AND customer_status = %s THEN 1
+						WHEN ( intelligence_currency_ready = 1 AND intelligence_generation = %s ) AND risk_score >= 70 THEN 2
 						WHEN email IS NULL OR email = '' OR phone IS NULL OR phone = '' THEN 3
 						ELSE 4
 					END ASC,
-					total_spent DESC,
+					CASE WHEN intelligence_currency_ready = 1 AND intelligence_generation = %s AND money_state = 'comparable' THEN total_spent ELSE 0 END DESC,
 					id DESC
 				LIMIT %d",
 				$table,
+				$generation,
 				'none',
 				'at_risk',
 				'inactive',
+				$generation,
 				'none',
 				'inactive',
+				$generation,
 				'none',
 				'at_risk',
+				$generation,
+				$generation,
 				$limit
 			),
 			ARRAY_A
 		);
 
-		return is_array( $customers ) ? $customers : array();
+		return is_array( $customers ) ? array_map( array( 'YoOhw_COS_Intelligence', 'safe_customer_decisions' ), $customers ) : array();
 	}
 
 	public static function get_priority_tasks( int $limit = 5 ): array {
@@ -265,6 +294,9 @@ final class YoOhw_COS_Overview {
 			'total_customers'      => 0,
 			'total_orders'         => 0,
 			'total_spent'          => 0.0,
+			'money_state'          => 'none',
+			'money_currency'       => null,
+			'commerce_metrics_version' => YoOhw_COS_Commerce_Metrics_Policy::VERSION,
 			'average_order_value'  => 0.0,
 			'purchasing_customers' => 0,
 			'repeat_customers'     => 0,

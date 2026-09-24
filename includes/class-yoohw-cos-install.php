@@ -120,7 +120,11 @@ final class YoOhw_COS_Install {
 					'total_orders' => array( 'bigint unsigned', false, '0' ),
 					'total_spent' => array( 'decimal(20,6)', false, '0.000000' ),
 					'average_order_value' => array( 'decimal(20,6)', false, '0.000000' ),
+					'money_state' => array( 'varchar(20)', false, 'unknown' ),
+					'money_currency' => array( 'varchar(10)', true, null ),
 					'commerce_metrics_version' => array( 'smallint unsigned', false, '0' ),
+					'intelligence_currency_ready' => array( 'tinyint', false, '0' ),
+					'intelligence_generation' => array( 'varchar(36)', false, '' ),
 					'risk_score' => array( 'decimal(5,2)', false, '0.00' ),
 					'trust_score' => array( 'decimal(5,2)', false, '0.00' ),
 					'loyalty_score' => array( 'decimal(5,2)', false, '0.00' ),
@@ -313,6 +317,7 @@ final class YoOhw_COS_Install {
 					'order_status' => array( 'varchar(30)', false, null ),
 					'order_total' => array( 'decimal(20,6)', false, '0.000000' ),
 					'revenue_amount' => array( 'decimal(20,6)', false, '0.000000' ),
+					'currency' => array( 'varchar(10)', true, null ),
 					'counts_as_order' => array( 'tinyint', false, '0' ),
 					'counts_as_revenue' => array( 'tinyint', false, '0' ),
 					'order_date' => array( 'datetime', false, null ),
@@ -424,7 +429,11 @@ final class YoOhw_COS_Install {
 			total_orders BIGINT UNSIGNED NOT NULL DEFAULT 0,
 			total_spent DECIMAL(20,6) NOT NULL DEFAULT 0.000000,
 			average_order_value DECIMAL(20,6) NOT NULL DEFAULT 0.000000,
+			money_state VARCHAR(20) NOT NULL DEFAULT 'unknown',
+			money_currency VARCHAR(10) NULL,
 			commerce_metrics_version SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+			intelligence_currency_ready TINYINT NOT NULL DEFAULT 0,
+			intelligence_generation VARCHAR(36) NOT NULL DEFAULT '',
 			risk_score DECIMAL(5,2) NOT NULL DEFAULT 0.00,
 			trust_score DECIMAL(5,2) NOT NULL DEFAULT 0.00,
 			loyalty_score DECIMAL(5,2) NOT NULL DEFAULT 0.00,
@@ -593,6 +602,7 @@ final class YoOhw_COS_Install {
 			order_status VARCHAR(30) NOT NULL,
 			order_total DECIMAL(20,6) NOT NULL DEFAULT 0.000000,
 			revenue_amount DECIMAL(20,6) NOT NULL DEFAULT 0.000000,
+			currency VARCHAR(10) NULL,
 			counts_as_order TINYINT(1) NOT NULL DEFAULT 0,
 			counts_as_revenue TINYINT(1) NOT NULL DEFAULT 0,
 			order_date DATETIME NOT NULL,
@@ -886,6 +896,23 @@ final class YoOhw_COS_Install {
 					'ALTER TABLE %i ADD commerce_metrics_version SMALLINT UNSIGNED NOT NULL DEFAULT 0 AFTER average_order_value',
 					$table
 				)
+			);
+		}
+
+		$intelligence_ready_exists = $wpdb->get_var(
+			$wpdb->prepare( 'SHOW COLUMNS FROM %i LIKE %s', $table, 'intelligence_currency_ready' )
+		);
+		if ( empty( $intelligence_ready_exists ) ) {
+			self::execute_ensure_ddl(
+				$wpdb->prepare( 'ALTER TABLE %i ADD intelligence_currency_ready TINYINT NOT NULL DEFAULT 0 AFTER commerce_metrics_version', $table )
+			);
+		}
+		$intelligence_generation_exists = $wpdb->get_var(
+			$wpdb->prepare( 'SHOW COLUMNS FROM %i LIKE %s', $table, 'intelligence_generation' )
+		);
+		if ( empty( $intelligence_generation_exists ) ) {
+			self::execute_ensure_ddl(
+				$wpdb->prepare( "ALTER TABLE %i ADD intelligence_generation VARCHAR(36) NOT NULL DEFAULT '' AFTER intelligence_currency_ready", $table )
 			);
 		}
 

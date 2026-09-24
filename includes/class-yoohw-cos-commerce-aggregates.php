@@ -61,31 +61,29 @@ final class YoOhw_COS_Commerce_Aggregates {
 			if ( $old_customer_id > 0 && $old_customer_id !== $customer_id ) {
 				self::apply_delta(
 					$old_customer_id,
-					-1 * absint( $old_fact['counts_as_order'] ?? 0 ),
-					-1 * (float) ( $old_fact['revenue_amount'] ?? 0 )
+					-1 * absint( $old_fact['counts_as_order'] ?? 0 )
 				);
 				self::apply_delta(
 					$customer_id,
-					absint( $new_fact['counts_as_order'] ),
-					(float) $new_fact['revenue_amount']
+					absint( $new_fact['counts_as_order'] )
 				);
 			} else {
 				self::apply_delta(
 					$customer_id,
-					absint( $new_fact['counts_as_order'] ) - absint( $old_fact['counts_as_order'] ?? 0 ),
-					(float) $new_fact['revenue_amount'] - (float) ( $old_fact['revenue_amount'] ?? 0 )
+					absint( $new_fact['counts_as_order'] ) - absint( $old_fact['counts_as_order'] ?? 0 )
 				);
 			}
 
 			$sql = $wpdb->prepare(
 				"INSERT INTO %i
-					(order_id, customer_id, order_status, order_total, revenue_amount, counts_as_order, counts_as_revenue, order_date, policy_version, updated_at)
-				VALUES (%d, %d, %s, %f, %f, %d, %d, %s, %d, %s)
+					(order_id, customer_id, order_status, order_total, revenue_amount, currency, counts_as_order, counts_as_revenue, order_date, policy_version, updated_at)
+				VALUES (%d, %d, %s, %f, %f, %s, %d, %d, %s, %d, %s)
 				ON DUPLICATE KEY UPDATE
 					customer_id = VALUES(customer_id),
 					order_status = VALUES(order_status),
 					order_total = VALUES(order_total),
 					revenue_amount = VALUES(revenue_amount),
+					currency = VALUES(currency),
 					counts_as_order = VALUES(counts_as_order),
 					counts_as_revenue = VALUES(counts_as_revenue),
 					order_date = VALUES(order_date),
@@ -97,6 +95,7 @@ final class YoOhw_COS_Commerce_Aggregates {
 				$new_fact['order_status'],
 				$new_fact['order_total'],
 				$new_fact['revenue_amount'],
+				$new_fact['currency'],
 				$new_fact['counts_as_order'],
 				$new_fact['counts_as_revenue'],
 				$new_fact['order_date'],
@@ -111,7 +110,9 @@ final class YoOhw_COS_Commerce_Aggregates {
 			}
 
 			foreach ( $affected_ids as $affected_id ) {
+				self::refresh_money( $affected_id );
 				self::refresh_order_bounds( $affected_id );
+				self::invalidate_persisted_intelligence( $affected_id );
 			}
 
 			$wpdb->query( 'COMMIT' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.TransactionQuery
@@ -124,6 +125,7 @@ final class YoOhw_COS_Commerce_Aggregates {
 		if ( ! $transaction_ok ) {
 			return array();
 		}
+		YoOhw_COS_Migration_Runner::note_currency_reconciled( 'order', $order_id );
 
 		$metrics = self::get_customer_metrics( $customer_id );
 		$metrics['_affected_customer_ids'] = $affected_ids;
@@ -163,7 +165,7 @@ final class YoOhw_COS_Commerce_Aggregates {
 		try {
 			$fact = $wpdb->get_row(
 				$wpdb->prepare(
-					'SELECT customer_id, counts_as_order, revenue_amount FROM %i WHERE order_id = %d FOR UPDATE',
+					'SELECT customer_id, counts_as_order FROM %i WHERE order_id = %d FOR UPDATE',
 					$facts_table,
 					$order_id
 				),
@@ -178,9 +180,8 @@ final class YoOhw_COS_Commerce_Aggregates {
 			$customer_id = absint( $fact['customer_id'] ?? 0 );
 			self::lock_and_initialize_customer( $customer_id );
 			self::apply_delta(
-				$customer_id,
-				-1 * absint( $fact['counts_as_order'] ?? 0 ),
-				-1 * (float) ( $fact['revenue_amount'] ?? 0 )
+					$customer_id,
+					-1 * absint( $fact['counts_as_order'] ?? 0 )
 			);
 
 			$deleted = $wpdb->delete( $facts_table, array( 'order_id' => $order_id ), array( '%d' ) );
@@ -189,7 +190,9 @@ final class YoOhw_COS_Commerce_Aggregates {
 				throw new RuntimeException( 'Unable to remove customer order fact.' );
 			}
 
+			self::refresh_money( $customer_id );
 			self::refresh_order_bounds( $customer_id );
+			self::invalidate_persisted_intelligence( $customer_id );
 			$wpdb->query( 'COMMIT' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.TransactionQuery
 		} catch ( Throwable $exception ) {
 			$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.TransactionQuery
@@ -208,7 +211,7 @@ final class YoOhw_COS_Commerce_Aggregates {
 
 		$row = $wpdb->get_row(
 			$wpdb->prepare(
-				'SELECT total_orders, total_spent, average_order_value FROM %i WHERE id = %d',
+				'SELECT total_orders, total_spent, average_order_value, money_state, money_currency, commerce_metrics_version FROM %i WHERE id = %d',
 				YoOhw_COS_DB::customers_table(),
 				absint( $customer_id )
 			),
@@ -218,18 +221,18 @@ final class YoOhw_COS_Commerce_Aggregates {
 		return is_array( $row ) ? $row : array();
 	}
 
-	public static function rebuild_customer( int $customer_id ): bool {
+	public static function rebuild_customer( int $customer_id, bool $trusted_backfill = false ): bool {
 		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
 			return false;
 		}
 		try {
-			return self::rebuild_customer_guarded( $customer_id );
+			return self::rebuild_customer_guarded( $customer_id, $trusted_backfill );
 		} finally {
 			YoOhw_COS_Reset_Guard::leave();
 		}
 	}
 
-	private static function rebuild_customer_guarded( int $customer_id ): bool {
+	private static function rebuild_customer_guarded( int $customer_id, bool $trusted_backfill ): bool {
 		global $wpdb;
 
 		$customer_id = absint( $customer_id );
@@ -253,32 +256,25 @@ final class YoOhw_COS_Commerce_Aggregates {
 				throw new RuntimeException( 'Customer aggregate rebuild target does not exist.' );
 			}
 
-			$aggregate = $wpdb->get_row(
-				$wpdb->prepare(
-					"SELECT
-						COALESCE(SUM(counts_as_order), 0) AS total_orders,
-						COALESCE(SUM(revenue_amount), 0) AS total_spent
-					FROM %i
-					WHERE customer_id = %d",
-					YoOhw_COS_DB::order_facts_table(),
-					$customer_id
-				),
-				ARRAY_A
-			);
-
+			$aggregate = self::fact_summary( $customer_id );
 			$total_orders = absint( $aggregate['total_orders'] ?? 0 );
-			$total_spent  = max( 0.0, (float) ( $aggregate['total_spent'] ?? 0 ) );
+			$previous_version = absint( $wpdb->get_var( $wpdb->prepare( 'SELECT commerce_metrics_version FROM %i WHERE id = %d', YoOhw_COS_DB::customers_table(), $customer_id ) ) );
+			$trusted = $trusted_backfill || $previous_version >= YoOhw_COS_Commerce_Metrics_Policy::VERSION || 0 === $previous_version;
+			$money = self::money_values( $aggregate, $trusted );
 			$updated = $wpdb->update(
 				YoOhw_COS_DB::customers_table(),
 				array(
 					'total_orders'             => $total_orders,
-					'total_spent'              => $total_spent,
-					'average_order_value'      => $total_orders > 0 ? $total_spent / $total_orders : 0.0,
-					'commerce_metrics_version' => YoOhw_COS_Commerce_Metrics_Policy::VERSION,
+					'total_spent'              => $money['total_spent'],
+					'average_order_value'      => $money['average_order_value'],
+					'money_state'              => $money['money_state'],
+					'money_currency'           => $money['money_currency'],
+					'commerce_metrics_version' => $trusted ? YoOhw_COS_Commerce_Metrics_Policy::VERSION : $previous_version,
+					'intelligence_currency_ready' => 0,
 					'updated_at'               => YoOhw_COS_DB::now(),
 				),
 				array( 'id' => $customer_id ),
-				array( '%d', '%f', '%f', '%d', '%s' ),
+				array( '%d', '%f', '%f', '%s', '%s', '%d', '%d', '%s' ),
 				array( '%d' )
 			);
 
@@ -295,7 +291,10 @@ final class YoOhw_COS_Commerce_Aggregates {
 			return false;
 		}
 
-		YoOhw_COS_Customers::refresh_derived_intelligence( $customer_id );
+		if ( ! YoOhw_COS_Customers::refresh_derived_intelligence( $customer_id ) ) {
+			return false;
+		}
+		YoOhw_COS_Migration_Runner::note_currency_reconciled( 'customer', $customer_id );
 
 		return true;
 	}
@@ -316,7 +315,7 @@ final class YoOhw_COS_Commerce_Aggregates {
 			throw new RuntimeException( 'Customer aggregate target does not exist.' );
 		}
 
-		if ( absint( $customer['commerce_metrics_version'] ?? 0 ) >= YoOhw_COS_Commerce_Metrics_Policy::VERSION ) {
+		if ( absint( $customer['commerce_metrics_version'] ?? 0 ) > 0 ) {
 			return;
 		}
 
@@ -326,10 +325,12 @@ final class YoOhw_COS_Commerce_Aggregates {
 				'total_orders'             => 0,
 				'total_spent'              => 0,
 				'average_order_value'      => 0,
+				'money_state'              => 'none',
+				'money_currency'           => null,
 				'commerce_metrics_version' => YoOhw_COS_Commerce_Metrics_Policy::VERSION,
 			),
 			array( 'id' => $customer_id ),
-			array( '%d', '%f', '%f', '%d' ),
+			array( '%d', '%f', '%f', '%s', '%s', '%d' ),
 			array( '%d' )
 		);
 
@@ -338,12 +339,12 @@ final class YoOhw_COS_Commerce_Aggregates {
 		}
 	}
 
-	private static function apply_delta( int $customer_id, int $order_delta, float $revenue_delta ): void {
+	private static function apply_delta( int $customer_id, int $order_delta ): void {
 		global $wpdb;
 
 		$row = $wpdb->get_row(
 			$wpdb->prepare(
-				'SELECT total_orders, total_spent FROM %i WHERE id = %d FOR UPDATE',
+				'SELECT total_orders FROM %i WHERE id = %d FOR UPDATE',
 				YoOhw_COS_DB::customers_table(),
 				$customer_id
 			),
@@ -355,22 +356,85 @@ final class YoOhw_COS_Commerce_Aggregates {
 		}
 
 		$total_orders = max( 0, absint( $row['total_orders'] ?? 0 ) + $order_delta );
-		$total_spent  = max( 0.0, (float) ( $row['total_spent'] ?? 0 ) + $revenue_delta );
 		$updated      = $wpdb->update(
 			YoOhw_COS_DB::customers_table(),
 			array(
 				'total_orders'        => $total_orders,
-				'total_spent'         => $total_spent,
-				'average_order_value' => $total_orders > 0 ? $total_spent / $total_orders : 0.0,
 				'updated_at'          => YoOhw_COS_DB::now(),
 			),
 			array( 'id' => $customer_id ),
-			array( '%d', '%f', '%f', '%s' ),
+			array( '%d', '%s' ),
 			array( '%d' )
 		);
 
 		if ( false === $updated ) {
 			throw new RuntimeException( 'Unable to update customer aggregate.' );
+		}
+	}
+
+	private static function fact_summary( int $customer_id ): array {
+		global $wpdb;
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT COALESCE(SUM(counts_as_order), 0) AS total_orders,
+					COALESCE(SUM(CASE WHEN counts_as_order = 1 THEN revenue_amount ELSE 0 END), 0) AS total_spent,
+					SUM(CASE WHEN counts_as_order = 1 AND (currency IS NULL OR currency = '') THEN 1 ELSE 0 END) AS unknown_count,
+					MIN(CASE WHEN counts_as_order = 1 THEN NULLIF(currency, '') END) AS min_currency,
+					MAX(CASE WHEN counts_as_order = 1 THEN NULLIF(currency, '') END) AS max_currency
+				FROM %i WHERE customer_id = %d",
+				YoOhw_COS_DB::order_facts_table(),
+				$customer_id
+			),
+			ARRAY_A
+		);
+		if ( ! is_array( $row ) ) {
+			throw new RuntimeException( 'Unable to summarize customer currency facts.' );
+		}
+		return $row;
+	}
+
+	private static function money_values( array $summary, bool $trusted ): array {
+		$orders = absint( $summary['total_orders'] ?? 0 );
+		$min = (string) ( $summary['min_currency'] ?? '' );
+		$max = (string) ( $summary['max_currency'] ?? '' );
+		$state = ! $trusted || absint( $summary['unknown_count'] ?? 0 ) > 0 ? 'unknown'
+			: ( 0 === $orders ? 'none' : ( $min === $max && '' !== $min ? 'comparable' : 'mixed' ) );
+		$spent = 'comparable' === $state ? max( 0.0, (float) ( $summary['total_spent'] ?? 0 ) ) : 0.0;
+		return array(
+			'total_spent' => $spent,
+			'average_order_value' => 'comparable' === $state && $orders > 0 ? $spent / $orders : 0.0,
+			'money_state' => $state,
+			'money_currency' => 'comparable' === $state ? $min : null,
+		);
+	}
+
+	private static function refresh_money( int $customer_id ): void {
+		global $wpdb;
+		$version = absint( $wpdb->get_var( $wpdb->prepare( 'SELECT commerce_metrics_version FROM %i WHERE id = %d', YoOhw_COS_DB::customers_table(), $customer_id ) ) );
+		$money = self::money_values( self::fact_summary( $customer_id ), $version >= YoOhw_COS_Commerce_Metrics_Policy::VERSION );
+		$updated = $wpdb->update(
+			YoOhw_COS_DB::customers_table(),
+			$money,
+			array( 'id' => $customer_id ),
+			array( '%f', '%f', '%s', '%s' ),
+			array( '%d' )
+		);
+		if ( false === $updated ) {
+			throw new RuntimeException( 'Unable to persist customer currency state.' );
+		}
+	}
+
+	private static function invalidate_persisted_intelligence( int $customer_id ): void {
+		global $wpdb;
+		$updated = $wpdb->update(
+			YoOhw_COS_DB::customers_table(),
+			array( 'intelligence_currency_ready' => 0 ),
+			array( 'id' => $customer_id ),
+			array( '%d' ),
+			array( '%d' )
+		);
+		if ( false === $updated ) {
+			throw new RuntimeException( 'Unable to invalidate customer intelligence.' );
 		}
 	}
 

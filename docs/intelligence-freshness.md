@@ -18,6 +18,20 @@ Long passes continue across daily ticks instead of repeatedly restarting at ID z
 
 Saving scoring settings through the existing update method writes a fresh opaque
 generation and requests that wakeup. This includes the authorized admin-post handler.
+The currency backfill completion, a resolved backfill issue, and a store currency
+setting change also write a new generation before requesting the wakeup. A completed
+checkpoint and an in-progress cursor therefore restart at ID zero so money-derived
+decisions converge under the new currency state.
+While currency backfill is incomplete, rows whose currency-aware intelligence refresh
+has not succeeded have derived decisions recalculated safely on individual reads.
+Persisted legacy classifications are excluded from SQL-backed classification filters,
+counts and Overview priority decisions until the bounded refresh processes those rows. The
+unfiltered customer list still includes them, and its all-customers count includes
+the temporarily unavailable classification group. Non-monetary branches continue to
+calculate on read; order/contact facts remain available.
+Commerce changes invalidate each affected row's readiness in the same transaction as
+its aggregate update; a successful derived classification write restores readiness.
+A failed refresh leaves the row in the untrusted group for a bounded retry.
 The worker reads the generation uncached before/after each batch and invalidates its
 settings cache at the start. A superseded pass restarts at ID zero, including when
 settings return to the same values after an intervening change. Old scheduled cursor

@@ -4,14 +4,46 @@ defined( 'ABSPATH' ) || exit;
 final class YoOhw_COS_Intelligence {
 
 	private const SCORING_SETTINGS_OPTION = 'yoohw_cos_scoring_settings';
+	private static $settings_cache_generation = null;
 
 	public static function init(): void {
-		// Reserved for future hooks.
+		add_action( 'update_option_woocommerce_currency', array( __CLASS__, 'currency_changed' ), 10, 2 );
+	}
+
+	public static function currency_changed( $old_currency, $new_currency ): void {
+		if ( $old_currency !== $new_currency ) {
+			self::invalidate_monetary_decisions();
+		}
+	}
+
+	/** Restart the bounded persisted refresh, including a completed or partial pass. */
+	public static function invalidate_monetary_decisions(): void {
+		update_option( 'yoohw_cos_intelligence_generation', wp_generate_uuid4(), false );
+		YoOhw_COS_Customers::request_intelligence_refresh();
+	}
+
+	/** Old persisted classifications may have used mixed-currency spend before migration. */
+	public static function persisted_decisions_are_safe( array $customer ): bool {
+		return 1 === absint( $customer['intelligence_currency_ready'] ?? 0 )
+			&& (string) ( $customer['intelligence_generation'] ?? '' ) === self::get_scoring_generation();
+	}
+
+	public static function safe_customer_decisions( array $customer ): array {
+		if ( self::persisted_decisions_are_safe( $customer ) ) {
+			return $customer;
+		}
+		$customer['customer_status'] = self::calculate_customer_status( $customer );
+		$customer['lifecycle_stage'] = self::calculate_lifecycle_stage( $customer );
+		$customer['vip_status'] = self::calculate_vip_status( $customer );
+		$customer['trust_score'] = self::calculate_trust_score( $customer );
+		$customer['risk_score'] = self::calculate_risk_score( $customer );
+		return $customer;
 	}
 
 	public static function calculate_customer_status( array $customer ): string {
 		$total_orders = absint( $customer['total_orders'] ?? 0 );
 		$total_spent  = (float) ( $customer['total_spent'] ?? 0 );
+		$money_valid = YoOhw_COS_Commerce_Metrics_Policy::money_matches_store( $customer );
 		$last_active  = self::get_last_activity_date( $customer );
 		$settings     = self::get_scoring_settings();
 		$status       = $settings['customer_status'];
@@ -28,7 +60,7 @@ final class YoOhw_COS_Intelligence {
 			return 'new';
 		}
 
-		if ( $total_spent >= (float) $status['vip_spent'] || $total_orders >= absint( $status['vip_orders'] ) ) {
+		if ( ( $money_valid && $total_spent >= (float) $status['vip_spent'] ) || $total_orders >= absint( $status['vip_orders'] ) ) {
 			return 'vip';
 		}
 
@@ -38,18 +70,19 @@ final class YoOhw_COS_Intelligence {
 	public static function calculate_vip_status( array $customer ): string {
 		$total_orders = absint( $customer['total_orders'] ?? 0 );
 		$total_spent  = (float) ( $customer['total_spent'] ?? 0 );
+		$money_valid = YoOhw_COS_Commerce_Metrics_Policy::money_matches_store( $customer );
 		$settings     = self::get_scoring_settings();
 		$tiers        = $settings['value_tiers'];
 
-		if ( $total_spent >= (float) $tiers['top_customer_spent'] || $total_orders >= absint( $tiers['top_customer_orders'] ) ) {
+		if ( ( $money_valid && $total_spent >= (float) $tiers['top_customer_spent'] ) || $total_orders >= absint( $tiers['top_customer_orders'] ) ) {
 			return 'platinum';
 		}
 
-		if ( $total_spent >= (float) $tiers['very_high_value_spent'] || $total_orders >= absint( $tiers['very_high_value_orders'] ) ) {
+		if ( ( $money_valid && $total_spent >= (float) $tiers['very_high_value_spent'] ) || $total_orders >= absint( $tiers['very_high_value_orders'] ) ) {
 			return 'gold';
 		}
 
-		if ( $total_spent >= (float) $tiers['high_value_spent'] || $total_orders >= absint( $tiers['high_value_orders'] ) ) {
+		if ( ( $money_valid && $total_spent >= (float) $tiers['high_value_spent'] ) || $total_orders >= absint( $tiers['high_value_orders'] ) ) {
 			return 'silver';
 		}
 
@@ -57,6 +90,14 @@ final class YoOhw_COS_Intelligence {
 	}
 
 	public static function get_scoring_settings(): array {
+		$generation = self::get_scoring_generation();
+		if ( self::$settings_cache_generation !== $generation ) {
+			// Another request may have changed settings without invalidating this request's option cache.
+			wp_cache_delete( self::SCORING_SETTINGS_OPTION, 'options' );
+			wp_cache_delete( 'notoptions', 'options' );
+			wp_cache_delete( 'alloptions', 'options' );
+			self::$settings_cache_generation = $generation;
+		}
 		$saved = get_option( self::SCORING_SETTINGS_OPTION, array() );
 		$saved = is_array( $saved ) ? $saved : array();
 
@@ -195,6 +236,7 @@ final class YoOhw_COS_Intelligence {
 	public static function calculate_trust_score( array $customer ): float {
 		$total_orders = absint( $customer['total_orders'] ?? 0 );
 		$total_spent  = (float) ( $customer['total_spent'] ?? 0 );
+		$money_valid = YoOhw_COS_Commerce_Metrics_Policy::money_matches_store( $customer );
 
 		$score = 50.0;
 
@@ -210,11 +252,11 @@ final class YoOhw_COS_Intelligence {
 			$score += 10;
 		}
 
-		if ( $total_spent >= 500 ) {
+		if ( $money_valid && $total_spent >= 500 ) {
 			$score += 10;
 		}
 
-		if ( $total_spent >= 1000 ) {
+		if ( $money_valid && $total_spent >= 1000 ) {
 			$score += 10;
 		}
 
@@ -234,6 +276,7 @@ final class YoOhw_COS_Intelligence {
 	public static function calculate_risk_score( array $customer ): float {
 		$total_orders = absint( $customer['total_orders'] ?? 0 );
 		$total_spent  = (float) ( $customer['total_spent'] ?? 0 );
+		$money_valid = YoOhw_COS_Commerce_Metrics_Policy::money_matches_store( $customer );
 		$last_active  = self::get_last_activity_date( $customer );
 		$email        = sanitize_email( $customer['email'] ?? '' );
 		$phone        = sanitize_text_field( $customer['phone'] ?? '' );
@@ -252,7 +295,7 @@ final class YoOhw_COS_Intelligence {
 			$score += 10;
 		}
 
-		if ( $total_spent >= 1000 && $total_orders <= 1 ) {
+		if ( $money_valid && $total_spent >= 1000 && $total_orders <= 1 ) {
 			$score += 20;
 		}
 
@@ -295,6 +338,7 @@ final class YoOhw_COS_Intelligence {
 
 		$total_orders = absint( $customer['total_orders'] ?? 0 );
 		$total_spent  = (float) ( $customer['total_spent'] ?? 0 );
+		$money_valid = YoOhw_COS_Commerce_Metrics_Policy::money_matches_store( $customer );
 		$last_active  = self::get_last_activity_date( $customer );
 		$email        = sanitize_email( $customer['email'] ?? '' );
 		$phone        = sanitize_text_field( $customer['phone'] ?? '' );
@@ -323,7 +367,7 @@ final class YoOhw_COS_Intelligence {
 			);
 		}
 
-		if ( $total_spent >= 1000 && $total_orders <= 1 ) {
+		if ( $money_valid && $total_spent >= 1000 && $total_orders <= 1 ) {
 			$factors[] = array(
 				'label'       => __( 'High value with limited history', 'yoohw-customer-intelligence' ),
 				'impact'      => 20,
@@ -358,6 +402,7 @@ final class YoOhw_COS_Intelligence {
 
 		$total_orders = absint( $customer['total_orders'] ?? 0 );
 		$total_spent  = (float) ( $customer['total_spent'] ?? 0 );
+		$money_valid = YoOhw_COS_Commerce_Metrics_Policy::money_matches_store( $customer );
 		$email        = sanitize_email( $customer['email'] ?? '' );
 		$phone        = sanitize_text_field( $customer['phone'] ?? '' );
 
@@ -401,7 +446,7 @@ final class YoOhw_COS_Intelligence {
 			);
 		}
 
-		if ( $total_spent >= 500 ) {
+		if ( $money_valid && $total_spent >= 500 ) {
 			$factors[] = array(
 				'label'       => __( 'Meaningful purchase value', 'yoohw-customer-intelligence' ),
 				'impact'      => 10,
@@ -409,7 +454,7 @@ final class YoOhw_COS_Intelligence {
 			);
 		}
 
-		if ( $total_spent >= 1000 ) {
+		if ( $money_valid && $total_spent >= 1000 ) {
 			$factors[] = array(
 				'label'       => __( 'High purchase value', 'yoohw-customer-intelligence' ),
 				'impact'      => 10,
@@ -431,6 +476,7 @@ final class YoOhw_COS_Intelligence {
 	public static function calculate_lifecycle_stage( array $customer ): string {
 		$total_orders = absint( $customer['total_orders'] ?? 0 );
 		$total_spent  = (float) ( $customer['total_spent'] ?? 0 );
+		$money_valid = YoOhw_COS_Commerce_Metrics_Policy::money_matches_store( $customer );
 		$last_active  = self::get_last_activity_date( $customer );
 		$settings     = self::get_scoring_settings();
 		$lifecycle    = $settings['lifecycle'];
@@ -439,11 +485,11 @@ final class YoOhw_COS_Intelligence {
 			return 'dormant';
 		}
 
-		if ( $total_spent >= (float) $lifecycle['top_customer_spent'] || $total_orders >= absint( $lifecycle['top_customer_orders'] ) ) {
+		if ( ( $money_valid && $total_spent >= (float) $lifecycle['top_customer_spent'] ) || $total_orders >= absint( $lifecycle['top_customer_orders'] ) ) {
 			return 'vip';
 		}
 
-		if ( $total_orders >= absint( $lifecycle['loyal_orders'] ) || $total_spent >= (float) $lifecycle['loyal_spent'] ) {
+		if ( $total_orders >= absint( $lifecycle['loyal_orders'] ) || ( $money_valid && $total_spent >= (float) $lifecycle['loyal_spent'] ) ) {
 			return 'loyal';
 		}
 
@@ -458,6 +504,7 @@ final class YoOhw_COS_Intelligence {
 		$stage        = self::calculate_lifecycle_stage( $customer );
 		$total_orders = absint( $customer['total_orders'] ?? 0 );
 		$total_spent  = (float) ( $customer['total_spent'] ?? 0 );
+		$money_valid = YoOhw_COS_Commerce_Metrics_Policy::money_matches_store( $customer );
 		$last_active  = self::get_last_activity_date( $customer );
 		$settings     = self::get_scoring_settings();
 		$lifecycle    = $settings['lifecycle'];
@@ -506,11 +553,13 @@ final class YoOhw_COS_Intelligence {
 
 		$factors[] = array(
 			'label'       => __( 'Lifetime value', 'yoohw-customer-intelligence' ),
-			'description' => sprintf(
-				/* translators: %s: total spent */
-				__( 'This customer has spent %s in store currency.', 'yoohw-customer-intelligence' ),
-				number_format_i18n( $total_spent, 2 )
-			),
+			'description' => YoOhw_COS_Commerce_Metrics_Policy::money_is_comparable( $customer )
+				? sprintf(
+					/* translators: %s: formatted customer spend. */
+					__( 'This customer has spent %s.', 'yoohw-customer-intelligence' ),
+					YoOhw_COS_Commerce_Metrics_Policy::format_money( $customer, 'total_spent' )
+				)
+				: __( 'Lifetime value unavailable because order currency is mixed or unknown.', 'yoohw-customer-intelligence' ),
 		);
 
 		$factors[] = array(

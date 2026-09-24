@@ -205,8 +205,15 @@ final class YoOhw_COS_Customers {
 		$affected_customer_ids = array_map( 'absint', (array) ( $metrics['_affected_customer_ids'] ?? array( $customer_id ) ) );
 		unset( $metrics['_affected_customer_ids'] );
 
+		$refresh_failed = false;
 		foreach ( array_values( array_unique( array_filter( $affected_customer_ids ) ) ) as $affected_customer_id ) {
-			self::refresh_derived_intelligence( $affected_customer_id, $affected_customer_id === $customer_id ? $order : null );
+			if ( ! self::refresh_derived_intelligence( $affected_customer_id, $affected_customer_id === $customer_id ? $order : null ) ) {
+				$refresh_failed = true;
+			}
+		}
+		if ( $refresh_failed ) {
+			YoOhw_COS_Intelligence::invalidate_monetary_decisions();
+			self::schedule_failed_order_sync( new RuntimeException( 'Derived intelligence refresh failed.' ), $order_id, $customer_id );
 		}
 
 		if ( ! self::maybe_link_order_to_customer( $order, $customer_id ) ) {
@@ -379,6 +386,8 @@ final class YoOhw_COS_Customers {
 
 		$data = array(
 			'last_activity_date' => $last_activity ?: null,
+			'intelligence_currency_ready' => 1,
+			'intelligence_generation' => YoOhw_COS_Intelligence::get_scoring_generation(),
 			'customer_status'    => YoOhw_COS_Intelligence::calculate_customer_status( $customer ),
 			'lifecycle_stage'    => YoOhw_COS_Intelligence::calculate_lifecycle_stage( $customer ),
 			'vip_status'         => YoOhw_COS_Intelligence::calculate_vip_status( $customer ),
@@ -618,7 +627,11 @@ final class YoOhw_COS_Customers {
 			'total_orders'        => '%d',
 			'total_spent'         => '%f',
 			'average_order_value' => '%f',
+			'money_state'       => '%s',
+			'money_currency'    => '%s',
 			'commerce_metrics_version' => '%d',
+			'intelligence_currency_ready' => '%d',
+			'intelligence_generation' => '%s',
 			'risk_score'          => '%f',
 			'trust_score'         => '%f',
 			'loyalty_score'       => '%f',
@@ -738,7 +751,7 @@ final class YoOhw_COS_Customers {
 			ARRAY_A
 		);
 
-		return is_array( $customer ) ? $customer : array();
+		return is_array( $customer ) ? YoOhw_COS_Intelligence::safe_customer_decisions( $customer ) : array();
 	}
 
 	public static function customer_exists( int $customer_id ): bool {
@@ -881,26 +894,13 @@ final class YoOhw_COS_Customers {
 	}
 
 	public static function get_stats(): array {
-		global $wpdb;
-
-		$table = YoOhw_COS_DB::customers_table();
-
-		$total_customers = (int) $wpdb->get_var(
-			$wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE archived_at IS NULL', $table )
-		);
-
-		$total_orders = (int) $wpdb->get_var(
-			$wpdb->prepare( 'SELECT SUM(total_orders) FROM %i WHERE archived_at IS NULL', $table )
-		);
-
-		$total_spent = (float) $wpdb->get_var(
-			$wpdb->prepare( 'SELECT SUM(total_spent) FROM %i WHERE archived_at IS NULL', $table )
-		);
-
+		$summary = YoOhw_COS_Overview::get_summary();
 		return array(
-			'total_customers' => $total_customers,
-			'total_orders'    => $total_orders,
-			'total_spent'     => $total_spent,
+			'total_customers' => $summary['total_customers'],
+			'total_orders'    => $summary['total_orders'],
+			'total_spent'     => $summary['total_spent'],
+			'money_state'     => $summary['money_state'],
+			'money_currency'  => $summary['money_currency'],
 		);
 	}
 
@@ -1243,13 +1243,15 @@ final class YoOhw_COS_Customers {
 		global $wpdb;
 
 		$table = YoOhw_COS_DB::customers_table();
+		$generation = YoOhw_COS_Intelligence::get_scoring_generation();
 
 		$rows = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT customer_status, COUNT(*) as total
+				"SELECT CASE WHEN intelligence_currency_ready = 1 AND intelligence_generation = %s THEN customer_status ELSE 'unavailable' END AS safe_status, COUNT(*) as total
 				FROM %i
 				WHERE archived_at IS NULL
-				GROUP BY customer_status",
+				GROUP BY safe_status",
+				$generation,
 				$table
 			),
 			ARRAY_A
@@ -1261,11 +1263,12 @@ final class YoOhw_COS_Customers {
 			'at_risk'  => 0,
 			'inactive' => 0,
 			'vip'      => 0,
+			'unavailable' => 0,
 		);
 
 		if ( is_array( $rows ) ) {
 			foreach ( $rows as $row ) {
-				$status = sanitize_key( $row['customer_status'] ?? '' );
+				$status = sanitize_key( $row['safe_status'] ?? '' );
 
 				if ( isset( $counts[ $status ] ) ) {
 					$counts[ $status ] = absint( $row['total'] ?? 0 );
@@ -1280,14 +1283,16 @@ final class YoOhw_COS_Customers {
 		global $wpdb;
 
 		$table = YoOhw_COS_DB::customers_table();
+		$generation = YoOhw_COS_Intelligence::get_scoring_generation();
 
 		$rows = $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT vip_status, COUNT(*) as total
 				FROM %i
-				WHERE archived_at IS NULL
+				WHERE archived_at IS NULL AND ( intelligence_currency_ready = 1 AND intelligence_generation = %s )
 				GROUP BY vip_status",
-				$table
+				$table,
+				$generation
 			),
 			ARRAY_A
 		);
@@ -1316,6 +1321,7 @@ final class YoOhw_COS_Customers {
 		global $wpdb;
 
 		$table = YoOhw_COS_DB::customers_table();
+		$generation = YoOhw_COS_Intelligence::get_scoring_generation();
 
 		$counts = array(
 			'none'   => 0,
@@ -1332,8 +1338,9 @@ final class YoOhw_COS_Customers {
 				SUM(CASE WHEN risk_score >= 40 AND risk_score < 70 THEN 1 ELSE 0 END) AS medium_count,
 				SUM(CASE WHEN risk_score >= 70 THEN 1 ELSE 0 END) AS high_count
 				FROM %i
-				WHERE archived_at IS NULL",
-				$table
+				WHERE archived_at IS NULL AND ( intelligence_currency_ready = 1 AND intelligence_generation = %s )",
+				$table,
+				$generation
 			),
 			ARRAY_A
 		);
@@ -1619,14 +1626,16 @@ final class YoOhw_COS_Customers {
 		global $wpdb;
 
 		$table = YoOhw_COS_DB::customers_table();
+		$generation = YoOhw_COS_Intelligence::get_scoring_generation();
 
 		$rows = $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT lifecycle_stage, COUNT(*) as total
 				FROM %i
-				WHERE archived_at IS NULL
+				WHERE archived_at IS NULL AND ( intelligence_currency_ready = 1 AND intelligence_generation = %s )
 				GROUP BY lifecycle_stage",
-				$table
+				$table,
+				$generation
 			),
 			ARRAY_A
 		);

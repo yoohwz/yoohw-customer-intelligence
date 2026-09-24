@@ -927,7 +927,7 @@ final class YCI_CSV_Export_Safety_Test extends WP_UnitTestCase {
 		$this->assertSame( 0, proc_close( $process ), $error );
 		$rows = json_decode( $output, true );
 		$this->assertIsArray( $rows );
-		foreach ( $rows as $row ) { $this->assertCount( 12, $row ); }
+		foreach ( $rows as $row ) { $this->assertCount( 14, $row ); }
 		return $rows;
 	}
 
@@ -936,7 +936,7 @@ final class YCI_CSV_Export_Safety_Test extends WP_UnitTestCase {
 		YoOhw_COS_Customers::reset_data();
 		$id = YoOhw_COS_Customers::create_customer( array( 'display_name' => 'CSV fixture' ) );
 		$this->assertGreaterThan( 0, $id );
-		$this->assertNotFalse( $wpdb->update( YoOhw_COS_DB::customers_table(), $values + array( 'display_name' => 'CSV fixture', 'email' => 'csv@example.test', 'phone' => '', 'total_orders' => 2, 'total_spent' => '-12.50', 'average_order_value' => '-6.25', 'risk_score' => '0', 'trust_score' => '95.25' ), array( 'id' => $id ) ) );
+		$this->assertNotFalse( $wpdb->update( YoOhw_COS_DB::customers_table(), $values + array( 'display_name' => 'CSV fixture', 'email' => 'csv@example.test', 'phone' => '', 'total_orders' => 2, 'total_spent' => '-12.50', 'average_order_value' => '-6.25', 'money_state' => 'comparable', 'money_currency' => get_woocommerce_currency(), 'commerce_metrics_version' => YoOhw_COS_Commerce_Metrics_Policy::VERSION, 'intelligence_currency_ready' => 1, 'intelligence_generation' => YoOhw_COS_Intelligence::get_scoring_generation(), 'risk_score' => '0', 'trust_score' => '95.25' ), array( 'id' => $id ) ) );
 		return $id;
 	}
 
@@ -978,8 +978,38 @@ final class YCI_CSV_Export_Safety_Test extends WP_UnitTestCase {
 		$this->assertCount( 2, $rows );
 		foreach ( array( 0, 10, 11 ) as $column ) { $this->assertSame( $expected, $rows[1][$column] ); }
 		$this->assertSame( array( '2', '-12.50', '-6.25', '0.00', '95.25' ), array_slice( $rows[1], 3, 5 ) );
+		$this->assertSame( get_woocommerce_currency(), $rows[1][12] );
+		$this->assertSame( 'comparable', $rows[1][13] );
 		if ( "\t" === substr( $expected, 0, 1 ) ) {
 			$this->assertStringContainsString( '"' . str_replace( '"', '""', $expected ) . '"', $result['bytes'], 'TAB must be inside the quoted field with enclosure doubling.' );
+		}
+	}
+
+	public function test_export_labels_foreign_currency_and_incompatible_money(): void {
+		$foreign = 'USD' === get_woocommerce_currency() ? 'EUR' : 'USD';
+		$this->fixture( array( 'email' => 'foreign@example.test', 'money_currency' => $foreign, 'total_spent' => '25', 'average_order_value' => '12.5' ) );
+		foreach ( array( 'mixed', 'unknown' ) as $state ) {
+			YoOhw_COS_Customers::create_customer( array(
+				'email' => $state . '@example.test',
+				'display_name' => ucfirst( $state ),
+				'total_orders' => 2,
+				'total_spent' => 9999,
+				'average_order_value' => 4999.5,
+				'money_state' => $state,
+				'commerce_metrics_version' => YoOhw_COS_Commerce_Metrics_Policy::VERSION,
+			) );
+		}
+		$rows = $this->decode( $this->request() );
+		$by_email = array();
+		foreach ( array_slice( $rows, 1 ) as $row ) { $by_email[ $row[1] ] = $row; }
+		$this->assertSame( $foreign, $by_email['foreign@example.test'][12] );
+		$this->assertSame( 'comparable', $by_email['foreign@example.test'][13] );
+		$this->assertSame( '25.00', $by_email['foreign@example.test'][4] );
+		foreach ( array( 'mixed', 'unknown' ) as $state ) {
+			$this->assertSame( '', $by_email[ $state . '@example.test' ][4] );
+			$this->assertSame( '', $by_email[ $state . '@example.test' ][5] );
+			$this->assertSame( '', $by_email[ $state . '@example.test' ][12] );
+			$this->assertSame( $state, $by_email[ $state . '@example.test' ][13] );
 		}
 	}
 
@@ -1016,7 +1046,7 @@ final class YCI_CSV_Export_Safety_Test extends WP_UnitTestCase {
 		$this->assertCount( 2, $rows ); $this->assertSame( 'AAA second CSV', $rows[1][0] );
 		$rows = $this->decode( $this->request( array(), array( 's' => 'no matching CSV row' ) ) );
 		$this->assertCount( 1, $rows );
-		$this->assertSame( array( 'Name', 'Email', 'Phone', 'Orders', 'Spent', 'AOV', 'Risk score', 'Trust score', 'Value tier', 'Lifecycle', 'Tags', 'Segments' ), $rows[0] );
+		$this->assertSame( array( 'Name', 'Email', 'Phone', 'Orders', 'Spent', 'AOV', 'Risk score', 'Trust score', 'Value tier', 'Lifecycle', 'Tags', 'Segments', 'Currency', 'Monetary state' ), $rows[0] );
 		global $wpdb;
 		$wpdb->update( YoOhw_COS_DB::customers_table(), array( 'archived_at' => '2026-01-01 00:00:00' ), array( 'id' => $id ) );
 		$rows = $this->decode( $this->request( array(), array( 'customer_view' => 'archived' ) ) );
@@ -2125,7 +2155,7 @@ final class YCI_Intelligence_Freshness_Test extends WP_UnitTestCase {
 	// WordPress current_time('timestamp') has this existing option seam. No source dates change.
 	public function clock() { return $this->clock_days * 24; }
 	private function customer( int $days, float $spent = 100 ): int {
-		$id = YoOhw_COS_Customers::create_customer( array( 'email' => wp_generate_uuid4() . '@example.test', 'phone' => '555-0123', 'display_name' => 'Freshness fixture', 'total_orders' => 2, 'total_spent' => $spent ) );
+		$id = YoOhw_COS_Customers::create_customer( array( 'email' => wp_generate_uuid4() . '@example.test', 'phone' => '555-0123', 'display_name' => 'Freshness fixture', 'total_orders' => 2, 'total_spent' => $spent, 'money_state' => 'comparable', 'money_currency' => get_woocommerce_currency(), 'commerce_metrics_version' => YoOhw_COS_Commerce_Metrics_Policy::VERSION ) );
 		YoOhw_COS_Events::record( array( 'customer_id' => $id, 'event_source' => 'wc_loyalty', 'event_type' => 'fixture_activity', 'created_at' => gmdate( 'Y-m-d H:i:s', time() - $days * DAY_IN_SECONDS - HOUR_IN_SECONDS ) ) );
 		$this->assertTrue( YoOhw_COS_Customers::refresh_derived_intelligence( $id ) );
 		return $id;
@@ -2192,6 +2222,43 @@ final class YCI_Intelligence_Freshness_Test extends WP_UnitTestCase {
 		$this->reads( $id, 'value' === $case ? 'vip' : ( in_array( $case, array( 'at_risk', 'inactive' ), true ) ? $case : 'active' ), 'dormant' === $case ? 'dormant' : ( 'value' === $case ? 'loyal' : 'repeat' ) );
 		$this->assertSame( 'value' === $case ? 'silver' : 'none', $row['vip_status'] );
 	}
+
+	public function test_currency_change_restarts_completed_money_decisions(): void {
+		$id = $this->customer( 20, 1500 );
+		$this->assertSame( 'vip', YoOhw_COS_Customers::get_customer( $id )['customer_status'] );
+		YoOhw_COS_Customers::request_intelligence_refresh();
+		$this->wake();
+		$this->assertSame( 'completed', $this->state()['status'] );
+		$generation = $this->state()['generation'];
+		$store_currency = get_woocommerce_currency();
+		$other_currency = 'USD' === $store_currency ? 'EUR' : 'USD';
+		try {
+			update_option( 'woocommerce_currency', $other_currency );
+			$this->assertNotSame( $generation, YoOhw_COS_Intelligence::get_scoring_generation() );
+			$this->wake();
+			$row = YoOhw_COS_Customers::get_customer( $id );
+			$this->assertSame( 'active', $row['customer_status'] );
+			$this->assertSame( 'none', $row['vip_status'] );
+			$this->assertSame( 60.0, (float) $row['trust_score'] );
+			$this->assertSame( 'completed', $this->state()['status'] );
+		} finally {
+			update_option( 'woocommerce_currency', $store_currency );
+		}
+	}
+
+	public function test_currency_invalidation_restarts_an_in_progress_cursor(): void {
+		$first = $this->customer( 20, 1500 );
+		$second = $this->customer( 20, 1500 );
+		$foreign = 'USD' === get_woocommerce_currency() ? 'EUR' : 'USD';
+		YoOhw_COS_Customers::update_customer( $first, array( 'money_currency' => $foreign ) );
+		YoOhw_COS_Customers::update_customer( $second, array( 'money_currency' => $foreign ) );
+		update_option( 'yoohw_cos_intelligence_freshness', array( 'generation' => YoOhw_COS_Intelligence::get_scoring_generation(), 'cursor' => $first, 'status' => 'in_progress' ), false );
+		YoOhw_COS_Intelligence::invalidate_monetary_decisions();
+		$this->wake();
+		$this->assertSame( 'completed', $this->state()['status'] );
+		$this->assertSame( 'none', YoOhw_COS_Customers::get_customer( $first )['vip_status'] );
+		$this->assertSame( 'none', YoOhw_COS_Customers::get_customer( $second )['vip_status'] );
+	}
 	private function wake( array $args = array( -1 ) ): void {
 		$hook = YoOhw_COS_Customers::RISK_SCORE_REFRESH_HOOK;
 		$time = wp_next_scheduled( $hook, $args );
@@ -2211,7 +2278,8 @@ final class YCI_Intelligence_Freshness_Test extends WP_UnitTestCase {
 		$this->assertSame( 'in_progress', $state['status'] );
 		$this->assertSame( $ids[249], $state['cursor'] );
 		$this->assertSame( 250, YoOhw_COS_Customer_Query::query( array( 'customer_status' => 'at_risk' ) )['total_items'] );
-		$this->assertSame( 'active', YoOhw_COS_Customers::get_customer( $ids[250] )['customer_status'] );
+		$this->assertSame( 'active', $wpdb->get_var( $wpdb->prepare( 'SELECT customer_status FROM %i WHERE id = %d', YoOhw_COS_DB::customers_table(), $ids[250] ) ) );
+		$this->assertSame( 'at_risk', YoOhw_COS_Customers::get_customer( $ids[250] )['customer_status'] );
 		$settings['customer_status']['inactive_days'] = 15;
 		$this->save( $settings );
 		$this->assertNotSame( $state['generation'], YoOhw_COS_Intelligence::get_scoring_generation() );
@@ -2258,6 +2326,35 @@ final class YCI_Intelligence_Freshness_Test extends WP_UnitTestCase {
 		$this->assertSame( 'pending', $this->state()['status'] ); $this->assertSame( 0, $this->state()['cursor'] );
 		$this->wake(); $this->assertSame( 'completed', $this->state()['status'] );
 		$this->reads( $id, 'active', 'repeat' );
+	}
+	public function test_concurrent_scoring_change_inside_batch_uses_current_thresholds(): void {
+		global $wpdb;
+		$first = $this->customer( 20 );
+		$second = $this->customer( 20 );
+		$original = YoOhw_COS_Intelligence::get_scoring_settings_defaults();
+		YoOhw_COS_Intelligence::update_scoring_settings( $original );
+		$changed = $original;
+		$changed['customer_status']['at_risk_days'] = 10;
+		$generation = wp_generate_uuid4();
+		$once = false;
+		$change = static function ( $customer ) use ( &$once, $wpdb, $changed, $generation ) {
+			if ( ! $once ) {
+				$once = true;
+				get_option( 'yoohw_cos_scoring_settings' ); // Keep this request's option cache stale.
+				$wpdb->update( $wpdb->options, array( 'option_value' => maybe_serialize( $changed ) ), array( 'option_name' => 'yoohw_cos_scoring_settings' ) );
+				$wpdb->update( $wpdb->options, array( 'option_value' => $generation ), array( 'option_name' => 'yoohw_cos_intelligence_generation' ) );
+			}
+			return $customer;
+		};
+		add_filter( 'yoohw_cos_customer_recalculate_intelligence_data', $change );
+		try { $this->wake(); } finally { remove_filter( 'yoohw_cos_customer_recalculate_intelligence_data', $change ); }
+		$this->assertSame( 'pending', $this->state()['status'] );
+		foreach ( array( $first, $second ) as $id ) {
+			$this->assertSame( $generation, $wpdb->get_var( $wpdb->prepare( 'SELECT intelligence_generation FROM %i WHERE id = %d', YoOhw_COS_DB::customers_table(), $id ) ) );
+			$this->assertSame( 'at_risk', $wpdb->get_var( $wpdb->prepare( 'SELECT customer_status FROM %i WHERE id = %d', YoOhw_COS_DB::customers_table(), $id ) ) );
+			$this->assertSame( 'at_risk', YoOhw_COS_Customers::get_customer( $id )['customer_status'] );
+		}
+		$this->assertSame( 2, YoOhw_COS_Customer_Query::query( array( 'customer_status' => 'at_risk' ) )['total_items'] );
 	}
 	public function test_reset_contention_failure_zero_and_archived_rows(): void {
 		global $wpdb;

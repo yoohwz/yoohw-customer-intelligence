@@ -350,9 +350,7 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 
 	private function format_commerce( array $item ): string {
 		$orders = absint( $item['total_orders'] ?? 0 );
-		$spent  = function_exists( 'wc_price' )
-			? wc_price( (float) ( $item['total_spent'] ?? 0 ) )
-			: number_format_i18n( (float) ( $item['total_spent'] ?? 0 ), 2 );
+		$spent = YoOhw_COS_Commerce_Metrics_Policy::format_money( $item, 'total_spent' );
 		$orders_label = sprintf(
 			/* translators: %s: number of customer orders. */
 			_n( '%s order', '%s orders', $orders, 'yoohw-customer-intelligence' ),

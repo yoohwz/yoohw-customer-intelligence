@@ -46,6 +46,12 @@ final class YoOhw_COS_Migration_Runner {
 			);
 		}
 
+		if ( '' !== $from_version && version_compare( $from_version, '0.2.2', '<' ) && ! isset( $state['commerce_currency_v3'] ) ) {
+			$state['commerce_currency_v3'] = self::new_migration_state(
+				array( 'phase' => 'orders', 'next_page' => 1, 'last_customer_id' => 0 )
+			);
+		}
+
 		if ( '' !== $from_version && version_compare( $from_version, '0.1.10', '<' ) && ! isset( $state['activity_semantics_v2'] ) ) {
 			$state['activity_semantics_v2'] = self::new_migration_state(
 				array( 'last_customer_id' => 0 )
@@ -92,6 +98,9 @@ final class YoOhw_COS_Migration_Runner {
 			if ( '' === $migration_id ) {
 				return;
 			}
+			if ( self::needs_woocommerce_orders( $migration_id ) && ! self::woocommerce_orders_available() ) {
+				return;
+			}
 
 			$migration = $state[ $migration_id ];
 			$migration['status'] = 'in_progress';
@@ -100,14 +109,19 @@ final class YoOhw_COS_Migration_Runner {
 
 			if ( 'identity_normalization_v2' === $migration_id ) {
 				$migration = self::run_identity_normalization_batch( $migration );
-			} elseif ( 'commerce_facts_v2' === $migration_id ) {
-				$migration = self::run_commerce_facts_batch( $migration );
+			} elseif ( in_array( $migration_id, array( 'commerce_facts_v2', 'commerce_currency_v3' ), true ) ) {
+				$migration = self::run_commerce_facts_batch( $migration, $migration_id );
 			} else {
 				$migration = self::run_activity_semantics_batch( $migration );
 			}
 
 			$state[ $migration_id ] = $migration;
 			update_option( self::STATE_OPTION, $state, false );
+			if ( 'completed' === ( $migration['status'] ?? '' )
+				&& ( 'commerce_currency_v3' === $migration_id
+					|| ( 'commerce_facts_v2' === $migration_id && ! isset( $state['commerce_currency_v3'] ) ) ) ) {
+				YoOhw_COS_Intelligence::invalidate_monetary_decisions();
+			}
 		} catch ( Throwable $exception ) {
 			$state = self::get_state();
 
@@ -132,7 +146,39 @@ final class YoOhw_COS_Migration_Runner {
 		return is_array( $state ) ? $state : array();
 	}
 
-	private static function run_commerce_facts_batch( array $migration ): array {
+	public static function currency_backfill_is_complete(): bool {
+		if ( version_compare( (string) get_option( 'yoohw_cos_db_version', '' ), '0.2.2', '<' ) ) {
+			return false;
+		}
+		$state = self::get_state();
+		if ( isset( $state['commerce_currency_v3'] ) ) {
+			return 'completed' === ( $state['commerce_currency_v3']['status'] ?? '' );
+		}
+		return ! isset( $state['commerce_facts_v2'] )
+			|| 'completed' === ( $state['commerce_facts_v2']['status'] ?? '' );
+	}
+
+	public static function note_currency_reconciled( string $object_type, int $object_id ): void {
+		$state = self::get_state();
+		$migration_id = isset( $state['commerce_currency_v3'] ) ? 'commerce_currency_v3' : 'commerce_facts_v2';
+		if ( ! isset( $state[ $migration_id ] ) || ! in_array( $object_type, array( 'order', 'customer' ), true ) ) {
+			return;
+		}
+		self::resolve_issue( $migration_id, $object_type, absint( $object_id ) );
+		if ( 'completed_with_issues' !== ( $state[ $migration_id ]['status'] ?? '' )
+			|| self::count_issues( $migration_id, 'pending' ) > 0
+			|| self::count_issues( $migration_id, 'unresolved' ) > 0 ) {
+			return;
+		}
+		$state[ $migration_id ]['status'] = 'completed';
+		$state[ $migration_id ]['pending_issues'] = 0;
+		$state[ $migration_id ]['unresolved_issues'] = 0;
+		$state[ $migration_id ]['completed_at'] = YoOhw_COS_DB::now();
+		update_option( self::STATE_OPTION, $state, false );
+		YoOhw_COS_Intelligence::invalidate_monetary_decisions();
+	}
+
+	private static function run_commerce_facts_batch( array $migration, string $migration_id ): array {
 		$phase = sanitize_key( (string) ( $migration['phase'] ?? 'orders' ) );
 
 		if ( 'orders' === $phase ) {
@@ -146,11 +192,11 @@ final class YoOhw_COS_Migration_Runner {
 				$code   = sanitize_key( (string) ( $outcome['code'] ?? 'sync_failed' ) );
 
 				if ( 'success' === $status ) {
-					self::resolve_issue( 'commerce_facts_v2', 'order', absint( $order_id ) );
+					self::resolve_issue( $migration_id, 'order', absint( $order_id ) );
 					$migration['successful'] = absint( $migration['successful'] ?? 0 ) + 1;
 				} else {
 					self::record_issue(
-						'commerce_facts_v2',
+						$migration_id,
 						'order',
 						absint( $order_id ),
 						$code ?: 'sync_failed',
@@ -171,7 +217,7 @@ final class YoOhw_COS_Migration_Runner {
 		}
 
 		if ( 'order_retries' === $phase ) {
-			$pending = self::retry_order_issues();
+			$pending = self::retry_order_issues( $migration_id );
 
 			if ( $pending > 0 ) {
 				$migration['pending_issues'] = $pending;
@@ -184,14 +230,14 @@ final class YoOhw_COS_Migration_Runner {
 		}
 
 		if ( 'rebuild_retries' === $phase ) {
-			$pending = self::retry_customer_rebuild_issues();
+			$pending = self::retry_customer_rebuild_issues( $migration_id );
 
 			if ( $pending > 0 ) {
 				$migration['pending_issues'] = $pending;
 				return $migration;
 			}
 
-			return self::complete_with_issue_accounting( $migration, 'commerce_facts_v2' );
+			return self::complete_with_issue_accounting( $migration, $migration_id );
 		}
 
 		global $wpdb;
@@ -209,10 +255,10 @@ final class YoOhw_COS_Migration_Runner {
 		foreach ( is_array( $ids ) ? $ids : array() as $customer_id ) {
 			$customer_id = absint( $customer_id );
 
-			if ( YoOhw_COS_Commerce_Aggregates::rebuild_customer( $customer_id ) ) {
-				self::resolve_issue( 'commerce_facts_v2', 'customer', $customer_id );
+			if ( YoOhw_COS_Commerce_Aggregates::rebuild_customer( $customer_id, 'commerce_currency_v3' === $migration_id ) ) {
+				self::resolve_issue( $migration_id, 'customer', $customer_id );
 			} else {
-				self::record_issue( 'commerce_facts_v2', 'customer', $customer_id, 'rebuild_failed', 'Customer aggregate rebuild failed.', 'pending' );
+				self::record_issue( $migration_id, 'customer', $customer_id, 'rebuild_failed', 'Customer aggregate rebuild failed.', 'pending' );
 			}
 
 			$last_id = max( $last_id, $customer_id );
@@ -326,9 +372,9 @@ final class YoOhw_COS_Migration_Runner {
 		return $migration;
 	}
 
-	private static function retry_order_issues(): int {
+	private static function retry_order_issues( string $migration_id ): int {
 		return self::retry_issues(
-			'commerce_facts_v2',
+			$migration_id,
 			'order',
 			static function( int $order_id ): array {
 				return YoOhw_COS_Customers::sync_order_for_migration( $order_id );
@@ -336,12 +382,12 @@ final class YoOhw_COS_Migration_Runner {
 		);
 	}
 
-	private static function retry_customer_rebuild_issues(): int {
+	private static function retry_customer_rebuild_issues( string $migration_id ): int {
 		return self::retry_issues(
-			'commerce_facts_v2',
+			$migration_id,
 			'customer',
-			static function( int $customer_id ): array {
-				return YoOhw_COS_Commerce_Aggregates::rebuild_customer( $customer_id )
+			static function( int $customer_id ) use ( $migration_id ): array {
+				return YoOhw_COS_Commerce_Aggregates::rebuild_customer( $customer_id, 'commerce_currency_v3' === $migration_id )
 					? array( 'status' => 'success', 'code' => '' )
 					: array( 'status' => 'retry', 'code' => 'rebuild_failed' );
 			}
@@ -559,7 +605,7 @@ final class YoOhw_COS_Migration_Runner {
 	}
 
 	private static function next_pending_migration( array $state ): string {
-		foreach ( array( 'identity_normalization_v2', 'commerce_facts_v2', 'activity_semantics_v2' ) as $migration_id ) {
+		foreach ( array( 'identity_normalization_v2', 'commerce_facts_v2', 'activity_semantics_v2', 'commerce_currency_v3' ) as $migration_id ) {
 			$status = sanitize_key( (string) ( $state[ $migration_id ]['status'] ?? '' ) );
 
 			if ( in_array( $status, array( 'pending', 'in_progress' ), true ) ) {
@@ -571,9 +617,21 @@ final class YoOhw_COS_Migration_Runner {
 	}
 
 	private static function maybe_schedule(): void {
-		if ( '' !== self::next_pending_migration( self::get_state() ) && ! wp_next_scheduled( self::HOOK ) ) {
+		$migration_id = self::next_pending_migration( self::get_state() );
+		if ( '' === $migration_id || ( self::needs_woocommerce_orders( $migration_id ) && ! self::woocommerce_orders_available() ) ) {
+			return;
+		}
+		if ( ! wp_next_scheduled( self::HOOK ) ) {
 			self::schedule_next();
 		}
+	}
+
+	private static function needs_woocommerce_orders( string $migration_id ): bool {
+		return in_array( $migration_id, array( 'commerce_facts_v2', 'commerce_currency_v3' ), true );
+	}
+
+	private static function woocommerce_orders_available(): bool {
+		return function_exists( 'wc_get_orders' ) && function_exists( 'wc_get_order_statuses' );
 	}
 
 	private static function schedule_next(): void {

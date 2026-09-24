@@ -10,7 +10,56 @@ defined( 'ABSPATH' ) || exit;
  */
 final class YoOhw_COS_Commerce_Metrics_Policy {
 
-	public const VERSION = 1;
+	public const VERSION = 2;
+	private static $store_currency_generation = null;
+
+	public static function currency( WC_Order $order ): ?string {
+		$currency = strtoupper( trim( (string) $order->get_currency() ) );
+		return preg_match( '/^[A-Z]{3}$/', $currency ) ? $currency : null;
+	}
+
+	public static function money_is_comparable( array $customer ): bool {
+		return 'comparable' === ( $customer['money_state'] ?? '' )
+			&& YoOhw_COS_Migration_Runner::currency_backfill_is_complete()
+			&& absint( $customer['commerce_metrics_version'] ?? 0 ) >= self::VERSION
+			&& preg_match( '/^[A-Z]{3}$/', (string) ( $customer['money_currency'] ?? '' ) );
+	}
+
+	public static function money_matches_store( array $customer ): bool {
+		if ( ! self::money_is_comparable( $customer ) || ! function_exists( 'get_woocommerce_currency' ) ) {
+			return false;
+		}
+		$generation = YoOhw_COS_Intelligence::get_scoring_generation();
+		if ( self::$store_currency_generation !== $generation ) {
+			// A currency update in another request does not invalidate this request's option cache.
+			wp_cache_delete( 'woocommerce_currency', 'options' );
+			wp_cache_delete( 'notoptions', 'options' );
+			wp_cache_delete( 'alloptions', 'options' );
+			self::$store_currency_generation = $generation;
+		}
+		return $customer['money_currency'] === get_woocommerce_currency();
+	}
+
+	public static function format_money( array $source, string $key ): string {
+		if ( 'none' === ( $source['money_state'] ?? '' ) && self::currency_data_ready() ) {
+			return function_exists( 'wc_price' ) ? wc_price( 0 ) : number_format_i18n( 0, 2 );
+		}
+		if ( ! self::money_is_comparable( $source ) ) {
+			return esc_html__( 'Unavailable (mixed or unknown currency)', 'yoohw-customer-intelligence' );
+		}
+		$amount = (float) ( $source[ $key ] ?? 0 );
+		$formatted = function_exists( 'wc_price' )
+			? wc_price( $amount, array( 'currency' => $source['money_currency'] ) )
+			: number_format_i18n( $amount, 2 ) . ' ' . esc_html( $source['money_currency'] );
+		if ( function_exists( 'get_woocommerce_currency' ) && $source['money_currency'] !== get_woocommerce_currency() ) {
+			$formatted .= ' (' . esc_html( $source['money_currency'] ) . ')';
+		}
+		return $formatted;
+	}
+
+	private static function currency_data_ready(): bool {
+		return YoOhw_COS_Migration_Runner::currency_backfill_is_complete();
+	}
 
 	public static function recognized_statuses(): array {
 		$statuses = function_exists( 'wc_get_is_paid_statuses' )
@@ -64,6 +113,7 @@ final class YoOhw_COS_Commerce_Metrics_Policy {
 			'order_id'          => absint( $order->get_id() ),
 			'customer_id'       => absint( $customer_id ),
 			'order_status'      => sanitize_key( $order->get_status() ),
+			'currency'          => self::currency( $order ),
 			'order_total'       => $gross,
 			'revenue_amount'    => $net,
 			'counts_as_order'    => $recognized ? 1 : 0,

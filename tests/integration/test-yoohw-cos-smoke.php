@@ -42,6 +42,10 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 
 			$this->assertSame( $table, $found, "Missing customer table: {$table_key}" );
 		}
+		$this->assertNotNull( $wpdb->get_row( $wpdb->prepare( 'SHOW COLUMNS FROM %i LIKE %s', YoOhw_COS_DB::order_facts_table(), 'currency' ) ) );
+		$this->assertNotNull( $wpdb->get_row( $wpdb->prepare( 'SHOW COLUMNS FROM %i LIKE %s', YoOhw_COS_DB::customers_table(), 'money_state' ) ) );
+		$this->assertNotNull( $wpdb->get_row( $wpdb->prepare( 'SHOW COLUMNS FROM %i LIKE %s', YoOhw_COS_DB::customers_table(), 'intelligence_currency_ready' ) ) );
+		$this->assertNotNull( $wpdb->get_row( $wpdb->prepare( 'SHOW COLUMNS FROM %i LIKE %s', YoOhw_COS_DB::customers_table(), 'intelligence_generation' ) ) );
 	}
 
 	public function test_customer_partial_update_keeps_format_mapping_stable(): void {
@@ -53,6 +57,8 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 				'total_spent'    => 25.50,
 				'trust_score'    => 50,
 				'risk_score'     => 10,
+				'intelligence_currency_ready' => 1,
+				'intelligence_generation' => YoOhw_COS_Intelligence::get_scoring_generation(),
 				'customer_status' => 'active',
 				'vip_status'     => 'none',
 			)
@@ -221,13 +227,364 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 		$this->assertSame( 50.0, (float) $customer['average_order_value'] );
 	}
 
+	public function test_mixed_currency_fails_closed_and_same_status_edit_recovers(): void {
+		$previous_migrations = get_option( 'yoohw_cos_data_migrations', array() );
+		update_option( 'yoohw_cos_data_migrations', array( 'commerce_currency_v3' => array( 'status' => 'completed' ) ), false );
+		try {
+		$currency = get_woocommerce_currency();
+		$other_currency = 'USD' === $currency ? 'EUR' : 'USD';
+		$first = $this->create_order( 'mixed-currency@example.test', 'completed', '100.00' );
+		$second = $this->create_order( 'mixed-currency@example.test', 'completed', '2000.00' );
+		$second->set_currency( $other_currency );
+		$second->save();
+		$id = YoOhw_COS_Customers::sync_from_order( $first );
+		YoOhw_COS_Customers::sync_from_order( $second );
+		$customer = YoOhw_COS_Customers::get_customer( $id );
+		$this->assertSame( 2, (int) $customer['total_orders'] );
+		$this->assertSame( 'mixed', $customer['money_state'] );
+		$this->assertSame( 0.0, (float) $customer['total_spent'] );
+		$this->assertSame( 0.0, (float) $customer['average_order_value'] );
+		$this->assertSame( 'none', $customer['vip_status'] );
+		$this->assertSame( 'mixed', YoOhw_COS_Overview::get_summary()['money_state'] );
+		$this->assertStringContainsString( 'Unavailable', YoOhw_COS_Commerce_Metrics_Policy::format_money( $customer, 'total_spent' ) );
+		$this->assertStringContainsString( 'Unavailable', YoOhw_COS_Commerce_Metrics_Policy::format_money( YoOhw_COS_Overview::get_summary(), 'average_order_value' ) );
+		$this->assertFalse( YoOhw_COS_Commerce_Metrics_Policy::money_is_comparable( $customer ) );
+		$other_id = YoOhw_COS_Customers::create_customer( array( 'email' => 'currency-reassigned@example.test' ) );
+		$second->update_meta_data( YoOhw_COS_Customers::ORDER_CUSTOMER_META_KEY, $other_id );
+		$second->save();
+		YoOhw_COS_Customers::sync_from_order( $second );
+		$this->assertSame( 'comparable', YoOhw_COS_Customers::get_customer( $id )['money_state'] );
+		$this->assertSame( 100.0, (float) YoOhw_COS_Customers::get_customer( $id )['total_spent'] );
+		$this->assertSame( $other_currency, YoOhw_COS_Customers::get_customer( $other_id )['money_currency'] );
+		$this->assertSame( 'mixed', YoOhw_COS_Overview::get_summary()['money_state'] );
+		$second->update_meta_data( YoOhw_COS_Customers::ORDER_CUSTOMER_META_KEY, $id );
+		$second->save();
+		YoOhw_COS_Customers::sync_from_order( $second );
+		$this->assertSame( 'mixed', YoOhw_COS_Customers::get_customer( $id )['money_state'] );
+		$this->assertSame( 'none', YoOhw_COS_Customers::get_customer( $other_id )['money_state'] );
+
+		$second->set_currency( $currency );
+		$second->save();
+		$customer = YoOhw_COS_Customers::get_customer( $id );
+		$this->assertSame( 'comparable', $customer['money_state'] );
+		$this->assertSame( $currency, $customer['money_currency'] );
+		$this->assertSame( 2100.0, (float) $customer['total_spent'] );
+		$this->assertSame( 1050.0, (float) $customer['average_order_value'] );
+		$this->assertSame( 2, (int) $customer['total_orders'] );
+		$this->assertSame( 'comparable', YoOhw_COS_Overview::get_summary()['money_state'] );
+		$this->assertStringNotContainsString( 'Unavailable', YoOhw_COS_Commerce_Metrics_Policy::format_money( $customer, 'total_spent' ) );
+
+		update_option( 'woocommerce_currency', $other_currency );
+		try {
+			$this->assertSame( $currency, YoOhw_COS_Customers::get_customer( $id )['money_currency'] );
+			$this->assertFalse( YoOhw_COS_Commerce_Metrics_Policy::money_matches_store( $customer ) );
+		} finally {
+			update_option( 'woocommerce_currency', $currency );
+		}
+		} finally {
+			update_option( 'yoohw_cos_data_migrations', $previous_migrations, false );
+		}
+	}
+
+	public function test_legacy_unknown_currency_stays_unavailable_until_order_reconciles(): void {
+		global $wpdb;
+		$order = $this->create_order( 'unknown-currency@example.test', 'completed', '70.00' );
+		$id = YoOhw_COS_Customers::sync_from_order( $order );
+		$this->assertGreaterThan( 0, $id );
+		$this->assertNotFalse( $wpdb->update( YoOhw_COS_DB::order_facts_table(), array( 'currency' => null ), array( 'order_id' => $order->get_id() ) ) );
+		$this->assertTrue( YoOhw_COS_Commerce_Aggregates::rebuild_customer( $id ) );
+		$customer = YoOhw_COS_Customers::get_customer( $id );
+		$this->assertSame( 'unknown', $customer['money_state'] );
+		$this->assertSame( 1, (int) $customer['total_orders'] );
+		$this->assertSame( 0.0, (float) $customer['total_spent'] );
+		YoOhw_COS_Customers::sync_from_order( $order );
+		$this->assertSame( 'comparable', YoOhw_COS_Customers::get_customer( $id )['money_state'] );
+	}
+
+	public function test_currency_backfill_is_bounded_and_does_not_trust_legacy_spend_early(): void {
+		global $wpdb;
+		YoOhw_COS_Customers::reset_data();
+		$order = $this->create_order( 'currency-backfill@example.test', 'completed', '35.00' );
+		$id = YoOhw_COS_Customers::sync_from_order( $order );
+		$this->assertGreaterThan( 0, $id );
+		$wpdb->update( YoOhw_COS_DB::order_facts_table(), array( 'currency' => null ), array( 'order_id' => $order->get_id() ) );
+		$wpdb->update( YoOhw_COS_DB::customers_table(), array( 'commerce_metrics_version' => 1, 'money_state' => 'unknown', 'money_currency' => null, 'total_spent' => 9999 ), array( 'id' => $id ) );
+		$state = array( 'commerce_currency_v3' => array( 'status' => 'pending', 'phase' => 'orders', 'next_page' => 1, 'last_customer_id' => 0 ) );
+		update_option( 'yoohw_cos_data_migrations', $state, false );
+		$previous_generation = YoOhw_COS_Intelligence::get_scoring_generation();
+		$this->assertFalse( YoOhw_COS_Commerce_Metrics_Policy::money_is_comparable( YoOhw_COS_Customers::get_customer( $id ) ) );
+		try {
+			for ( $batch = 0; $batch < 10; ++$batch ) {
+				YoOhw_COS_Migration_Runner::run_next_batch();
+				$current = YoOhw_COS_Migration_Runner::get_state()['commerce_currency_v3'];
+				if ( 'completed' === $current['status'] ) {
+					break;
+				}
+			}
+			$this->assertSame( 'completed', $current['status'] );
+			$this->assertNotSame( $previous_generation, YoOhw_COS_Intelligence::get_scoring_generation() );
+			$this->assertSame( get_woocommerce_currency(), $wpdb->get_var( $wpdb->prepare( 'SELECT currency FROM %i WHERE order_id = %d', YoOhw_COS_DB::order_facts_table(), $order->get_id() ) ) );
+			$customer = YoOhw_COS_Customers::get_customer( $id );
+			$this->assertSame( 'comparable', $customer['money_state'] );
+			$this->assertSame( 35.0, (float) $customer['total_spent'] );
+			$this->assertSame( YoOhw_COS_Commerce_Metrics_Policy::VERSION, (int) $customer['commerce_metrics_version'] );
+		} finally {
+			delete_option( 'yoohw_cos_data_migrations' );
+			wp_clear_scheduled_hook( YoOhw_COS_Migration_Runner::HOOK );
+		}
+	}
+
+	public function test_fresh_install_hides_partial_historical_money_until_commerce_import_finishes(): void {
+		global $wpdb;
+		$previous_migrations = get_option( 'yoohw_cos_data_migrations', array() );
+		$first = $this->create_order( 'fresh-history@example.test', 'completed', '6000.00' );
+		$second = $this->create_order( 'fresh-history@example.test', 'completed', '5.00' );
+		$second->set_currency( 'USD' === $first->get_currency() ? 'EUR' : 'USD' );
+		$second->save();
+		$customer_id = YoOhw_COS_Customers::sync_from_order( $first );
+		YoOhw_COS_Customers::sync_from_order( $second );
+		$this->assertNotFalse( $wpdb->delete( YoOhw_COS_DB::order_facts_table(), array( 'order_id' => $second->get_id() ) ) );
+		$this->assertTrue( YoOhw_COS_Commerce_Aggregates::rebuild_customer( $customer_id ) );
+
+		try {
+			delete_option( 'yoohw_cos_data_migrations' );
+			$this->assertTrue( YoOhw_COS_Migration_Runner::register_upgrade( '', YOOHW_COS_DB_VERSION ) );
+			$state = YoOhw_COS_Migration_Runner::get_state();
+			$this->assertArrayNotHasKey( 'commerce_currency_v3', $state );
+			$this->assertSame( 'pending', $state['commerce_facts_v2']['status'] );
+			$state['identity_normalization_v2']['status'] = 'completed';
+			update_option( 'yoohw_cos_data_migrations', $state, false );
+
+			$partial = YoOhw_COS_Customers::get_customer( $customer_id );
+			$this->assertSame( 'comparable', $partial['money_state'] );
+			$this->assertFalse( YoOhw_COS_Commerce_Metrics_Policy::money_is_comparable( $partial ) );
+			$this->assertSame( 'none', YoOhw_COS_Intelligence::calculate_vip_status( $partial ) );
+			$this->assertSame( 'unknown', YoOhw_COS_Overview::get_summary()['money_state'] );
+			$generation = YoOhw_COS_Intelligence::get_scoring_generation();
+			for ( $batch = 0; $batch < 10; ++$batch ) {
+				YoOhw_COS_Migration_Runner::run_next_batch();
+				if ( 'completed' === ( YoOhw_COS_Migration_Runner::get_state()['commerce_facts_v2']['status'] ?? '' ) ) {
+					break;
+				}
+			}
+			$this->assertSame( 'completed', YoOhw_COS_Migration_Runner::get_state()['commerce_facts_v2']['status'] );
+			$this->assertNotSame( $generation, YoOhw_COS_Intelligence::get_scoring_generation() );
+			$complete = YoOhw_COS_Customers::get_customer( $customer_id );
+			$this->assertSame( 2, (int) $complete['total_orders'] );
+			$this->assertSame( 'mixed', $complete['money_state'] );
+			$this->assertFalse( YoOhw_COS_Commerce_Metrics_Policy::money_is_comparable( $complete ) );
+		} finally {
+			update_option( 'yoohw_cos_data_migrations', $previous_migrations, false );
+			wp_clear_scheduled_hook( YoOhw_COS_Migration_Runner::HOOK );
+		}
+	}
+
+	public function test_pending_currency_upgrade_hides_legacy_money_classifications(): void {
+		global $wpdb;
+		$previous_migrations = get_option( 'yoohw_cos_data_migrations', array() );
+		YoOhw_COS_Customers::reset_data();
+		$customer_id = YoOhw_COS_Customers::create_customer( array(
+			'email' => 'legacy-money-decisions@example.test',
+			'phone' => '+14155550198',
+			'total_orders' => 2,
+			'total_spent' => 6000,
+			'commerce_metrics_version' => 1,
+			'money_state' => 'unknown',
+			'customer_status' => 'vip',
+			'vip_status' => 'platinum',
+			'lifecycle_stage' => 'vip',
+			'trust_score' => 100,
+			'risk_score' => 90,
+			'last_activity_date' => YoOhw_COS_DB::now(),
+		) );
+		$this->assertGreaterThan( 0, $customer_id );
+		update_option( 'yoohw_cos_data_migrations', array( 'commerce_currency_v3' => array( 'status' => 'pending', 'phase' => 'orders', 'next_page' => 1 ) ), false );
+		try {
+			$customer = YoOhw_COS_Customers::get_customer( $customer_id );
+			$this->assertSame( 2, (int) $customer['total_orders'] );
+			$this->assertSame( 'active', $customer['customer_status'] );
+			$this->assertSame( 'none', $customer['vip_status'] );
+			$this->assertSame( 'repeat', $customer['lifecycle_stage'] );
+			$this->assertSame( 60.0, (float) $customer['trust_score'] );
+			$this->assertSame( 0.0, (float) $customer['risk_score'] );
+			$this->assertFalse( YoOhw_COS_Commerce_Metrics_Policy::money_is_comparable( $customer ) );
+			$list = YoOhw_COS_Customer_Query::query( array( 's' => 'legacy-money-decisions@example.test' ) );
+			$this->assertSame( 'none', $list['items'][0]['vip_status'] );
+			$this->assertSame( 0, YoOhw_COS_Customer_Query::query( array( 'vip_status' => 'high_value' ) )['total_items'] );
+			$this->assertSame( 0, YoOhw_COS_Customer_Query::query( array( 'customer_status' => 'vip' ) )['total_items'] );
+			$this->assertSame( 0, YoOhw_COS_Customer_Query::query( array( 'risk_level' => 'high' ) )['total_items'] );
+			$this->assertSame( 0, YoOhw_COS_Customers::get_status_counts()['vip'] );
+			$this->assertSame( 1, YoOhw_COS_Customers::get_status_counts()['unavailable'] );
+			$this->assertSame( 0, YoOhw_COS_Customers::get_vip_counts()['platinum'] );
+			$this->assertSame( 0, YoOhw_COS_Customers::get_risk_counts()['high'] );
+			$this->assertSame( 0, YoOhw_COS_Customers::get_lifecycle_counts()['vip'] );
+			$this->assertSame( 0, YoOhw_COS_Overview::get_summary()['high_value_customers'] );
+			$this->assertSame( 0, YoOhw_COS_Overview::get_attention_counts()['high_risk_customers'] );
+			$this->assertNotContains( $customer_id, array_map( 'absint', array_column( YoOhw_COS_Overview::get_priority_customers(), 'id' ) ) );
+			$this->assertTrue( YoOhw_COS_Customers::update_customer( $customer_id, array( 'commerce_metrics_version' => YoOhw_COS_Commerce_Metrics_Policy::VERSION ) ) );
+			$this->assertSame( 'none', YoOhw_COS_Customers::get_customer( $customer_id )['vip_status'] );
+			$this->assertSame( 0, YoOhw_COS_Customer_Query::query( array( 'vip_status' => 'high_value' ) )['total_items'] );
+			$interrupt = static function(): void { throw new RuntimeException( 'Synthetic refresh interruption.' ); };
+			add_filter( 'yoohw_cos_customer_recalculate_intelligence_data', $interrupt );
+			$interrupted = false;
+			try {
+				YoOhw_COS_Commerce_Aggregates::rebuild_customer( $customer_id, true );
+			} catch ( RuntimeException $exception ) {
+				$interrupted = true;
+			} finally {
+				remove_filter( 'yoohw_cos_customer_recalculate_intelligence_data', $interrupt );
+			}
+			$this->assertTrue( $interrupted );
+			$this->assertSame( '0', (string) $wpdb->get_var( $wpdb->prepare( 'SELECT intelligence_currency_ready FROM %i WHERE id = %d', YoOhw_COS_DB::customers_table(), $customer_id ) ) );
+			$this->assertSame( 0, YoOhw_COS_Customer_Query::query( array( 'vip_status' => 'high_value' ) )['total_items'] );
+			$this->assertTrue( YoOhw_COS_Commerce_Aggregates::rebuild_customer( $customer_id, true ) );
+			$this->assertSame( '1', (string) $wpdb->get_var( $wpdb->prepare( 'SELECT intelligence_currency_ready FROM %i WHERE id = %d', YoOhw_COS_DB::customers_table(), $customer_id ) ) );
+			$this->assertSame( 1, YoOhw_COS_Customer_Query::query( array( 'customer_status' => 'inactive' ) )['total_items'] );
+		} finally {
+			update_option( 'yoohw_cos_data_migrations', $previous_migrations, false );
+			wp_clear_scheduled_hook( YoOhw_COS_Migration_Runner::HOOK );
+		}
+	}
+
+	public function test_completed_backfill_hides_stale_decisions_after_interrupted_order_refresh(): void {
+		global $wpdb;
+		$previous_migrations = get_option( 'yoohw_cos_data_migrations', array() );
+		update_option( 'yoohw_cos_data_migrations', array( 'commerce_currency_v3' => array( 'status' => 'completed' ) ), false );
+		try {
+			$currency = get_woocommerce_currency();
+			$other_currency = 'USD' === $currency ? 'EUR' : 'USD';
+			$first = $this->create_order( 'completed-refresh@example.test', 'completed', '3000.00' );
+			$second = $this->create_order( 'completed-refresh@example.test', 'completed', '3000.00' );
+			$id = YoOhw_COS_Customers::sync_from_order( $first );
+			YoOhw_COS_Customers::sync_from_order( $second );
+			YoOhw_COS_Customers::process_risk_score_cache_refresh( -1 );
+			$this->assertSame( 'platinum', YoOhw_COS_Customers::get_customer( $id )['vip_status'] );
+			$this->assertSame( 1, YoOhw_COS_Customer_Query::query( array( 'vip_status' => 'high_value' ) )['total_items'] );
+
+			$interrupt = static function(): void { throw new RuntimeException( 'Synthetic refresh interruption.' ); };
+			add_filter( 'yoohw_cos_customer_recalculate_intelligence_data', $interrupt );
+			try {
+				$second->set_currency( $other_currency );
+				$second->save();
+			} finally {
+				remove_filter( 'yoohw_cos_customer_recalculate_intelligence_data', $interrupt );
+			}
+			$this->assertSame( '0', (string) $wpdb->get_var( $wpdb->prepare( 'SELECT intelligence_currency_ready FROM %i WHERE id = %d', YoOhw_COS_DB::customers_table(), $id ) ) );
+			$this->assertSame( 'mixed', YoOhw_COS_Customers::get_customer( $id )['money_state'] );
+			$this->assertSame( 'none', YoOhw_COS_Customers::get_customer( $id )['vip_status'] );
+			$this->assertSame( 0, YoOhw_COS_Customer_Query::query( array( 'vip_status' => 'high_value' ) )['total_items'] );
+			$this->assertSame( 0, YoOhw_COS_Customers::get_vip_counts()['platinum'] );
+			$this->assertSame( 0, YoOhw_COS_Overview::get_summary()['high_value_customers'] );
+			$this->assertNotContains( $id, array_map( 'absint', array_column( YoOhw_COS_Overview::get_priority_customers(), 'id' ) ) );
+			$this->assertGreaterThan( 0, YoOhw_COS_Customers::sync_from_order( $second ) );
+			$this->assertSame( '1', (string) $wpdb->get_var( $wpdb->prepare( 'SELECT intelligence_currency_ready FROM %i WHERE id = %d', YoOhw_COS_DB::customers_table(), $id ) ) );
+			$this->assertSame( 'none', YoOhw_COS_Customers::get_customer( $id )['vip_status'] );
+		} finally {
+			update_option( 'yoohw_cos_data_migrations', $previous_migrations, false );
+		}
+	}
+
+	public function test_store_currency_change_gates_persisted_decisions_until_refresh_completes(): void {
+		$previous_migrations = get_option( 'yoohw_cos_data_migrations', array() );
+		update_option( 'yoohw_cos_data_migrations', array( 'commerce_currency_v3' => array( 'status' => 'completed' ) ), false );
+		$currency = get_woocommerce_currency();
+		$other_currency = 'USD' === $currency ? 'EUR' : 'USD';
+		try {
+			$first = $this->create_order( 'store-currency-change@example.test', 'completed', '3000.00' );
+			$second = $this->create_order( 'store-currency-change@example.test', 'completed', '3000.00' );
+			$id = YoOhw_COS_Customers::sync_from_order( $first );
+			YoOhw_COS_Customers::sync_from_order( $second );
+			YoOhw_COS_Customers::process_risk_score_cache_refresh( -1 );
+			$this->assertSame( 'platinum', YoOhw_COS_Customers::get_customer( $id )['vip_status'] );
+			$this->assertSame( 1, YoOhw_COS_Overview::get_summary()['high_value_customers'] );
+
+			update_option( 'woocommerce_currency', $other_currency );
+			$this->assertFalse( YoOhw_COS_Intelligence::persisted_decisions_are_safe( YoOhw_COS_Customers::get_customer( $id ) ) );
+			$this->assertSame( 'none', YoOhw_COS_Customers::get_customer( $id )['vip_status'] );
+			$this->assertSame( 0, YoOhw_COS_Customer_Query::query( array( 'vip_status' => 'high_value' ) )['total_items'] );
+			$this->assertSame( 0, YoOhw_COS_Customers::get_vip_counts()['platinum'] );
+			$this->assertSame( 0, YoOhw_COS_Overview::get_summary()['high_value_customers'] );
+			$this->assertNotContains( $id, array_map( 'absint', array_column( YoOhw_COS_Overview::get_priority_customers(), 'id' ) ) );
+			YoOhw_COS_Customers::process_risk_score_cache_refresh( -1 );
+			$this->assertTrue( YoOhw_COS_Intelligence::persisted_decisions_are_safe( YoOhw_COS_Customers::get_customer( $id ) ) );
+			$this->assertSame( 'none', YoOhw_COS_Customers::get_customer( $id )['vip_status'] );
+		} finally {
+			update_option( 'woocommerce_currency', $currency );
+			update_option( 'yoohw_cos_data_migrations', $previous_migrations, false );
+		}
+	}
+
+	public function test_store_currency_change_in_another_request_ignores_stale_option_cache(): void {
+		global $wpdb;
+		$previous_migrations = get_option( 'yoohw_cos_data_migrations', array() );
+		update_option( 'yoohw_cos_data_migrations', array( 'commerce_currency_v3' => array( 'status' => 'completed' ) ), false );
+		$currency = get_woocommerce_currency();
+		$other_currency = 'USD' === $currency ? 'EUR' : 'USD';
+		try {
+			$first = $this->create_order( 'remote-currency-change@example.test', 'completed', '3000.00' );
+			$second = $this->create_order( 'remote-currency-change@example.test', 'completed', '3000.00' );
+			$id = YoOhw_COS_Customers::sync_from_order( $first );
+			YoOhw_COS_Customers::sync_from_order( $second );
+			$this->assertSame( 'platinum', YoOhw_COS_Customers::get_customer( $id )['vip_status'] );
+			$this->assertSame( $currency, get_option( 'woocommerce_currency' ) );
+			$wpdb->update( $wpdb->options, array( 'option_value' => $other_currency ), array( 'option_name' => 'woocommerce_currency' ) );
+			YoOhw_COS_Intelligence::invalidate_monetary_decisions();
+			$this->assertSame( 'none', YoOhw_COS_Customers::get_customer( $id )['vip_status'] );
+			$this->assertSame( 0, YoOhw_COS_Customer_Query::query( array( 'vip_status' => 'high_value' ) )['total_items'] );
+		} finally {
+			$wpdb->update( $wpdb->options, array( 'option_value' => $currency ), array( 'option_name' => 'woocommerce_currency' ) );
+			wp_cache_delete( 'woocommerce_currency', 'options' );
+			wp_cache_delete( 'alloptions', 'options' );
+			update_option( 'yoohw_cos_data_migrations', $previous_migrations, false );
+		}
+	}
+
+	public function test_reset_then_scoring_change_hides_old_money_decisions_during_interrupted_refresh(): void {
+		global $wpdb;
+		YoOhw_COS_Customers::reset_data();
+		$first = $this->create_order( 'reset-scoring@example.test', 'completed', '3000.00' );
+		$second = $this->create_order( 'reset-scoring@example.test', 'completed', '3000.00' );
+		$id = YoOhw_COS_Customers::sync_from_order( $first );
+		YoOhw_COS_Customers::sync_from_order( $second );
+		$this->assertSame( 'platinum', YoOhw_COS_Customers::get_customer( $id )['vip_status'] );
+		$old_generation = $wpdb->get_var( $wpdb->prepare( 'SELECT intelligence_generation FROM %i WHERE id = %d', YoOhw_COS_DB::customers_table(), $id ) );
+		$settings = YoOhw_COS_Intelligence::get_scoring_settings_defaults();
+		$settings['value_tiers']['high_value_spent'] = 10000;
+		$settings['value_tiers']['very_high_value_spent'] = 20000;
+		$settings['value_tiers']['top_customer_spent'] = 30000;
+		$settings['customer_status']['vip_spent'] = 10000;
+		YoOhw_COS_Intelligence::update_scoring_settings( $settings );
+		$this->assertNotSame( $old_generation, YoOhw_COS_Intelligence::get_scoring_generation() );
+		$interrupt = static function(): void { throw new RuntimeException( 'Synthetic scoring refresh interruption.' ); };
+		add_filter( 'yoohw_cos_customer_recalculate_intelligence_data', $interrupt );
+		try {
+			YoOhw_COS_Customers::process_risk_score_cache_refresh( -1 );
+		} finally {
+			remove_filter( 'yoohw_cos_customer_recalculate_intelligence_data', $interrupt );
+		}
+		$this->assertSame( '1', (string) $wpdb->get_var( $wpdb->prepare( 'SELECT intelligence_currency_ready FROM %i WHERE id = %d', YoOhw_COS_DB::customers_table(), $id ) ) );
+		$this->assertSame( $old_generation, $wpdb->get_var( $wpdb->prepare( 'SELECT intelligence_generation FROM %i WHERE id = %d', YoOhw_COS_DB::customers_table(), $id ) ) );
+		$this->assertSame( 'none', YoOhw_COS_Customers::get_customer( $id )['vip_status'] );
+		$this->assertSame( 0, YoOhw_COS_Customer_Query::query( array( 'vip_status' => 'high_value' ) )['total_items'] );
+		$this->assertSame( 0, YoOhw_COS_Customers::get_vip_counts()['platinum'] );
+		$this->assertSame( 0, YoOhw_COS_Overview::get_summary()['high_value_customers'] );
+		$this->assertNotContains( $id, array_map( 'absint', array_column( YoOhw_COS_Overview::get_priority_customers(), 'id' ) ) );
+		YoOhw_COS_Customers::process_risk_score_cache_refresh( -1 );
+		$this->assertSame( YoOhw_COS_Intelligence::get_scoring_generation(), $wpdb->get_var( $wpdb->prepare( 'SELECT intelligence_generation FROM %i WHERE id = %d', YoOhw_COS_DB::customers_table(), $id ) ) );
+		$this->assertSame( 'none', YoOhw_COS_Customers::get_customer( $id )['vip_status'] );
+	}
+
 	public function test_order_fact_moves_contribution_when_customer_is_reassigned(): void {
+		$previous_migrations = get_option( 'yoohw_cos_data_migrations', array() );
+		update_option( 'yoohw_cos_data_migrations', array( 'commerce_currency_v3' => array( 'status' => 'completed' ) ), false );
+		try {
 		$settings = YoOhw_COS_Intelligence::get_scoring_settings_defaults();
 		$settings['customer_status']['new_max_orders'] = 0;
 		YoOhw_COS_Intelligence::update_scoring_settings( $settings );
 		$order = $this->create_order( 'reassign-one@example.test', 'processing', '6000.00' );
 		$first_id = YoOhw_COS_Customers::sync_from_order( $order );
 		$first_before = YoOhw_COS_Customers::get_customer( $first_id );
+		$this->assertTrue( YoOhw_COS_Commerce_Metrics_Policy::money_matches_store( $first_before ) );
 		$this->assertSame( 'platinum', $first_before['vip_status'] );
 		$this->assertSame( 'vip', $first_before['customer_status'] );
 		$this->assertSame( 'vip', $first_before['lifecycle_stage'] );
@@ -254,6 +611,9 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 		$this->assertSame( 'vip', $second['customer_status'] );
 		$this->assertSame( 'vip', $second['lifecycle_stage'] );
 		$this->assertSame( 70.0, (float) $second['trust_score'] );
+		} finally {
+			update_option( 'yoohw_cos_data_migrations', $previous_migrations, false );
+		}
 	}
 
 	public function test_identity_normalization_precedence_and_ambiguous_phone(): void {
@@ -405,6 +765,7 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 		$this->assertSame( 0, absint( $customer['total_orders'] ) );
 		$this->assertSame( 0.0, (float) $customer['total_spent'] );
 		$this->assertSame( 0.0, (float) $customer['average_order_value'] );
+		$this->assertSame( 'none', $customer['money_state'] );
 	}
 
 	public function test_partial_refund_reduces_net_revenue_without_changing_count(): void {
@@ -424,6 +785,8 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 		$this->assertSame( 1, absint( $customer['total_orders'] ) );
 		$this->assertSame( 75.0, (float) $customer['total_spent'] );
 		$this->assertSame( 75.0, (float) $customer['average_order_value'] );
+		$this->assertSame( 'comparable', $customer['money_state'] );
+		$this->assertSame( get_woocommerce_currency(), $customer['money_currency'] );
 	}
 
 	public function test_deleted_order_removes_its_persisted_contribution(): void {
@@ -648,9 +1011,10 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 		YoOhw_COS_Install::maybe_update();
 
 		$state = YoOhw_COS_Migration_Runner::get_state();
-		$this->assertSame( '0.2.1', get_option( 'yoohw_cos_db_version' ) );
+		$this->assertSame( YOOHW_COS_DB_VERSION, get_option( 'yoohw_cos_db_version' ) );
 		$this->assertSame( 'pending', $state['identity_normalization_v2']['status'] );
 		$this->assertSame( 'pending', $state['commerce_facts_v2']['status'] );
+		$this->assertSame( 'pending', $state['commerce_currency_v3']['status'] );
 		$this->assertSame(
 			'migration-preserved@example.test',
 			YoOhw_COS_Customers::get_customer( $preserved_customer_id )['email']
@@ -931,15 +1295,24 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 	}
 
 	public function test_inactive_status_takes_priority_over_value_tier(): void {
+		$previous_migrations = get_option( 'yoohw_cos_data_migrations', array() );
+		update_option( 'yoohw_cos_data_migrations', array( 'commerce_currency_v3' => array( 'status' => 'completed' ) ), false );
+		try {
 		$customer = array(
 			'total_orders'       => 20,
 			'total_spent'        => 5000,
+			'money_state'        => 'comparable',
+			'money_currency'     => get_woocommerce_currency(),
+			'commerce_metrics_version' => YoOhw_COS_Commerce_Metrics_Policy::VERSION,
 			'last_order_date'    => date_i18n( 'Y-m-d H:i:s', current_time( 'timestamp' ) - ( 120 * DAY_IN_SECONDS ) ),
 			'last_activity_date' => '',
 		);
 
 		$this->assertSame( 'inactive', YoOhw_COS_Intelligence::calculate_customer_status( $customer ) );
 		$this->assertSame( 'platinum', YoOhw_COS_Intelligence::calculate_vip_status( $customer ) );
+		} finally {
+			update_option( 'yoohw_cos_data_migrations', $previous_migrations, false );
+		}
 	}
 
 	public function test_overview_summary_and_action_filters_use_existing_customer_data(): void {
@@ -949,7 +1322,12 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 				'phone'             => '555-0110',
 				'display_name'      => 'Repeat overview',
 				'total_orders'      => 3,
-				'total_spent'       => 300,
+				'total_spent'       => 1000,
+				'commerce_metrics_version' => YoOhw_COS_Commerce_Metrics_Policy::VERSION,
+				'intelligence_currency_ready' => 1,
+				'intelligence_generation' => YoOhw_COS_Intelligence::get_scoring_generation(),
+				'money_state'       => 'comparable',
+				'money_currency'    => get_woocommerce_currency(),
 				'customer_status'   => 'active',
 				'vip_status'        => 'silver',
 				'lifecycle_stage'   => 'repeat',
@@ -1297,7 +1675,7 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 		}
 
 		if ( ! defined( 'YOOHW_COS_DB_VERSION' ) ) {
-			define( 'YOOHW_COS_DB_VERSION', '0.2.1' );
+			define( 'YOOHW_COS_DB_VERSION', '0.2.2' );
 		}
 
 		if ( ! defined( 'YOOHW_COS_PATH' ) ) {
@@ -1634,7 +2012,7 @@ final class YCI_Schema_Upgrade_Test extends WP_UnitTestCase {
 		global $wpdb;
 		$table = YoOhw_COS_DB::notes_table();
 		$state = array(
-			'_schema' => array( 'from' => '0.2.1', 'to' => '0.2.2', 'updated_at' => YoOhw_COS_DB::now() ),
+			'_schema' => array( 'from' => '0.2.2', 'to' => '0.2.3', 'updated_at' => YoOhw_COS_DB::now() ),
 			'identity_normalization_v1' => array( 'status' => 'pending', 'processed' => 7 ),
 			'identity_normalization_v2' => array( 'status' => 'pending', 'phase' => 'scan', 'last_customer_id' => 900000, 'processed' => 13, 'attempts' => 2 ),
 		);
@@ -1653,7 +2031,7 @@ final class YCI_Schema_Upgrade_Test extends WP_UnitTestCase {
 			if ( preg_match( '/^\s*(CREATE|ALTER|DROP|RENAME)\b/i', $query ) ) { $ddl[] = $query; }
 			return $query;
 		};
-		update_option( 'yoohw_cos_db_version', '0.2.2' );
+		update_option( 'yoohw_cos_db_version', '0.2.3' );
 		wp_clear_scheduled_hook( YoOhw_COS_Migration_Runner::HOOK );
 		try {
 			add_filter( 'query', $observe );
@@ -1661,13 +2039,13 @@ final class YCI_Schema_Upgrade_Test extends WP_UnitTestCase {
 			YoOhw_COS_Install::$entrypoint();
 			remove_filter( 'query', $observe );
 			$this->assertSame( array(), $ddl, 'A rollback must not apply older schema DDL.' );
-			$this->assertSame( '0.2.2', get_option( 'yoohw_cos_db_version' ) );
+			$this->assertSame( '0.2.3', get_option( 'yoohw_cos_db_version' ) );
 			$this->assertSame( 'varchar(100)', $wpdb->get_row( "SHOW COLUMNS FROM {$table} LIKE 'visibility'" )->Type );
 			$this->assertSame( $before, $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i WHERE id = %d', $table, $id ), ARRAY_A ) );
 			$this->assertSame( 'blocked', get_option( 'yoohw_cos_schema_status' )['status'] );
 			$this->assertSame( $state, YoOhw_COS_Migration_Runner::get_state(), 'No older-target registration or superseding is allowed.' );
 			YoOhw_COS_Migration_Runner::init();
-			$this->assertFalse( YoOhw_COS_Migration_Runner::register_upgrade( '0.2.2', YOOHW_COS_DB_VERSION ) );
+			$this->assertFalse( YoOhw_COS_Migration_Runner::register_upgrade( '0.2.3', YOOHW_COS_DB_VERSION ) );
 			do_action( YoOhw_COS_Migration_Runner::HOOK );
 			$this->assertSame( $state, YoOhw_COS_Migration_Runner::get_state() );
 			$this->assertFalse( wp_next_scheduled( YoOhw_COS_Migration_Runner::HOOK ) );
