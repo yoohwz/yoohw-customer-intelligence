@@ -85,6 +85,88 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 		$this->assertSame( 'limit', YoOhw_COS_Saved_Views::mutate( 'create', '', 'Overflow', array() ) );
 	}
 
+	public function test_follow_up_attention_tracks_task_membership_and_saved_view_definitions(): void {
+		$owner = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $owner );
+		$ready = array(
+			'intelligence_currency_ready' => 1,
+			'intelligence_generation' => YoOhw_COS_Intelligence::get_scoring_generation(),
+			'customer_status' => 'at_risk',
+			'vip_status' => 'gold',
+			'total_orders' => 2,
+		);
+		$first = YoOhw_COS_Customers::create_customer( array_merge( $ready, array( 'email' => 'attention-first@example.test', 'phone' => '555-0101', 'display_name' => 'Attention first' ) ) );
+		$second = YoOhw_COS_Customers::create_customer( array_merge( $ready, array( 'email' => 'attention-second@example.test', 'phone' => '555-0102', 'display_name' => 'Attention second' ) ) );
+		$this->assertGreaterThan( 0, $first );
+		$this->assertGreaterThan( 0, $second );
+		$this->assertSame( 'ok', YoOhw_COS_Saved_Views::mutate( 'create', '', 'Needs follow-up', array( 'customer_attention' => 'high_value_needs_follow_up' ) ) );
+		$saved = YoOhw_COS_Saved_Views::get( array_key_first( YoOhw_COS_Saved_Views::all() ) )['definition'];
+		$this->assertSame( 'high_value_needs_follow_up', $saved['customer_attention'] );
+		$this->assertSame( '', YoOhw_COS_Saved_Views::stale_reason( $saved ) );
+		$this->assertSame( 2, YoOhw_COS_Customer_Query::query( $saved )['total_items'] );
+		$task = YoOhw_COS_Tasks::create_task( array( 'customer_id' => $first, 'title' => 'Follow up' ) );
+		$this->assertGreaterThan( 0, $task );
+		$this->assertSame( 1, YoOhw_COS_Customer_Query::query( $saved )['total_items'] );
+		$this->assertSame( $first, absint( YoOhw_COS_Customer_Query::query( array( 'customer_attention' => 'open_follow_up' ) )['items'][0]['id'] ) );
+		$this->assertTrue( YoOhw_COS_Tasks::update_task( $task, array( 'customer_id' => $second ) ) );
+		$this->assertSame( $second, absint( YoOhw_COS_Customer_Query::query( array( 'customer_attention' => 'open_follow_up' ) )['items'][0]['id'] ) );
+		$this->assertTrue( YoOhw_COS_Tasks::set_task_status( $task, YoOhw_COS_Tasks::STATUS_COMPLETED ) );
+		$this->assertSame( 0, YoOhw_COS_Customer_Query::query( array( 'customer_attention' => 'open_follow_up' ) )['total_items'] );
+		$this->assertSame( 2, YoOhw_COS_Customer_Query::query( $saved )['total_items'] );
+		$this->assertTrue( YoOhw_COS_Tasks::set_task_status( $task, YoOhw_COS_Tasks::STATUS_OPEN ) );
+		$this->assertSame( 1, YoOhw_COS_Customer_Query::query( $saved )['total_items'] );
+		$this->assertSame( '', YoOhw_COS_Saved_Views::stale_reason( $saved ) );
+		$this->assertSame( 'invalid', YoOhw_COS_Saved_Views::stale_reason( array_merge( $saved, array( 'customer_attention' => 'unknown_attention' ) ) ) );
+		$unready = YoOhw_COS_Customers::create_customer( array( 'email' => 'attention-unready@example.test', 'phone' => '555-0103', 'customer_status' => 'at_risk', 'vip_status' => 'gold' ) );
+		$this->assertGreaterThan( 0, $unready );
+		$this->assertSame( 1, YoOhw_COS_Customer_Query::query( $saved )['total_items'] );
+		$this->assertGreaterThan( 0, YoOhw_COS_Tasks::create_task( array( 'customer_id' => $unready, 'title' => 'Task without currency readiness' ) ) );
+		$this->assertSame( 2, YoOhw_COS_Customer_Query::query( array( 'customer_attention' => 'open_follow_up' ) )['total_items'] );
+	}
+
+	public function test_follow_up_attention_overdue_scope_and_pagination(): void {
+		global $wpdb;
+		$customer_ids = array();
+		foreach ( array( 'One', 'Two', 'Three' ) as $name ) {
+			$customer_ids[] = YoOhw_COS_Customers::create_customer( array( 'email' => strtolower( $name ) . '@example.test', 'phone' => '555-0199', 'display_name' => $name, 'total_orders' => 1 ) );
+		}
+		list( $first, $second, $third ) = $customer_ids;
+		$past = wp_date( 'Y-m-d H:i:s', time() - DAY_IN_SECONDS );
+		$future = wp_date( 'Y-m-d H:i:s', time() + DAY_IN_SECONDS );
+		$tasks = array(
+			YoOhw_COS_Tasks::create_task( array( 'customer_id' => $first, 'title' => 'Past one' ) ),
+			YoOhw_COS_Tasks::create_task( array( 'customer_id' => $first, 'title' => 'Past two' ) ),
+			YoOhw_COS_Tasks::create_task( array( 'customer_id' => $second, 'title' => 'Future' ) ),
+			YoOhw_COS_Tasks::create_task( array( 'customer_id' => $third, 'title' => 'No due' ) ),
+			YoOhw_COS_Tasks::create_task( array( 'customer_id' => $third, 'title' => 'Invalid old due' ) ),
+		);
+		foreach ( $tasks as $task ) {
+			$this->assertGreaterThan( 0, $task );
+		}
+		foreach ( array( 0, 1 ) as $index ) {
+			$wpdb->update( YoOhw_COS_DB::tasks_table(), array( 'due_date' => $past ), array( 'id' => $tasks[ $index ] ) );
+		}
+		$wpdb->update( YoOhw_COS_DB::tasks_table(), array( 'due_date' => $future ), array( 'id' => $tasks[2] ) );
+		$this->assertSame( 1, $wpdb->update( YoOhw_COS_DB::tasks_table(), array( 'due_date' => '1899-12-31 12:00:00' ), array( 'id' => $tasks[4] ) ) );
+		$this->assertSame( 0, YoOhw_COS_DB::date_timestamp( '1899-12-31 12:00:00' ) );
+		$tag = YoOhw_COS_Tags::create_tag( 'Follow-up sample' );
+		$segment = YoOhw_COS_Segments::create_segment( 'Follow-up sample' );
+		$this->assertTrue( YoOhw_COS_Tags::assign_tag( $first, $tag ) );
+		$this->assertTrue( YoOhw_COS_Segments::assign_customer( $first, $segment ) );
+		$this->assertSame( 1, YoOhw_COS_Customer_Query::query( array( 'customer_attention' => 'overdue_follow_up' ) )['total_items'] );
+		$this->assertSame( 3, YoOhw_COS_Customer_Query::query( array( 'customer_attention' => 'open_follow_up' ) )['total_items'] );
+		$this->assertSame( 1, count( YoOhw_COS_Customer_Query::query( array( 'customer_attention' => 'open_follow_up', 'per_page' => 1, 'paged' => 2 ) )['items'] ) );
+		$this->assertSame( 1, YoOhw_COS_Customer_Query::query( array( 'customer_attention' => 'overdue_follow_up', 's' => 'One', 'customer_cohort' => 'first_time' ) )['total_items'] );
+		$this->assertSame( 1, YoOhw_COS_Customer_Query::query( array( 'customer_attention' => 'overdue_follow_up', 'customer_tag' => $tag, 'customer_segment' => $segment, 'orderby' => 'total_orders', 'order' => 'ASC' ) )['total_items'] );
+		$this->assertSame( 0, YoOhw_COS_Customer_Query::query( array( 'customer_attention' => 'overdue_follow_up', 'customer_cohort' => 'repeat' ) )['total_items'] );
+		$this->assertTrue( YoOhw_COS_Customers::archive_customer( $first ) );
+		$this->assertSame( 0, YoOhw_COS_Customer_Query::query( array( 'customer_attention' => 'overdue_follow_up' ) )['total_items'] );
+		$this->assertSame( 1, YoOhw_COS_Customer_Query::query( array( 'customer_attention' => 'overdue_follow_up', 'customer_view' => 'archived' ) )['total_items'] );
+		$this->assertTrue( YoOhw_COS_Tasks::set_task_status( $tasks[0], YoOhw_COS_Tasks::STATUS_COMPLETED ) );
+		$this->assertTrue( YoOhw_COS_Tasks::set_task_status( $tasks[1], YoOhw_COS_Tasks::STATUS_COMPLETED ) );
+		$this->assertSame( 0, YoOhw_COS_Customer_Query::query( array( 'customer_attention' => 'overdue_follow_up', 'customer_view' => 'archived' ) )['total_items'] );
+	}
+
 	public function test_install_creates_expected_custom_tables(): void {
 		global $wpdb;
 

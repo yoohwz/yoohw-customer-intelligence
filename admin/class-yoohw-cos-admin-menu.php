@@ -845,6 +845,7 @@ final class YoOhw_COS_Admin_Menu {
 		}
 
 		$list_table->views();
+		$list_table->render_attention_quick_views();
 
 		echo '<form method="post">';
 		YoOhw_COS_Reset_Guard::render_field( $list_table->selection_epoch );

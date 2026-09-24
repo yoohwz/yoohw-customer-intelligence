@@ -317,6 +317,37 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 		return $views;
 	}
 
+	public function render_attention_quick_views(): void {
+		$views = array(
+			array( 'customer_cohort', 'first_time', __( 'First-time customers', 'yoohw-customer-intelligence' ) ),
+			array( 'customer_cohort', 'repeat', __( 'Repeat customers', 'yoohw-customer-intelligence' ) ),
+			array( 'customer_attention', 'high_value_retention', __( 'High-value at risk', 'yoohw-customer-intelligence' ) ),
+			array( 'customer_attention', 'missing_contact', __( 'Missing contact information', 'yoohw-customer-intelligence' ) ),
+			array( 'customer_attention', 'open_follow_up', __( 'Open follow-up', 'yoohw-customer-intelligence' ) ),
+			array( 'customer_attention', 'overdue_follow_up', __( 'Overdue follow-up', 'yoohw-customer-intelligence' ) ),
+			array( 'customer_attention', 'high_value_needs_follow_up', __( 'High-value needs follow-up', 'yoohw-customer-intelligence' ) ),
+		);
+		$filters = YoOhw_COS_Saved_Views::definition( wp_unslash( $_GET ) );
+		$filters = array_filter( $filters, static function ( $value ) { return '' !== (string) $value; } );
+		unset( $filters['paged'] );
+		if ( isset( $_GET['saved_view_id'] ) ) {
+			$filters['saved_view_id'] = YoOhw_COS_Saved_Views::active_id( $_GET );
+			$filters['saved_view_context'] = '1';
+		}
+
+		echo '<p class="yoohw-cos-attention-views"><strong>' . esc_html__( 'Attention / quick views:', 'yoohw-customer-intelligence' ) . '</strong> ';
+		foreach ( $views as $index => $view ) {
+			list( $key, $value, $label ) = $view;
+			$args = array_merge( $filters, array( 'page' => 'yoohw-customer-intelligence', $key => $value ) );
+			$current = isset( $filters[ $key ] ) && $filters[ $key ] === $value;
+			if ( $index > 0 ) {
+				echo ' <span aria-hidden="true">|</span> ';
+			}
+			echo '<a href="' . esc_url( add_query_arg( $args, admin_url( 'admin.php' ) ) ) . '"' . ( $current ? ' aria-current="page"' : '' ) . '>' . esc_html( $label ) . '</a>';
+		}
+		echo '</p>';
+	}
+
 	private function format_date( ?string $date ): string {
 		return YoOhw_COS_DB::format_admin_date( $date, '&mdash;' );
 	}
@@ -609,6 +640,9 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 			''                     => __( 'All attention states', 'yoohw-customer-intelligence' ),
 			'high_value_retention' => __( 'High-value retention risk', 'yoohw-customer-intelligence' ),
 			'missing_contact'      => __( 'Missing contact details', 'yoohw-customer-intelligence' ),
+			'open_follow_up'      => __( 'Open follow-up', 'yoohw-customer-intelligence' ),
+			'overdue_follow_up'   => __( 'Overdue follow-up', 'yoohw-customer-intelligence' ),
+			'high_value_needs_follow_up' => __( 'High-value needs follow-up', 'yoohw-customer-intelligence' ),
 		);
 
 		echo '<select name="customer_attention">';
