@@ -920,7 +920,7 @@ final class YoOhw_COS_Admin_Menu {
 		$id = YoOhw_COS_Saved_Views::active_id( $_GET );
 		$active = YoOhw_COS_Saved_Views::get( $id );
 		$stale = isset( $_GET['saved_view_id'] ) && YoOhw_COS_Saved_Views::request_is_stale( $_GET );
-		$dirty = $active && ! $stale && YoOhw_COS_Saved_Views::definition( wp_unslash( $_GET ) ) !== $active['definition'];
+		$dirty = $active && ! $stale && YoOhw_COS_Saved_Views::definition( wp_unslash( $_GET ) ) !== YoOhw_COS_Saved_Views::definition( $active['definition'] );
 		$messages = array(
 			'created' => __( 'Saved view created.', 'yoohw-customer-intelligence' ),
 			'updated' => __( 'Saved view updated.', 'yoohw-customer-intelligence' ),

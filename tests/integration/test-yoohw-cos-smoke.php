@@ -146,6 +146,22 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 		$old = $definition;
 		unset( $old['rfm_recency_max_days'], $old['rfm_frequency_min'], $old['rfm_monetary_min'] );
 		$this->assertSame( '', YoOhw_COS_Saved_Views::stale_reason( $old ) );
+		$views = YoOhw_COS_Saved_Views::all();
+		$id = array_key_first( $views );
+		$views[ $id ]['definition'] = $old;
+		update_user_meta( get_current_user_id(), '_yoohw_cos_saved_customer_views', $views );
+		$previous_get = $_GET;
+		try {
+			$_GET = array_merge( $old, array( 'saved_view_id' => $id, 'saved_view_context' => '1' ) );
+			$render = new ReflectionMethod( 'YoOhw_COS_Admin_Menu', 'render_saved_views_control' );
+			ob_start();
+			$render->invoke( null );
+			$html = ob_get_clean();
+			$this->assertStringContainsString( 'Saved view active.', $html );
+			$this->assertStringNotContainsString( 'Current filters differ from this saved view.', $html );
+		} finally {
+			$_GET = $previous_get;
+		}
 	}
 
 	public function test_follow_up_attention_tracks_task_membership_and_saved_view_definitions(): void {
