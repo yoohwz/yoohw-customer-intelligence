@@ -379,6 +379,7 @@ final class YoOhw_COS_Customers {
 
 		$data = array(
 			'last_activity_date' => $last_activity ?: null,
+			'intelligence_currency_ready' => 1,
 			'customer_status'    => YoOhw_COS_Intelligence::calculate_customer_status( $customer ),
 			'lifecycle_stage'    => YoOhw_COS_Intelligence::calculate_lifecycle_stage( $customer ),
 			'vip_status'         => YoOhw_COS_Intelligence::calculate_vip_status( $customer ),
@@ -621,6 +622,7 @@ final class YoOhw_COS_Customers {
 			'money_state'       => '%s',
 			'money_currency'    => '%s',
 			'commerce_metrics_version' => '%d',
+			'intelligence_currency_ready' => '%d',
 			'risk_score'          => '%f',
 			'trust_score'         => '%f',
 			'loyalty_score'       => '%f',
@@ -740,7 +742,7 @@ final class YoOhw_COS_Customers {
 			ARRAY_A
 		);
 
-		return is_array( $customer ) ? $customer : array();
+		return is_array( $customer ) ? YoOhw_COS_Intelligence::safe_customer_decisions( $customer ) : array();
 	}
 
 	public static function customer_exists( int $customer_id ): bool {
@@ -1232,13 +1234,15 @@ final class YoOhw_COS_Customers {
 		global $wpdb;
 
 		$table = YoOhw_COS_DB::customers_table();
+		$backfill_complete = YoOhw_COS_Migration_Runner::currency_backfill_is_complete() ? 1 : 0;
 
 		$rows = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT customer_status, COUNT(*) as total
+				"SELECT CASE WHEN %d = 1 OR intelligence_currency_ready = 1 THEN customer_status ELSE 'unavailable' END AS safe_status, COUNT(*) as total
 				FROM %i
 				WHERE archived_at IS NULL
-				GROUP BY customer_status",
+				GROUP BY safe_status",
+				$backfill_complete,
 				$table
 			),
 			ARRAY_A
@@ -1250,11 +1254,12 @@ final class YoOhw_COS_Customers {
 			'at_risk'  => 0,
 			'inactive' => 0,
 			'vip'      => 0,
+			'unavailable' => 0,
 		);
 
 		if ( is_array( $rows ) ) {
 			foreach ( $rows as $row ) {
-				$status = sanitize_key( $row['customer_status'] ?? '' );
+				$status = sanitize_key( $row['safe_status'] ?? '' );
 
 				if ( isset( $counts[ $status ] ) ) {
 					$counts[ $status ] = absint( $row['total'] ?? 0 );
@@ -1269,14 +1274,16 @@ final class YoOhw_COS_Customers {
 		global $wpdb;
 
 		$table = YoOhw_COS_DB::customers_table();
+		$backfill_complete = YoOhw_COS_Migration_Runner::currency_backfill_is_complete() ? 1 : 0;
 
 		$rows = $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT vip_status, COUNT(*) as total
 				FROM %i
-				WHERE archived_at IS NULL
+				WHERE archived_at IS NULL AND ( %d = 1 OR intelligence_currency_ready = 1 )
 				GROUP BY vip_status",
-				$table
+				$table,
+				$backfill_complete
 			),
 			ARRAY_A
 		);
@@ -1305,6 +1312,7 @@ final class YoOhw_COS_Customers {
 		global $wpdb;
 
 		$table = YoOhw_COS_DB::customers_table();
+		$backfill_complete = YoOhw_COS_Migration_Runner::currency_backfill_is_complete() ? 1 : 0;
 
 		$counts = array(
 			'none'   => 0,
@@ -1321,8 +1329,9 @@ final class YoOhw_COS_Customers {
 				SUM(CASE WHEN risk_score >= 40 AND risk_score < 70 THEN 1 ELSE 0 END) AS medium_count,
 				SUM(CASE WHEN risk_score >= 70 THEN 1 ELSE 0 END) AS high_count
 				FROM %i
-				WHERE archived_at IS NULL",
-				$table
+				WHERE archived_at IS NULL AND ( %d = 1 OR intelligence_currency_ready = 1 )",
+				$table,
+				$backfill_complete
 			),
 			ARRAY_A
 		);
@@ -1608,14 +1617,16 @@ final class YoOhw_COS_Customers {
 		global $wpdb;
 
 		$table = YoOhw_COS_DB::customers_table();
+		$backfill_complete = YoOhw_COS_Migration_Runner::currency_backfill_is_complete() ? 1 : 0;
 
 		$rows = $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT lifecycle_stage, COUNT(*) as total
 				FROM %i
-				WHERE archived_at IS NULL
+				WHERE archived_at IS NULL AND ( %d = 1 OR intelligence_currency_ready = 1 )
 				GROUP BY lifecycle_stage",
-				$table
+				$table,
+				$backfill_complete
 			),
 			ARRAY_A
 		);

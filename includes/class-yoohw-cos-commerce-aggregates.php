@@ -112,6 +112,7 @@ final class YoOhw_COS_Commerce_Aggregates {
 			foreach ( $affected_ids as $affected_id ) {
 				self::refresh_money( $affected_id );
 				self::refresh_order_bounds( $affected_id );
+				self::invalidate_persisted_intelligence( $affected_id );
 			}
 
 			$wpdb->query( 'COMMIT' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.TransactionQuery
@@ -191,6 +192,7 @@ final class YoOhw_COS_Commerce_Aggregates {
 
 			self::refresh_money( $customer_id );
 			self::refresh_order_bounds( $customer_id );
+			self::invalidate_persisted_intelligence( $customer_id );
 			$wpdb->query( 'COMMIT' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.TransactionQuery
 		} catch ( Throwable $exception ) {
 			$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.TransactionQuery
@@ -268,10 +270,11 @@ final class YoOhw_COS_Commerce_Aggregates {
 					'money_state'              => $money['money_state'],
 					'money_currency'           => $money['money_currency'],
 					'commerce_metrics_version' => $trusted ? YoOhw_COS_Commerce_Metrics_Policy::VERSION : $previous_version,
+					'intelligence_currency_ready' => 0,
 					'updated_at'               => YoOhw_COS_DB::now(),
 				),
 				array( 'id' => $customer_id ),
-				array( '%d', '%f', '%f', '%s', '%s', '%d', '%s' ),
+				array( '%d', '%f', '%f', '%s', '%s', '%d', '%d', '%s' ),
 				array( '%d' )
 			);
 
@@ -288,7 +291,9 @@ final class YoOhw_COS_Commerce_Aggregates {
 			return false;
 		}
 
-		YoOhw_COS_Customers::refresh_derived_intelligence( $customer_id );
+		if ( ! YoOhw_COS_Customers::refresh_derived_intelligence( $customer_id ) ) {
+			return false;
+		}
 		YoOhw_COS_Migration_Runner::note_currency_reconciled( 'customer', $customer_id );
 
 		return true;
@@ -416,6 +421,20 @@ final class YoOhw_COS_Commerce_Aggregates {
 		);
 		if ( false === $updated ) {
 			throw new RuntimeException( 'Unable to persist customer currency state.' );
+		}
+	}
+
+	private static function invalidate_persisted_intelligence( int $customer_id ): void {
+		global $wpdb;
+		$updated = $wpdb->update(
+			YoOhw_COS_DB::customers_table(),
+			array( 'intelligence_currency_ready' => 0 ),
+			array( 'id' => $customer_id ),
+			array( '%d' ),
+			array( '%d' )
+		);
+		if ( false === $updated ) {
+			throw new RuntimeException( 'Unable to invalidate customer intelligence.' );
 		}
 	}
 

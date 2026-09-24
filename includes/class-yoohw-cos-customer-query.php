@@ -37,6 +37,10 @@ final class YoOhw_COS_Customer_Query {
 		global $wpdb;
 
 		$args = self::sanitize_args( $args );
+		if ( ! YoOhw_COS_Migration_Runner::currency_backfill_is_complete()
+			&& in_array( $args['orderby'], array( 'total_spent', 'average_order_value', 'risk_score', 'trust_score' ), true ) ) {
+			$args['orderby'] = 'last_activity_date';
+		}
 
 		$table      = YoOhw_COS_DB::customers_table();
 		$where_data = self::build_where_clause( $args );
@@ -68,7 +72,7 @@ final class YoOhw_COS_Customer_Query {
 		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, PluginCheck.Security.DirectDB.UnescapedDBParameter
 
 		return array(
-			'items'       => is_array( $items ) ? $items : array(),
+			'items'       => is_array( $items ) ? array_map( array( 'YoOhw_COS_Intelligence', 'safe_customer_decisions' ), $items ) : array(),
 			'total_items' => $total_items,
 			'args'        => $args,
 		);
@@ -83,6 +87,12 @@ final class YoOhw_COS_Customer_Query {
 		$params                  = array();
 		$search                  = (string) $args['s'];
 		$normalized_search_id    = self::normalize_search_id( $search );
+		$classification_filter = '' !== $args['customer_status'] || '' !== $args['vip_status']
+			|| '' !== $args['risk_level'] || '' !== $args['lifecycle_stage']
+			|| 'high_value_retention' === $args['customer_attention'];
+		if ( $classification_filter && ! YoOhw_COS_Migration_Runner::currency_backfill_is_complete() ) {
+			$where .= ' AND intelligence_currency_ready = 1';
+		}
 
 		if ( 'archived' === $args['customer_view'] ) {
 			$where .= ' AND archived_at IS NOT NULL';

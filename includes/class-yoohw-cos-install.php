@@ -123,6 +123,7 @@ final class YoOhw_COS_Install {
 					'money_state' => array( 'varchar(20)', false, 'unknown' ),
 					'money_currency' => array( 'varchar(10)', true, null ),
 					'commerce_metrics_version' => array( 'smallint unsigned', false, '0' ),
+					'intelligence_currency_ready' => array( 'tinyint', false, '0' ),
 					'risk_score' => array( 'decimal(5,2)', false, '0.00' ),
 					'trust_score' => array( 'decimal(5,2)', false, '0.00' ),
 					'loyalty_score' => array( 'decimal(5,2)', false, '0.00' ),
@@ -430,6 +431,7 @@ final class YoOhw_COS_Install {
 			money_state VARCHAR(20) NOT NULL DEFAULT 'unknown',
 			money_currency VARCHAR(10) NULL,
 			commerce_metrics_version SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+			intelligence_currency_ready TINYINT NOT NULL DEFAULT 0,
 			risk_score DECIMAL(5,2) NOT NULL DEFAULT 0.00,
 			trust_score DECIMAL(5,2) NOT NULL DEFAULT 0.00,
 			loyalty_score DECIMAL(5,2) NOT NULL DEFAULT 0.00,
@@ -892,6 +894,15 @@ final class YoOhw_COS_Install {
 					'ALTER TABLE %i ADD commerce_metrics_version SMALLINT UNSIGNED NOT NULL DEFAULT 0 AFTER average_order_value',
 					$table
 				)
+			);
+		}
+
+		$intelligence_ready_exists = $wpdb->get_var(
+			$wpdb->prepare( 'SHOW COLUMNS FROM %i LIKE %s', $table, 'intelligence_currency_ready' )
+		);
+		if ( empty( $intelligence_ready_exists ) ) {
+			self::execute_ensure_ddl(
+				$wpdb->prepare( 'ALTER TABLE %i ADD intelligence_currency_ready TINYINT NOT NULL DEFAULT 0 AFTER commerce_metrics_version', $table )
 			);
 		}
 

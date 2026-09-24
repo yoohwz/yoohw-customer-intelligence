@@ -40,7 +40,8 @@ under a separately authorized policy. This change provides truthful status, not 
 automatic duplicate repair or historical rewrite.
 
 The 0.2.2 schema adds nullable order-fact currency and explicit customer monetary state
-and currency columns. Existing rows default to unknown; they are never assigned the
+and currency columns, plus a readiness marker for currency-aware derived intelligence.
+Existing rows default to unknown and unready; they are never assigned the
 current store currency. The existing bounded migration worker runs
 `commerce_currency_v3` after earlier migrations: it reloads orders through WooCommerce,
 retries failed items, then rebuilds customers. Revenue and AOV remain unavailable while

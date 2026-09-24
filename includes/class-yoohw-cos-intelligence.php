@@ -21,6 +21,24 @@ final class YoOhw_COS_Intelligence {
 		YoOhw_COS_Customers::request_intelligence_refresh();
 	}
 
+	/** Old persisted classifications may have used mixed-currency spend before migration. */
+	public static function persisted_decisions_are_safe( array $customer ): bool {
+		return YoOhw_COS_Migration_Runner::currency_backfill_is_complete()
+			|| 1 === absint( $customer['intelligence_currency_ready'] ?? 0 );
+	}
+
+	public static function safe_customer_decisions( array $customer ): array {
+		if ( self::persisted_decisions_are_safe( $customer ) ) {
+			return $customer;
+		}
+		$customer['customer_status'] = self::calculate_customer_status( $customer );
+		$customer['lifecycle_stage'] = self::calculate_lifecycle_stage( $customer );
+		$customer['vip_status'] = self::calculate_vip_status( $customer );
+		$customer['trust_score'] = self::calculate_trust_score( $customer );
+		$customer['risk_score'] = self::calculate_risk_score( $customer );
+		return $customer;
+	}
+
 	public static function calculate_customer_status( array $customer ): string {
 		$total_orders = absint( $customer['total_orders'] ?? 0 );
 		$total_spent  = (float) ( $customer['total_spent'] ?? 0 );

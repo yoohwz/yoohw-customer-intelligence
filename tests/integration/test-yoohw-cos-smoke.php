@@ -44,6 +44,7 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 		}
 		$this->assertNotNull( $wpdb->get_row( $wpdb->prepare( 'SHOW COLUMNS FROM %i LIKE %s', YoOhw_COS_DB::order_facts_table(), 'currency' ) ) );
 		$this->assertNotNull( $wpdb->get_row( $wpdb->prepare( 'SHOW COLUMNS FROM %i LIKE %s', YoOhw_COS_DB::customers_table(), 'money_state' ) ) );
+		$this->assertNotNull( $wpdb->get_row( $wpdb->prepare( 'SHOW COLUMNS FROM %i LIKE %s', YoOhw_COS_DB::customers_table(), 'intelligence_currency_ready' ) ) );
 	}
 
 	public function test_customer_partial_update_keeps_format_mapping_stable(): void {
@@ -369,6 +370,73 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 			$this->assertSame( 2, (int) $complete['total_orders'] );
 			$this->assertSame( 'mixed', $complete['money_state'] );
 			$this->assertFalse( YoOhw_COS_Commerce_Metrics_Policy::money_is_comparable( $complete ) );
+		} finally {
+			update_option( 'yoohw_cos_data_migrations', $previous_migrations, false );
+			wp_clear_scheduled_hook( YoOhw_COS_Migration_Runner::HOOK );
+		}
+	}
+
+	public function test_pending_currency_upgrade_hides_legacy_money_classifications(): void {
+		global $wpdb;
+		$previous_migrations = get_option( 'yoohw_cos_data_migrations', array() );
+		YoOhw_COS_Customers::reset_data();
+		$customer_id = YoOhw_COS_Customers::create_customer( array(
+			'email' => 'legacy-money-decisions@example.test',
+			'phone' => '+14155550198',
+			'total_orders' => 2,
+			'total_spent' => 6000,
+			'commerce_metrics_version' => 1,
+			'money_state' => 'unknown',
+			'customer_status' => 'vip',
+			'vip_status' => 'platinum',
+			'lifecycle_stage' => 'vip',
+			'trust_score' => 100,
+			'risk_score' => 90,
+			'last_activity_date' => YoOhw_COS_DB::now(),
+		) );
+		$this->assertGreaterThan( 0, $customer_id );
+		update_option( 'yoohw_cos_data_migrations', array( 'commerce_currency_v3' => array( 'status' => 'pending', 'phase' => 'orders', 'next_page' => 1 ) ), false );
+		try {
+			$customer = YoOhw_COS_Customers::get_customer( $customer_id );
+			$this->assertSame( 2, (int) $customer['total_orders'] );
+			$this->assertSame( 'active', $customer['customer_status'] );
+			$this->assertSame( 'none', $customer['vip_status'] );
+			$this->assertSame( 'repeat', $customer['lifecycle_stage'] );
+			$this->assertSame( 60.0, (float) $customer['trust_score'] );
+			$this->assertSame( 0.0, (float) $customer['risk_score'] );
+			$this->assertFalse( YoOhw_COS_Commerce_Metrics_Policy::money_is_comparable( $customer ) );
+			$list = YoOhw_COS_Customer_Query::query( array( 's' => 'legacy-money-decisions@example.test' ) );
+			$this->assertSame( 'none', $list['items'][0]['vip_status'] );
+			$this->assertSame( 0, YoOhw_COS_Customer_Query::query( array( 'vip_status' => 'high_value' ) )['total_items'] );
+			$this->assertSame( 0, YoOhw_COS_Customer_Query::query( array( 'customer_status' => 'vip' ) )['total_items'] );
+			$this->assertSame( 0, YoOhw_COS_Customer_Query::query( array( 'risk_level' => 'high' ) )['total_items'] );
+			$this->assertSame( 0, YoOhw_COS_Customers::get_status_counts()['vip'] );
+			$this->assertSame( 1, YoOhw_COS_Customers::get_status_counts()['unavailable'] );
+			$this->assertSame( 0, YoOhw_COS_Customers::get_vip_counts()['platinum'] );
+			$this->assertSame( 0, YoOhw_COS_Customers::get_risk_counts()['high'] );
+			$this->assertSame( 0, YoOhw_COS_Customers::get_lifecycle_counts()['vip'] );
+			$this->assertSame( 0, YoOhw_COS_Overview::get_summary()['high_value_customers'] );
+			$this->assertSame( 0, YoOhw_COS_Overview::get_attention_counts()['high_risk_customers'] );
+			$this->assertNotContains( $customer_id, array_map( 'absint', array_column( YoOhw_COS_Overview::get_priority_customers(), 'id' ) ) );
+			$this->assertTrue( YoOhw_COS_Customers::update_customer( $customer_id, array( 'commerce_metrics_version' => YoOhw_COS_Commerce_Metrics_Policy::VERSION ) ) );
+			$this->assertSame( 'none', YoOhw_COS_Customers::get_customer( $customer_id )['vip_status'] );
+			$this->assertSame( 0, YoOhw_COS_Customer_Query::query( array( 'vip_status' => 'high_value' ) )['total_items'] );
+			$interrupt = static function(): void { throw new RuntimeException( 'Synthetic refresh interruption.' ); };
+			add_filter( 'yoohw_cos_customer_recalculate_intelligence_data', $interrupt );
+			$interrupted = false;
+			try {
+				YoOhw_COS_Commerce_Aggregates::rebuild_customer( $customer_id, true );
+			} catch ( RuntimeException $exception ) {
+				$interrupted = true;
+			} finally {
+				remove_filter( 'yoohw_cos_customer_recalculate_intelligence_data', $interrupt );
+			}
+			$this->assertTrue( $interrupted );
+			$this->assertSame( '0', (string) $wpdb->get_var( $wpdb->prepare( 'SELECT intelligence_currency_ready FROM %i WHERE id = %d', YoOhw_COS_DB::customers_table(), $customer_id ) ) );
+			$this->assertSame( 0, YoOhw_COS_Customer_Query::query( array( 'vip_status' => 'high_value' ) )['total_items'] );
+			$this->assertTrue( YoOhw_COS_Commerce_Aggregates::rebuild_customer( $customer_id, true ) );
+			$this->assertSame( '1', (string) $wpdb->get_var( $wpdb->prepare( 'SELECT intelligence_currency_ready FROM %i WHERE id = %d', YoOhw_COS_DB::customers_table(), $customer_id ) ) );
+			$this->assertSame( 1, YoOhw_COS_Customer_Query::query( array( 'customer_status' => 'inactive' ) )['total_items'] );
 		} finally {
 			update_option( 'yoohw_cos_data_migrations', $previous_migrations, false );
 			wp_clear_scheduled_hook( YoOhw_COS_Migration_Runner::HOOK );
@@ -1123,7 +1191,11 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 				'phone'             => '555-0110',
 				'display_name'      => 'Repeat overview',
 				'total_orders'      => 3,
-				'total_spent'       => 300,
+				'total_spent'       => 1000,
+				'commerce_metrics_version' => YoOhw_COS_Commerce_Metrics_Policy::VERSION,
+				'intelligence_currency_ready' => 1,
+				'money_state'       => 'comparable',
+				'money_currency'    => get_woocommerce_currency(),
 				'customer_status'   => 'active',
 				'vip_status'        => 'silver',
 				'lifecycle_stage'   => 'repeat',
