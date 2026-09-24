@@ -18,6 +18,10 @@ Long passes continue across daily ticks instead of repeatedly restarting at ID z
 
 Saving scoring settings through the existing update method writes a fresh opaque
 generation and requests that wakeup. This includes the authorized admin-post handler.
+The currency backfill completion, a resolved backfill issue, and a store currency
+setting change also write a new generation before requesting the wakeup. A completed
+checkpoint and an in-progress cursor therefore restart at ID zero so money-derived
+decisions converge under the new currency state.
 The worker reads the generation uncached before/after each batch and invalidates its
 settings cache at the start. A superseded pass restarts at ID zero, including when
 settings return to the same values after an intervening change. Old scheduled cursor

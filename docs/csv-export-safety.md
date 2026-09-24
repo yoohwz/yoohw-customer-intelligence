@@ -2,14 +2,15 @@
 
 Export CSV is for viewing customer lists in spreadsheets, not a byte-identical
 backup/import protocol. It retains the current filters, sorting, archive view,
-12 columns, comma delimiter, UTF-8 BOM and bounded maximum of 5,000 customers.
+14 columns, comma delimiter, UTF-8 BOM and bounded maximum of 5,000 customers.
 Stored records are not changed by export. Existing contact/name normalization still
 runs before serialization (for example, name line breaks become spaces).
 
 ## Text and numeric representation
 
 One final cell boundary protects every heading and every textual data column:
-Name (including fallbacks), Email, Phone, Value tier, Lifecycle, Tags and Segments.
+Name (including fallbacks), Email, Phone, Value tier, Lifecycle, Tags, Segments,
+Currency and Monetary state.
 Relationship names are joined before protection. Translated labels pass through the
 same boundary. A TAB (U+0009) is prepended to text whose first significant character
 is `=`, `+`, `-`, `@` or the full-width `＝`, `＋`, `－`, `＠`. Detection looks past
@@ -25,7 +26,11 @@ backslashes and remaining embedded line breaks cannot create another CSV cell or
 record when parsed with standard comma/double-quote CSV settings.
 
 The five internally formatted metrics (Orders, Spent, AOV, Risk score, Trust score)
-retain their numeric output, including negative and zero decimals. The exemption is
+retain their numeric output, including negative and zero decimals. Spent and AOV
+are numeric only for a comparable customer; otherwise they are blank and the
+Monetary state column says `mixed` or `unknown`. Comparable values carry their
+order currency in the Currency column, including when it differs from the store
+setting. The exemption is
 based on those known sources/column positions, never `is_numeric()` on customer text.
 Headings for these columns are still text and receive protection when needed.
 

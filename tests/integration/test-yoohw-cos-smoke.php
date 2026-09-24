@@ -307,6 +307,7 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 		$wpdb->update( YoOhw_COS_DB::customers_table(), array( 'commerce_metrics_version' => 1, 'money_state' => 'unknown', 'money_currency' => null, 'total_spent' => 9999 ), array( 'id' => $id ) );
 		$state = array( 'commerce_currency_v3' => array( 'status' => 'pending', 'phase' => 'orders', 'next_page' => 1, 'last_customer_id' => 0 ) );
 		update_option( 'yoohw_cos_data_migrations', $state, false );
+		$previous_generation = YoOhw_COS_Intelligence::get_scoring_generation();
 		$this->assertFalse( YoOhw_COS_Commerce_Metrics_Policy::money_is_comparable( YoOhw_COS_Customers::get_customer( $id ) ) );
 		try {
 			for ( $batch = 0; $batch < 10; ++$batch ) {
@@ -317,6 +318,7 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 				}
 			}
 			$this->assertSame( 'completed', $current['status'] );
+			$this->assertNotSame( $previous_generation, YoOhw_COS_Intelligence::get_scoring_generation() );
 			$this->assertSame( get_woocommerce_currency(), $wpdb->get_var( $wpdb->prepare( 'SELECT currency FROM %i WHERE order_id = %d', YoOhw_COS_DB::order_facts_table(), $order->get_id() ) ) );
 			$customer = YoOhw_COS_Customers::get_customer( $id );
 			$this->assertSame( 'comparable', $customer['money_state'] );

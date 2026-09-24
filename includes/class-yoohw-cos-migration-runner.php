@@ -115,7 +115,7 @@ final class YoOhw_COS_Migration_Runner {
 			$state[ $migration_id ] = $migration;
 			update_option( self::STATE_OPTION, $state, false );
 			if ( 'commerce_currency_v3' === $migration_id && 'completed' === ( $migration['status'] ?? '' ) ) {
-				YoOhw_COS_Customers::request_intelligence_refresh();
+				YoOhw_COS_Intelligence::invalidate_monetary_decisions();
 			}
 		} catch ( Throwable $exception ) {
 			$state = self::get_state();
@@ -166,7 +166,7 @@ final class YoOhw_COS_Migration_Runner {
 		$state['commerce_currency_v3']['unresolved_issues'] = 0;
 		$state['commerce_currency_v3']['completed_at'] = YoOhw_COS_DB::now();
 		update_option( self::STATE_OPTION, $state, false );
-		YoOhw_COS_Customers::request_intelligence_refresh();
+		YoOhw_COS_Intelligence::invalidate_monetary_decisions();
 	}
 
 	private static function run_commerce_facts_batch( array $migration, string $migration_id ): array {

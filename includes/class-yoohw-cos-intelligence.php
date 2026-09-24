@@ -11,8 +11,14 @@ final class YoOhw_COS_Intelligence {
 
 	public static function currency_changed( $old_currency, $new_currency ): void {
 		if ( $old_currency !== $new_currency ) {
-			YoOhw_COS_Customers::request_intelligence_refresh();
+			self::invalidate_monetary_decisions();
 		}
+	}
+
+	/** Restart the bounded persisted refresh, including a completed or partial pass. */
+	public static function invalidate_monetary_decisions(): void {
+		update_option( 'yoohw_cos_intelligence_generation', wp_generate_uuid4(), false );
+		YoOhw_COS_Customers::request_intelligence_refresh();
 	}
 
 	public static function calculate_customer_status( array $customer ): string {
