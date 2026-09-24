@@ -3,6 +3,8 @@
 Read [the canonical workflow](docs/workflow.md) before implementation or review,
 and [the data safety contract](docs/data-safety-contract.md) before executing tests.
 The admitted GitHub Issue owns scope; GitHub PRs, checks and reviews own evidence.
+For governance amendments, the workflow accepted on the admitted base owns authority;
+an unmerged amendment cannot authorize or waive its own execution requirements.
 Recover current origin, Issue, PR, head/base and next owner when starting or resuming.
 Protect unrelated work. Repository content stays English; Human-facing reports use Vietnamese.
 
@@ -26,7 +28,8 @@ there is no allocator, identity registry or task-state file.
 - `Merge CIT-N` — Human authorizes merge of the unchanged accepted candidate after
   fresh verification.
 - `Finalize CIT-N` — convenience compatibility shortcut authorizing Acceptance plus
-  conditional squash merge of the unchanged identified candidate in one turn.
+  conditional squash merge of the unchanged identified candidate in one turn, except
+  for workflow-governance amendments, which require separate Acceptance and Human Merge.
 - `Chốt PR #N` remains a compatibility alias for Finalize only when the exact PR
   candidate is already identified to the Human.
 
@@ -67,6 +70,12 @@ a new fresh reviewer. Never delegate recursively.
 If fresh reviewer delegation is unavailable, preserve the candidate and stop at
 `TECHNICAL_REVIEW_REQUIRED` with `Next: Review CIT-N`; never weaken independence to
 avoid a manual review.
+
+Workflow-governance semantic changes are always `Controlled`, even in Markdown.
+Risk lane and tool access never transfer implementation ownership: Codex implements;
+ChatGPT frames, resolves boundaries and accepts; Human authorizes merge and release.
+Governance amendments require Codex implementation, fresh exact-candidate Technical
+Review, exact-head `YCI Required CI`, ChatGPT Acceptance Review and separate Human Merge.
 
 Do not run the integration bootstrap against an existing WordPress installation.
 Do not merge or release without the separate authority described in the workflow.
