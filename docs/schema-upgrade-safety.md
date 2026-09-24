@@ -47,6 +47,8 @@ retries failed items, then rebuilds customers. Revenue and AOV remain unavailabl
 backfill is incomplete or has unresolved issues. A successful order/customer repair can
 resolve its recorded issue; once all issues resolve, the worker's state becomes complete
 and the bounded intelligence refresh recalculates money-derived decisions.
+Commerce migrations pause without WooCommerce order APIs and resume when WooCommerce
+becomes available; an unavailable order source cannot count as an empty completed scan.
 
 Tests use the guarded owned MySQL runner, synthetic duplicate rows, and metadata/data
 snapshots. They cover blocked activation/upgrade, persisted migrations, retry,

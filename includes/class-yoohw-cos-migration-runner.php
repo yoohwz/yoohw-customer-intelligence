@@ -98,6 +98,9 @@ final class YoOhw_COS_Migration_Runner {
 			if ( '' === $migration_id ) {
 				return;
 			}
+			if ( self::needs_woocommerce_orders( $migration_id ) && ! self::woocommerce_orders_available() ) {
+				return;
+			}
 
 			$migration = $state[ $migration_id ];
 			$migration['status'] = 'in_progress';
@@ -608,9 +611,21 @@ final class YoOhw_COS_Migration_Runner {
 	}
 
 	private static function maybe_schedule(): void {
-		if ( '' !== self::next_pending_migration( self::get_state() ) && ! wp_next_scheduled( self::HOOK ) ) {
+		$migration_id = self::next_pending_migration( self::get_state() );
+		if ( '' === $migration_id || ( self::needs_woocommerce_orders( $migration_id ) && ! self::woocommerce_orders_available() ) ) {
+			return;
+		}
+		if ( ! wp_next_scheduled( self::HOOK ) ) {
 			self::schedule_next();
 		}
+	}
+
+	private static function needs_woocommerce_orders( string $migration_id ): bool {
+		return in_array( $migration_id, array( 'commerce_facts_v2', 'commerce_currency_v3' ), true );
+	}
+
+	private static function woocommerce_orders_available(): bool {
+		return function_exists( 'wc_get_orders' ) && function_exists( 'wc_get_order_statuses' );
 	}
 
 	private static function schedule_next(): void {
