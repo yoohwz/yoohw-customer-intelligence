@@ -12,14 +12,21 @@ Keep operator commands short. GitHub Issue `#N` is the canonical task identity `
 there is no allocator, identity registry or task-state file.
 
 - `Create ...` — ChatGPT records the minimum useful Issue boundary and risk.
-- `Run CIT-N` — Codex recovers Issue `#N`, branch/PR/current GitHub state and performs
-  the next implementation-owned step.
-- `Continue CIT-N` — Codex recovers current GitHub state and continues without
+- `Run CIT-N` — Codex recovers current GitHub state and performs the next
+  implementation-owned step. For `Controlled` work it also delegates the required
+  fresh Technical Reviewer after an exact candidate is pushed when supported.
+- `Continue CIT-N` — recover current GitHub state and resume the same task without
   restarting or asking the Human to repeat recoverable context.
-- `Review CIT-N` — a fresh independent reviewer handles the frozen exact candidate
-  when `Controlled` review is required. Review never authorizes merge.
-- `Finalize CIT-N` — Human conditionally authorizes ChatGPT to perform final Acceptance
-  and squash-merge only the unchanged identified candidate after fresh verification.
+- `Plan Review CIT-N` — ChatGPT resolves a genuinely unresolved product, architecture,
+  data, permission or compatibility boundary. It is not required for every Controlled task.
+- `Review CIT-N` — manual/standalone fresh Technical Review fallback for a frozen
+  Controlled candidate. Review never authorizes merge.
+- `Acceptance Review CIT-N` — ChatGPT performs exact-head external Acceptance and
+  records the verdict in GitHub. Acceptance never authorizes release.
+- `Merge CIT-N` — Human authorizes merge of the unchanged accepted candidate after
+  fresh verification.
+- `Finalize CIT-N` — convenience compatibility shortcut authorizing Acceptance plus
+  conditional squash merge of the unchanged identified candidate in one turn.
 - `Chốt PR #N` remains a compatibility alias for Finalize only when the exact PR
   candidate is already identified to the Human.
 
@@ -30,13 +37,36 @@ useful navigation footer:
 `Task: CIT-N`
 `Next: <one exact short Human command, or None>`
 
-Useful labels include `READY_TO_RUN`, `IN_PROGRESS`, `TECHNICAL_REVIEW_REQUIRED`,
-`TECHNICAL_REVIEW_BLOCKED`, `HUMAN_DECISION_REQUIRED`, `READY_TO_FINALIZE` and
-`FINALIZED`. These are Human navigation hints only: never parse them as authority,
+Useful labels include `READY_TO_RUN`, `IN_PROGRESS`, `PLAN_REVIEW_REQUIRED`,
+`TECHNICAL_REVIEW_REQUIRED`, `TECHNICAL_REVIEW_BLOCKED`,
+`ACCEPTANCE_REVIEW_REQUIRED`, `READY_TO_MERGE`, `HUMAN_DECISION_REQUIRED`
+and `FINALIZED`. These are Human navigation hints only: never parse them as authority,
 never store them as workflow state, and never let them replace GitHub facts.
 
-Use one implementer. Delegate only the independent review required by the workflow,
-in a fresh context and isolated, source-read-only checkout; never delegate recursively.
+## Compute and delegation
+
+Compute is selected by phase, not stored as task lifecycle state.
+
+- Root / ordinary implementation / correction: GPT-6 Sol / MEDIUM.
+- Controlled discovery or architecture when a separate Plan Review is actually needed:
+  GPT-6 Sol / HIGH.
+- Every fresh independent Technical Reviewer and re-reviewer: GPT-6 Sol / HIGH.
+- GPT-6 Sol / XHIGH is exceptional and requires a specific unresolved
+  architecture/security reason.
+- GPT-6 Astra is exceptional manual escalation, not a governed default.
+
+Reduce irrelevant context before increasing compute. Do not switch models for shell/Git/test
+substeps inside a phase.
+
+Use one implementer. For Controlled work, delegate only the required independent reviewer,
+in a fresh context and source-read-only checkout/environment. The reviewer receives the
+Issue/approved boundary, approved base, exact candidate SHA/diff and required validation,
+not implementer scratch reasoning or self-review conclusions. A changed candidate requires
+a new fresh reviewer. Never delegate recursively.
+
+If fresh reviewer delegation is unavailable, preserve the candidate and stop at
+`TECHNICAL_REVIEW_REQUIRED` with `Next: Review CIT-N`; never weaken independence to
+avoid a manual review.
+
 Do not run the integration bootstrap against an existing WordPress installation.
 Do not merge or release without the separate authority described in the workflow.
-This Foundation candidate cannot waive its own review or activate policy before Human merge.
