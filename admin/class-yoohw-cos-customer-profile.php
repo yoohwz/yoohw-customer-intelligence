@@ -129,20 +129,14 @@ final class YoOhw_COS_Customer_Profile {
 	}
 
 	private static function render_summary_cards( array $customer ): void {
+		$rfm = YoOhw_COS_RFM::summary( $customer );
 		echo '<div class="postbox yoohw-cos-profile-summary">';
 		echo '<div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Customer summary', 'yoohw-customer-intelligence' ) . '</h2></div>';
 		echo '<div class="inside">';
 		echo '<div class="yoohw-cos-summary-cards">';
-
-		self::render_card(
-			__( 'Total spent', 'yoohw-customer-intelligence' ),
-			YoOhw_COS_Commerce_Metrics_Policy::format_money( $customer, 'total_spent' )
-		);
-
-		self::render_card(
-			__( 'Orders', 'yoohw-customer-intelligence' ),
-			number_format_i18n( (int) $customer['total_orders'] )
-		);
+		self::render_card( __( 'R · Days since last recognized order', 'yoohw-customer-intelligence' ), $rfm['r'] );
+		self::render_card( __( 'F · Lifetime recognized orders', 'yoohw-customer-intelligence' ), $rfm['f'] );
+		self::render_card( __( 'M · Lifetime net revenue in recorded currency', 'yoohw-customer-intelligence' ), $rfm['m'] );
 
 		self::render_card(
 			__( 'Average order value', 'yoohw-customer-intelligence' ),

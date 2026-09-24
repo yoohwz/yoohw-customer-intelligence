@@ -13,7 +13,7 @@ final class YoOhw_COS_Saved_Views {
 		$input = array();
 		foreach ( $allowed as $key ) {
 			$value = $source[ $key ] ?? '';
-			$input[ $key ] = is_scalar( $value ) && strlen( (string) $value ) <= self::MAX_SEARCH ? (string) $value : '';
+			$input[ $key ] = is_scalar( $value ) && strlen( (string) $value ) <= self::MAX_SEARCH ? (string) $value : ( 0 === strpos( $key, 'rfm_' ) ? 'invalid' : '' );
 		}
 		$canonical = YoOhw_COS_Customer_Query::sanitize_args( $input );
 		return array_intersect_key( $canonical, array_fill_keys( $allowed, true ) );
@@ -23,8 +23,19 @@ final class YoOhw_COS_Saved_Views {
 		if ( ! is_array( $stored ) ) {
 			return 'invalid';
 		}
+		// Definitions written before RFM have no RFM keys and retain empty thresholds.
+		foreach ( array( 'rfm_recency_max_days', 'rfm_frequency_min', 'rfm_monetary_min' ) as $key ) {
+			if ( ! array_key_exists( $key, $stored ) ) {
+				$stored[ $key ] = '';
+			}
+		}
 		$canonical = self::definition( $stored );
-		if ( array_keys( $canonical ) !== array_keys( $stored ) ) {
+		foreach ( array( 'rfm_recency_max_days', 'rfm_frequency_min', 'rfm_monetary_min' ) as $key ) {
+			if ( 'invalid' === $canonical[ $key ] ) {
+				return 'invalid';
+			}
+		}
+		if ( array_diff_key( $canonical, $stored ) || array_diff_key( $stored, $canonical ) ) {
 			return 'invalid';
 		}
 		foreach ( $canonical as $key => $value ) {
@@ -162,6 +173,12 @@ final class YoOhw_COS_Saved_Views {
 			}
 			if ( ! is_scalar( $source[ $key ] ) || strlen( (string) $source[ $key ] ) > self::MAX_SEARCH ) {
 				return false;
+			}
+			if ( 0 === strpos( $key, 'rfm_' ) ) {
+				if ( 'invalid' === $value ) {
+					return false;
+				}
+				continue;
 			}
 			if ( (string) $source[ $key ] !== (string) $value ) {
 				return false;
