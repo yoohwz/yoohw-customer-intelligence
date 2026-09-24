@@ -248,8 +248,8 @@ final class YoOhw_COS_Customer_Query {
 			$params[] = YoOhw_COS_DB::tasks_table();
 			$params[] = YoOhw_COS_Tasks::STATUS_OPEN;
 			if ( 'overdue_follow_up' === $args['customer_attention'] ) {
-				$where .= ' AND t.due_date IS NOT NULL AND t.due_date > %s AND t.due_date < %s';
-				$params[] = '0000-00-00 00:00:00';
+				$where .= ' AND t.due_date IS NOT NULL AND t.due_date >= %s AND t.due_date < %s';
+				$params[] = '1900-01-01 00:00:00';
 				$params[] = YoOhw_COS_DB::now();
 			}
 			$where .= ')';

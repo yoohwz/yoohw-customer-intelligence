@@ -138,6 +138,7 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 			YoOhw_COS_Tasks::create_task( array( 'customer_id' => $first, 'title' => 'Past two' ) ),
 			YoOhw_COS_Tasks::create_task( array( 'customer_id' => $second, 'title' => 'Future' ) ),
 			YoOhw_COS_Tasks::create_task( array( 'customer_id' => $third, 'title' => 'No due' ) ),
+			YoOhw_COS_Tasks::create_task( array( 'customer_id' => $third, 'title' => 'Invalid old due' ) ),
 		);
 		foreach ( $tasks as $task ) {
 			$this->assertGreaterThan( 0, $task );
@@ -146,6 +147,8 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 			$wpdb->update( YoOhw_COS_DB::tasks_table(), array( 'due_date' => $past ), array( 'id' => $tasks[ $index ] ) );
 		}
 		$wpdb->update( YoOhw_COS_DB::tasks_table(), array( 'due_date' => $future ), array( 'id' => $tasks[2] ) );
+		$this->assertSame( 1, $wpdb->update( YoOhw_COS_DB::tasks_table(), array( 'due_date' => '1899-12-31 12:00:00' ), array( 'id' => $tasks[4] ) ) );
+		$this->assertSame( 0, YoOhw_COS_DB::date_timestamp( '1899-12-31 12:00:00' ) );
 		$tag = YoOhw_COS_Tags::create_tag( 'Follow-up sample' );
 		$segment = YoOhw_COS_Segments::create_segment( 'Follow-up sample' );
 		$this->assertTrue( YoOhw_COS_Tags::assign_tag( $first, $tag ) );
