@@ -68,6 +68,7 @@ final class YoOhw_COS_Loader {
 		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-notification-ledger.php';
 		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-integrations.php';
 		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-customer-query.php';
+		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-saved-views.php';
 		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-events.php';
 		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-customers.php';
 		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-tags.php';

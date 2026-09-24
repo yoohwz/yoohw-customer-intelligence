@@ -28,6 +28,61 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 		delete_option( 'yoohw_cos_scoring_settings' );
 	}
 
+	public function test_saved_views_are_private_canonical_and_explicitly_updated(): void {
+		$first = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		$second = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $first );
+		$source = array( 's' => 'synthetic', 'customer_status' => 'active', 'orderby' => 'total_orders', 'order' => 'ASC', 'paged' => 8, 'per_page' => 500, 'customer_id' => 42 );
+		$this->assertSame( 'ok', YoOhw_COS_Saved_Views::mutate( 'create', '', 'My view', $source ) );
+		$views = YoOhw_COS_Saved_Views::all();
+		$this->assertCount( 1, $views );
+		$id = array_key_first( $views );
+		$definition = $views[ $id ]['definition'];
+		$this->assertSame( 'synthetic', $definition['s'] );
+		$this->assertSame( 'active', $definition['customer_status'] );
+		$this->assertSame( 'ASC', $definition['order'] );
+		$this->assertArrayNotHasKey( 'paged', $definition );
+		$this->assertArrayNotHasKey( 'per_page', $definition );
+		$this->assertArrayNotHasKey( 'customer_id', $definition );
+		$this->assertSame( 'duplicate', YoOhw_COS_Saved_Views::mutate( 'create', '', 'my VIEW', $source ) );
+		$this->assertSame( 'ok', YoOhw_COS_Saved_Views::mutate( 'update', $id, '', array( 'customer_view' => 'archived' ) ) );
+		$this->assertSame( 'archived', YoOhw_COS_Saved_Views::get( $id )['definition']['customer_view'] );
+		$this->assertSame( '', YoOhw_COS_Saved_Views::get( $id )['definition']['s'] );
+		wp_set_current_user( $second );
+		$this->assertSame( array(), YoOhw_COS_Saved_Views::get( $id ) );
+		$this->assertSame( 'missing', YoOhw_COS_Saved_Views::mutate( 'delete', $id, '', array() ) );
+		$this->assertTrue( YoOhw_COS_Saved_Views::request_is_stale( array( 'saved_view_id' => $id ) ) );
+		$subscriber = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		wp_set_current_user( $subscriber );
+		$this->assertSame( 'permission', YoOhw_COS_Saved_Views::mutate( 'create', '', 'Denied', array() ) );
+		wp_set_current_user( $first );
+		$this->assertSame( 'ok', YoOhw_COS_Saved_Views::mutate( 'delete', $id, '', array() ) );
+		$this->assertSame( array(), YoOhw_COS_Saved_Views::all() );
+	}
+
+	public function test_saved_view_rejects_missing_constraints_and_malformed_definitions(): void {
+		$user = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $user );
+		$this->assertSame( 'invalid', YoOhw_COS_Saved_Views::mutate( 'create', '', 'Bad', array( 'customer_status' => array( 'active' ) ) ) );
+		$tag = YoOhw_COS_Tags::create_tag( 'Saved view fixture' );
+		$this->assertGreaterThan( 0, $tag );
+		$this->assertSame( 'ok', YoOhw_COS_Saved_Views::mutate( 'create', '', 'Tag view', array( 'customer_tag' => $tag ) ) );
+		$id = array_key_first( YoOhw_COS_Saved_Views::all() );
+		$this->assertSame( '', YoOhw_COS_Saved_Views::stale_reason( YoOhw_COS_Saved_Views::get( $id )['definition'] ) );
+		YoOhw_COS_Tags::delete_tag( $tag, true );
+		$this->assertSame( 'tag', YoOhw_COS_Saved_Views::stale_reason( YoOhw_COS_Saved_Views::get( $id )['definition'] ) );
+		$this->assertTrue( YoOhw_COS_Saved_Views::request_is_stale( array( 'saved_view_id' => $id ) ) );
+		$bad = YoOhw_COS_Saved_Views::get( $id )['definition'];
+		$bad['customer_status'] = 'unrecognized';
+		$this->assertSame( 'invalid', YoOhw_COS_Saved_Views::stale_reason( $bad ) );
+		$this->assertSame( 'ok', YoOhw_COS_Saved_Views::mutate( 'update', $id, '', array( 'customer_status' => 'active' ) ) );
+		$this->assertSame( '', YoOhw_COS_Saved_Views::stale_reason( YoOhw_COS_Saved_Views::get( $id )['definition'] ) );
+		for ( $index = 1; $index < 20; $index++ ) {
+			$this->assertSame( 'ok', YoOhw_COS_Saved_Views::mutate( 'create', '', 'View ' . $index, array() ) );
+		}
+		$this->assertSame( 'limit', YoOhw_COS_Saved_Views::mutate( 'create', '', 'Overflow', array() ) );
+	}
+
 	public function test_install_creates_expected_custom_tables(): void {
 		global $wpdb;
 

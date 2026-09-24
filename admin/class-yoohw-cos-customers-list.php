@@ -101,6 +101,13 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 		$per_page   = 20;
 		$query_args = YoOhw_COS_Customer_Query::sanitize_args( wp_unslash( $_REQUEST ) );
 
+		if ( YoOhw_COS_Saved_Views::request_is_stale( $_REQUEST ) ) {
+			$this->items = array();
+			$this->_column_headers = array( $this->get_columns(), array(), $this->get_sortable_columns() );
+			$this->set_pagination_args( array( 'total_items' => 0, 'per_page' => $per_page ) );
+			return;
+		}
+
 		$query_args['per_page'] = $per_page;
 		$query_args['paged']    = $this->get_pagenum();
 
@@ -197,6 +204,10 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 	}
 
 	public function no_items(): void {
+		if ( YoOhw_COS_Saved_Views::request_is_stale( $_REQUEST ) ) {
+			echo esc_html__( 'Saved view filters are unavailable. Correct them and update the view.', 'yoohw-customer-intelligence' );
+			return;
+		}
 		$customer_view = isset( $_REQUEST['customer_view'] ) ? sanitize_key( wp_unslash( $_REQUEST['customer_view'] ) ) : '';
 
 		if ( 'archived' === $customer_view ) {
@@ -253,9 +264,14 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 		$views = array();
 
 		foreach ( $labels as $status => $label ) {
-			$args = array(
-				'page' => 'yoohw-customer-intelligence',
-			);
+			$args = array( 'page' => 'yoohw-customer-intelligence' );
+			if ( isset( $_GET['saved_view_id'] ) ) {
+				$args = array_merge( $args, YoOhw_COS_Saved_Views::definition( wp_unslash( $_GET ) ) );
+				$args['customer_view'] = '';
+				$args['customer_status'] = $status;
+				$args['saved_view_id'] = YoOhw_COS_Saved_Views::active_id( $_GET );
+				$args['saved_view_context'] = '1';
+			}
 
 			if ( '' !== $status ) {
 				$args['customer_status'] = $status;
@@ -285,6 +301,9 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 			),
 			admin_url( 'admin.php' )
 		);
+		if ( isset( $_GET['saved_view_id'] ) ) {
+			$archived_url = add_query_arg( array_merge( YoOhw_COS_Saved_Views::definition( wp_unslash( $_GET ) ), array( 'customer_view' => 'archived', 'customer_status' => '', 'saved_view_id' => YoOhw_COS_Saved_Views::active_id( $_GET ), 'saved_view_context' => '1' ) ), $archived_url );
+		}
 		$archived_class = 'archived' === $current ? ' class="current" aria-current="page"' : '';
 
 		$views['archived'] = sprintf(

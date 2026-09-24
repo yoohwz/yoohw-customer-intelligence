@@ -24,6 +24,10 @@ final class YoOhw_COS_Customer_Exporter {
 			wp_die( esc_html__( 'Customer export request could not be verified.', 'yoohw-customer-intelligence' ) );
 		}
 
+		if ( YoOhw_COS_Saved_Views::request_is_stale( $_REQUEST ) ) {
+			wp_die( esc_html__( 'Saved view filters are unavailable; export was blocked.', 'yoohw-customer-intelligence' ) );
+		}
+
 		$source             = wp_unslash( $_REQUEST );
 		$args               = YoOhw_COS_Customer_Query::sanitize_args( is_array( $source ) ? $source : array() );
 		$args['paged']      = 1;
