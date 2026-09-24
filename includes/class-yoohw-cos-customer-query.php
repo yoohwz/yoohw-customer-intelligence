@@ -21,6 +21,9 @@ final class YoOhw_COS_Customer_Query {
 			'risk_level'         => self::sanitize_risk_level( self::get_scalar( $source, 'risk_level' ) ),
 			'customer_cohort'    => self::sanitize_customer_cohort( self::get_scalar( $source, 'customer_cohort' ) ),
 			'customer_attention' => self::sanitize_customer_attention( self::get_scalar( $source, 'customer_attention' ) ),
+			'rfm_recency_max_days' => self::sanitize_rfm_integer( array_key_exists( 'rfm_recency_max_days', $source ) ? $source['rfm_recency_max_days'] : '', 3650 ),
+			'rfm_frequency_min' => self::sanitize_rfm_integer( array_key_exists( 'rfm_frequency_min', $source ) ? $source['rfm_frequency_min'] : '', 100000 ),
+			'rfm_monetary_min' => self::sanitize_rfm_money( array_key_exists( 'rfm_monetary_min', $source ) ? $source['rfm_monetary_min'] : '' ),
 			'loyalty_level'      => $loyalty_active ? self::sanitize_loyalty_level( self::get_scalar( $source, 'loyalty_level' ) ) : '',
 			'loyalty_score'      => $loyalty_active ? self::sanitize_loyalty_score_range( self::get_scalar( $source, 'loyalty_score' ) ) : '',
 			'lifecycle_stage'    => self::sanitize_lifecycle_stage( self::get_scalar( $source, 'lifecycle_stage' ) ),
@@ -85,6 +88,11 @@ final class YoOhw_COS_Customer_Query {
 		$customer_segments_table = YoOhw_COS_DB::customer_segments_table();
 		$where                   = 'WHERE 1=1';
 		$params                  = array();
+		foreach ( array( 'rfm_recency_max_days', 'rfm_frequency_min', 'rfm_monetary_min' ) as $rfm_key ) {
+			if ( 'invalid' === $args[ $rfm_key ] ) {
+				return array( 'where' => 'WHERE 1=0', 'params' => array() );
+			}
+		}
 		$search                  = (string) $args['s'];
 		$normalized_search_id    = self::normalize_search_id( $search );
 		$classification_filter = '' !== $args['customer_status'] || '' !== $args['vip_status']
@@ -231,6 +239,28 @@ final class YoOhw_COS_Customer_Query {
 			$where .= ' AND total_orders <= 1';
 		}
 
+		if ( '' !== $args['rfm_recency_max_days'] ) {
+			$today = new DateTimeImmutable( current_time( 'Y-m-d' ), wp_timezone() );
+			$first_day = $today->modify( '-' . $args['rfm_recency_max_days'] . ' days' )->format( 'Y-m-d 00:00:00' );
+			$where .= ' AND total_orders > 0 AND last_order_date >= %s';
+			$params[] = $first_day;
+		}
+		if ( '' !== $args['rfm_frequency_min'] ) {
+			$where .= ' AND total_orders >= %d';
+			$params[] = (int) $args['rfm_frequency_min'];
+		}
+		if ( '' !== $args['rfm_monetary_min'] ) {
+			$currency = YoOhw_COS_Commerce_Metrics_Policy::current_store_currency();
+			if ( ! YoOhw_COS_Migration_Runner::currency_backfill_is_complete() || ! preg_match( '/^[A-Z]{3}$/', $currency ) ) {
+				return array( 'where' => 'WHERE 1=0', 'params' => array() );
+			}
+			$where .= ' AND money_state = %s AND money_currency = %s AND commerce_metrics_version >= %d AND total_spent >= %s';
+			$params[] = 'comparable';
+			$params[] = $currency;
+			$params[] = YoOhw_COS_Commerce_Metrics_Policy::VERSION;
+			$params[] = $args['rfm_monetary_min'];
+		}
+
 		if ( in_array( $args['customer_attention'], array( 'high_value_retention', 'high_value_needs_follow_up' ), true ) ) {
 			$where   .= ' AND vip_status <> %s AND customer_status IN (%s, %s)';
 			$params[] = 'none';
@@ -293,6 +323,36 @@ final class YoOhw_COS_Customer_Query {
 		}
 
 		return (string) $source[ $key ];
+	}
+
+	private static function sanitize_rfm_integer( $value, int $maximum ): string {
+		if ( ! is_scalar( $value ) || is_bool( $value ) ) {
+			return 'invalid';
+		}
+		$value = trim( (string) $value );
+		if ( '' === $value ) {
+			return '';
+		}
+		if ( ! preg_match( '/^(0|[1-9][0-9]*)$/D', $value ) || strlen( $value ) > strlen( (string) $maximum ) || (int) $value > $maximum ) {
+			return 'invalid';
+		}
+		return $value;
+	}
+
+	private static function sanitize_rfm_money( $value ): string {
+		if ( ! is_scalar( $value ) || is_bool( $value ) ) {
+			return 'invalid';
+		}
+		$value = trim( (string) $value );
+		if ( '' === $value ) {
+			return '';
+		}
+		// A decimal(20,6) holds at most fourteen integer and six fractional digits.
+		if ( ! preg_match( '/^(0|[1-9][0-9]{0,13})(?:\.([0-9]{1,6}))?$/D', $value ) ) {
+			return 'invalid';
+		}
+		$parts = explode( '.', $value );
+		return $parts[0] . ( isset( $parts[1] ) && '' !== rtrim( $parts[1], '0' ) ? '.' . rtrim( $parts[1], '0' ) : '' );
 	}
 
 	private static function sanitize_orderby( string $orderby ): string {

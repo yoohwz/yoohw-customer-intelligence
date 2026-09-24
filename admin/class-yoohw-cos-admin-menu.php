@@ -774,6 +774,9 @@ final class YoOhw_COS_Admin_Menu {
 			&& empty( $_GET['lifecycle_stage'] )
 			&& empty( $_GET['customer_cohort'] )
 			&& empty( $_GET['customer_attention'] )
+			&& ( ! isset( $_GET['rfm_recency_max_days'] ) || '' === $_GET['rfm_recency_max_days'] )
+			&& ( ! isset( $_GET['rfm_frequency_min'] ) || '' === $_GET['rfm_frequency_min'] )
+			&& ( ! isset( $_GET['rfm_monetary_min'] ) || '' === $_GET['rfm_monetary_min'] )
 			&& ( ! self::is_loyalty_integration_active() || empty( $_GET['loyalty_level'] ) )
 			&& empty( $_GET['customer_tag'] )
 			&& empty( $_GET['customer_segment'] )
@@ -917,7 +920,7 @@ final class YoOhw_COS_Admin_Menu {
 		$id = YoOhw_COS_Saved_Views::active_id( $_GET );
 		$active = YoOhw_COS_Saved_Views::get( $id );
 		$stale = isset( $_GET['saved_view_id'] ) && YoOhw_COS_Saved_Views::request_is_stale( $_GET );
-		$dirty = $active && ! $stale && YoOhw_COS_Saved_Views::definition( wp_unslash( $_GET ) ) !== $active['definition'];
+		$dirty = $active && ! $stale && YoOhw_COS_Saved_Views::definition( wp_unslash( $_GET ) ) !== YoOhw_COS_Saved_Views::definition( $active['definition'] );
 		$messages = array(
 			'created' => __( 'Saved view created.', 'yoohw-customer-intelligence' ),
 			'updated' => __( 'Saved view updated.', 'yoohw-customer-intelligence' ),
@@ -4095,6 +4098,9 @@ final class YoOhw_COS_Admin_Menu {
 			'lifecycle_stage',
 			'customer_cohort',
 			'customer_attention',
+			'rfm_recency_max_days',
+			'rfm_frequency_min',
+			'rfm_monetary_min',
 			'customer_tag',
 			'customer_segment',
 			'paged',
@@ -4117,12 +4123,17 @@ final class YoOhw_COS_Admin_Menu {
 			$value = $source[ $key ];
 
 			if ( is_array( $value ) ) {
+				if ( 0 === strpos( $key, 'rfm_' ) ) {
+					$args[ $key ] = 'invalid';
+				}
 				continue;
 			}
 
-			$args[ $key ] = is_numeric( $value )
-				? absint( $value )
-				: sanitize_text_field( $value );
+			if ( 0 === strpos( $key, 'rfm_' ) ) {
+				$args[ $key ] = YoOhw_COS_Customer_Query::sanitize_args( array( $key => $value ) )[ $key ];
+			} else {
+				$args[ $key ] = is_numeric( $value ) ? absint( $value ) : sanitize_text_field( $value );
+			}
 		}
 
 		return $args;

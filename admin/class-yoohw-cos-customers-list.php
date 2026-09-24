@@ -31,7 +31,7 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 			'customer'           => __( 'Customer', 'yoohw-customer-intelligence' ),
 			'contact'            => __( 'Contact', 'yoohw-customer-intelligence' ),
 			'labels'             => __( 'Labels', 'yoohw-customer-intelligence' ),
-			'commerce'           => __( 'Commerce', 'yoohw-customer-intelligence' ),
+			'commerce'           => __( 'RFM', 'yoohw-customer-intelligence' ),
 			'health'             => __( 'Health', 'yoohw-customer-intelligence' ),
 			'last_activity_date' => __( 'Last active', 'yoohw-customer-intelligence' ),
 		);
@@ -218,7 +218,7 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 			return;
 		}
 
-		$filter_keys = array( 's', 'customer_status', 'customer_tag', 'customer_segment', 'vip_status', 'risk_level', 'lifecycle_stage', 'customer_cohort', 'customer_attention' );
+		$filter_keys = array( 's', 'customer_status', 'customer_tag', 'customer_segment', 'vip_status', 'risk_level', 'lifecycle_stage', 'customer_cohort', 'customer_attention', 'rfm_recency_max_days', 'rfm_frequency_min', 'rfm_monetary_min' );
 
 		if ( self::is_loyalty_integration_active() ) {
 			$filter_keys[] = 'loyalty_level';
@@ -246,7 +246,8 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 	}
 
 	protected function get_views(): array {
-		$status_counts = YoOhw_COS_Customers::get_status_counts();
+		$filters       = YoOhw_COS_Saved_Views::definition( wp_unslash( $_GET ) );
+		$stale         = YoOhw_COS_Saved_Views::request_is_stale( $_GET );
 		$current_view  = isset( $_GET['customer_view'] ) ? sanitize_key( wp_unslash( $_GET['customer_view'] ) ) : '';
 		$current       = 'archived' === $current_view
 			? 'archived'
@@ -264,22 +265,12 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 		$views = array();
 
 		foreach ( $labels as $status => $label ) {
-			$args = array( 'page' => 'yoohw-customer-intelligence' );
+			$args = array_merge( $filters, array( 'page' => 'yoohw-customer-intelligence', 'customer_status' => $status, 'customer_view' => '' ) );
 			if ( isset( $_GET['saved_view_id'] ) ) {
-				$args = array_merge( $args, YoOhw_COS_Saved_Views::definition( wp_unslash( $_GET ) ) );
-				$args['customer_view'] = '';
-				$args['customer_status'] = $status;
 				$args['saved_view_id'] = YoOhw_COS_Saved_Views::active_id( $_GET );
 				$args['saved_view_context'] = '1';
 			}
-
-			if ( '' !== $status ) {
-				$args['customer_status'] = $status;
-			}
-
-			$count = '' === $status
-				? array_sum( $status_counts )
-				: ( $status_counts[ $status ] ?? 0 );
+			$count = $stale ? 0 : YoOhw_COS_Customer_Query::query( array_merge( $filters, array( 'customer_status' => $status, 'customer_view' => '', 'per_page' => 1 ) ) )['total_items'];
 
 			$class = $current === $status ? ' class="current" aria-current="page"' : '';
 			$key   = '' === $status ? 'all' : $status;
@@ -293,16 +284,17 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 			);
 		}
 
-		$archived_count = YoOhw_COS_Customers::get_archived_count();
+		$archived_count = $stale ? 0 : YoOhw_COS_Customer_Query::query( array_merge( $filters, array( 'customer_view' => 'archived', 'customer_status' => '', 'per_page' => 1 ) ) )['total_items'];
 		$archived_url   = add_query_arg(
-			array(
+			array_merge( $filters, array(
 				'page'          => 'yoohw-customer-intelligence',
 				'customer_view' => 'archived',
-			),
+				'customer_status' => '',
+			) ),
 			admin_url( 'admin.php' )
 		);
 		if ( isset( $_GET['saved_view_id'] ) ) {
-			$archived_url = add_query_arg( array_merge( YoOhw_COS_Saved_Views::definition( wp_unslash( $_GET ) ), array( 'customer_view' => 'archived', 'customer_status' => '', 'saved_view_id' => YoOhw_COS_Saved_Views::active_id( $_GET ), 'saved_view_context' => '1' ) ), $archived_url );
+			$archived_url = add_query_arg( array( 'saved_view_id' => YoOhw_COS_Saved_Views::active_id( $_GET ), 'saved_view_context' => '1' ), $archived_url );
 		}
 		$archived_class = 'archived' === $current ? ' class="current" aria-current="page"' : '';
 
@@ -399,19 +391,12 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 	}
 
 	private function format_commerce( array $item ): string {
-		$orders = absint( $item['total_orders'] ?? 0 );
-		$spent = YoOhw_COS_Commerce_Metrics_Policy::format_money( $item, 'total_spent' );
-		$orders_label = sprintf(
-			/* translators: %s: number of customer orders. */
-			_n( '%s order', '%s orders', $orders, 'yoohw-customer-intelligence' ),
-			number_format_i18n( $orders )
-		);
+		$rfm = YoOhw_COS_RFM::summary( $item );
 
 		$output  = '<div class="yoohw-cos-customer-list-stack">';
-		$output .= '<strong>';
-		$output .= esc_html( $orders_label );
-		$output .= '</strong>';
-		$output .= '<span class="yoohw-cos-muted">' . wp_kses_post( $spent ) . '</span>';
+		$output .= '<strong title="' . esc_attr__( 'R: days since last recognized order', 'yoohw-customer-intelligence' ) . '">R: ' . esc_html( $rfm['r'] ) . '</strong>';
+		$output .= '<span title="' . esc_attr__( 'F: lifetime recognized orders', 'yoohw-customer-intelligence' ) . '">F: ' . esc_html( $rfm['f'] ) . '</span>';
+		$output .= '<span class="yoohw-cos-muted" title="' . esc_attr__( 'M: lifetime net revenue in its recorded currency', 'yoohw-customer-intelligence' ) . '">M: ' . wp_kses_post( $rfm['m'] ) . '</span>';
 		$output .= '</div>';
 
 		return $output;
@@ -652,6 +637,21 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 			echo '</option>';
 		}
 		echo '</select>';
+
+		$rfm_fields = array(
+			'rfm_recency_max_days' => array( __( 'R: max days since order', 'yoohw-customer-intelligence' ), '3650', '1' ),
+			'rfm_frequency_min'    => array( __( 'F: minimum orders', 'yoohw-customer-intelligence' ), '100000', '1' ),
+			'rfm_monetary_min'     => array( __( 'M: minimum net revenue in store currency', 'yoohw-customer-intelligence' ), '99999999999999.999999', '0.000001' ),
+		);
+		foreach ( $rfm_fields as $key => $field ) {
+			$value = YoOhw_COS_Customer_Query::sanitize_args( wp_unslash( $_REQUEST ) )[ $key ];
+			echo '<label class="screen-reader-text" for="yoohw-cos-' . esc_attr( $key ) . '">' . esc_html( $field[0] ) . '</label>';
+			if ( 'rfm_monetary_min' === $key ) {
+				echo '<input type="text" inputmode="decimal" maxlength="21" id="yoohw-cos-' . esc_attr( $key ) . '" name="' . esc_attr( $key ) . '" placeholder="' . esc_attr( $field[0] ) . '" value="' . esc_attr( 'invalid' === $value ? '' : $value ) . '" />';
+			} else {
+				echo '<input type="number" id="yoohw-cos-' . esc_attr( $key ) . '" name="' . esc_attr( $key ) . '" min="0" max="' . esc_attr( $field[1] ) . '" step="' . esc_attr( $field[2] ) . '" placeholder="' . esc_attr( $field[0] ) . '" value="' . esc_attr( 'invalid' === $value ? '' : $value ) . '" />';
+			}
+		}
 
 		submit_button(
 			__( 'Filter', 'yoohw-customer-intelligence' ),

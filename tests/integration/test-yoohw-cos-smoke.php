@@ -85,6 +85,88 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 		$this->assertSame( 'limit', YoOhw_COS_Saved_Views::mutate( 'create', '', 'Overflow', array() ) );
 	}
 
+	public function test_rfm_filters_use_site_days_and_guarded_currency(): void {
+		$previous = get_option( 'yoohw_cos_data_migrations', array() );
+		update_option( 'yoohw_cos_data_migrations', array( 'commerce_currency_v3' => array( 'status' => 'completed' ) ), false );
+		try {
+			$currency = get_woocommerce_currency();
+			$foreign = 'USD' === $currency ? 'EUR' : 'USD';
+			$today = current_time( 'Y-m-d' );
+			$day30 = ( new DateTimeImmutable( $today, wp_timezone() ) )->modify( '-30 days' )->format( 'Y-m-d' );
+			$day31 = ( new DateTimeImmutable( $today, wp_timezone() ) )->modify( '-31 days' )->format( 'Y-m-d' );
+			$base = array( 'total_orders' => 2, 'total_spent' => 125.5, 'money_state' => 'comparable', 'money_currency' => $currency, 'commerce_metrics_version' => YoOhw_COS_Commerce_Metrics_Policy::VERSION );
+			$today_id = YoOhw_COS_Customers::create_customer( array_merge( $base, array( 'email' => 'rfm-today@example.test', 'last_order_date' => $today . ' 09:00:00', 'last_activity_date' => $day31 . ' 12:00:00' ) ) );
+			$boundary_id = YoOhw_COS_Customers::create_customer( array_merge( $base, array( 'email' => 'rfm-boundary@example.test', 'last_order_date' => $day30 . ' 00:00:00' ) ) );
+			YoOhw_COS_Customers::create_customer( array_merge( $base, array( 'email' => 'rfm-old@example.test', 'last_order_date' => $day31 . ' 23:59:59' ) ) );
+			YoOhw_COS_Customers::create_customer( array_merge( $base, array( 'email' => 'rfm-foreign@example.test', 'last_order_date' => $today . ' 09:00:00', 'money_currency' => $foreign ) ) );
+			YoOhw_COS_Customers::create_customer( array_merge( $base, array( 'email' => 'rfm-mixed@example.test', 'last_order_date' => $today . ' 09:00:00', 'money_state' => 'mixed' ) ) );
+			YoOhw_COS_Customers::create_customer( array_merge( $base, array( 'email' => 'rfm-unknown@example.test', 'last_order_date' => $today . ' 09:00:00', 'money_state' => 'unknown', 'money_currency' => null ) ) );
+			YoOhw_COS_Customers::create_customer( array_merge( $base, array( 'email' => 'rfm-stale@example.test', 'last_order_date' => $today . ' 09:00:00', 'commerce_metrics_version' => 1 ) ) );
+			YoOhw_COS_Customers::create_customer( array( 'email' => 'rfm-none@example.test', 'total_orders' => 0, 'last_activity_date' => $today . ' 09:00:00' ) );
+			$this->assertSame( 0, YoOhw_COS_RFM::recency_days( YoOhw_COS_Customers::get_customer( $today_id ) ) );
+			$this->assertSame( 30, YoOhw_COS_RFM::recency_days( YoOhw_COS_Customers::get_customer( $boundary_id ) ) );
+			$this->assertSame( 6, YoOhw_COS_Customer_Query::query( array( 'rfm_recency_max_days' => '30' ) )['total_items'] );
+			$this->assertSame( 2, YoOhw_COS_Customer_Query::query( array( 'rfm_recency_max_days' => '30', 'rfm_frequency_min' => '2', 'rfm_monetary_min' => '125.50' ) )['total_items'] );
+			$filtered = YoOhw_COS_Customer_Query::query( array( 'rfm_recency_max_days' => '30', 'rfm_frequency_min' => '2', 'rfm_monetary_min' => '125.5', 'customer_attention' => 'missing_contact', 's' => 'rfm-', 'per_page' => 1 ) );
+			$this->assertSame( 2, $filtered['total_items'] );
+			$this->assertCount( 1, $filtered['items'] );
+			$this->assertSame( 1, YoOhw_COS_Customer_Query::query( array( 'rfm_recency_max_days' => '0', 'rfm_monetary_min' => '125.5' ) )['total_items'] );
+			update_option( 'woocommerce_currency', $foreign );
+			$this->assertSame( 1, YoOhw_COS_Customer_Query::query( array( 'rfm_monetary_min' => '125.5' ) )['total_items'] );
+			update_option( 'woocommerce_currency', $currency );
+			$this->assertSame( '125.5', YoOhw_COS_Customer_Query::sanitize_args( array( 'rfm_monetary_min' => '125.500000' ) )['rfm_monetary_min'] );
+			foreach ( array( -1, 'NaN', '3651', array( 1 ), false, null ) as $bad ) {
+				$this->assertSame( 0, YoOhw_COS_Customer_Query::query( array( 'rfm_recency_max_days' => $bad ) )['total_items'] );
+			}
+			$this->assertSame( 0, YoOhw_COS_Customer_Query::query( array( 'rfm_monetary_min' => '100000000000000' ) )['total_items'] );
+			update_option( 'yoohw_cos_data_migrations', array( 'commerce_currency_v3' => array( 'status' => 'pending' ) ), false );
+			$this->assertSame( 0, YoOhw_COS_Customer_Query::query( array( 'rfm_monetary_min' => '0' ) )['total_items'] );
+			$this->assertGreaterThan( 0, YoOhw_COS_Customer_Query::query( array( 'rfm_frequency_min' => '2' ) )['total_items'] );
+		} finally {
+			update_option( 'woocommerce_currency', $currency );
+			update_option( 'yoohw_cos_data_migrations', $previous, false );
+		}
+	}
+
+	public function test_rfm_saved_view_definitions_are_live_and_tampering_is_rejected(): void {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		$source = array( 'rfm_recency_max_days' => '30', 'rfm_frequency_min' => '2', 'rfm_monetary_min' => '125.500000' );
+		$this->assertSame( 'ok', YoOhw_COS_Saved_Views::mutate( 'create', '', 'RFM view', $source ) );
+		$definition = YoOhw_COS_Saved_Views::get( array_key_first( YoOhw_COS_Saved_Views::all() ) )['definition'];
+		$this->assertSame( '125.5', $definition['rfm_monetary_min'] );
+		$this->assertSame( '', YoOhw_COS_Saved_Views::stale_reason( $definition ) );
+		$this->assertArrayNotHasKey( 'paged', $definition );
+		$customer_id = YoOhw_COS_Customers::create_customer( array( 'email' => 'rfm-live@example.test', 'total_orders' => 2, 'total_spent' => 150, 'last_order_date' => current_time( 'Y-m-d' ) . ' 09:00:00', 'money_state' => 'comparable', 'money_currency' => get_woocommerce_currency(), 'commerce_metrics_version' => YoOhw_COS_Commerce_Metrics_Policy::VERSION ) );
+		$this->assertSame( 1, YoOhw_COS_Customer_Query::query( $definition )['total_items'] );
+		YoOhw_COS_Customers::update_customer( $customer_id, array( 'total_spent' => 100 ) );
+		$this->assertSame( 0, YoOhw_COS_Customer_Query::query( $definition )['total_items'] );
+		$this->assertSame( 'invalid', YoOhw_COS_Saved_Views::stale_reason( array_merge( $definition, array( 'rfm_frequency_min' => array( '2' ) ) ) ) );
+		$this->assertSame( 'invalid', YoOhw_COS_Saved_Views::stale_reason( array_merge( $definition, array( 'rfm_frequency_min' => false ) ) ) );
+		$this->assertSame( 'invalid', YoOhw_COS_Saved_Views::stale_reason( array_merge( $definition, array( 'rfm_monetary_min' => false ) ) ) );
+		$this->assertSame( 'invalid', YoOhw_COS_Saved_Views::mutate( 'create', '', 'Bad RFM', array( 'rfm_monetary_min' => '1e9' ) ) );
+		$this->assertSame( 'invalid', YoOhw_COS_Saved_Views::mutate( 'create', '', 'Bad boolean', array( 'rfm_recency_max_days' => false ) ) );
+		$this->assertSame( 'invalid', YoOhw_COS_Saved_Views::mutate( 'create', '', 'Bad array', array( 'rfm_recency_max_days' => array( '30' ) ) ) );
+		$old = $definition;
+		unset( $old['rfm_recency_max_days'], $old['rfm_frequency_min'], $old['rfm_monetary_min'] );
+		$this->assertSame( '', YoOhw_COS_Saved_Views::stale_reason( $old ) );
+		$views = YoOhw_COS_Saved_Views::all();
+		$id = array_key_first( $views );
+		$views[ $id ]['definition'] = $old;
+		update_user_meta( get_current_user_id(), '_yoohw_cos_saved_customer_views', $views );
+		$previous_get = $_GET;
+		try {
+			$_GET = array_merge( $old, array( 'saved_view_id' => $id, 'saved_view_context' => '1' ) );
+			$render = new ReflectionMethod( 'YoOhw_COS_Admin_Menu', 'render_saved_views_control' );
+			ob_start();
+			$render->invoke( null );
+			$html = ob_get_clean();
+			$this->assertStringContainsString( 'Saved view active.', $html );
+			$this->assertStringNotContainsString( 'Current filters differ from this saved view.', $html );
+		} finally {
+			$_GET = $previous_get;
+		}
+	}
+
 	public function test_follow_up_attention_tracks_task_membership_and_saved_view_definitions(): void {
 		$owner = self::factory()->user->create( array( 'role' => 'administrator' ) );
 		wp_set_current_user( $owner );
@@ -1825,6 +1907,7 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 			'includes/class-yoohw-cos-install.php',
 			'includes/class-yoohw-cos-db.php',
 			'includes/class-yoohw-cos-commerce-metrics-policy.php',
+			'includes/class-yoohw-cos-rfm.php',
 			'includes/class-yoohw-cos-customer-identity.php',
 			'includes/class-yoohw-cos-commerce-aggregates.php',
 			'includes/class-yoohw-cos-migration-runner.php',

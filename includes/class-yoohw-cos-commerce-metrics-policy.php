@@ -29,6 +29,13 @@ final class YoOhw_COS_Commerce_Metrics_Policy {
 		if ( ! self::money_is_comparable( $customer ) || ! function_exists( 'get_woocommerce_currency' ) ) {
 			return false;
 		}
+		return $customer['money_currency'] === self::current_store_currency();
+	}
+
+	public static function current_store_currency(): string {
+		if ( ! function_exists( 'get_woocommerce_currency' ) ) {
+			return '';
+		}
 		$generation = YoOhw_COS_Intelligence::get_scoring_generation();
 		if ( self::$store_currency_generation !== $generation ) {
 			// A currency update in another request does not invalidate this request's option cache.
@@ -37,7 +44,7 @@ final class YoOhw_COS_Commerce_Metrics_Policy {
 			wp_cache_delete( 'alloptions', 'options' );
 			self::$store_currency_generation = $generation;
 		}
-		return $customer['money_currency'] === get_woocommerce_currency();
+		return get_woocommerce_currency();
 	}
 
 	public static function format_money( array $source, string $key ): string {
