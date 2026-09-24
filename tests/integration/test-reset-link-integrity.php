@@ -936,7 +936,7 @@ final class YCI_CSV_Export_Safety_Test extends WP_UnitTestCase {
 		YoOhw_COS_Customers::reset_data();
 		$id = YoOhw_COS_Customers::create_customer( array( 'display_name' => 'CSV fixture' ) );
 		$this->assertGreaterThan( 0, $id );
-		$this->assertNotFalse( $wpdb->update( YoOhw_COS_DB::customers_table(), $values + array( 'display_name' => 'CSV fixture', 'email' => 'csv@example.test', 'phone' => '', 'total_orders' => 2, 'total_spent' => '-12.50', 'average_order_value' => '-6.25', 'money_state' => 'comparable', 'money_currency' => get_woocommerce_currency(), 'commerce_metrics_version' => YoOhw_COS_Commerce_Metrics_Policy::VERSION, 'risk_score' => '0', 'trust_score' => '95.25' ), array( 'id' => $id ) ) );
+		$this->assertNotFalse( $wpdb->update( YoOhw_COS_DB::customers_table(), $values + array( 'display_name' => 'CSV fixture', 'email' => 'csv@example.test', 'phone' => '', 'total_orders' => 2, 'total_spent' => '-12.50', 'average_order_value' => '-6.25', 'money_state' => 'comparable', 'money_currency' => get_woocommerce_currency(), 'commerce_metrics_version' => YoOhw_COS_Commerce_Metrics_Policy::VERSION, 'intelligence_currency_ready' => 1, 'risk_score' => '0', 'trust_score' => '95.25' ), array( 'id' => $id ) ) );
 		return $id;
 	}
 

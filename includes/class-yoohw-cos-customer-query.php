@@ -90,8 +90,10 @@ final class YoOhw_COS_Customer_Query {
 		$classification_filter = '' !== $args['customer_status'] || '' !== $args['vip_status']
 			|| '' !== $args['risk_level'] || '' !== $args['lifecycle_stage']
 			|| 'high_value_retention' === $args['customer_attention'];
-		if ( $classification_filter && ! YoOhw_COS_Migration_Runner::currency_backfill_is_complete() ) {
-			$where .= ' AND intelligence_currency_ready = 1';
+		if ( $classification_filter ) {
+			$where .= YoOhw_COS_Intelligence::persisted_generation_is_current()
+				? ' AND intelligence_currency_ready = 1'
+				: ' AND 1 = 0';
 		}
 
 		if ( 'archived' === $args['customer_view'] ) {

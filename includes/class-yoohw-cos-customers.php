@@ -205,8 +205,15 @@ final class YoOhw_COS_Customers {
 		$affected_customer_ids = array_map( 'absint', (array) ( $metrics['_affected_customer_ids'] ?? array( $customer_id ) ) );
 		unset( $metrics['_affected_customer_ids'] );
 
+		$refresh_failed = false;
 		foreach ( array_values( array_unique( array_filter( $affected_customer_ids ) ) ) as $affected_customer_id ) {
-			self::refresh_derived_intelligence( $affected_customer_id, $affected_customer_id === $customer_id ? $order : null );
+			if ( ! self::refresh_derived_intelligence( $affected_customer_id, $affected_customer_id === $customer_id ? $order : null ) ) {
+				$refresh_failed = true;
+			}
+		}
+		if ( $refresh_failed ) {
+			YoOhw_COS_Intelligence::invalidate_monetary_decisions();
+			self::schedule_failed_order_sync( new RuntimeException( 'Derived intelligence refresh failed.' ), $order_id, $customer_id );
 		}
 
 		if ( ! self::maybe_link_order_to_customer( $order, $customer_id ) ) {
@@ -928,6 +935,7 @@ final class YoOhw_COS_Customers {
 			'yoohw_cos_operation_sync_state_blacklist_signals',
 			'yoohw_cos_activity_semantics_recalculation',
 			'yoohw_cos_intelligence_freshness',
+			'yoohw_cos_currency_decision_generation',
 			'yoohw_cos_customer_data_updated_at',
 			'yoohw_cos_loyalty_backfill_state',
 			'yoohw_cos_premium_reassociation_state',
@@ -1234,15 +1242,15 @@ final class YoOhw_COS_Customers {
 		global $wpdb;
 
 		$table = YoOhw_COS_DB::customers_table();
-		$backfill_complete = YoOhw_COS_Migration_Runner::currency_backfill_is_complete() ? 1 : 0;
+		$generation_current = YoOhw_COS_Intelligence::persisted_generation_is_current() ? 1 : 0;
 
 		$rows = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT CASE WHEN %d = 1 OR intelligence_currency_ready = 1 THEN customer_status ELSE 'unavailable' END AS safe_status, COUNT(*) as total
+				"SELECT CASE WHEN %d = 1 AND intelligence_currency_ready = 1 THEN customer_status ELSE 'unavailable' END AS safe_status, COUNT(*) as total
 				FROM %i
 				WHERE archived_at IS NULL
 				GROUP BY safe_status",
-				$backfill_complete,
+				$generation_current,
 				$table
 			),
 			ARRAY_A
@@ -1274,16 +1282,16 @@ final class YoOhw_COS_Customers {
 		global $wpdb;
 
 		$table = YoOhw_COS_DB::customers_table();
-		$backfill_complete = YoOhw_COS_Migration_Runner::currency_backfill_is_complete() ? 1 : 0;
+		$generation_current = YoOhw_COS_Intelligence::persisted_generation_is_current() ? 1 : 0;
 
 		$rows = $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT vip_status, COUNT(*) as total
 				FROM %i
-				WHERE archived_at IS NULL AND ( %d = 1 OR intelligence_currency_ready = 1 )
+				WHERE archived_at IS NULL AND ( %d = 1 AND intelligence_currency_ready = 1 )
 				GROUP BY vip_status",
 				$table,
-				$backfill_complete
+				$generation_current
 			),
 			ARRAY_A
 		);
@@ -1312,7 +1320,7 @@ final class YoOhw_COS_Customers {
 		global $wpdb;
 
 		$table = YoOhw_COS_DB::customers_table();
-		$backfill_complete = YoOhw_COS_Migration_Runner::currency_backfill_is_complete() ? 1 : 0;
+		$generation_current = YoOhw_COS_Intelligence::persisted_generation_is_current() ? 1 : 0;
 
 		$counts = array(
 			'none'   => 0,
@@ -1329,9 +1337,9 @@ final class YoOhw_COS_Customers {
 				SUM(CASE WHEN risk_score >= 40 AND risk_score < 70 THEN 1 ELSE 0 END) AS medium_count,
 				SUM(CASE WHEN risk_score >= 70 THEN 1 ELSE 0 END) AS high_count
 				FROM %i
-				WHERE archived_at IS NULL AND ( %d = 1 OR intelligence_currency_ready = 1 )",
+				WHERE archived_at IS NULL AND ( %d = 1 AND intelligence_currency_ready = 1 )",
 				$table,
-				$backfill_complete
+				$generation_current
 			),
 			ARRAY_A
 		);
@@ -1617,16 +1625,16 @@ final class YoOhw_COS_Customers {
 		global $wpdb;
 
 		$table = YoOhw_COS_DB::customers_table();
-		$backfill_complete = YoOhw_COS_Migration_Runner::currency_backfill_is_complete() ? 1 : 0;
+		$generation_current = YoOhw_COS_Intelligence::persisted_generation_is_current() ? 1 : 0;
 
 		$rows = $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT lifecycle_stage, COUNT(*) as total
 				FROM %i
-				WHERE archived_at IS NULL AND ( %d = 1 OR intelligence_currency_ready = 1 )
+				WHERE archived_at IS NULL AND ( %d = 1 AND intelligence_currency_ready = 1 )
 				GROUP BY lifecycle_stage",
 				$table,
-				$backfill_complete
+				$generation_current
 			),
 			ARRAY_A
 		);
