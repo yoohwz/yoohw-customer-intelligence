@@ -52,16 +52,26 @@ final class YoOhw_COS_Diagnostics {
 
 		$sync = get_option( 'yoohw_cos_sync_state', array() );
 		$sync = is_array( $sync ) ? $sync : array();
+		$legacy_outcomes = ! isset( $sync['total_retryable'], $sync['total_unresolved'] )
+			&& ( ! empty( $sync['last_run_at'] ) || get_option( 'yoohw_cos_last_sync_at', '' ) );
+		$has_outcomes = isset( $sync['total_retryable'], $sync['total_unresolved'] );
+		if ( ! $has_outcomes ) { $sync = array(); }
+		$sync_status = $has_outcomes ? sanitize_key( (string) ( $sync['status'] ?? 'not_started' ) ) : 'not_started';
+		if ( ! in_array( $sync_status, array( 'not_started', 'in_progress', 'completed', 'completed_with_issues' ), true ) ) { $sync_status = 'not_started'; }
+		$sync_order = sanitize_key( (string) ( $sync['sync_order'] ?? '' ) );
+		$obsolete_scan = YoOhw_COS_Customers::SYNC_ORDER !== $sync_order && ( ! empty( $sync['has_more'] ) || 'in_progress' === $sync_status );
+		if ( $obsolete_scan ) { $sync_status = 'not_started'; }
 		$sync = array(
-			'status' => sanitize_key( (string) ( $sync['status'] ?? 'not_started' ) ),
+			'status' => $sync_status,
+			'legacy_outcomes' => (bool) $legacy_outcomes,
 			'scanned' => absint( $sync['total_scanned'] ?? 0 ),
 			'processed' => absint( $sync['total_processed'] ?? 0 ),
 			'total' => absint( $sync['total_orders'] ?? 0 ),
 			'retryable' => absint( $sync['total_retryable'] ?? 0 ),
 			'unresolved' => absint( $sync['total_unresolved'] ?? 0 ),
 			'last_run_at' => sanitize_text_field( (string) ( $sync['last_run_at'] ?? '' ) ),
-			'completed_at' => sanitize_text_field( (string) ( $sync['completed_at'] ?? '' ) ),
-			'unfinished' => ! empty( $sync['has_more'] ) || 'in_progress' === ( $sync['status'] ?? '' ),
+			'completed_at' => $has_outcomes ? sanitize_text_field( (string) ( $sync['completed_at'] ?? '' ) ) : '',
+			'unfinished' => $has_outcomes && ! $obsolete_scan && ( ! empty( $sync['has_more'] ) || 'in_progress' === $sync_status ),
 		);
 		$migration_state = YoOhw_COS_Migration_Runner::get_state();
 		$migrations = array();
@@ -94,37 +104,40 @@ final class YoOhw_COS_Diagnostics {
 				}
 			}
 		}
-		$freshness = get_option( 'yoohw_cos_activity_semantics_recalculation', array() );
-		$freshness = is_array( $freshness ) ? $freshness : array();
-		$freshness = array(
-			'status' => sanitize_key( (string) ( $freshness['status'] ?? 'not_started' ) ),
-			'scanned' => absint( $freshness['total_scanned'] ?? 0 ),
-			'updated' => absint( $freshness['total_updated'] ?? 0 ),
-			'next_page' => absint( $freshness['next_page'] ?? 0 ),
+		$worker = get_option( 'yoohw_cos_intelligence_freshness', array() );
+		$worker = is_array( $worker ) ? $worker : array();
+		$worker = array(
+			'status' => sanitize_key( (string) ( $worker['status'] ?? 'not_started' ) ),
+			'cursor' => absint( $worker['cursor'] ?? 0 ),
+			'generation_matches' => '' !== $generation && (string) ( $worker['generation'] ?? '' ) === $generation,
+		);
+		$activity = get_option( 'yoohw_cos_activity_semantics_recalculation', array() );
+		$activity = is_array( $activity ) ? $activity : array();
+		$activity = array(
+			'status' => sanitize_key( (string) ( $activity['status'] ?? 'not_started' ) ),
+			'scanned' => absint( $activity['total_scanned'] ?? 0 ),
+			'updated' => absint( $activity['total_updated'] ?? 0 ),
+			'next_page' => absint( $activity['next_page'] ?? 0 ),
 		);
 		$cron = array();
 		foreach ( array(
 			'migration' => YoOhw_COS_Migration_Runner::HOOK,
-			'intelligence' => YoOhw_COS_Customers::RISK_SCORE_REFRESH_HOOK,
-			'freshness' => 'yoohw_cos_recalculate_activity_semantics',
+			'intelligence_daily' => YoOhw_COS_Customers::RISK_SCORE_REFRESH_HOOK,
+			'activity_recalculation' => 'yoohw_cos_recalculate_activity_semantics',
 			'crm_due_soon' => 'yoohw_cos_crm_email_due_soon',
 			'crm_daily' => 'yoohw_cos_crm_email_daily',
 		) as $name => $hook ) {
-			$next = wp_next_scheduled( $hook );
-			$cron[ $name ] = array(
-				'scheduled' => false !== $next,
-				'next_site_time' => false !== $next ? wp_date( 'Y-m-d H:i:s T', $next ) : '',
-				'overdue' => false !== $next && $next < time(),
-			);
+			$cron[ $name ] = self::cron_fact( $hook );
 		}
+		$cron['intelligence_catchup'] = self::cron_fact( YoOhw_COS_Customers::RISK_SCORE_REFRESH_HOOK, array( -1 ) );
+		$cron['intelligence_daily_wakeup'] = self::cron_fact( YoOhw_COS_Customers::RISK_SCORE_REFRESH_HOOK, array( 0 ) );
 		foreach ( array(
 			'loyalty_backfill' => array( 'yoohw_cos_loyalty_backfill_state', 'yoohw_cos_backfill_loyalty_history' ),
 			'premium_reassociation' => array( 'yoohw_cos_premium_reassociation_state', 'yoohw_cos_reassociate_premium_checkout_events' ),
 		) as $name => $definition ) {
 			$state = get_option( $definition[0], array() );
 			if ( ! is_array( $state ) || ! in_array( (string) ( $state['status'] ?? '' ), array( 'pending', 'in_progress' ), true ) ) { continue; }
-			$next = wp_next_scheduled( $definition[1] );
-			$cron[ $name ] = array( 'scheduled' => false !== $next, 'next_site_time' => false !== $next ? wp_date( 'Y-m-d H:i:s T', $next ) : '', 'overdue' => false !== $next && $next < time() );
+			$cron[ $name ] = self::cron_fact( $definition[1] );
 		}
 		$privacy_ready = null !== $privacy;
 		$currency_complete = YoOhw_COS_Migration_Runner::currency_backfill_is_complete();
@@ -144,34 +157,49 @@ final class YoOhw_COS_Diagnostics {
 		foreach ( $migrations as $item ) {
 			if ( $item['unresolved_issues'] || 'completed_with_issues' === $item['status'] ) { $migration_unresolved = true; break; }
 		}
-		$required_cron = array( 'intelligence', 'crm_due_soon', 'crm_daily' );
-		if ( in_array( 'migration', $warnings, true ) ) { $required_cron[] = 'migration'; }
-		if ( in_array( $freshness['status'], array( 'pending', 'in_progress' ), true ) ) { $required_cron[] = 'freshness'; }
+		$migration_active = false;
+		$next_migration = '';
+		foreach ( array( 'identity_normalization_v2', 'commerce_facts_v2', 'activity_semantics_v2', 'commerce_currency_v3' ) as $id ) {
+			if ( in_array( $migrations[ $id ]['status'] ?? '', array( 'pending', 'in_progress' ), true ) ) { $migration_active = true; $next_migration = $id; break; }
+		}
+		$woocommerce_blocks_migration = in_array( $next_migration, array( 'commerce_facts_v2', 'commerce_currency_v3' ), true )
+			&& ( ! function_exists( 'wc_get_orders' ) || ! function_exists( 'wc_get_order_statuses' ) );
+		$required_cron = array( 'intelligence_daily', 'crm_due_soon', 'crm_daily' );
+		if ( $migration_active && ! $woocommerce_blocks_migration ) { $required_cron[] = 'migration'; }
+		if ( in_array( $activity['status'], array( 'pending', 'in_progress' ), true ) ) { $required_cron[] = 'activity_recalculation'; }
 		foreach ( array( 'loyalty_backfill', 'premium_reassociation' ) as $integration ) {
 			if ( isset( $cron[ $integration ] ) ) { $required_cron[] = $integration; }
 		}
 		foreach ( $required_cron as $name ) {
 			if ( ! $cron[ $name ]['scheduled'] || $cron[ $name ]['overdue'] ) { $warnings[] = 'cron'; break; }
 		}
+		if ( in_array( $worker['status'], array( 'pending', 'in_progress' ), true ) && ! $cron['intelligence_catchup']['scheduled'] && ! $cron['intelligence_daily_wakeup']['scheduled'] ) { $warnings[] = 'cron'; }
 		$status = 'ready';
 		if ( 'blocked' === $schema['status'] || 'ready' !== $reset['status'] || ! $privacy_ready ) { $status = 'blocked'; }
-		elseif ( 'not_started' === $sync['status'] || $sync['unresolved'] || $migration_unresolved || ( $currency_complete && $data['outdated_metrics'] ) || 'upgrade-required' === $schema['status'] || in_array( 'cron', $warnings, true ) ) { $status = 'attention'; }
+		elseif ( 'not_started' === $sync['status'] || $sync['unresolved'] || $migration_unresolved || $woocommerce_blocks_migration || ( $currency_complete && $data['outdated_metrics'] ) || 'upgrade-required' === $schema['status'] || in_array( 'cron', $warnings, true ) ) { $status = 'attention'; }
 		elseif ( ! empty( $warnings ) ) { $status = 'working'; }
 		$actionable = array_values( array_intersect( $warnings, array( 'schema', 'reset', 'privacy', 'cron' ) ) );
 		if ( 'not_started' === $sync['status'] || $sync['unresolved'] ) { $actionable[] = 'sync'; }
-		if ( $migration_unresolved ) { $actionable[] = 'migration'; }
+		if ( $migration_unresolved || $woocommerce_blocks_migration ) { $actionable[] = 'migration'; }
 		if ( $currency_complete && $data['outdated_metrics'] ) { $actionable[] = 'currency'; }
 		return array(
 			'status' => $status, 'warnings' => array_values( array_unique( $warnings ) ), 'actionable' => array_values( array_unique( $actionable ) ),
 			'schema' => $schema, 'data' => $data, 'sync' => $sync,
 			'migrations' => $migrations,
-			'woocommerce_blocks_migration' => ( ! function_exists( 'wc_get_orders' ) || ! function_exists( 'wc_get_order_statuses' ) )
-				&& ( in_array( $migrations['commerce_facts_v2']['status'] ?? '', array( 'pending', 'in_progress' ), true )
-					|| in_array( $migrations['commerce_currency_v3']['status'] ?? '', array( 'pending', 'in_progress' ), true ) ),
+			'woocommerce_blocks_migration' => $woocommerce_blocks_migration,
 			'currency' => array( 'backfill_complete' => $currency_complete, 'store_currency' => function_exists( 'get_woocommerce_currency' ) ? get_woocommerce_currency() : '' ),
-			'intelligence' => array( 'generation' => substr( $generation, 0, 8 ), 'worker' => $freshness, 'data_updated_at' => sanitize_text_field( (string) get_option( 'yoohw_cos_customer_data_updated_at', '' ) ) ),
+			'intelligence' => array( 'generation' => substr( $generation, 0, 8 ), 'worker' => $worker, 'activity_worker' => $activity, 'data_updated_at' => sanitize_text_field( (string) get_option( 'yoohw_cos_customer_data_updated_at', '' ) ) ),
 			'cron' => $cron, 'disable_wp_cron' => defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON,
 			'reset' => array( 'status' => $reset['status'] ), 'privacy' => array( 'evaluable' => $privacy_ready, 'receipts' => $receipt_count ),
+		);
+	}
+
+	private static function cron_fact( string $hook, array $args = array() ): array {
+		$next = wp_next_scheduled( $hook, $args );
+		return array(
+			'scheduled' => false !== $next,
+			'next_site_time' => false !== $next ? wp_date( 'Y-m-d H:i:s T', $next ) : '',
+			'overdue' => false !== $next && $next < time(),
 		);
 	}
 }

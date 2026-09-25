@@ -44,14 +44,14 @@ count at page sizes 1 and 20.
 
 | Path | Queries | Median ms | Exact matching profiles | Dominant `EXPLAIN` |
 | --- | ---: | ---: | ---: | --- |
-| Default Customers first page and count | 3 | 36.330 | 25,000 | `c`: `ref`, `archived_at`, ~12,500 rows; filesort |
-| Status/lifecycle/value/risk composition | 4 | 12.383 | 238 | `c`: `ref`, `customer_status`, ~5,000 rows; filesort |
-| `open_follow_up` | 3 | 94.262 | 22,500 | `c`: `ref`, `archived_at`; `t`: `ref`, `customer_id`, ~1 row, FirstMatch |
-| `overdue_follow_up` | 3 | 115.655 | 15,001 | `c`: `ref`, `archived_at`; `t`: `ref`, `customer_id`, ~1 row, FirstMatch |
-| `high_value_needs_follow_up` | 4 | 64.421 | 357 | `c`: `ref`, `archived_at`; `t`: `ref`, `customer_id`, ~1 row, Not exists |
-| R/F/M thresholds | 4 | 60.323 | 12,500 | `c`: `ref`, `archived_at`, ~12,500 rows; filesort |
-| Overview summary and attention | 5 | 92.054 | n/a | customer aggregate: `ref`, `archived_at`, ~12,500 rows |
-| Diagnostics snapshot | 45 | 65.515 | n/a | customer aggregate: `ALL`, 25,000 rows |
+| Default Customers first page and count | 3 | 37.076 | 25,000 | `c`: `ref`, `archived_at`, ~12,500 rows; filesort |
+| Status/lifecycle/value/risk composition | 4 | 13.170 | 238 | `c`: `ref`, `customer_status`, ~5,000 rows; filesort |
+| `open_follow_up` | 3 | 96.989 | 22,500 | `c`: `ref`, `archived_at`; `t`: `ref`, `customer_id`, ~1 row, FirstMatch |
+| `overdue_follow_up` | 3 | 102.741 | 15,001 | `c`: `ref`, `archived_at`; `t`: `ref`, `customer_id`, ~1 row, FirstMatch |
+| `high_value_needs_follow_up` | 4 | 66.405 | 357 | `c`: `ref`, `archived_at`; `t`: `ref`, `customer_id`, ~1 row, Not exists |
+| R/F/M thresholds | 4 | 58.069 | 12,500 | `c`: `ref`, `archived_at`, ~12,500 rows; filesort |
+| Overview summary and attention | 5 | 93.564 | n/a | customer aggregate: `ref`, `archived_at`, ~12,500 rows |
+| Diagnostics snapshot | 45 | 68.646 | n/a | customer aggregate: `ALL`, 25,000 rows |
 
 The customer aggregate in Diagnostics intentionally reads every profile to count
 archive, currency and generation states. The Overview scans active profiles for
@@ -74,5 +74,5 @@ decisions remain in their canonical classes; no persistent cache was introduced.
 
 The owned runner completed its negative ownership/grant controls, verified an
 unrelated synthetic DB sentinel, and removed its MySQL process and temporary files.
-The full HPOS=yes and HPOS=no integration suites each passed 215 tests and the
+The full HPOS=yes and HPOS=no integration suites each passed 219 tests and the
 40-profile benchmark smoke.
