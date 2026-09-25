@@ -9,7 +9,7 @@ final class YoOhw_COS_Saved_Views {
 	private const MAX_SEARCH = 200;
 
 	public static function definition( array $source ): array {
-		$allowed = array_diff( array_keys( YoOhw_COS_Customer_Query::sanitize_args( array() ) ), array( 'paged', 'per_page', 'offset' ) );
+		$allowed = array_diff( array_keys( YoOhw_COS_Customer_Query::sanitize_args( array() ) ), array( 'paged', 'per_page', 'offset', 'extensions' ) );
 		$input = array();
 		foreach ( $allowed as $key ) {
 			$value = array_key_exists( $key, $source ) ? $source[ $key ] : '';

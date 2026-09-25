@@ -12,7 +12,7 @@ final class YoOhw_COS_Customer_Query {
 			$order = 'DESC';
 		}
 
-		return array(
+		$canonical = array(
 			's'                  => sanitize_text_field( self::get_scalar( $source, 's' ) ),
 			'customer_tag'       => absint( self::get_scalar( $source, 'customer_tag' ) ),
 			'customer_segment'   => absint( self::get_scalar( $source, 'customer_segment' ) ),
@@ -34,6 +34,10 @@ final class YoOhw_COS_Customer_Query {
 			'per_page'           => self::sanitize_per_page( self::get_scalar( $source, 'per_page', 20 ) ),
 			'offset'             => isset( $source['offset'] ) ? max( 0, absint( self::get_scalar( $source, 'offset' ) ) ) : null,
 		);
+		if ( array_key_exists( 'extensions', $source ) ) {
+			$canonical['extensions'] = YoOhw_COS_Extensions::sanitize_query( $source['extensions'] );
+		}
+		return $canonical;
 	}
 
 	public static function query( array $args ): array {
@@ -53,7 +57,7 @@ final class YoOhw_COS_Customer_Query {
 			? ( $args['paged'] - 1 ) * $args['per_page']
 			: $args['offset'];
 
-		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Filter SQL fragments are hardcoded; sort direction is whitelisted and all dynamic values are prepared.
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Core SQL fragments are fixed; extension fields/operators and sort direction are whitelisted, and values are prepared.
 		$total_items = (int) $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT COUNT(*) FROM %i c {$where}",
@@ -92,6 +96,29 @@ final class YoOhw_COS_Customer_Query {
 		foreach ( array( 'rfm_recency_max_days', 'rfm_frequency_min', 'rfm_monetary_min' ) as $rfm_key ) {
 			if ( 'invalid' === $args[ $rfm_key ] ) {
 				return array( 'where' => 'WHERE 1=0', 'params' => array() );
+			}
+		}
+		if ( isset( $args['extensions'] ) ) {
+			$predicates = YoOhw_COS_Extensions::predicates( $args['extensions'] );
+			if ( null === $predicates ) {
+				return array( 'where' => 'WHERE 1=0', 'params' => array() );
+			}
+			foreach ( $predicates as $predicate ) {
+				$field = $predicate['field'];
+				if ( in_array( $field, array( 'customer_status', 'lifecycle_stage', 'vip_status', 'risk_score', 'trust_score' ), true ) ) {
+					$where .= ' AND intelligence_currency_ready = 1 AND intelligence_generation = %s';
+					$params[] = YoOhw_COS_Intelligence::get_scoring_generation();
+				}
+				if ( in_array( $field, array( 'total_spent', 'average_order_value' ), true ) ) {
+					$currency = YoOhw_COS_Commerce_Metrics_Policy::current_store_currency();
+					if ( ! YoOhw_COS_Migration_Runner::currency_backfill_is_complete() || ! preg_match( '/^[A-Z]{3}$/', $currency ) ) {
+						return array( 'where' => 'WHERE 1=0', 'params' => array() );
+					}
+					$where .= ' AND money_state = %s AND money_currency = %s AND commerce_metrics_version >= %d';
+					array_push( $params, 'comparable', $currency, YoOhw_COS_Commerce_Metrics_Policy::VERSION );
+				}
+				$where .= ' AND c.' . $field . ' ' . $predicate['operator'] . ' %s';
+				$params[] = (string) $predicate['value'];
 			}
 		}
 		$search                  = (string) $args['s'];

@@ -64,6 +64,9 @@ final class YoOhw_COS_Loader {
 		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-db.php';
 		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-commerce-metrics-policy.php';
 		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-rfm.php';
+		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-extensions.php';
+		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-customer-facts.php';
+		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-attention.php';
 		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-reset-guard.php';
 		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-customer-identity.php';
 		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-commerce-aggregates.php';
