@@ -466,27 +466,47 @@ final class YoOhw_COS_Customers {
 		return array( $customer_id ) === YoOhw_COS_Customer_Identity::get_persisted_order_customer_ids( $canonical_order );
 	}
 
-	/** Remove only the CRM link for this subject, using the active Woo data store. */
-	public static function unlink_order_for_erasure( int $order_id, int $customer_id ): bool {
-		if ( ! function_exists( 'wc_get_order' ) ) { return false; }
+	/** Read only the two plugin-owned link keys through the active Woo data store. */
+	public static function order_link_state_for_erasure( int $order_id ): ?array {
+		if ( ! function_exists( 'wc_get_order' ) ) { return null; }
 		self::invalidate_order_object_cache( $order_id );
 		$order = wc_get_order( $order_id );
-		if ( false === $order ) { return true; }
-		if ( ! $order instanceof WC_Order ) { return false; }
-		// Inspect the raw data-store link; the validated helper hides stale epochs.
+		if ( false === $order ) { return array( 'missing' => true, 'has_link' => false, 'customer_ids' => array(), 'fingerprint' => '' ); }
+		if ( ! $order instanceof WC_Order ) { return null; }
 		$raw_metadata = $order->get_data_store()->read_meta( $order );
-		if ( ! is_array( $raw_metadata ) ) { return false; }
+		if ( ! is_array( $raw_metadata ) ) { return null; }
+		$customer_ids = array();
+		$epochs = array();
 		foreach ( $raw_metadata as $meta ) {
 			$value = is_object( $meta ) && method_exists( $meta, 'get_data' ) ? $meta->get_data() : $meta;
 			$key = is_array( $value ) ? (string) ( $value['meta_key'] ?? $value['key'] ?? '' ) : (string) ( $value->meta_key ?? $value->key ?? '' );
 			$raw = is_array( $value ) ? ( $value['meta_value'] ?? $value['value'] ?? null ) : ( $value->meta_value ?? $value->value ?? null );
 			if ( self::ORDER_CUSTOMER_META_KEY === $key ) {
 				$raw_link = maybe_unserialize( $raw );
-				if ( ! ( is_int( $raw_link ) || ( is_string( $raw_link ) && preg_match( '/^[1-9][0-9]*$/D', $raw_link ) ) ) || (int) $raw_link !== $customer_id ) {
-					return false;
-				}
+				if ( ! ( is_int( $raw_link ) || ( is_string( $raw_link ) && preg_match( '/^[1-9][0-9]*$/D', $raw_link ) ) ) || (int) $raw_link <= 0 ) { return null; }
+				$customer_ids[] = (int) $raw_link;
+			} elseif ( YoOhw_COS_Reset_Guard::META_KEY === $key ) {
+				$epoch = maybe_unserialize( $raw );
+				if ( ! is_string( $epoch ) ) { return null; }
+				$epochs[] = $epoch;
 			}
 		}
+		sort( $customer_ids, SORT_NUMERIC );
+		sort( $epochs, SORT_STRING );
+		return array( 'missing' => false, 'has_link' => (bool) ( $customer_ids || $epochs ), 'customer_ids' => $customer_ids, 'fingerprint' => hash( 'sha256', wp_json_encode( array( $customer_ids, $epochs ) ) ) );
+	}
+
+	/** Remove only the CRM link for this subject, using the active Woo data store. */
+	public static function unlink_order_for_erasure( int $order_id, int $customer_id, string $expected_fingerprint = '' ): bool {
+		$state = self::order_link_state_for_erasure( $order_id );
+		if ( null === $state ) { return false; }
+		if ( $state['missing'] ) { return true; }
+		if ( '' !== $expected_fingerprint && $expected_fingerprint !== $state['fingerprint'] ) { return false; }
+		foreach ( $state['customer_ids'] as $linked_id ) {
+			if ( $linked_id !== $customer_id ) { return false; }
+		}
+		$order = wc_get_order( $order_id );
+		if ( ! $order instanceof WC_Order ) { return false; }
 		$order->delete_meta_data( self::ORDER_CUSTOMER_META_KEY );
 		$order->delete_meta_data( YoOhw_COS_Reset_Guard::META_KEY );
 		self::$persisting_order_links[ $order_id ] = true;
@@ -989,7 +1009,6 @@ final class YoOhw_COS_Customers {
 
 	private static function clear_reset_tables(): void {
 		global $wpdb;
-		self::clear_suppressed_order_links_before_reset();
 
 		$tables = array(
 			YoOhw_COS_DB::customers_table(),
@@ -1040,52 +1059,6 @@ final class YoOhw_COS_Customers {
 		foreach ( $hooks as $hook ) {
 			if ( false === wp_clear_scheduled_hook( $hook ) ) {
 				throw new RuntimeException( 'Reset recovery required: scheduled work was not cleared.' );
-			}
-		}
-	}
-
-	/** Preserve erasure completion when Reset removes the fact lookup between pages. */
-	private static function clear_suppressed_order_links_before_reset(): void {
-		global $wpdb;
-		$receipt = $wpdb->get_var( $wpdb->prepare( 'SELECT id FROM %i LIMIT 1', YoOhw_COS_DB::table( 'privacy_suppression' ) ) );
-		if ( '' !== $wpdb->last_error ) {
-			throw new RuntimeException( 'Reset recovery required: privacy suppression state unavailable.' );
-		}
-		if ( null === $receipt ) { return; }
-		$last_customer_id = 0;
-		while ( true ) {
-			$customers = $wpdb->get_results( $wpdb->prepare(
-				'SELECT id, email, wp_user_id FROM %i WHERE id > %d ORDER BY id ASC LIMIT 25',
-				YoOhw_COS_DB::customers_table(), $last_customer_id
-			), ARRAY_A );
-			if ( '' !== $wpdb->last_error || ! is_array( $customers ) ) {
-				throw new RuntimeException( 'Reset recovery required: privacy link owners could not be read.' );
-			}
-			if ( ! $customers ) { return; }
-			foreach ( $customers as $customer ) {
-				$last_customer_id = (int) $customer['id'];
-				$suppressed = YoOhw_COS_Privacy_Erasure::is_suppressed( $customer );
-				if ( null === $suppressed ) {
-					throw new RuntimeException( 'Reset recovery required: privacy suppression state unavailable.' );
-				}
-				if ( ! $suppressed ) { continue; }
-				$last_fact_id = 0;
-				while ( true ) {
-					$facts = $wpdb->get_results( $wpdb->prepare(
-						'SELECT id, order_id FROM %i WHERE customer_id = %d AND id > %d ORDER BY id ASC LIMIT 25',
-						YoOhw_COS_DB::order_facts_table(), $last_customer_id, $last_fact_id
-					), ARRAY_A );
-					if ( '' !== $wpdb->last_error || ! is_array( $facts ) ) {
-						throw new RuntimeException( 'Reset recovery required: privacy order facts could not be read.' );
-					}
-					if ( ! $facts ) { break; }
-					foreach ( $facts as $fact ) {
-						$last_fact_id = (int) $fact['id'];
-						if ( ! self::unlink_order_for_erasure( (int) $fact['order_id'], $last_customer_id ) ) {
-							throw new RuntimeException( 'Reset recovery required: privacy order link could not be cleared.' );
-						}
-					}
-				}
 			}
 		}
 	}
