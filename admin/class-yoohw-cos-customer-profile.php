@@ -138,6 +138,9 @@ final class YoOhw_COS_Customer_Profile {
 			echo '<button type="button" class="button yoohw-cos-email-composer-open" data-yoohw-cos-email-open aria-haspopup="dialog" aria-controls="yoohw-cos-email-composer">' . esc_html__( 'Email customer', 'yoohw-customer-intelligence' ) . '</button>';
 		}
 		echo '<a class="button button-primary" href="#yoohw_cos_profile_task_title">' . esc_html__( 'Add task', 'yoohw-customer-intelligence' ) . '</a>';
+		foreach ( YoOhw_COS_Extensions::actions( $customer ) as $action ) {
+			echo '<a class="button" href="' . esc_url( $action['url'] ) . '">' . esc_html( $action['label'] ) . '</a>';
+		}
 		echo '</div>';
 		echo '</div>';
 	}
@@ -221,36 +224,16 @@ final class YoOhw_COS_Customer_Profile {
 	}
 
 	private static function render_needs_attention( array $customer, int $open_tasks, int $overdue_tasks ): void {
-		$status     = sanitize_key( (string) ( $customer['customer_status'] ?? '' ) );
-		$high_value = ! in_array( sanitize_key( (string) ( $customer['vip_status'] ?? 'none' ) ), array( '', 'none' ), true );
-		$email      = sanitize_email( (string) ( $customer['email'] ?? '' ) );
-		$phone      = trim( (string) ( $customer['phone'] ?? '' ) );
-		$action_url = '#yoohw_cos_profile_task_title';
-		$action     = __( 'Add task', 'yoohw-customer-intelligence' );
-
-		if ( $overdue_tasks > 0 ) {
-			$message    = sprintf( _n( '%s open follow-up task is overdue.', '%s open follow-up tasks are overdue.', $overdue_tasks, 'yoohw-customer-intelligence' ), number_format_i18n( $overdue_tasks ) );
-			$action_url = '#yoohw-cos-add-task';
-			$action     = __( 'Review open tasks', 'yoohw-customer-intelligence' );
-		} elseif ( $high_value && in_array( $status, array( 'at_risk', 'inactive' ), true ) ) {
-			$message = __( 'This high-value customer is at risk or inactive.', 'yoohw-customer-intelligence' );
-		} elseif ( in_array( $status, array( 'at_risk', 'inactive' ), true ) ) {
-			$message = __( 'This customer is at risk or inactive.', 'yoohw-customer-intelligence' );
-		} elseif ( ! is_email( $email ) || '' === $phone ) {
-			$message = __( 'Contact details are incomplete. Check the customer identity before following up.', 'yoohw-customer-intelligence' );
-			$action_url = '#yoohw-cos-profile-identity';
-			$action     = __( 'Review contact details', 'yoohw-customer-intelligence' );
-		} elseif ( $high_value && 0 === $open_tasks ) {
-			$message = __( 'This high-value customer has no open follow-up task.', 'yoohw-customer-intelligence' );
-		} else {
-			$message = __( 'No current attention reason is recorded for this customer.', 'yoohw-customer-intelligence' );
-			$action_url = '';
-		}
-
+		$reasons = YoOhw_COS_Attention::reasons( $customer, array( 'open_tasks' => $open_tasks, 'overdue_tasks' => $overdue_tasks ) );
+		$primary = $reasons[0];
+		$action_url = $primary['action_url'];
 		echo '<section class="postbox yoohw-cos-profile-attention' . ( '' === $action_url ? ' yoohw-cos-profile-attention--quiet' : '' ) . '"><div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Needs attention', 'yoohw-customer-intelligence' ) . '</h2></div><div class="inside">';
-		echo '<p>' . esc_html( $message ) . '</p>';
+		echo '<p>' . esc_html( $primary['message'] ) . '</p>';
 		if ( '' !== $action_url ) {
-			echo '<p><a class="button" href="' . esc_url( $action_url ) . '">' . esc_html( $action ) . '</a></p>';
+			echo '<p><a class="button" href="' . esc_url( $action_url ) . '">' . esc_html( $primary['action_label'] ) . '</a></p>';
+		}
+		foreach ( array_slice( $reasons, 1 ) as $reason ) {
+			echo '<p>' . esc_html( $reason['message'] ) . '</p>';
 		}
 		echo '</div></section>';
 	}
