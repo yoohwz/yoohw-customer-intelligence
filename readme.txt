@@ -55,6 +55,8 @@ Customer Intelligence remains useful without the optional integrations. Integrat
 
 Customer intelligence data remains in the site's WordPress database unless an administrator exports it or a configured integration moves it. WooCommerce continues to manage orders, and WordPress continues to manage users.
 
+WordPress's Personal Data Export tool includes matching Customer Intelligence profiles, notes, tasks, activity, tag and static-segment memberships, plus personal Saved Customer Views for the requested WordPress user. Matching uses the exact request email or its exact WordPress user link. The exporter is read-only and does not include WooCommerce order contents, external plugin records, or internal delivery and migration state. WooCommerce and other plugins provide their own exporters for data they own.
+
 Uninstalling the plugin preserves Customer Intelligence tables and records by default. A site owner may explicitly opt in to removal by setting the non-autoloaded `yoohw_cos_remove_data_on_uninstall` option to `yes` before uninstalling.
 
 Optional security signals are normalized and minimized. Raw IP addresses, device identifiers, browser fingerprints, and payment identifiers are not copied into Customer Intelligence activity metadata.

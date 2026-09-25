@@ -59,13 +59,21 @@ final class YoOhw_COS_Saved_Views {
 	}
 
 	public static function all(): array {
-		$stored = get_user_meta( get_current_user_id(), self::META_KEY, true );
+		return self::all_for_user( get_current_user_id() );
+	}
+
+	/** Read only the named owner's stored preferences, independent of the operator. */
+	public static function all_for_user( int $user_id ): array {
+		if ( $user_id < 1 ) {
+			return array();
+		}
+		$stored = get_user_meta( $user_id, self::META_KEY, true );
 		if ( ! is_array( $stored ) || count( $stored ) > self::LIMIT ) {
 			return array();
 		}
 		$views = array();
 		foreach ( $stored as $id => $view ) {
-			if ( ! is_string( $id ) || ! preg_match( '/^[a-f0-9-]{36}$/', $id ) || ! is_array( $view ) || ! isset( $view['name'], $view['definition'] ) || ! is_string( $view['name'] ) ) {
+			if ( ! is_string( $id ) || ! preg_match( '/^[a-f0-9-]{36}$/', $id ) || ! is_array( $view ) || ! isset( $view['name'], $view['definition'] ) || ! is_string( $view['name'] ) || '' === trim( $view['name'] ) || mb_strlen( $view['name'] ) > self::MAX_NAME ) {
 				continue;
 			}
 			$views[ $id ] = $view;
