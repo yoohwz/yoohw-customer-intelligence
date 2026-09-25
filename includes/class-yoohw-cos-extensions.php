@@ -113,11 +113,11 @@ final class YoOhw_COS_Extensions {
 		return $result;
 	}
 
-	public static function fact_values( array $customer, array $core ): array {
+	public static function fact_values( array $core ): array {
 		$extra = array();
 		foreach ( self::$facts as $id => $callback ) {
 			try {
-				$values = call_user_func( $callback, $customer, $core );
+				$values = call_user_func( $callback, $core );
 			} catch ( Throwable $error ) {
 				continue;
 			}
@@ -137,9 +137,14 @@ final class YoOhw_COS_Extensions {
 
 	public static function attention_reasons( array $customer, array $context ): array {
 		$result = array();
+		if ( ! self::$attention ) {
+			return $result;
+		}
+		$safe_context = self::attention_context( $context );
+		$core = YoOhw_COS_Customer_Facts::core_snapshot( $customer, $safe_context );
 		foreach ( self::$attention as $id => $callback ) {
 			try {
-				$reason = call_user_func( $callback, $customer, $context );
+				$reason = call_user_func( $callback, $core, $safe_context );
 			} catch ( Throwable $error ) {
 				continue;
 			}
@@ -160,9 +165,14 @@ final class YoOhw_COS_Extensions {
 
 	public static function actions( array $customer ): array {
 		$result = array();
+		$customer_id = absint( $customer['id'] ?? 0 );
+		if ( ! self::$actions || $customer_id < 1 ) {
+			return $result;
+		}
+		$core = YoOhw_COS_Customer_Facts::core_snapshot( $customer );
 		foreach ( self::$actions as $id => $callback ) {
 			try {
-				$action = call_user_func( $callback, $customer );
+				$action = call_user_func( $callback, $customer_id, $core );
 			} catch ( Throwable $error ) {
 				continue;
 			}
@@ -177,6 +187,16 @@ final class YoOhw_COS_Extensions {
 			}
 		}
 		return $result;
+	}
+
+	private static function attention_context( array $context ): array {
+		$safe = array();
+		foreach ( array( 'open_tasks', 'overdue_tasks' ) as $key ) {
+			if ( isset( $context[ $key ] ) && is_numeric( $context[ $key ] ) ) {
+				$safe[ $key ] = max( 0, (int) $context[ $key ] );
+			}
+		}
+		return $safe;
 	}
 
 	private static function is_safe_admin_url( string $url ): bool {

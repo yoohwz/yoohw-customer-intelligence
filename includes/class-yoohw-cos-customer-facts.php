@@ -4,6 +4,12 @@ defined( 'ABSPATH' ) || exit;
 	/** Read-only scalar snapshot from a canonical, already-loaded customer row. */
 final class YoOhw_COS_Customer_Facts {
 	public static function snapshot( array $customer, array $context = array() ): array {
+		$core = self::core_snapshot( $customer, $context );
+		return $core + YoOhw_COS_Extensions::fact_values( $core );
+	}
+
+	/** The fixed, PII-minimized map supplied to external providers. */
+	public static function core_snapshot( array $customer, array $context = array() ): array {
 		$orders = absint( $customer['total_orders'] ?? 0 );
 		$money_ready = YoOhw_COS_Commerce_Metrics_Policy::money_is_comparable( $customer );
 		$money_state = $money_ready ? 'comparable' : ( 'none' === ( $customer['money_state'] ?? '' ) && YoOhw_COS_Migration_Runner::currency_backfill_is_complete() ? 'none' : 'unavailable' );
@@ -32,6 +38,6 @@ final class YoOhw_COS_Customer_Facts {
 				$facts[ $key ] = max( 0, (int) $context[ $input ] );
 			}
 		}
-		return $facts + YoOhw_COS_Extensions::fact_values( $customer, $facts );
+		return $facts;
 	}
 }

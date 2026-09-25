@@ -7,6 +7,7 @@ require_once dirname( __DIR__ ) . '/fixtures/example-extension-provider.php';
 final class YCI_Extension_Contracts_Test extends WP_UnitTestCase {
 	public function set_up(): void {
 		parent::set_up();
+		YCI_Example_Extension_Provider::$observed = array();
 		delete_option( YoOhw_COS_Reset_Guard::OPTION );
 		YoOhw_COS_Reset_Guard::init();
 	}
@@ -73,6 +74,18 @@ final class YCI_Extension_Contracts_Test extends WP_UnitTestCase {
 		}
 		$this->assertSame( $before_snapshots, $wpdb->num_queries, 'Canonical list snapshots must not issue per-customer SQL.' );
 		$customer = YoOhw_COS_Customers::get_customer( $two );
+		$private_values = array(
+			'email' => 'private-customer@example.test',
+			'phone' => '555-PII-PHONE',
+			'first_name' => 'PrivateFirst',
+			'last_name' => 'PrivateLast',
+			'display_name' => 'PrivateDisplay',
+			'address_line_1' => 'Private Address 123',
+			'notes' => 'Private note text',
+			'payment_token' => 'PrivatePaymentToken',
+			'privacy_suppression_digest' => 'PrivatePrivacyDigest',
+		);
+		$customer = array_merge( $customer, $private_values );
 		$customer['money_state'] = 'mixed';
 		$customer['total_spent'] = 500;
 		$facts = YoOhw_COS_Customer_Facts::snapshot( $customer, array( 'open_tasks' => 2 ) );
@@ -104,16 +117,30 @@ final class YCI_Extension_Contracts_Test extends WP_UnitTestCase {
 			$this->assertNull( $money_facts['core/average_order_value'] );
 		}
 		$this->assertSame( 0, $money_facts['core/rfm_recency_days'] );
-		$reasons = YoOhw_COS_Attention::reasons( $customer, array( 'overdue_tasks' => 1 ) );
+		$reasons = YoOhw_COS_Attention::reasons( $customer, array( 'overdue_tasks' => 1, 'raw_note' => 'PrivateAttentionContext' ) );
 		$this->assertSame( 'core/overdue_follow_up', $reasons[0]['id'] );
 		$this->assertSame( 'example-provider/check', $reasons[1]['id'] );
+		$this->assertSame( array( 'overdue_tasks' => 1 ), YCI_Example_Extension_Provider::$observed['attention']['context'] );
 		YoOhw_COS_Extensions::register_attention( 'example-provider/too-long', static fn() => array( 'id' => 'example-provider/too-long', 'message' => str_repeat( 'x', 241 ) ) );
 		YoOhw_COS_Extensions::register_attention( 'example-provider/wrong-id', static fn() => array( 'id' => 'core/overdue_follow_up', 'message' => 'Override' ) );
 		$this->assertCount( 2, YoOhw_COS_Attention::reasons( $customer, array( 'overdue_tasks' => 1 ) ) );
 		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
 		$this->assertSame( array(), YoOhw_COS_Extensions::actions( $customer ) );
 		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
-		$this->assertCount( 1, YoOhw_COS_Extensions::actions( $customer ) );
+		$actions = YoOhw_COS_Extensions::actions( $customer );
+		$this->assertCount( 1, $actions );
+		$this->assertStringContainsString( 'customer_id=' . $two, $actions[0]['url'] );
+		$this->assertSame( $two, YCI_Example_Extension_Provider::$observed['action']['customer_id'] );
+		$observed = wp_json_encode( YCI_Example_Extension_Provider::$observed );
+		foreach ( $private_values as $private_value ) {
+			$this->assertStringNotContainsString( $private_value, $observed );
+		}
+		$this->assertStringNotContainsString( 'PrivateAttentionContext', $observed );
+		$this->assertTrue( YCI_Example_Extension_Provider::$observed['facts']['core/email_present'] );
+		$this->assertTrue( YCI_Example_Extension_Provider::$observed['facts']['core/phone_present'] );
+		$this->assertSame( 2, YCI_Example_Extension_Provider::$observed['facts']['core/rfm_frequency'] );
+		$this->assertArrayHasKey( 'core/money_state', YCI_Example_Extension_Provider::$observed['facts'] );
+		$this->assertArrayHasKey( 'core/status', YCI_Example_Extension_Provider::$observed['facts'] );
 		ob_start();
 		YoOhw_COS_Customer_Profile::render( $two );
 		$profile = ob_get_clean();
