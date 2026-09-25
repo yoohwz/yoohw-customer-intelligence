@@ -989,6 +989,7 @@ final class YoOhw_COS_Customers {
 
 	private static function clear_reset_tables(): void {
 		global $wpdb;
+		self::clear_suppressed_order_links_before_reset();
 
 		$tables = array(
 			YoOhw_COS_DB::customers_table(),
@@ -1039,6 +1040,52 @@ final class YoOhw_COS_Customers {
 		foreach ( $hooks as $hook ) {
 			if ( false === wp_clear_scheduled_hook( $hook ) ) {
 				throw new RuntimeException( 'Reset recovery required: scheduled work was not cleared.' );
+			}
+		}
+	}
+
+	/** Preserve erasure completion when Reset removes the fact lookup between pages. */
+	private static function clear_suppressed_order_links_before_reset(): void {
+		global $wpdb;
+		$receipt = $wpdb->get_var( $wpdb->prepare( 'SELECT id FROM %i LIMIT 1', YoOhw_COS_DB::table( 'privacy_suppression' ) ) );
+		if ( '' !== $wpdb->last_error ) {
+			throw new RuntimeException( 'Reset recovery required: privacy suppression state unavailable.' );
+		}
+		if ( null === $receipt ) { return; }
+		$last_customer_id = 0;
+		while ( true ) {
+			$customers = $wpdb->get_results( $wpdb->prepare(
+				'SELECT id, email, wp_user_id FROM %i WHERE id > %d ORDER BY id ASC LIMIT 25',
+				YoOhw_COS_DB::customers_table(), $last_customer_id
+			), ARRAY_A );
+			if ( '' !== $wpdb->last_error || ! is_array( $customers ) ) {
+				throw new RuntimeException( 'Reset recovery required: privacy link owners could not be read.' );
+			}
+			if ( ! $customers ) { return; }
+			foreach ( $customers as $customer ) {
+				$last_customer_id = (int) $customer['id'];
+				$suppressed = YoOhw_COS_Privacy_Erasure::is_suppressed( $customer );
+				if ( null === $suppressed ) {
+					throw new RuntimeException( 'Reset recovery required: privacy suppression state unavailable.' );
+				}
+				if ( ! $suppressed ) { continue; }
+				$last_fact_id = 0;
+				while ( true ) {
+					$facts = $wpdb->get_results( $wpdb->prepare(
+						'SELECT id, order_id FROM %i WHERE customer_id = %d AND id > %d ORDER BY id ASC LIMIT 25',
+						YoOhw_COS_DB::order_facts_table(), $last_customer_id, $last_fact_id
+					), ARRAY_A );
+					if ( '' !== $wpdb->last_error || ! is_array( $facts ) ) {
+						throw new RuntimeException( 'Reset recovery required: privacy order facts could not be read.' );
+					}
+					if ( ! $facts ) { break; }
+					foreach ( $facts as $fact ) {
+						$last_fact_id = (int) $fact['id'];
+						if ( ! self::unlink_order_for_erasure( (int) $fact['order_id'], $last_customer_id ) ) {
+							throw new RuntimeException( 'Reset recovery required: privacy order link could not be cleared.' );
+						}
+					}
+				}
 			}
 		}
 	}

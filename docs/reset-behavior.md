@@ -1,10 +1,17 @@
 # Customer Reset and order link validity
 
 Reset clears the same CRM tables and worker state as before, while retaining tag and
-segment definitions. It does not modify WooCommerce orders, refunds, billing, totals,
-statuses, users or other plugins' metadata. Orders can be rebuilt with **Sync orders**.
+segment definitions. It does not modify WooCommerce order contents, refunds, billing,
+totals, statuses, users or other plugins' metadata. Orders can be rebuilt with **Sync orders**.
 Existing incorrect historical assignments are not repaired automatically; recovery
 requires a separate decision based on evidence.
+
+When a profile has a privacy suppression receipt, Reset first clears Customer
+Intelligence's two order-link metadata keys for orders identified by that profile's
+order facts. It reads owners and facts in bounded batches and stops in recoverable
+`pending` state if an order link cannot be cleared. This lets a paged personal-data
+erasure finish truthfully when Reset removes its remaining facts between pages;
+WooCommerce order contents and unrelated metadata remain intact.
 
 A private `yoohw_cos_reset_boundary` option records a random epoch and `pending` or
 `ready`. Reset persists `pending` before its first TRUNCATE. Old numeric order links

@@ -126,6 +126,36 @@ final class YCI_Privacy_Erasure_Test extends WP_UnitTestCase {
 		$this->assertSame( 'unrelated-after-reset@example.test', YoOhw_COS_Customers::get_customer( $new )['email'] );
 	}
 
+	public function test_reset_between_pages_clears_receipted_subject_order_link_before_fact_truncation(): void {
+		global $wpdb;
+		$order = wc_create_order();
+		$order->set_billing_email( 'reset-linked@example.test' );
+		$order->set_total( '37.00' );
+		$order->update_meta_data( '_other_plugin', 'keep' );
+		$order->save();
+		$old = YoOhw_COS_Customers::sync_from_order( $order );
+		$this->assertGreaterThan( 0, $old );
+		$this->assertSame( 1, (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE customer_id = %d', YoOhw_COS_DB::order_facts_table(), $old ) ) );
+		for ( $i = 0; $i < 27; $i++ ) {
+			$wpdb->insert( YoOhw_COS_DB::notes_table(), array( 'customer_id' => $old, 'note_content' => 'Synthetic', 'created_at' => YoOhw_COS_DB::now(), 'updated_at' => YoOhw_COS_DB::now() ) );
+		}
+		$this->assertFalse( YoOhw_COS_Privacy_Erasure::erase( 'reset-linked@example.test', 1 )['done'] );
+		$this->assertSame( (string) $old, (string) wc_get_order( $order->get_id() )->get_meta( YoOhw_COS_Customers::ORDER_CUSTOMER_META_KEY ) );
+		$this->assertTrue( YoOhw_COS_Customers::reset_data() );
+		$new = YoOhw_COS_Customers::create_customer( array( 'email' => 'reset-unrelated@example.test' ) );
+		$this->assertSame( $old, $new );
+		$result = YoOhw_COS_Privacy_Erasure::erase( 'reset-linked@example.test', 2 );
+		$this->assertTrue( $result['done'] );
+		$fresh = wc_get_order( $order->get_id() );
+		$this->assertSame( '', (string) $fresh->get_meta( YoOhw_COS_Customers::ORDER_CUSTOMER_META_KEY ) );
+		$this->assertSame( '', (string) $fresh->get_meta( YoOhw_COS_Reset_Guard::META_KEY ) );
+		$this->assertSame( 'keep', $fresh->get_meta( '_other_plugin' ) );
+		$this->assertSame( '37.00', $fresh->get_total() );
+		$this->assertSame( 'reset-unrelated@example.test', YoOhw_COS_Customers::get_customer( $new )['email'] );
+		$this->assertSame( 0, YoOhw_COS_Customers::sync_from_order_id( $order->get_id() ) );
+		$this->assertFalse( wp_next_scheduled( YoOhw_COS_Customers::ORDER_SYNC_RETRY_HOOK, array( $order->get_id() ) ) );
+	}
+
 	public function test_partial_email_match_does_not_erase_an_unrelated_profile(): void {
 		$id = YoOhw_COS_Customers::create_customer( array( 'email' => 'not-owner@example.test' ) );
 		$this->assertGreaterThan( 0, $id );
