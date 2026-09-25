@@ -220,8 +220,31 @@ final class YCI_Privacy_Erasure_Test extends WP_UnitTestCase {
 		$order->set_billing_phone( '+15557654321' );
 		$order->save();
 		$this->assertSame( 0, YoOhw_COS_Customers::sync_from_order_id( $order->get_id() ) );
+		$this->assertSame( array( 'status' => 'suppressed', 'code' => 'privacy_suppressed' ), YoOhw_COS_Customers::sync_order_for_migration( $order->get_id() ) );
+		$this->assertFalse( wp_next_scheduled( YoOhw_COS_Customers::ORDER_SYNC_RETRY_HOOK, array( $order->get_id() ) ) );
 		$this->assertSame( 0, (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE order_id = %d', YoOhw_COS_DB::order_facts_table(), $order->get_id() ) ) );
 		$this->assertSame( '', (string) wc_get_order( $order->get_id() )->get_meta( YoOhw_COS_Customers::ORDER_CUSTOMER_META_KEY ) );
+	}
+
+	public function test_linked_profile_suppression_precedes_identity_conflict_event(): void {
+		global $wpdb;
+		$a = YoOhw_COS_Customers::create_customer( array( 'email' => 'conflict-erased@example.test' ) );
+		$b = YoOhw_COS_Customers::create_customer( array( 'email' => 'conflict-other@example.test' ) );
+		$this->assertGreaterThan( 0, $a );
+		$this->assertGreaterThan( 0, $b );
+		for ( $i = 0; $i < 27; $i++ ) {
+			$wpdb->insert( YoOhw_COS_DB::notes_table(), array( 'customer_id' => $a, 'note_content' => 'Synthetic', 'created_at' => YoOhw_COS_DB::now(), 'updated_at' => YoOhw_COS_DB::now() ) );
+		}
+		$order = wc_create_order();
+		$order->set_billing_email( 'conflict-other@example.test' );
+		$order->update_meta_data( YoOhw_COS_Customers::ORDER_CUSTOMER_META_KEY, $a );
+		$order->update_meta_data( YoOhw_COS_Reset_Guard::META_KEY, YoOhw_COS_Reset_Guard::epoch() . ':' . $a );
+		$order->save();
+		$this->assertFalse( YoOhw_COS_Privacy_Erasure::erase( 'conflict-erased@example.test', 1 )['done'] );
+		$events_before = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE customer_id = %d', YoOhw_COS_DB::events_table(), $a ) );
+		$this->assertSame( 0, YoOhw_COS_Customers::sync_from_order_id( $order->get_id() ) );
+		$this->assertSame( $events_before, (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE customer_id = %d', YoOhw_COS_DB::events_table(), $a ) ) );
+		$this->assertFalse( wp_next_scheduled( YoOhw_COS_Customers::ORDER_SYNC_RETRY_HOOK, array( $order->get_id() ) ) );
 	}
 
 	public function test_integration_event_preserves_source_user_suppression(): void {
