@@ -1,10 +1,9 @@
 <?php
 defined( 'ABSPATH' ) || exit;
 
-/** Read-only scalar snapshot from a canonical, already-loaded customer row. */
+	/** Read-only scalar snapshot from a canonical, already-loaded customer row. */
 final class YoOhw_COS_Customer_Facts {
 	public static function snapshot( array $customer, array $context = array() ): array {
-		$customer = YoOhw_COS_Intelligence::safe_customer_decisions( $customer );
 		$orders = absint( $customer['total_orders'] ?? 0 );
 		$money_ready = YoOhw_COS_Commerce_Metrics_Policy::money_is_comparable( $customer );
 		$money_state = $money_ready ? 'comparable' : ( 'none' === ( $customer['money_state'] ?? '' ) && YoOhw_COS_Migration_Runner::currency_backfill_is_complete() ? 'none' : 'unavailable' );

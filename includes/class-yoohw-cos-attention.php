@@ -4,7 +4,6 @@ defined( 'ABSPATH' ) || exit;
 /** Shared deterministic Profile attention decision. */
 final class YoOhw_COS_Attention {
 	public static function reasons( array $customer, array $context = array() ): array {
-		$customer = YoOhw_COS_Intelligence::safe_customer_decisions( $customer );
 		$status = sanitize_key( (string) ( $customer['customer_status'] ?? '' ) );
 		$high_value = ! in_array( sanitize_key( (string) ( $customer['vip_status'] ?? 'none' ) ), array( '', 'none' ), true );
 		$email = sanitize_email( (string) ( $customer['email'] ?? '' ) );

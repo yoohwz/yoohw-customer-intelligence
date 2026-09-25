@@ -21,6 +21,7 @@ final class YCI_Extension_Contracts_Test extends WP_UnitTestCase {
 	}
 
 	public function test_external_provider_contracts(): void {
+		global $wpdb;
 		$this->assertSame( 1, YoOhw_COS_Extensions::version() );
 		$this->assertSame( YoOhw_COS_Extensions::VERSION, YoOhw_COS_Extensions::version() );
 		$today = YoOhw_COS_DB::now();
@@ -28,6 +29,9 @@ final class YCI_Extension_Contracts_Test extends WP_UnitTestCase {
 		$two = YoOhw_COS_Customers::create_customer( array( 'email' => 'extension-two@example.test', 'phone' => '123', 'total_orders' => 2, 'last_activity_date' => $today ) );
 		$three = YoOhw_COS_Customers::create_customer( array( 'email' => 'extension-three@example.test', 'phone' => '123', 'total_orders' => 3, 'last_activity_date' => $today ) );
 		$this->assertGreaterThan( 0, $three );
+		$options_before = $wpdb->get_col( $wpdb->prepare( 'SELECT option_name FROM %i WHERE option_name LIKE %s ORDER BY option_name', $wpdb->options, $wpdb->esc_like( 'yoohw_cos_' ) . '%' ) );
+		$tables_before = $wpdb->get_col( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $wpdb->prefix . 'yoohw_cos_' ) . '%' ) );
+		$cron_before = get_option( 'cron' );
 		$baseline = YoOhw_COS_Customer_Query::query( array( 's' => 'extension-', 'per_page' => 1 ) );
 		$this->assertSame( 3, $baseline['total_items'] );
 		YCI_Example_Extension_Provider::register();
@@ -60,6 +64,14 @@ final class YCI_Extension_Contracts_Test extends WP_UnitTestCase {
 		YoOhw_COS_Customer_Query::query( array( 's' => 'extension-', 'extensions' => array( 'example-provider/count-calls' => '1' ), 'per_page' => 3 ) );
 		$this->assertSame( 2, $builder_calls );
 		$this->assertArrayNotHasKey( 'extensions', YoOhw_COS_Saved_Views::definition( $input ) );
+		$canonical_rows = YoOhw_COS_Customer_Query::query( array( 's' => 'extension-', 'per_page' => 3 ) )['items'];
+		YoOhw_COS_Customer_Facts::snapshot( $canonical_rows[0] ); // Warm shared policy options before measuring row scaling.
+		$before_snapshots = $wpdb->num_queries;
+		foreach ( $canonical_rows as $canonical_row ) {
+			YoOhw_COS_Customer_Facts::snapshot( $canonical_row );
+			YoOhw_COS_Attention::reasons( $canonical_row );
+		}
+		$this->assertSame( $before_snapshots, $wpdb->num_queries, 'Canonical list snapshots must not issue per-customer SQL.' );
 		$customer = YoOhw_COS_Customers::get_customer( $two );
 		$customer['money_state'] = 'mixed';
 		$customer['total_spent'] = 500;
@@ -74,9 +86,30 @@ final class YCI_Extension_Contracts_Test extends WP_UnitTestCase {
 			$this->assertDoesNotMatchRegularExpression( '/email|phone|name|address|note|payment|privacy/i', $key === 'core/email_present' || $key === 'core/phone_present' ? '' : $key );
 		}
 		$this->assertStringNotContainsString( 'extension-two@example.test', wp_json_encode( $facts ) );
+		$comparable = $customer;
+		$comparable['money_state'] = 'comparable';
+		$comparable['money_currency'] = get_woocommerce_currency();
+		$comparable['commerce_metrics_version'] = YoOhw_COS_Commerce_Metrics_Policy::VERSION;
+		$comparable['last_order_date'] = current_time( 'Y-m-d' ) . ' 12:00:00';
+		$comparable['total_spent'] = '125.50';
+		$comparable['average_order_value'] = '62.75';
+		$money_facts = YoOhw_COS_Customer_Facts::snapshot( $comparable );
+		if ( YoOhw_COS_Commerce_Metrics_Policy::money_is_comparable( $comparable ) ) {
+			$this->assertSame( 'comparable', $money_facts['core/money_state'] );
+			$this->assertSame( 125.5, $money_facts['core/rfm_monetary'] );
+			$this->assertSame( 62.75, $money_facts['core/average_order_value'] );
+		} else {
+			$this->assertSame( 'unavailable', $money_facts['core/money_state'] );
+			$this->assertNull( $money_facts['core/rfm_monetary'] );
+			$this->assertNull( $money_facts['core/average_order_value'] );
+		}
+		$this->assertSame( 0, $money_facts['core/rfm_recency_days'] );
 		$reasons = YoOhw_COS_Attention::reasons( $customer, array( 'overdue_tasks' => 1 ) );
 		$this->assertSame( 'core/overdue_follow_up', $reasons[0]['id'] );
 		$this->assertSame( 'example-provider/check', $reasons[1]['id'] );
+		YoOhw_COS_Extensions::register_attention( 'example-provider/too-long', static fn() => array( 'id' => 'example-provider/too-long', 'message' => str_repeat( 'x', 241 ) ) );
+		YoOhw_COS_Extensions::register_attention( 'example-provider/wrong-id', static fn() => array( 'id' => 'core/overdue_follow_up', 'message' => 'Override' ) );
+		$this->assertCount( 2, YoOhw_COS_Attention::reasons( $customer, array( 'overdue_tasks' => 1 ) ) );
 		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
 		$this->assertSame( array(), YoOhw_COS_Extensions::actions( $customer ) );
 		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
@@ -90,5 +123,8 @@ final class YCI_Extension_Contracts_Test extends WP_UnitTestCase {
 		YoOhw_COS_Extensions::register_action( 'example-provider/traversal', static fn() => array( 'id' => 'example-provider/traversal', 'label' => 'Traversal', 'url' => admin_url( '../outside' ), 'capability' => 'manage_options' ) );
 		$this->assertCount( 1, YoOhw_COS_Extensions::actions( $customer ) );
 		$this->assertFalse( wp_next_scheduled( 'example-provider/open' ) );
+		$this->assertSame( $options_before, $wpdb->get_col( $wpdb->prepare( 'SELECT option_name FROM %i WHERE option_name LIKE %s ORDER BY option_name', $wpdb->options, $wpdb->esc_like( 'yoohw_cos_' ) . '%' ) ) );
+		$this->assertSame( $tables_before, $wpdb->get_col( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $wpdb->prefix . 'yoohw_cos_' ) . '%' ) ) );
+		$this->assertSame( $cron_before, get_option( 'cron' ) );
 	}
 }
