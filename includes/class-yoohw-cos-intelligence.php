@@ -23,13 +23,13 @@ final class YoOhw_COS_Intelligence {
 	}
 
 	/** Old persisted classifications may have used mixed-currency spend before migration. */
-	public static function persisted_decisions_are_safe( array $customer ): bool {
+	public static function persisted_decisions_are_safe( array $customer, ?string $generation = null ): bool {
 		return 1 === absint( $customer['intelligence_currency_ready'] ?? 0 )
-			&& (string) ( $customer['intelligence_generation'] ?? '' ) === self::get_scoring_generation();
+			&& (string) ( $customer['intelligence_generation'] ?? '' ) === ( null === $generation ? self::get_scoring_generation() : $generation );
 	}
 
-	public static function safe_customer_decisions( array $customer ): array {
-		if ( self::persisted_decisions_are_safe( $customer ) ) {
+	public static function safe_customer_decisions( array $customer, ?string $generation = null ): array {
+		if ( self::persisted_decisions_are_safe( $customer, $generation ) ) {
 			return $customer;
 		}
 		$customer['customer_status'] = self::calculate_customer_status( $customer );

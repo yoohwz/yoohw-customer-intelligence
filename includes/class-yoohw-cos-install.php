@@ -44,8 +44,36 @@ final class YoOhw_COS_Install {
 		return self::check_schema();
 	}
 
+	/** Inspect the installed schema without persisting a diagnostic status. */
+	public static function inspect_schema(): array {
+		$failures = self::schema_failures();
+		$stored_version = (string) get_option( 'yoohw_cos_db_version', '' );
+		return array(
+			'stored_version' => $stored_version,
+			'target_version' => self::db_version(),
+			'requirements' => $failures,
+			'status' => ! empty( $failures ) || version_compare( $stored_version, self::db_version(), '>' ) ? 'blocked' : ( version_compare( $stored_version, self::db_version(), '<' ) ? 'upgrade-required' : 'ready' ),
+		);
+	}
+
 	private static function check_schema( bool $attempted = false, array $failures = array() ): bool {
+		$failures = array_values( array_unique( array_merge( $failures, self::schema_failures() ) ) );
+		// Only fixed manifest identifiers are persisted: no raw SQL/error/row data.
+		$status = array(
+			'status' => empty( $failures ) ? 'ready' : 'blocked',
+			'target_version' => self::db_version(),
+			'requirements' => $failures,
+		);
+		$stored = get_option( self::SCHEMA_STATUS_OPTION, array() );
+		$last_attempt = is_array( $stored ) ? ( $stored['last_attempt_at'] ?? '' ) : '';
+		$status['last_attempt_at'] = $attempted || '' === $last_attempt ? YoOhw_COS_DB::now() : $last_attempt;
+		update_option( self::SCHEMA_STATUS_OPTION, $status, false );
+		return empty( $failures );
+	}
+
+	private static function schema_failures(): array {
 		global $wpdb;
+		$failures = array();
 		$previous = $wpdb->suppress_errors();
 		try {
 			foreach ( self::schema_contract() as $key => $contract ) {
@@ -87,17 +115,7 @@ final class YoOhw_COS_Install {
 		} finally {
 			$wpdb->suppress_errors( $previous );
 		}
-		// Only fixed manifest identifiers are persisted: no raw SQL/error/row data.
-		$status = array(
-			'status' => empty( $failures ) ? 'ready' : 'blocked',
-			'target_version' => self::db_version(),
-			'requirements' => array_values( array_unique( $failures ) ),
-		);
-		$stored = get_option( self::SCHEMA_STATUS_OPTION, array() );
-		$last_attempt = is_array( $stored ) ? ( $stored['last_attempt_at'] ?? '' ) : '';
-		$status['last_attempt_at'] = $attempted || '' === $last_attempt ? YoOhw_COS_DB::now() : $last_attempt;
-		update_option( self::SCHEMA_STATUS_OPTION, $status, false );
-		return empty( $failures );
+		return array_values( array_unique( $failures ) );
 	}
 
 	private static function execute_ensure_ddl( string $sql ): void {
