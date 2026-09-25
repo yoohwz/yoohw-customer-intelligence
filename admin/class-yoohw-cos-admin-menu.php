@@ -654,8 +654,6 @@ final class YoOhw_COS_Admin_Menu {
 		$priority_customers = YoOhw_COS_Overview::get_priority_customers();
 		$priority_tasks     = YoOhw_COS_Reset_Guard::snapshot_rows( array( 'YoOhw_COS_Overview', 'get_priority_tasks' ) );
 		$sync_state         = self::get_sync_state();
-		$refresh_state      = get_option( 'yoohw_cos_activity_semantics_recalculation', array() );
-		$refresh_state      = is_array( $refresh_state ) ? $refresh_state : array();
 		$revenue            = YoOhw_COS_Commerce_Metrics_Policy::format_money( $summary, 'total_spent' );
 		$average_order      = YoOhw_COS_Commerce_Metrics_Policy::format_money( $summary, 'average_order_value' );
 		$customers_url      = self::get_overview_customers_url();
@@ -672,7 +670,7 @@ final class YoOhw_COS_Admin_Menu {
 		echo '</div>';
 		echo '</div>';
 
-		self::render_overview_data_status( $sync_state, $refresh_state );
+		self::render_overview_data_status( YoOhw_COS_Diagnostics::snapshot() );
 		self::render_overview_notices();
 
 		if ( empty( $sync_state['last_run_at'] ) && empty( $summary['total_customers'] ) ) {
@@ -2553,6 +2551,7 @@ final class YoOhw_COS_Admin_Menu {
 		$readiness  = self::get_setup_readiness( $sync_state );
 
 		self::render_setup_panel( $readiness, $sync_state, $stats );
+		self::render_diagnostics( YoOhw_COS_Diagnostics::snapshot() );
 
 		if ( isset( $_GET['yoohw_cos_processed'] ) ) {
 			$summary = self::get_sync_status_summary( $sync_state );
@@ -3407,56 +3406,57 @@ final class YoOhw_COS_Admin_Menu {
 		return '<span class="yoohw-cos-status-pill yoohw-cos-status-pill--' . esc_attr( $type ) . '">' . esc_html( $label ) . '</span>';
 	}
 
-	private static function render_overview_data_status( array $sync_state, array $refresh_state ): void {
-		$last_full_sync = sanitize_text_field( (string) ( $sync_state['last_run_at'] ?? '' ) );
-		$last_updated   = sanitize_text_field( (string) get_option( 'yoohw_cos_customer_data_updated_at', '' ) );
-		$full_sync_time = YoOhw_COS_DB::date_timestamp( $last_full_sync );
-		$updated_time   = YoOhw_COS_DB::date_timestamp( $last_updated );
-		$last_run_at    = $updated_time > $full_sync_time ? $last_updated : $last_full_sync;
-		$last_timestamp = max( $full_sync_time, $updated_time );
-		$stale_days     = max( 1, absint( apply_filters( 'yoohw_cos_overview_stale_sync_days', 7 ) ) );
-		$age_seconds    = $last_timestamp ? max( 0, current_time( 'timestamp' ) - $last_timestamp ) : 0;
-		$is_stale       = $last_timestamp && $age_seconds >= ( $stale_days * DAY_IN_SECONDS );
-		$is_syncing     = ! empty( $sync_state['has_more'] ) || 'in_progress' === (string) ( $sync_state['status'] ?? '' );
-		$refresh_status = sanitize_key( (string) ( $refresh_state['status'] ?? '' ) );
-		$type           = 'success';
-		$icon           = 'yes-alt';
-
-		if ( empty( $last_run_at ) ) {
-			$type    = 'warning';
-			$icon    = 'warning';
-			$message = __( 'Customer data has not been synced yet.', 'yoohw-customer-intelligence' );
-		} elseif ( $is_syncing ) {
-			$type    = 'info';
-			$icon    = 'update';
-			$message = __( 'Order sync is in progress. Dashboard totals may continue to change.', 'yoohw-customer-intelligence' );
-		} elseif ( $is_stale ) {
-			$type    = 'warning';
-			$icon    = 'clock';
-			$message = sprintf(
-				/* translators: %s: date of the last customer sync. */
-				__( 'No customer data changes have been recorded since %s. Run sync if store history changed outside normal WooCommerce flows.', 'yoohw-customer-intelligence' ),
-				YoOhw_COS_DB::format_admin_date( $last_run_at, '&mdash;' )
-			);
-		} else {
-			$message = sprintf(
-				/* translators: %s: date of the last customer sync. */
-				__( 'Customer data is current. Last updated %s.', 'yoohw-customer-intelligence' ),
-				YoOhw_COS_DB::format_admin_date( $last_run_at, '&mdash;' )
-			);
-		}
-
+	private static function render_overview_data_status( array $diagnostics ): void {
+		$status = $diagnostics['status'];
+		$type = 'ready' === $status ? 'success' : ( 'working' === $status ? 'info' : 'warning' );
 		echo '<div class="yoohw-cos-overview-data-status yoohw-cos-overview-data-status--' . esc_attr( $type ) . '">';
-		echo '<span class="dashicons dashicons-' . esc_attr( $icon ) . '" aria-hidden="true"></span>';
-		echo '<span>' . wp_kses_post( $message ) . '</span>';
-
-		if ( in_array( $refresh_status, array( 'pending', 'in_progress' ), true ) ) {
-			echo '<span class="yoohw-cos-overview-data-status__refresh">';
-			echo esc_html__( 'Customer classifications are being refreshed in the background.', 'yoohw-customer-intelligence' );
-			echo '</span>';
+		echo '<span class="dashicons dashicons-chart-area" aria-hidden="true"></span>';
+		echo '<span><strong>' . esc_html( ucfirst( $status ) ) . '.</strong> ';
+		echo esc_html( sprintf( __( '%1$d active profiles, %2$d order facts. Background work can take time to converge.', 'yoohw-customer-intelligence' ), $diagnostics['data']['active_profiles'], $diagnostics['data']['order_facts'] ) ) . '</span>';
+		if ( $diagnostics['actionable'] ) {
+			echo '<span>' . esc_html( sprintf( __( 'Check: %s.', 'yoohw-customer-intelligence' ), implode( ', ', $diagnostics['actionable'] ) ) ) . '</span>';
 		}
-
+		echo '<a href="' . esc_url( admin_url( 'admin.php?page=yoohw-customer-intelligence-settings#yoohw-cos-diagnostics' ) ) . '">' . esc_html__( 'View diagnostics', 'yoohw-customer-intelligence' ) . '</a>';
 		echo '</div>';
+	}
+
+	private static function render_diagnostics( array $diagnostics ): void {
+		echo '<div id="yoohw-cos-diagnostics" class="postbox"><div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Diagnostics', 'yoohw-customer-intelligence' ) . '</h2></div><div class="inside">';
+		echo '<p>' . esc_html__( 'Read-only state at page load. A scheduled WP-Cron event does not prove that work ran.', 'yoohw-customer-intelligence' ) . '</p>';
+		$rows = array(
+			'Health' => ucfirst( $diagnostics['status'] ),
+			'Schema' => $diagnostics['schema']['status'] . ' (' . $diagnostics['schema']['stored_version'] . ' → ' . $diagnostics['schema']['target_version'] . ')',
+			'Schema requirements' => implode( ', ', $diagnostics['schema']['requirements'] ),
+			'Profiles / active / archived' => implode( ' / ', array( $diagnostics['data']['profiles'], $diagnostics['data']['active_profiles'], $diagnostics['data']['archived_profiles'] ) ),
+			'Order facts / open tasks / overdue tasks' => implode( ' / ', array( $diagnostics['data']['order_facts'], $diagnostics['data']['open_tasks'], $diagnostics['data']['overdue_tasks'] ) ),
+			'Order sync' => $diagnostics['sync']['status'] . ' — ' . $diagnostics['sync']['scanned'] . ' scanned, ' . $diagnostics['sync']['processed'] . ' processed, ' . $diagnostics['sync']['retryable'] . ' retryable, ' . $diagnostics['sync']['unresolved'] . ' unresolved',
+			'Order sync legacy outcomes' => $diagnostics['sync']['legacy_outcomes'] ? 'Outcome counts unavailable; run a new sync to verify' : 'No legacy outcome gap',
+			'Order sync last updated at' => $diagnostics['sync']['last_run_at'],
+			'Order sync completed at' => $diagnostics['sync']['completed_at'],
+			'Currency' => ( $diagnostics['currency']['backfill_complete'] ? 'Backfill complete' : 'Converging' ) . ' — ' . $diagnostics['currency']['store_currency'],
+			'Active profiles: comparable / mixed / unknown' => implode( ' / ', array( $diagnostics['data']['comparable'], $diagnostics['data']['mixed'], $diagnostics['data']['unknown'] ) ),
+			'Active profiles with outdated commerce metrics' => $diagnostics['data']['outdated_metrics'],
+			'WooCommerce blocks migration' => $diagnostics['woocommerce_blocks_migration'] ? 'Yes' : 'No evidence',
+			'Intelligence generation' => $diagnostics['intelligence']['generation'],
+			'Active profiles: current / stale / currency unavailable' => implode( ' / ', array( $diagnostics['data']['current_generation'], $diagnostics['data']['stale_generation'], $diagnostics['data']['currency_unready'] ) ),
+			'Intelligence freshness worker' => $diagnostics['intelligence']['worker']['status'] . ' — cursor ' . $diagnostics['intelligence']['worker']['cursor'] . ( $diagnostics['intelligence']['worker']['generation_matches'] ? ', current generation' : ', generation not verified' ),
+			'Activity recalculation worker' => $diagnostics['intelligence']['activity_worker']['status'] . ' — ' . $diagnostics['intelligence']['activity_worker']['scanned'] . ' scanned, ' . $diagnostics['intelligence']['activity_worker']['updated'] . ' updated, page ' . $diagnostics['intelligence']['activity_worker']['next_page'],
+			'Customer data updated at' => $diagnostics['intelligence']['data_updated_at'],
+			'Reset boundary' => $diagnostics['reset']['status'],
+			'Privacy suppression' => $diagnostics['privacy']['evaluable'] ? 'Evaluable, ' . $diagnostics['privacy']['receipts'] . ' receipts' : 'Unavailable',
+			'DISABLE_WP_CRON' => $diagnostics['disable_wp_cron'] ? 'On' : 'Off',
+		);
+		foreach ( $diagnostics['migrations'] as $id => $migration ) {
+			$rows[ 'Migration: ' . $id ] = $migration['status'] . ' / ' . $migration['phase'] . ' — ' . $migration['processed'] . ' processed, page ' . $migration['next_page'] . ', ' . $migration['pending_issues'] . ' pending, ' . $migration['unresolved_issues'] . ' unresolved';
+		}
+		foreach ( $diagnostics['cron'] as $name => $cron ) {
+			$rows[ 'WP-Cron: ' . $name ] = $cron['scheduled'] ? $cron['next_site_time'] . ( $cron['overdue'] ? ' (overdue)' : '' ) : 'Not scheduled';
+		}
+		echo '<table class="widefat striped"><tbody>';
+		foreach ( $rows as $label => $value ) {
+			echo '<tr><th scope="row">' . esc_html( $label ) . '</th><td>' . esc_html( '' === (string) $value ? '—' : (string) $value ) . '</td></tr>';
+		}
+		echo '</tbody></table></div></div>';
 	}
 
 	private static function render_overview_notices(): void {

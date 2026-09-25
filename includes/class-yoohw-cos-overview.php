@@ -229,7 +229,7 @@ final class YoOhw_COS_Overview {
 			ARRAY_A
 		);
 
-		return is_array( $customers ) ? array_map( array( 'YoOhw_COS_Intelligence', 'safe_customer_decisions' ), $customers ) : array();
+		return is_array( $customers ) ? array_map( static fn( array $customer ): array => YoOhw_COS_Intelligence::safe_customer_decisions( $customer, $generation ), $customers ) : array();
 	}
 
 	public static function get_priority_tasks( int $limit = 5 ): array {

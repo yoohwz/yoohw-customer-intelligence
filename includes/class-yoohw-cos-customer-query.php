@@ -74,8 +74,9 @@ final class YoOhw_COS_Customer_Query {
 		);
 		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, PluginCheck.Security.DirectDB.UnescapedDBParameter
 
+		$generation = YoOhw_COS_Intelligence::get_scoring_generation();
 		return array(
-			'items'       => is_array( $items ) ? array_map( array( 'YoOhw_COS_Intelligence', 'safe_customer_decisions' ), $items ) : array(),
+			'items'       => is_array( $items ) ? array_map( static fn( array $item ): array => YoOhw_COS_Intelligence::safe_customer_decisions( $item, $generation ), $items ) : array(),
 			'total_items' => $total_items,
 			'args'        => $args,
 		);

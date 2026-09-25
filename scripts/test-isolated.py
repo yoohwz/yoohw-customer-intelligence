@@ -59,7 +59,7 @@ def controls(root, env, php, sql, credentials):
     for p in paths:
         p.write_text('<?php file_put_contents(' + repr(str(marker)) + ', "mutated"); exit(0);')
     credential_file = root / 'environment.json'
-    entrypoints = [REPO / path for path in ('tests/bootstrap.php', 'tests/integration/test-yoohw-cos-smoke.php', 'tests/integration/test-reset-link-integrity.php', 'tests/reset-worker.php')]
+    entrypoints = [REPO / path for path in ('tests/bootstrap.php', 'tests/integration/test-yoohw-cos-smoke.php', 'tests/integration/test-reset-link-integrity.php', 'tests/reset-worker.php', 'tests/benchmark.php')]
     cases = [({}, 'missing root'), ({'YCI_TEST_TOKEN': ''}, 'missing token'),
              ({'YCI_TEST_TOKEN': 'false'}, 'false token'), ({'YCI_TEST_TOKEN': '0' * 64}, 'wrong token'),
              ({'WP_TESTS_DIR': '/tmp/wordpress-tests-lib'}, 'wrong test path'),
@@ -140,6 +140,7 @@ def main():
     parser.add_argument('--inputs', type=Path, help='Optional cache of checksum-verified dependency archives')
     parser.add_argument('--php', default=shutil.which('php'))
     parser.add_argument('--mode', choices=['yes', 'no', 'both'], default='both')
+    parser.add_argument('--benchmark-only', action='store_true', help='Run the large synthetic benchmark on the owned database instead of PHPUnit')
     args = parser.parse_args()
     # Do not propagate WordPress/database settings or PHP auto-prepend configuration.
     env = {k: v for k, v in os.environ.items() if not k.startswith(('WP_', 'WC_', 'YCI_', 'DB_', 'MYSQL', 'PHPRC', 'PHP_INI_SCAN_DIR'))}
@@ -181,13 +182,18 @@ def main():
             controls(root, env, args.php, sql, credentials)
             for mode in ['yes', 'no'] if args.mode == 'both' else [args.mode]:
                 env['WC_HPOS_ENABLED'] = mode
-                report = root / ('junit-' + mode + '.xml')
-                run([args.php, '-d', 'disable_functions=mail', REPO / 'vendor/bin/phpunit', '-c', REPO / 'phpunit.xml.dist', '--fail-on-skipped', '--fail-on-risky', '--log-junit', report], env=env, cwd=REPO)
-                suite = ET.parse(report).getroot()
-                cases = suite.findall('.//testcase')
-                if not cases or suite.findall('.//skipped') or suite.findall('.//failure') or suite.findall('.//error'):
-                    raise RuntimeError('Empty or incomplete integration evidence')
-                print(f'PASS: HPOS={mode}, {len(cases)} tests, WP 6.9 / WC 10.8.0 / PHP runtime above', flush=True)
+                if not args.benchmark_only:
+                    report = root / ('junit-' + mode + '.xml')
+                    run([args.php, '-d', 'disable_functions=mail', REPO / 'vendor/bin/phpunit', '-c', REPO / 'phpunit.xml.dist', '--fail-on-skipped', '--fail-on-risky', '--log-junit', report], env=env, cwd=REPO)
+                    suite = ET.parse(report).getroot()
+                    cases = suite.findall('.//testcase')
+                    if not cases or suite.findall('.//skipped') or suite.findall('.//failure') or suite.findall('.//error'):
+                        raise RuntimeError('Empty or incomplete integration evidence')
+                    print(f'PASS: HPOS={mode}, {len(cases)} tests, WP 6.9 / WC 10.8.0 / PHP runtime above', flush=True)
+                env['YCI_BENCHMARK_SIZE'] = 'large' if args.benchmark_only else 'smoke'
+                run([args.php, '-d', 'disable_functions=mail', REPO / 'tests/benchmark.php'], env=env, cwd=REPO)
+                print(f'PASS: HPOS={mode}, owned synthetic benchmark {env["YCI_BENCHMARK_SIZE"]}', flush=True)
+                env.pop('YCI_BENCHMARK_SIZE')
                 if sql('SELECT value FROM synthetic_sentinel.untouched') != token:
                     raise RuntimeError('Unrelated synthetic sentinel changed')
             print('PASS: persisted unrelated synthetic database sentinel unchanged', flush=True)
