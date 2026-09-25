@@ -26,6 +26,7 @@ final class YoOhw_COS_Loader {
 	public static function init(): void {
 		self::includes();
 		YoOhw_COS_Reset_Guard::init();
+		YoOhw_COS_Privacy_Exporter::init();
 
 		YoOhw_COS_Install::maybe_update();
 		YoOhw_COS_Migration_Runner::init();
@@ -70,6 +71,7 @@ final class YoOhw_COS_Loader {
 		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-integrations.php';
 		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-customer-query.php';
 		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-saved-views.php';
+		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-privacy-exporter.php';
 		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-events.php';
 		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-customers.php';
 		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-tags.php';
