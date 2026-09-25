@@ -191,9 +191,9 @@ final class YoOhw_COS_Migration_Runner {
 				$status = sanitize_key( (string) ( $outcome['status'] ?? 'retry' ) );
 				$code   = sanitize_key( (string) ( $outcome['code'] ?? 'sync_failed' ) );
 
-				if ( 'success' === $status ) {
+				if ( in_array( $status, array( 'success', 'suppressed' ), true ) ) {
 					self::resolve_issue( $migration_id, 'order', absint( $order_id ) );
-					$migration['successful'] = absint( $migration['successful'] ?? 0 ) + 1;
+					if ( 'success' === $status ) { $migration['successful'] = absint( $migration['successful'] ?? 0 ) + 1; }
 				} else {
 					self::record_issue(
 						$migration_id,
@@ -442,7 +442,7 @@ final class YoOhw_COS_Migration_Runner {
 			$status    = sanitize_key( (string) ( $outcome['status'] ?? 'retry' ) );
 			$code      = sanitize_key( (string) ( $outcome['code'] ?? 'retry_failed' ) );
 
-			if ( 'success' === $status ) {
+			if ( in_array( $status, array( 'success', 'suppressed' ), true ) ) {
 				self::resolve_issue( $migration_id, $object_type, $object_id );
 				continue;
 			}

@@ -1,6 +1,6 @@
 # Schema upgrade safety
 
-The database target is `0.2.2`. Both `install()` and `maybe_update()` attempt the
+The database target is `0.2.4`. Both `install()` and `maybe_update()` attempt the
 existing idempotent DDL and use the same current-schema postcondition verifier before
 registering data migrations or recording `yoohw_cos_db_version`. A failed attempt keeps
 the previous (or absent) DB version. `yoohw_cos_version` retains its separate plugin
@@ -62,3 +62,5 @@ created and removed inside the disposable database. Existing mail/HTTP intercept
 grant controls, unrelated database sentinel and owned cleanup remain unchanged. This
 is pinned WP/WC plus MySQL 8 evidence, not universal engine/runtime, live-store,
 concurrent-DDL serialization, or release certification.
+
+The 0.2.4 schema adds a dedicated bounded-lookup privacy suppression table. Receipts use keyed one-way digests; the local key is held in a non-autoloaded option and is removed only by explicit full-data uninstall. Reset retains the receipts so an erased profile cannot be reconstructed by the next order sync.

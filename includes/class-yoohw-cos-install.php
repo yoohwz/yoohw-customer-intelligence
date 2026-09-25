@@ -355,6 +355,20 @@ final class YoOhw_COS_Install {
 					'task_lookup' => array( false, array( 'task_id', 'notification_type' ) ),
 				),
 			),
+			'privacy_suppression' => array(
+				'columns' => array(
+					'id' => array( 'bigint unsigned', false, null ),
+					'identity_kind' => array( 'varchar(20)', false, null ),
+					'identity_digest' => array( 'char(64)', false, null ),
+					'hash_version' => array( 'smallint unsigned', false, '1' ),
+					'created_at' => array( 'datetime', false, null ),
+				),
+				'indexes' => array(
+					'PRIMARY' => array( true, array( 'id' ) ),
+					'identity' => array( true, array( 'identity_kind', 'identity_digest' ) ),
+					'hash_version' => array( false, array( 'hash_version' ) ),
+				),
+			),
 			'migration_issues' => array(
 				'columns' => array(
 					'id' => array( 'bigint unsigned', false, null ),
@@ -391,6 +405,7 @@ final class YoOhw_COS_Install {
 			'customer_segments',
 			'order_facts',
 			'notification_log',
+			'privacy_suppression',
 			'migration_issues',
 		);
 	}
@@ -417,6 +432,7 @@ final class YoOhw_COS_Install {
 		$order_facts_table       = $wpdb->prefix . 'yoohw_cos_customer_order_facts';
 		$notification_log_table  = $wpdb->prefix . 'yoohw_cos_notification_log';
 		$migration_issues_table  = $wpdb->prefix . 'yoohw_cos_migration_issues';
+		$privacy_suppression_table = $wpdb->prefix . 'yoohw_cos_privacy_suppression';
 
 		$sql_customers = "CREATE TABLE {$customers_table} (
 			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -652,6 +668,17 @@ final class YoOhw_COS_Install {
 			KEY retry_queue (migration_id, status, id)
 		) {$charset_collate};";
 
+		$sql_privacy_suppression = "CREATE TABLE {$privacy_suppression_table} (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			identity_kind VARCHAR(20) NOT NULL,
+			identity_digest CHAR(64) NOT NULL,
+			hash_version SMALLINT UNSIGNED NOT NULL DEFAULT 1,
+			created_at DATETIME NOT NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY identity (identity_kind, identity_digest),
+			KEY hash_version (hash_version)
+		) {$charset_collate};";
+
 		dbDelta( $sql_customers );
 		dbDelta( $sql_events );
 		dbDelta( $sql_notes );
@@ -663,6 +690,7 @@ final class YoOhw_COS_Install {
 		dbDelta( $sql_order_facts );
 		dbDelta( $sql_notification_log );
 		dbDelta( $sql_migration_issues );
+		dbDelta( $sql_privacy_suppression );
 	}
 
 	public static function maybe_update(): void {
