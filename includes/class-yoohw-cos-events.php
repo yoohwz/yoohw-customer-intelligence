@@ -43,23 +43,22 @@ final class YoOhw_COS_Events {
 
 		// These integration sources use wp_user_id as the customer subject.
 		if ( in_array( (string) $args['event_source'], array( 'wc_blacklist_manager', 'wc_blacklist_manager_premium', 'wc_loyalty' ), true ) ) {
-			$subject = array( 'wp_user_id' => absint( $args['wp_user_id'] ) );
+			$identities = array( array( 'wp_user_id' => absint( $args['wp_user_id'] ) ) );
 			$customer_id = absint( $args['customer_id'] );
 			if ( $customer_id ) {
 				$customer = YoOhw_COS_Customers::get_customer( $customer_id );
-				$subject['email'] = (string) ( $customer['email'] ?? '' );
-				$subject['wp_user_id'] = absint( $customer['wp_user_id'] ?? $subject['wp_user_id'] );
+				$identities[] = array( 'email' => (string) ( $customer['email'] ?? '' ), 'wp_user_id' => absint( $customer['wp_user_id'] ?? 0 ) );
 			}
 			$order_id = 'order' === (string) $args['object_type'] ? absint( $args['object_id'] ) : absint( ( (array) $args['metadata'] )['order_id'] ?? 0 );
 			if ( $order_id && function_exists( 'wc_get_order' ) ) {
 				$order = wc_get_order( $order_id );
 				if ( $order instanceof WC_Order ) {
-					$source_identity = YoOhw_COS_Customer_Identity::from_order( $order );
-					$subject['email'] = (string) $source_identity['email'];
-					$subject['wp_user_id'] = absint( $source_identity['wp_user_id'] ) ?: $subject['wp_user_id'];
+					$identities[] = YoOhw_COS_Customer_Identity::from_order( $order );
 				}
 			}
-			if ( false !== YoOhw_COS_Privacy_Erasure::is_suppressed( $subject ) ) { return 0; }
+			foreach ( $identities as $identity ) {
+				if ( false !== YoOhw_COS_Privacy_Erasure::is_suppressed( $identity ) ) { return 0; }
+			}
 		}
 		$table = YoOhw_COS_DB::events_table();
 		$event_key = self::normalize_event_key( (string) ( $args['event_key'] ?? '' ) );

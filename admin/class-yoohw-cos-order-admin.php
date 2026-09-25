@@ -334,6 +334,12 @@ final class YoOhw_COS_Order_Admin {
 			if ( empty( $customer ) ) {
 				return;
 			}
+			if ( false !== YoOhw_COS_Privacy_Erasure::is_suppressed( $customer ) ) {
+				if ( class_exists( 'WC_Admin_Meta_Boxes' ) ) {
+					WC_Admin_Meta_Boxes::add_error( __( 'Customer Intelligence cannot link a privacy-suppressed customer profile.', 'yoohw-customer-intelligence' ) );
+				}
+				return;
+			}
 
 			$wc_order->delete_meta_data( YoOhw_COS_Customers::ORDER_CUSTOMER_META_KEY );
 			$wc_order->add_meta_data( YoOhw_COS_Customers::ORDER_CUSTOMER_META_KEY, $customer_id, true );

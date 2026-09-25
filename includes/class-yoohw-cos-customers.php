@@ -193,8 +193,20 @@ final class YoOhw_COS_Customers {
 			$data = apply_filters( 'yoohw_cos_customer_sync_data', $data, $order, $customer_id );
 			$data = is_array( $data ) ? $data : array();
 
+			$stored_suppression = $customer_id > 0 ? YoOhw_COS_Privacy_Erasure::is_suppressed( $existing ) : false;
+			$next_suppression = YoOhw_COS_Privacy_Erasure::is_suppressed( array_merge( $existing, $data ) );
+			if ( true === $stored_suppression || true === $next_suppression ) {
+				return 0; // Terminal: a phone or stale link must not adopt an erased identity.
+			}
+			if ( null === $stored_suppression || null === $next_suppression ) {
+				self::schedule_failed_order_sync( new RuntimeException( 'Privacy suppression state unavailable.' ), $order_id, $customer_id );
+				return 0;
+			}
 			if ( $customer_id > 0 ) {
-				self::update_customer( $customer_id, $data );
+				if ( ! self::update_customer( $customer_id, $data ) ) {
+					self::schedule_failed_order_sync( new RuntimeException( 'Customer update failed.' ), $order_id, $customer_id );
+					return 0;
+				}
 			} else {
 				$customer_id = self::create_customer( $data );
 			}
@@ -463,8 +475,20 @@ final class YoOhw_COS_Customers {
 		$order = wc_get_order( $order_id );
 		if ( false === $order ) { return true; }
 		if ( ! $order instanceof WC_Order ) { return false; }
-		$linked = YoOhw_COS_Customer_Identity::get_persisted_order_customer_ids( $order );
-		if ( $linked && array( $customer_id ) !== $linked ) { return false; }
+		// Inspect the raw data-store link; the validated helper hides stale epochs.
+		$raw_metadata = $order->get_data_store()->read_meta( $order );
+		if ( ! is_array( $raw_metadata ) ) { return false; }
+		foreach ( $raw_metadata as $meta ) {
+			$value = is_object( $meta ) && method_exists( $meta, 'get_data' ) ? $meta->get_data() : $meta;
+			$key = is_array( $value ) ? (string) ( $value['meta_key'] ?? $value['key'] ?? '' ) : (string) ( $value->meta_key ?? $value->key ?? '' );
+			$raw = is_array( $value ) ? ( $value['meta_value'] ?? $value['value'] ?? null ) : ( $value->meta_value ?? $value->value ?? null );
+			if ( self::ORDER_CUSTOMER_META_KEY === $key ) {
+				$raw_link = maybe_unserialize( $raw );
+				if ( ! ( is_int( $raw_link ) || ( is_string( $raw_link ) && preg_match( '/^[1-9][0-9]*$/D', $raw_link ) ) ) || (int) $raw_link !== $customer_id ) {
+					return false;
+				}
+			}
+		}
 		$order->delete_meta_data( self::ORDER_CUSTOMER_META_KEY );
 		$order->delete_meta_data( YoOhw_COS_Reset_Guard::META_KEY );
 		self::$persisting_order_links[ $order_id ] = true;

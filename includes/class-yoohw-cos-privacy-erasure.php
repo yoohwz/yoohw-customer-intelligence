@@ -5,6 +5,7 @@ defined( 'ABSPATH' ) || exit;
 final class YoOhw_COS_Privacy_Erasure {
 	private const SECRET_OPTION = 'yoohw_cos_privacy_suppression_secret';
 	private const PAGE_SIZE = 25;
+	private const MAX_ALIAS_PROFILES = 1000;
 	private const DOMAIN = 'yoohw-customer-intelligence';
 
 	public static function init(): void {
@@ -78,10 +79,14 @@ final class YoOhw_COS_Privacy_Erasure {
 		if ( ! is_string( $secret ) || ! preg_match( '/^[a-f0-9]{64}$/D', $secret ) ) {
 			return false;
 		}
+		if ( false !== self::is_suppressed( array() ) ) { return false; }
 		$table = YoOhw_COS_DB::table( 'privacy_suppression' );
+		$unique = array();
 		foreach ( $identities as $identity ) {
 			foreach ( self::identity_values( $identity ) as $kind => $value ) {
 				$digest = hash_hmac( 'sha256', $kind . '|' . $value, hex2bin( $secret ) );
+				if ( isset( $unique[ $kind . ':' . $digest ] ) ) { continue; }
+				$unique[ $kind . ':' . $digest ] = true;
 				$result = $wpdb->query( $wpdb->prepare( 'INSERT IGNORE INTO %i (identity_kind, identity_digest, hash_version, created_at) VALUES (%s, %s, 1, %s)', $table, $kind, $digest, YoOhw_COS_DB::now() ) );
 				if ( false === $result ) {
 					return false;
@@ -113,6 +118,7 @@ final class YoOhw_COS_Privacy_Erasure {
 		if ( ! is_email( $email ) || sanitize_email( $email ) !== $email || strlen( $email ) > 191 ) {
 			return self::result( false, false, true );
 		}
+		if ( (int) $page > intdiv( PHP_INT_MAX, self::PAGE_SIZE ) ) { return self::result( false, false, false, true ); }
 		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
 			return self::result( false, false, false, true );
 		}
@@ -120,18 +126,36 @@ final class YoOhw_COS_Privacy_Erasure {
 			$user = get_user_by( 'email', $email );
 			$user_id = $user && strtolower( (string) $user->user_email ) === $email ? (int) $user->ID : 0;
 			$table = YoOhw_COS_DB::customers_table();
+			// All linked-user aliases must be receipted under this first-page lock.
+			// A hard cap keeps the callback bounded; overflow fails closed without
+			// deleting any subject record or losing aliases across Reset.
+			$aliases = array();
+			if ( $user_id ) {
+				$aliases = $wpdb->get_results( $wpdb->prepare(
+					'SELECT email FROM %i WHERE wp_user_id = %d ORDER BY id ASC LIMIT %d',
+					$table, $user_id, self::MAX_ALIAS_PROFILES + 1
+				), ARRAY_A );
+				if ( '' !== $wpdb->last_error || ! is_array( $aliases ) ) {
+					return self::result( false, false, false, true );
+				}
+				if ( count( $aliases ) > self::MAX_ALIAS_PROFILES ) {
+					$result = self::result( false, false, false, true );
+					$result['messages'][] = __( 'More linked Customer Intelligence profiles were found than can be safely prepared in one erasure page. Contact the site administrator; no Customer Intelligence data was deleted.', self::DOMAIN );
+					return $result;
+				}
+			}
+			$identities = array( array( 'email' => $email, 'wp_user_id' => $user_id ) );
+			foreach ( $aliases as $alias ) {
+				$identities[] = array( 'email' => (string) $alias['email'] );
+			}
+			if ( ! self::ensure_receipts( $identities ) ) {
+				return self::result( false, false, false, true );
+			}
 			$profile = $wpdb->get_row( $wpdb->prepare(
 				'SELECT id, email FROM %i WHERE (email = %s AND BINARY email = BINARY %s)' . ( $user_id ? ' OR wp_user_id = %d' : '' ) . ' ORDER BY id ASC LIMIT 1',
 				...array_merge( array( $table, $email, $email ), $user_id ? array( $user_id ) : array() )
 			), ARRAY_A );
 			if ( '' !== $wpdb->last_error ) {
-				return self::result( false, false, false, true );
-			}
-			$identities = array( array( 'email' => $email, 'wp_user_id' => $user_id ) );
-			if ( $profile ) {
-				$identities[] = array( 'email' => (string) $profile['email'] );
-			}
-			if ( ! self::ensure_receipts( $identities ) ) {
 				return self::result( false, false, false, true );
 			}
 			if ( $profile ) {

@@ -194,4 +194,65 @@ final class YCI_Privacy_Erasure_Test extends WP_UnitTestCase {
 		$this->assertNull( get_option( 'yoohw_cos_privacy_suppression_secret', null ) );
 	}
 
+	public function test_all_linked_aliases_survive_reset_after_first_erasure_page(): void {
+		$user_id = self::factory()->user->create( array( 'user_email' => 'all-aliases@example.test' ) );
+		YoOhw_COS_Customers::create_customer( array( 'wp_user_id' => $user_id, 'email' => 'first-alias@example.test' ) );
+		YoOhw_COS_Customers::create_customer( array( 'wp_user_id' => $user_id, 'email' => 'second-alias@example.test' ) );
+		$first = YoOhw_COS_Privacy_Erasure::erase( 'all-aliases@example.test', 1 );
+		$this->assertFalse( $first['done'] );
+		$this->assertTrue( YoOhw_COS_Privacy_Erasure::is_suppressed( array( 'email' => 'first-alias@example.test' ) ) );
+		$this->assertTrue( YoOhw_COS_Privacy_Erasure::is_suppressed( array( 'email' => 'second-alias@example.test' ) ) );
+		YoOhw_COS_Customers::reset_data();
+		$order = wc_create_order();
+		$order->set_billing_email( 'second-alias@example.test' );
+		$order->save();
+		$this->assertSame( 0, YoOhw_COS_Customers::sync_from_order_id( $order->get_id() ) );
+	}
+
+	public function test_phone_only_order_cannot_adopt_profile_during_erasure(): void {
+		global $wpdb;
+		$id = YoOhw_COS_Customers::create_customer( array( 'email' => 'pending-erase@example.test', 'phone' => '+15557654321' ) );
+		for ( $i = 0; $i < 27; $i++ ) {
+			$wpdb->insert( YoOhw_COS_DB::notes_table(), array( 'customer_id' => $id, 'note_content' => 'Synthetic', 'created_at' => YoOhw_COS_DB::now(), 'updated_at' => YoOhw_COS_DB::now() ) );
+		}
+		$this->assertFalse( YoOhw_COS_Privacy_Erasure::erase( 'pending-erase@example.test', 1 )['done'] );
+		$order = wc_create_order();
+		$order->set_billing_phone( '+15557654321' );
+		$order->save();
+		$this->assertSame( 0, YoOhw_COS_Customers::sync_from_order_id( $order->get_id() ) );
+		$this->assertSame( 0, (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE order_id = %d', YoOhw_COS_DB::order_facts_table(), $order->get_id() ) ) );
+		$this->assertSame( '', (string) wc_get_order( $order->get_id() )->get_meta( YoOhw_COS_Customers::ORDER_CUSTOMER_META_KEY ) );
+	}
+
+	public function test_integration_event_preserves_source_user_suppression(): void {
+		$user_id = self::factory()->user->create( array( 'user_email' => 'event-owner@example.test' ) );
+		$this->erase_all( 'event-owner@example.test' );
+		$guest = YoOhw_COS_Customers::create_customer( array( 'email' => 'different-event@example.test', 'wp_user_id' => 0 ) );
+		$this->assertGreaterThan( 0, $guest );
+		$this->assertSame( 0, YoOhw_COS_Events::record( array( 'customer_id' => $guest, 'wp_user_id' => $user_id, 'event_type' => 'synthetic_signal', 'event_source' => 'wc_blacklist_manager' ) ) );
+	}
+
+	public function test_stale_raw_link_to_another_customer_is_retained_and_fact_retryable(): void {
+		global $wpdb;
+		$order = wc_create_order();
+		$order->set_billing_email( 'raw-link-a@example.test' );
+		$order->save();
+		$a = YoOhw_COS_Customers::sync_from_order( $order );
+		$b = YoOhw_COS_Customers::create_customer( array( 'email' => 'raw-link-b@example.test' ) );
+		$this->assertGreaterThan( 0, $a );
+		$this->assertGreaterThan( 0, $b );
+		$order = wc_get_order( $order->get_id() );
+		$order->delete_meta_data( YoOhw_COS_Customers::ORDER_CUSTOMER_META_KEY );
+		$order->add_meta_data( YoOhw_COS_Customers::ORDER_CUSTOMER_META_KEY, $b, true );
+		$order->update_meta_data( YoOhw_COS_Reset_Guard::META_KEY, 'stale:' . $b );
+		$order->save_meta_data();
+		for ( $page = 1; $page <= 5; $page++ ) {
+			$result = YoOhw_COS_Privacy_Erasure::erase( 'raw-link-a@example.test', $page );
+			if ( ! $result['items_removed'] ) { break; }
+		}
+		$this->assertFalse( $result['done'] );
+		$this->assertSame( 1, (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE customer_id = %d', YoOhw_COS_DB::order_facts_table(), $a ) ) );
+		$this->assertSame( (string) $b, (string) wc_get_order( $order->get_id() )->get_meta( YoOhw_COS_Customers::ORDER_CUSTOMER_META_KEY ) );
+	}
+
 }
