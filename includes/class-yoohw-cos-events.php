@@ -41,6 +41,25 @@ final class YoOhw_COS_Events {
 			return 0;
 		}
 
+		// These integration sources use wp_user_id as the customer subject.
+		if ( in_array( (string) $args['event_source'], array( 'wc_blacklist_manager', 'wc_blacklist_manager_premium', 'wc_loyalty' ), true ) ) {
+			$identities = array( array( 'wp_user_id' => absint( $args['wp_user_id'] ) ) );
+			$customer_id = absint( $args['customer_id'] );
+			if ( $customer_id ) {
+				$customer = YoOhw_COS_Customers::get_customer( $customer_id );
+				$identities[] = array( 'email' => (string) ( $customer['email'] ?? '' ), 'wp_user_id' => absint( $customer['wp_user_id'] ?? 0 ) );
+			}
+			$order_id = 'order' === (string) $args['object_type'] ? absint( $args['object_id'] ) : absint( ( (array) $args['metadata'] )['order_id'] ?? 0 );
+			if ( $order_id && function_exists( 'wc_get_order' ) ) {
+				$order = wc_get_order( $order_id );
+				if ( $order instanceof WC_Order ) {
+					$identities[] = YoOhw_COS_Customer_Identity::from_order( $order );
+				}
+			}
+			foreach ( $identities as $identity ) {
+				if ( false !== YoOhw_COS_Privacy_Erasure::is_suppressed( $identity ) ) { return 0; }
+			}
+		}
 		$table = YoOhw_COS_DB::events_table();
 		$event_key = self::normalize_event_key( (string) ( $args['event_key'] ?? '' ) );
 

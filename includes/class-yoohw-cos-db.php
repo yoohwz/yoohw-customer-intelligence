@@ -67,6 +67,7 @@ final class YoOhw_COS_DB {
 			'order_facts'       => 'yoohw_cos_customer_order_facts',
 			'notification_log'  => 'yoohw_cos_notification_log',
 			'migration_issues'  => 'yoohw_cos_migration_issues',
+			'privacy_suppression' => 'yoohw_cos_privacy_suppression',
 		);
 
 		if ( ! isset( $allowed_tables[ $name ] ) ) {

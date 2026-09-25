@@ -15,6 +15,7 @@ if ( 'yes' !== get_option( 'yoohw_cos_remove_data_on_uninstall', 'no' ) ) {
 global $wpdb;
 
 $yoohw_cos_table_suffixes = array(
+	'yoohw_cos_privacy_suppression',
 	'yoohw_cos_customer_segments',
 	'yoohw_cos_customer_tags',
 	'yoohw_cos_notification_log',

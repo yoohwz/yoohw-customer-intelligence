@@ -134,14 +134,21 @@ final class YoOhw_COS_Customers {
 		$wp_user_id = absint( $identity['wp_user_id'] );
 		$email      = (string) $identity['email'];
 		$phone      = (string) $identity['phone'];
+		$suppressed = YoOhw_COS_Privacy_Erasure::is_suppressed( $identity );
+		if ( null !== $suppressed && $suppressed ) {
+			// Terminal skip: the source order remains, with no CRM target or retry.
+			wp_clear_scheduled_hook( self::ORDER_SYNC_RETRY_HOOK, array( $order_id ) );
+			return 0;
+		}
+		if ( null === $suppressed ) {
+			self::schedule_failed_order_sync( new RuntimeException( 'Privacy suppression state unavailable.' ), $order_id, 0 );
+			return 0;
+		}
+
 		$order_date = $order->get_date_created() ? $order->get_date_created()->date( 'Y-m-d H:i:s' ) : YoOhw_COS_DB::now();
 		$resolution = YoOhw_COS_Customer_Identity::resolve( $identity );
 		$customer_id = absint( $resolution['customer_id'] ?? 0 );
 		$identity_lock = '';
-
-		if ( ! empty( $resolution['conflicts'] ) ) {
-			self::record_identity_conflict( $resolution, $order_id );
-		}
 
 		try {
 			if ( $customer_id <= 0 && empty( $resolution['conflicts'] ) ) {
@@ -157,15 +164,13 @@ final class YoOhw_COS_Customers {
 				$resolution  = YoOhw_COS_Customer_Identity::resolve( $identity );
 				$customer_id = absint( $resolution['customer_id'] ?? 0 );
 
-				if ( ! empty( $resolution['conflicts'] ) ) {
-					self::record_identity_conflict( $resolution, $order_id );
-				}
-			}
+		}
 
 			$existing     = $customer_id > 0 ? self::get_customer( $customer_id ) : array();
 			$last_activity_date = self::get_last_activity_date_for_sync( $customer_id, $order_date );
 
 			if ( $customer_id <= 0 && ! empty( $resolution['conflicts'] ) ) {
+				self::record_identity_conflict( $resolution, $order_id );
 				return 0;
 			}
 
@@ -182,8 +187,24 @@ final class YoOhw_COS_Customers {
 			$data = apply_filters( 'yoohw_cos_customer_sync_data', $data, $order, $customer_id );
 			$data = is_array( $data ) ? $data : array();
 
+			$stored_suppression = $customer_id > 0 ? YoOhw_COS_Privacy_Erasure::is_suppressed( $existing ) : false;
+			$next_suppression = YoOhw_COS_Privacy_Erasure::is_suppressed( array_merge( $existing, $data ) );
+			if ( true === $stored_suppression || true === $next_suppression ) {
+				wp_clear_scheduled_hook( self::ORDER_SYNC_RETRY_HOOK, array( $order_id ) );
+				return 0; // Terminal: a phone or stale link must not adopt an erased identity.
+			}
+			if ( null === $stored_suppression || null === $next_suppression ) {
+				self::schedule_failed_order_sync( new RuntimeException( 'Privacy suppression state unavailable.' ), $order_id, $customer_id );
+				return 0;
+			}
+			if ( ! empty( $resolution['conflicts'] ) ) {
+				self::record_identity_conflict( $resolution, $order_id );
+			}
 			if ( $customer_id > 0 ) {
-				self::update_customer( $customer_id, $data );
+				if ( ! self::update_customer( $customer_id, $data ) ) {
+					self::schedule_failed_order_sync( new RuntimeException( 'Customer update failed.' ), $order_id, $customer_id );
+					return 0;
+				}
 			} else {
 				$customer_id = self::create_customer( $data );
 			}
@@ -445,6 +466,66 @@ final class YoOhw_COS_Customers {
 		return array( $customer_id ) === YoOhw_COS_Customer_Identity::get_persisted_order_customer_ids( $canonical_order );
 	}
 
+	/** Read only the two plugin-owned link keys through the active Woo data store. */
+	public static function order_link_state_for_erasure( int $order_id ): ?array {
+		if ( ! function_exists( 'wc_get_order' ) ) { return null; }
+		self::invalidate_order_object_cache( $order_id );
+		$order = wc_get_order( $order_id );
+		if ( false === $order ) { return array( 'missing' => true, 'has_link' => false, 'customer_ids' => array(), 'fingerprint' => '' ); }
+		if ( ! $order instanceof WC_Order ) { return null; }
+		$raw_metadata = $order->get_data_store()->read_meta( $order );
+		if ( ! is_array( $raw_metadata ) ) { return null; }
+		$customer_ids = array();
+		$epochs = array();
+		foreach ( $raw_metadata as $meta ) {
+			$value = is_object( $meta ) && method_exists( $meta, 'get_data' ) ? $meta->get_data() : $meta;
+			$key = is_array( $value ) ? (string) ( $value['meta_key'] ?? $value['key'] ?? '' ) : (string) ( $value->meta_key ?? $value->key ?? '' );
+			$raw = is_array( $value ) ? ( $value['meta_value'] ?? $value['value'] ?? null ) : ( $value->meta_value ?? $value->value ?? null );
+			if ( self::ORDER_CUSTOMER_META_KEY === $key ) {
+				$raw_link = maybe_unserialize( $raw );
+				if ( ! ( is_int( $raw_link ) || ( is_string( $raw_link ) && preg_match( '/^[1-9][0-9]*$/D', $raw_link ) ) ) || (int) $raw_link <= 0 ) { return null; }
+				$customer_ids[] = (int) $raw_link;
+			} elseif ( YoOhw_COS_Reset_Guard::META_KEY === $key ) {
+				$epoch = maybe_unserialize( $raw );
+				if ( ! is_string( $epoch ) ) { return null; }
+				$epochs[] = $epoch;
+			}
+		}
+		sort( $customer_ids, SORT_NUMERIC );
+		sort( $epochs, SORT_STRING );
+		return array( 'missing' => false, 'has_link' => (bool) ( $customer_ids || $epochs ), 'customer_ids' => $customer_ids, 'fingerprint' => hash( 'sha256', wp_json_encode( array( $customer_ids, $epochs ) ) ) );
+	}
+
+	/** Remove only the CRM link for this subject, using the active Woo data store. */
+	public static function unlink_order_for_erasure( int $order_id, int $customer_id, string $expected_fingerprint = '' ): bool {
+		$state = self::order_link_state_for_erasure( $order_id );
+		if ( null === $state ) { return false; }
+		if ( $state['missing'] ) { return true; }
+		if ( '' !== $expected_fingerprint && $expected_fingerprint !== $state['fingerprint'] ) { return false; }
+		foreach ( $state['customer_ids'] as $linked_id ) {
+			if ( $linked_id !== $customer_id ) { return false; }
+		}
+		$order = wc_get_order( $order_id );
+		if ( ! $order instanceof WC_Order ) { return false; }
+		$order->delete_meta_data( self::ORDER_CUSTOMER_META_KEY );
+		$order->delete_meta_data( YoOhw_COS_Reset_Guard::META_KEY );
+		self::$persisting_order_links[ $order_id ] = true;
+		try { $order->save_meta_data(); }
+		catch ( Throwable $exception ) { return false; }
+		finally { unset( self::$persisting_order_links[ $order_id ] ); }
+		self::invalidate_order_object_cache( $order_id );
+		$fresh = wc_get_order( $order_id );
+		if ( ! $fresh instanceof WC_Order ) { return false; }
+		$metadata = $fresh->get_data_store()->read_meta( $fresh );
+		if ( ! is_array( $metadata ) ) { return false; }
+		foreach ( $metadata as $meta ) {
+			$value = is_object( $meta ) && method_exists( $meta, 'get_data' ) ? $meta->get_data() : $meta;
+			$key = is_array( $value ) ? (string) ( $value['meta_key'] ?? $value['key'] ?? '' ) : (string) ( $value->meta_key ?? $value->key ?? '' );
+			if ( in_array( $key, array( self::ORDER_CUSTOMER_META_KEY, YoOhw_COS_Reset_Guard::META_KEY ), true ) ) { return false; }
+		}
+		return true;
+	}
+
 	private static function invalidate_order_object_cache( int $order_id ): void {
 		$order_id = absint( $order_id );
 
@@ -543,6 +624,7 @@ final class YoOhw_COS_Customers {
 		$data['created_at'] = $data['created_at'] ?? YoOhw_COS_DB::now();
 		$data['updated_at'] = $data['updated_at'] ?? YoOhw_COS_DB::now();
 		$prepared           = self::prepare_customer_data( $data );
+		if ( false !== YoOhw_COS_Privacy_Erasure::is_suppressed( $prepared ) ) { return 0; }
 
 		$inserted = $wpdb->insert(
 			$table,
@@ -571,6 +653,8 @@ final class YoOhw_COS_Customers {
 
 		$data['updated_at'] = YoOhw_COS_DB::now();
 		$prepared           = self::prepare_customer_data( $data );
+		$existing = self::get_customer( $customer_id );
+		if ( empty( $existing ) || false !== YoOhw_COS_Privacy_Erasure::is_suppressed( $existing ) || false !== YoOhw_COS_Privacy_Erasure::is_suppressed( array_merge( $existing, $prepared ) ) ) { return false; }
 
 		$updated = $wpdb->update(
 			$table,
@@ -851,15 +935,30 @@ final class YoOhw_COS_Customers {
 		if ( ! $order instanceof WC_Order || $order instanceof WC_Order_Refund ) {
 			$outcome = array( 'status' => 'unresolved', 'code' => 'order_unavailable' );
 		} else {
-			$resolution = YoOhw_COS_Customer_Identity::resolve( YoOhw_COS_Customer_Identity::from_order( $order ) );
-
-			if ( empty( $resolution['customer_id'] ) && ! empty( $resolution['conflicts'] ) ) {
-				$outcome = array( 'status' => 'unresolved', 'code' => 'identity_conflict' );
+			$suppressed = YoOhw_COS_Privacy_Erasure::is_suppressed( YoOhw_COS_Customer_Identity::from_order( $order ) );
+			if ( true === $suppressed ) {
+				$outcome = array( 'status' => 'suppressed', 'code' => 'privacy_suppressed' );
+			} elseif ( null === $suppressed ) {
+				$outcome = array( 'status' => 'retry', 'code' => 'privacy_state_unavailable' );
 			} else {
-				$customer_id = self::sync_from_order( $order );
-				$outcome = $customer_id > 0
-					? array( 'status' => 'success', 'customer_id' => $customer_id, 'code' => '' )
-					: array( 'status' => 'retry', 'code' => 'sync_failed' );
+				$resolution = YoOhw_COS_Customer_Identity::resolve( YoOhw_COS_Customer_Identity::from_order( $order ) );
+				$resolved_customer_id = absint( $resolution['customer_id'] ?? 0 );
+				$resolved_suppression = $resolved_customer_id > 0
+					? YoOhw_COS_Privacy_Erasure::is_suppressed( self::get_customer( $resolved_customer_id ) )
+					: false;
+
+				if ( true === $resolved_suppression ) {
+					$outcome = array( 'status' => 'suppressed', 'code' => 'privacy_suppressed' );
+				} elseif ( null === $resolved_suppression ) {
+					$outcome = array( 'status' => 'retry', 'code' => 'privacy_state_unavailable' );
+				} elseif ( empty( $resolution['customer_id'] ) && ! empty( $resolution['conflicts'] ) ) {
+					$outcome = array( 'status' => 'unresolved', 'code' => 'identity_conflict' );
+				} else {
+					$customer_id = self::sync_from_order( $order );
+					$outcome = $customer_id > 0
+						? array( 'status' => 'success', 'customer_id' => $customer_id, 'code' => '' )
+						: array( 'status' => 'retry', 'code' => 'sync_failed' );
+				}
 			}
 		}
 

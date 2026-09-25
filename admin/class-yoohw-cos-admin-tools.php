@@ -452,7 +452,7 @@ final class YoOhw_COS_Admin_Tools {
 			);
 		}
 
-		$counts = array( 'success' => 0, 'retry' => 0, 'unresolved' => 0 );
+		$counts = array( 'success' => 0, 'suppressed' => 0, 'retry' => 0, 'unresolved' => 0 );
 		foreach ( (array) ( $result['outcomes'] ?? array() ) as $order_id => $outcome ) {
 			$status = (string) ( $outcome['status'] ?? 'retry' );
 			$status = isset( $counts[ $status ] ) ? $status : 'retry';

@@ -320,11 +320,24 @@ final class YoOhw_COS_Order_Admin {
 		if ( ! $wc_order instanceof WC_Order ) {
 			return;
 		}
+		// Manual adoption must respect the same privacy boundary as automatic sync.
+		if ( false !== YoOhw_COS_Privacy_Erasure::is_suppressed( YoOhw_COS_Customer_Identity::from_order( $wc_order ) ) ) {
+			if ( class_exists( 'WC_Admin_Meta_Boxes' ) ) {
+				WC_Admin_Meta_Boxes::add_error( __( 'Customer Intelligence cannot link this order while privacy suppression applies or is unavailable.', 'yoohw-customer-intelligence' ) );
+			}
+			return;
+		}
 
 		if ( $customer_id > 0 ) {
 			$customer = YoOhw_COS_Customers::get_customer( $customer_id );
 
 			if ( empty( $customer ) ) {
+				return;
+			}
+			if ( false !== YoOhw_COS_Privacy_Erasure::is_suppressed( $customer ) ) {
+				if ( class_exists( 'WC_Admin_Meta_Boxes' ) ) {
+					WC_Admin_Meta_Boxes::add_error( __( 'Customer Intelligence cannot link a privacy-suppressed customer profile.', 'yoohw-customer-intelligence' ) );
+				}
 				return;
 			}
 

@@ -1933,6 +1933,7 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 	private function clean_test_plugin_data(): void {
 		global $wpdb;
 
+		delete_option( 'yoohw_cos_privacy_suppression_secret' );
 		foreach ( YoOhw_COS_Install::expected_table_keys() as $table_key ) {
 			$wpdb->query( $wpdb->prepare( 'DELETE FROM %i', YoOhw_COS_DB::table( $table_key ) ) );
 		}
@@ -1967,7 +1968,7 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 		}
 
 		if ( ! defined( 'YOOHW_COS_DB_VERSION' ) ) {
-			define( 'YOOHW_COS_DB_VERSION', '0.2.2' );
+			define( 'YOOHW_COS_DB_VERSION', '0.2.4' );
 		}
 
 		if ( ! defined( 'YOOHW_COS_PATH' ) ) {
@@ -1986,6 +1987,7 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 			'includes/class-yoohw-cos-integrations.php',
 			'includes/class-yoohw-cos-customer-query.php',
 			'includes/class-yoohw-cos-events.php',
+			'includes/class-yoohw-cos-privacy-erasure.php',
 			'includes/class-yoohw-cos-customers.php',
 			'includes/class-yoohw-cos-tags.php',
 			'includes/class-yoohw-cos-notes.php',
@@ -2249,7 +2251,7 @@ final class YCI_Schema_Upgrade_Test extends WP_UnitTestCase {
 			delete_option( 'yoohw_cos_db_version' );
 			delete_option( 'yoohw_cos_data_migrations' );
 			$this->assertFalse( YoOhw_COS_Install::schema_is_ready() );
-			$this->assertCount( 11, get_option( 'yoohw_cos_schema_status' )['requirements'] );
+			$this->assertCount( 12, get_option( 'yoohw_cos_schema_status' )['requirements'] );
 			YoOhw_COS_Install::install();
 			$this->assertTrue( YoOhw_COS_Install::schema_is_ready() );
 			$this->assertSame( YOOHW_COS_DB_VERSION, get_option( 'yoohw_cos_db_version' ) );
@@ -2305,7 +2307,7 @@ final class YCI_Schema_Upgrade_Test extends WP_UnitTestCase {
 		global $wpdb;
 		$table = YoOhw_COS_DB::notes_table();
 		$state = array(
-			'_schema' => array( 'from' => '0.2.2', 'to' => '0.2.3', 'updated_at' => YoOhw_COS_DB::now() ),
+			'_schema' => array( 'from' => '0.2.4', 'to' => '0.2.5', 'updated_at' => YoOhw_COS_DB::now() ),
 			'identity_normalization_v1' => array( 'status' => 'pending', 'processed' => 7 ),
 			'identity_normalization_v2' => array( 'status' => 'pending', 'phase' => 'scan', 'last_customer_id' => 900000, 'processed' => 13, 'attempts' => 2 ),
 		);
@@ -2324,7 +2326,7 @@ final class YCI_Schema_Upgrade_Test extends WP_UnitTestCase {
 			if ( preg_match( '/^\s*(CREATE|ALTER|DROP|RENAME)\b/i', $query ) ) { $ddl[] = $query; }
 			return $query;
 		};
-		update_option( 'yoohw_cos_db_version', '0.2.3' );
+		update_option( 'yoohw_cos_db_version', '0.2.5' );
 		wp_clear_scheduled_hook( YoOhw_COS_Migration_Runner::HOOK );
 		try {
 			add_filter( 'query', $observe );
@@ -2332,13 +2334,13 @@ final class YCI_Schema_Upgrade_Test extends WP_UnitTestCase {
 			YoOhw_COS_Install::$entrypoint();
 			remove_filter( 'query', $observe );
 			$this->assertSame( array(), $ddl, 'A rollback must not apply older schema DDL.' );
-			$this->assertSame( '0.2.3', get_option( 'yoohw_cos_db_version' ) );
+			$this->assertSame( '0.2.5', get_option( 'yoohw_cos_db_version' ) );
 			$this->assertSame( 'varchar(100)', $wpdb->get_row( "SHOW COLUMNS FROM {$table} LIKE 'visibility'" )->Type );
 			$this->assertSame( $before, $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i WHERE id = %d', $table, $id ), ARRAY_A ) );
 			$this->assertSame( 'blocked', get_option( 'yoohw_cos_schema_status' )['status'] );
 			$this->assertSame( $state, YoOhw_COS_Migration_Runner::get_state(), 'No older-target registration or superseding is allowed.' );
 			YoOhw_COS_Migration_Runner::init();
-			$this->assertFalse( YoOhw_COS_Migration_Runner::register_upgrade( '0.2.3', YOOHW_COS_DB_VERSION ) );
+			$this->assertFalse( YoOhw_COS_Migration_Runner::register_upgrade( '0.2.5', YOOHW_COS_DB_VERSION ) );
 			do_action( YoOhw_COS_Migration_Runner::HOOK );
 			$this->assertSame( $state, YoOhw_COS_Migration_Runner::get_state() );
 			$this->assertFalse( wp_next_scheduled( YoOhw_COS_Migration_Runner::HOOK ) );
