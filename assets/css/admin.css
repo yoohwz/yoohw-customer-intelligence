@@ -1341,14 +1341,14 @@
 .yoohw-cos-saved-views__controls input[name="saved_view_name"] {
 	box-sizing: border-box;
 	flex: 0 1 260px;
+	height: 30px;
 	max-width: 100%;
-	min-height: 30px;
 	min-width: 0;
-	padding: 0 8px;
 }
 
 .yoohw-cos-saved-views__create .button {
 	flex: none;
+	margin-bottom: 0;
 	white-space: nowrap;
 }
 
@@ -1478,7 +1478,7 @@
 	}
 
 	.yoohw-cos-saved-views__controls input[name="saved_view_name"] {
-		min-height: 40px;
+		height: 40px;
 	}
 }
 
