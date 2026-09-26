@@ -45,7 +45,13 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 			$this->assertLessThan( strpos( $html, 'yoohw-cos-filters"' ), strpos( $html, 'yoohw-cos-customers-views"' ) );
 			$this->assertLessThan( strpos( $html, 'wp-list-table' ), strpos( $html, 'yoohw-cos-filters"' ) );
 			$document = new DOMDocument();
-			$document->loadHTML( $html );
+			$previous_libxml_errors = libxml_use_internal_errors( true );
+			try {
+				$this->assertTrue( $document->loadHTML( $html ) );
+			} finally {
+				libxml_clear_errors();
+				libxml_use_internal_errors( $previous_libxml_errors );
+			}
 			$xpath = new DOMXPath( $document );
 			$this->assertSame( 0, $xpath->query( '//form//form' )->length );
 			$this->assertSame( 1, $xpath->query( '//input[@name="s" and @form="yoohw-cos-customers-form"]' )->length );
