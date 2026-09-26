@@ -327,17 +327,37 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 			$filters['saved_view_context'] = '1';
 		}
 
-		echo '<p class="yoohw-cos-attention-views"><strong>' . esc_html__( 'Attention / quick views:', 'yoohw-customer-intelligence' ) . '</strong> ';
+		echo '<div class="yoohw-cos-attention-views"><strong>' . esc_html__( 'Quick views:', 'yoohw-customer-intelligence' ) . '</strong><div class="yoohw-cos-attention-views__links">';
 		foreach ( $views as $index => $view ) {
 			list( $key, $value, $label ) = $view;
 			$args = array_merge( $filters, array( 'page' => 'yoohw-customer-intelligence', $key => $value ) );
 			$current = isset( $filters[ $key ] ) && $filters[ $key ] === $value;
-			if ( $index > 0 ) {
-				echo ' <span aria-hidden="true">|</span> ';
-			}
-			echo '<a href="' . esc_url( add_query_arg( $args, admin_url( 'admin.php' ) ) ) . '"' . ( $current ? ' aria-current="page"' : '' ) . '>' . esc_html( $label ) . '</a>';
+			echo '<a href="' . esc_url( add_query_arg( $args, admin_url( 'admin.php' ) ) ) . '"' . ( $current ? ' class="current" aria-current="page"' : '' ) . '>' . esc_html( $label ) . '</a>';
 		}
-		echo '</p>';
+		echo '</div></div>';
+	}
+
+	protected function display_tablenav( $which ) {
+		if ( 'top' !== $which ) {
+			parent::display_tablenav( $which );
+			return;
+		}
+
+		wp_nonce_field( 'bulk-' . $this->_args['plural'] );
+		echo '<section class="yoohw-cos-filters" aria-labelledby="yoohw-cos-filters-title">';
+		echo '<div class="yoohw-cos-filters__heading"><div><h2 id="yoohw-cos-filters-title">' . esc_html__( 'Filters', 'yoohw-customer-intelligence' ) . '</h2>';
+		echo '<p>' . esc_html__( 'Refine your customer list using the filters below.', 'yoohw-customer-intelligence' ) . '</p></div>';
+		echo '<button type="button" class="button-link" data-yoohw-cos-filters-toggle data-show-label="' . esc_attr__( 'Show filters', 'yoohw-customer-intelligence' ) . '" data-hide-label="' . esc_attr__( 'Hide filters', 'yoohw-customer-intelligence' ) . '" aria-controls="yoohw-cos-filters-body" aria-expanded="true" hidden>' . esc_html__( 'Hide filters', 'yoohw-customer-intelligence' ) . '</button></div>';
+		echo '<div id="yoohw-cos-filters-body" class="yoohw-cos-filters__body">';
+		echo '<div class="yoohw-cos-filters__row yoohw-cos-filters__row--bulk">';
+		echo '<div class="alignleft actions bulkactions' . ( $this->has_items() ? '' : ' hidden' ) . '">';
+		$this->bulk_actions( 'top' );
+		echo '</div>';
+		$this->extra_tablenav( 'top' );
+		echo '</div></section>';
+		echo '<div class="tablenav top yoohw-cos-customers-pagination">';
+		$this->pagination( 'top' );
+		echo '</div>';
 	}
 
 	private function format_date( ?string $date ): string {
@@ -436,7 +456,7 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 			? get_current_user_id()
 			: 0;
 
-		echo '<div class="alignleft actions yoohw-cos-bulk-targets" data-yoohw-cos-bulk-targets hidden>';
+		echo '<div class="actions yoohw-cos-bulk-targets" data-yoohw-cos-bulk-targets hidden>';
 
 		echo '<span class="yoohw-cos-bulk-target" data-yoohw-cos-bulk-target="tag" hidden>';
 		echo '<label class="screen-reader-text" for="yoohw-cos-bulk-tag-id">';
@@ -501,7 +521,7 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 
 		echo '</div>';
 
-		echo '<div class="alignleft actions">';
+		echo '</div><div class="yoohw-cos-filters__row yoohw-cos-filters__row--classification">';
 
 		if ( ! empty( $tags ) ) {
 			$current_tag = isset( $_GET['customer_tag'] ) ? absint( wp_unslash( $_GET['customer_tag'] ) ) : 0;
@@ -525,6 +545,7 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 		if ( ! empty( $segments ) ) {
 			$current_segment = isset( $_GET['customer_segment'] ) ? absint( wp_unslash( $_GET['customer_segment'] ) ) : 0;
 
+			echo '<label class="screen-reader-text" for="yoohw-cos-customer-segment-filter">' . esc_html__( 'Filter by segment', 'yoohw-customer-intelligence' ) . '</label>';
 			echo '<select name="customer_segment" id="yoohw-cos-customer-segment-filter">';
 			echo '<option value="0">' . esc_html__( 'All segments', 'yoohw-customer-intelligence' ) . '</option>';
 
@@ -547,7 +568,8 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 			YoOhw_COS_Intelligence::get_value_tier_labels()
 		);
 
-		echo '<select name="vip_status">';
+		echo '<label class="screen-reader-text" for="yoohw-cos-value-tier-filter">' . esc_html__( 'Filter by value tier', 'yoohw-customer-intelligence' ) . '</label>';
+		echo '<select name="vip_status" id="yoohw-cos-value-tier-filter">';
 		foreach ( $vip_statuses as $vip_key => $vip_label ) {
 			echo '<option value="' . esc_attr( $vip_key ) . '" ' . selected( $current_vip, $vip_key, false ) . '>';
 			echo esc_html( $vip_label );
@@ -565,7 +587,8 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 			'high'   => __( 'High risk', 'yoohw-customer-intelligence' ),
 		);
 
-		echo '<select name="risk_level">';
+		echo '<label class="screen-reader-text" for="yoohw-cos-risk-filter">' . esc_html__( 'Filter by risk level', 'yoohw-customer-intelligence' ) . '</label>';
+		echo '<select name="risk_level" id="yoohw-cos-risk-filter">';
 		foreach ( $risk_levels as $risk_key => $risk_label ) {
 			echo '<option value="' . esc_attr( $risk_key ) . '" ' . selected( $current_risk, $risk_key, false ) . '>';
 			echo esc_html( $risk_label );
@@ -577,7 +600,8 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 			$current_loyalty_level = isset( $_GET['loyalty_level'] ) ? sanitize_key( wp_unslash( $_GET['loyalty_level'] ) ) : '';
 			$loyalty_levels        = $this->get_loyalty_level_filter_options( $current_loyalty_level );
 
-			echo '<select name="loyalty_level">';
+			echo '<label class="screen-reader-text" for="yoohw-cos-loyalty-filter">' . esc_html__( 'Filter by loyalty level', 'yoohw-customer-intelligence' ) . '</label>';
+			echo '<select name="loyalty_level" id="yoohw-cos-loyalty-filter">';
 			foreach ( $loyalty_levels as $level_key => $level_label ) {
 				echo '<option value="' . esc_attr( $level_key ) . '" ' . selected( $current_loyalty_level, $level_key, false ) . '>';
 				echo esc_html( $level_label );
@@ -586,6 +610,7 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 			echo '</select>';
 		}
 
+		echo '</div><div class="yoohw-cos-filters__row yoohw-cos-filters__row--behavior">';
 		$current_lifecycle = isset( $_GET['lifecycle_stage'] ) ? sanitize_key( wp_unslash( $_GET['lifecycle_stage'] ) ) : '';
 
 		$lifecycle_options = array(
@@ -597,7 +622,8 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 			'dormant' => __( 'Dormant', 'yoohw-customer-intelligence' ),
 		);
 
-		echo '<select name="lifecycle_stage">';
+		echo '<label class="screen-reader-text" for="yoohw-cos-lifecycle-filter">' . esc_html__( 'Filter by lifecycle stage', 'yoohw-customer-intelligence' ) . '</label>';
+		echo '<select name="lifecycle_stage" id="yoohw-cos-lifecycle-filter">';
 		foreach ( $lifecycle_options as $stage_key => $stage_label ) {
 			echo '<option value="' . esc_attr( $stage_key ) . '" ' . selected( $current_lifecycle, $stage_key, false ) . '>';
 			echo esc_html( $stage_label );
@@ -612,7 +638,8 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 			'repeat'     => __( 'Repeat customers', 'yoohw-customer-intelligence' ),
 		);
 
-		echo '<select name="customer_cohort">';
+		echo '<label class="screen-reader-text" for="yoohw-cos-cohort-filter">' . esc_html__( 'Filter by purchase cohort', 'yoohw-customer-intelligence' ) . '</label>';
+		echo '<select name="customer_cohort" id="yoohw-cos-cohort-filter">';
 		foreach ( $cohort_options as $cohort_key => $cohort_label ) {
 			echo '<option value="' . esc_attr( $cohort_key ) . '" ' . selected( $current_cohort, $cohort_key, false ) . '>';
 			echo esc_html( $cohort_label );
@@ -630,7 +657,8 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 			'high_value_needs_follow_up' => __( 'High-value needs follow-up', 'yoohw-customer-intelligence' ),
 		);
 
-		echo '<select name="customer_attention">';
+		echo '<label class="screen-reader-text" for="yoohw-cos-attention-filter">' . esc_html__( 'Filter by attention state', 'yoohw-customer-intelligence' ) . '</label>';
+		echo '<select name="customer_attention" id="yoohw-cos-attention-filter">';
 		foreach ( $attention_options as $attention_key => $attention_label ) {
 			echo '<option value="' . esc_attr( $attention_key ) . '" ' . selected( $current_attention, $attention_key, false ) . '>';
 			echo esc_html( $attention_label );
@@ -653,9 +681,10 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 			}
 		}
 
+		echo '</div><div class="yoohw-cos-filters__footer">';
 		submit_button(
 			__( 'Filter', 'yoohw-customer-intelligence' ),
-			'secondary',
+			'primary',
 			'filter_action',
 			false
 		);
@@ -663,6 +692,7 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 		echo ' <button type="submit" class="button" name="yoohw_cos_export_customers" value="1">';
 		echo esc_html__( 'Export CSV', 'yoohw-customer-intelligence' );
 		echo '</button>';
+		echo '<a class="yoohw-cos-filters__clear" href="' . esc_url( admin_url( 'admin.php?page=yoohw-customer-intelligence' ) ) . '">' . esc_html__( 'Clear all filters', 'yoohw-customer-intelligence' ) . '</a>';
 		echo '<p class="description">' . esc_html__( 'Spreadsheet CSV adds a protective TAB to formula-like text and phone values. This preserves phone formatting but changes exported bytes for programmatic imports. Safety varies by spreadsheet and import settings; editing or resaving may remove protection.', 'yoohw-customer-intelligence' ) . '</p>';
 
 		echo '</div>';

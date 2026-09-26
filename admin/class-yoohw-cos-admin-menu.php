@@ -805,8 +805,13 @@ final class YoOhw_COS_Admin_Menu {
 		$list_table->prepare_items();
 
 		echo '<div class="wrap yoohw-cos-admin yoohw-cos-customers-page">';
-		echo '<h1 class="wp-heading-inline">' . esc_html__( 'Customers', 'yoohw-customer-intelligence' ) . '</h1>';
+		echo '<div class="yoohw-cos-customers-heading"><div>';
+		echo '<h1>' . esc_html__( 'Customers', 'yoohw-customer-intelligence' ) . '</h1>';
 		echo '<p>' . esc_html__( 'Search, filter, export, and manage customer profiles synced from WooCommerce orders.', 'yoohw-customer-intelligence' ) . '</p>';
+		echo '</div><div class="yoohw-cos-customers-search">';
+		echo '<label for="yoohw-cos-customers-search">' . esc_html__( 'Search customers', 'yoohw-customer-intelligence' ) . '</label>';
+		echo '<div><input type="search" id="yoohw-cos-customers-search" name="s" form="yoohw-cos-customers-form" value="' . esc_attr( isset( $_GET['s'] ) ? sanitize_text_field( wp_unslash( $_GET['s'] ) ) : '' ) . '" /> ';
+		echo '<button type="submit" class="button" form="yoohw-cos-customers-form">' . esc_html__( 'Search', 'yoohw-customer-intelligence' ) . '</button></div></div></div>';
 		self::render_saved_views_control();
 
 		if ( isset( $_GET['yoohw_customers_bulk'] ) ) {
@@ -845,10 +850,13 @@ final class YoOhw_COS_Admin_Menu {
 			echo '</p></div>';
 		}
 
+		echo '<div class="yoohw-cos-customers-views"><div class="yoohw-cos-customers-views__statuses">';
 		$list_table->views();
+		echo '</div>';
 		$list_table->render_attention_quick_views();
+		echo '</div>';
 
-		echo '<form method="post">';
+		echo '<form method="post" id="yoohw-cos-customers-form">';
 		YoOhw_COS_Reset_Guard::render_field( $list_table->selection_epoch );
 		echo '<input type="hidden" name="page" value="yoohw-customer-intelligence" />';
 		wp_nonce_field( 'yoohw_cos_customers_bulk_action', 'yoohw_cos_customers_bulk_nonce' );
@@ -858,7 +866,6 @@ final class YoOhw_COS_Admin_Menu {
 			echo '<input type="hidden" name="saved_view_id" value="' . esc_attr( YoOhw_COS_Saved_Views::context_id( $_GET ) ) . '" />';
 			echo '<input type="hidden" name="saved_view_context" value="1" />';
 		}
-		$list_table->search_box( __( 'Search', 'yoohw-customer-intelligence' ), 'yoohw-cos-customers' );
 		$list_table->display();
 		echo '</form>';
 
@@ -935,20 +942,18 @@ final class YoOhw_COS_Admin_Menu {
 		if ( isset( $messages[ $notice ] ) ) {
 			echo '<div class="notice notice-' . ( in_array( $notice, array( 'created', 'updated', 'renamed', 'deleted' ), true ) ? 'success' : 'error' ) . ' is-dismissible"><p>' . esc_html( $messages[ $notice ] ) . '</p></div>';
 		}
-		if ( $stale ) {
-			echo '<div class="notice notice-error"><p>' . esc_html__( 'This saved view has an unavailable or invalid filter. Its results and export are blocked. Correct the filters and use Update, or delete the view.', 'yoohw-customer-intelligence' ) . '</p></div>';
-		} elseif ( $active ) {
-			echo '<p><strong>' . esc_html( $active['name'] ) . '</strong> — ' . esc_html( $dirty ? __( 'Current filters differ from this saved view.', 'yoohw-customer-intelligence' ) : __( 'Saved view active.', 'yoohw-customer-intelligence' ) ) . '</p>';
-		} else {
-			echo '<p>' . esc_html__( 'No saved view active.', 'yoohw-customer-intelligence' ) . '</p>';
-		}
+		echo '<section class="yoohw-cos-saved-views" aria-labelledby="yoohw-cos-saved-views-title">';
+		echo '<div class="yoohw-cos-saved-views__heading"><h2 id="yoohw-cos-saved-views-title">' . esc_html__( 'Saved Views', 'yoohw-customer-intelligence' ) . '</h2>';
+		echo '<p>' . esc_html__( 'Save and reuse filter configurations.', 'yoohw-customer-intelligence' ) . '</p></div>';
+		echo '<div class="yoohw-cos-saved-views__controls">';
 		echo '<form method="get" action="' . esc_url( admin_url( 'admin.php' ) ) . '"><input type="hidden" name="page" value="yoohw-customer-intelligence" />';
-		echo '<label for="yoohw-cos-saved-view-select">' . esc_html__( 'Saved Views', 'yoohw-customer-intelligence' ) . '</label> ';
+		echo '<label class="screen-reader-text" for="yoohw-cos-saved-view-select">' . esc_html__( 'Choose a saved view', 'yoohw-customer-intelligence' ) . '</label> ';
 		echo '<select id="yoohw-cos-saved-view-select" name="saved_view_id"><option value="">' . esc_html__( 'Choose a view', 'yoohw-customer-intelligence' ) . '</option>';
 		foreach ( $views as $view_id => $view ) {
 			echo '<option value="' . esc_attr( $view_id ) . '" ' . selected( $id, $view_id, false ) . '>' . esc_html( $view['name'] ) . '</option>';
 		}
 		echo '</select> <button class="button" type="submit">' . esc_html__( 'Open', 'yoohw-customer-intelligence' ) . '</button></form>';
+		echo '<span class="yoohw-cos-saved-views__separator" aria-hidden="true"></span>';
 		echo '<form method="post" action="' . esc_url( admin_url( 'admin.php?page=yoohw-customer-intelligence' ) ) . '">';
 		wp_nonce_field( 'yoohw_cos_saved_view', 'saved_view_nonce' );
 		echo '<input type="hidden" name="page" value="yoohw-customer-intelligence" /><input type="hidden" name="saved_view_id" value="' . esc_attr( $id ) . '" />';
@@ -963,7 +968,15 @@ final class YoOhw_COS_Admin_Menu {
 			echo '<button class="button" name="saved_view_action" value="rename">' . esc_html__( 'Rename', 'yoohw-customer-intelligence' ) . '</button> ';
 			echo '<button class="button" name="saved_view_action" value="delete" onclick="return confirm(' . esc_attr( wp_json_encode( __( 'Delete this saved view?', 'yoohw-customer-intelligence' ) ) ) . ')">' . esc_html__( 'Delete', 'yoohw-customer-intelligence' ) . '</button>';
 		}
-		echo '</form>';
+		echo '</form></div>';
+		if ( $stale ) {
+			echo '<div class="notice notice-error"><p>' . esc_html__( 'This saved view has an unavailable or invalid filter. Its results and export are blocked. Correct the filters and use Update, or delete the view.', 'yoohw-customer-intelligence' ) . '</p></div>';
+		} elseif ( $active ) {
+			echo '<p class="yoohw-cos-saved-views__state"><strong>' . esc_html( $active['name'] ) . '</strong> — ' . esc_html( $dirty ? __( 'Current filters differ from this saved view.', 'yoohw-customer-intelligence' ) : __( 'Saved view active.', 'yoohw-customer-intelligence' ) ) . '</p>';
+		} else {
+			echo '<p class="yoohw-cos-saved-views__state">' . esc_html__( 'No saved view active.', 'yoohw-customer-intelligence' ) . '</p>';
+		}
+		echo '</section>';
 	}
 
 	private static function maybe_handle_customers_bulk_action(): void {
