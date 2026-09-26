@@ -960,8 +960,8 @@ final class YoOhw_COS_Admin_Menu {
 		foreach ( YoOhw_COS_Saved_Views::definition( wp_unslash( $_GET ) ) as $key => $value ) {
 			echo '<input type="hidden" name="' . esc_attr( $key ) . '" value="' . esc_attr( $value ) . '" />';
 		}
-		echo '<label for="yoohw-cos-saved-view-name">' . esc_html__( 'View name', 'yoohw-customer-intelligence' ) . '</label> ';
-		echo '<input id="yoohw-cos-saved-view-name" name="saved_view_name" maxlength="80" value="" /> ';
+		echo '<label class="screen-reader-text" for="yoohw-cos-saved-view-name">' . esc_html__( 'View name', 'yoohw-customer-intelligence' ) . '</label> ';
+		echo '<input type="text" id="yoohw-cos-saved-view-name" name="saved_view_name" maxlength="80" placeholder="' . esc_attr__( 'View name', 'yoohw-customer-intelligence' ) . '" value="" /> ';
 		echo '<button class="button" name="saved_view_action" value="create">' . esc_html__( 'Save current view', 'yoohw-customer-intelligence' ) . '</button> ';
 		if ( $active ) {
 			echo '<button class="button" name="saved_view_action" value="update">' . esc_html__( 'Update', 'yoohw-customer-intelligence' ) . '</button> ';
