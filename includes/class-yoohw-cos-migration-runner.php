@@ -212,8 +212,10 @@ final class YoOhw_COS_Migration_Runner {
 			foreach ( (array) ( $result['outcomes'] ?? array() ) as $order_id => $outcome ) {
 				$status = sanitize_key( (string) ( $outcome['status'] ?? 'retry' ) );
 				$code   = sanitize_key( (string) ( $outcome['code'] ?? 'sync_failed' ) );
+				if ( 'skipped' === $status && 'no_customer_identity' !== $code ) { $status = 'retry'; }
 
-				if ( in_array( $status, array( 'success', 'suppressed' ), true ) ) {
+				if ( in_array( $status, array( 'success', 'suppressed', 'skipped' ), true ) ) {
+					if ( 'skipped' === $status ) { self::note_currency_reconciled( 'order', absint( $order_id ) ); }
 					self::resolve_issue( $migration_id, 'order', absint( $order_id ) );
 					if ( 'success' === $status ) { $migration['successful'] = absint( $migration['successful'] ?? 0 ) + 1; }
 				} else {
@@ -463,8 +465,10 @@ final class YoOhw_COS_Migration_Runner {
 			$outcome   = $callback( $object_id );
 			$status    = sanitize_key( (string) ( $outcome['status'] ?? 'retry' ) );
 			$code      = sanitize_key( (string) ( $outcome['code'] ?? 'retry_failed' ) );
+			if ( 'skipped' === $status && 'no_customer_identity' !== $code ) { $status = 'retry'; }
 
-			if ( in_array( $status, array( 'success', 'suppressed' ), true ) ) {
+			if ( in_array( $status, array( 'success', 'suppressed', 'skipped' ), true ) ) {
+				if ( 'skipped' === $status && 'order' === $object_type ) { self::note_currency_reconciled( 'order', $object_id ); }
 				self::resolve_issue( $migration_id, $object_type, $object_id );
 				continue;
 			}

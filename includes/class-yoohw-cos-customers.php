@@ -935,13 +935,22 @@ final class YoOhw_COS_Customers {
 		if ( ! $order instanceof WC_Order || $order instanceof WC_Order_Refund ) {
 			$outcome = array( 'status' => 'unresolved', 'code' => 'order_unavailable' );
 		} else {
-			$suppressed = YoOhw_COS_Privacy_Erasure::is_suppressed( YoOhw_COS_Customer_Identity::from_order( $order ) );
+			$identity = YoOhw_COS_Customer_Identity::from_order( $order );
+			$suppressed = YoOhw_COS_Privacy_Erasure::is_suppressed( $identity );
 			if ( true === $suppressed ) {
 				$outcome = array( 'status' => 'suppressed', 'code' => 'privacy_suppressed' );
 			} elseif ( null === $suppressed ) {
 				$outcome = array( 'status' => 'retry', 'code' => 'privacy_state_unavailable' );
+			} elseif ( ! array_filter( $identity ) ) {
+				global $wpdb;
+				$fact = $wpdb->get_var( $wpdb->prepare(
+					'SELECT 1 FROM %i WHERE order_id = %d LIMIT 1', YoOhw_COS_DB::order_facts_table(), $order_id
+				) );
+				$outcome = $wpdb->last_error ? array( 'status' => 'retry', 'code' => 'fact_lookup_failed' )
+					: ( $fact ? array( 'status' => 'retry', 'code' => 'linked_order_missing_identity' )
+						: array( 'status' => 'skipped', 'code' => 'no_customer_identity' ) );
 			} else {
-				$resolution = YoOhw_COS_Customer_Identity::resolve( YoOhw_COS_Customer_Identity::from_order( $order ) );
+				$resolution = YoOhw_COS_Customer_Identity::resolve( $identity );
 				$resolved_customer_id = absint( $resolution['customer_id'] ?? 0 );
 				$resolved_suppression = $resolved_customer_id > 0
 					? YoOhw_COS_Privacy_Erasure::is_suppressed( self::get_customer( $resolved_customer_id ) )
