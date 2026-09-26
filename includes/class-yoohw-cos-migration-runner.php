@@ -71,7 +71,7 @@ final class YoOhw_COS_Migration_Runner {
 		return true;
 	}
 
-	/** Recover a missing currency migration on a current-schema site with legacy facts. */
+	/** Recover a missing currency migration on a current-schema site with legacy facts or an old issue ledger. */
 	public static function register_missing_currency_backfill(): void {
 		$state = self::get_state();
 		if ( isset( $state['commerce_currency_v3'] ) || ! YoOhw_COS_Install::schema_is_ready() ) { return; }
@@ -80,7 +80,7 @@ final class YoOhw_COS_Migration_Runner {
 			"SELECT 1 FROM %i WHERE policy_version < %d OR (counts_as_order = 1 AND (currency IS NULL OR currency = '')) LIMIT 1",
 			YoOhw_COS_DB::order_facts_table(), YoOhw_COS_Commerce_Metrics_Policy::VERSION
 		) );
-		if ( ! $legacy_fact ) { return; }
+		if ( ! $legacy_fact && 'completed_with_issues' !== ( $state['commerce_facts_v2']['status'] ?? '' ) ) { return; }
 		$state['commerce_currency_v3'] = self::new_migration_state(
 			array( 'phase' => 'orders', 'next_page' => 1, 'last_customer_id' => 0 )
 		);
