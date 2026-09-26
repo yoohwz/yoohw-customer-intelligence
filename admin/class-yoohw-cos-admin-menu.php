@@ -954,15 +954,16 @@ final class YoOhw_COS_Admin_Menu {
 		}
 		echo '</select> <button class="button" type="submit">' . esc_html__( 'Open', 'yoohw-customer-intelligence' ) . '</button></form>';
 		echo '<span class="yoohw-cos-saved-views__separator" aria-hidden="true"></span>';
-		echo '<form method="post" action="' . esc_url( admin_url( 'admin.php?page=yoohw-customer-intelligence' ) ) . '">';
+		echo '<form class="yoohw-cos-saved-views__save-form" method="post" action="' . esc_url( admin_url( 'admin.php?page=yoohw-customer-intelligence' ) ) . '">';
 		wp_nonce_field( 'yoohw_cos_saved_view', 'saved_view_nonce' );
 		echo '<input type="hidden" name="page" value="yoohw-customer-intelligence" /><input type="hidden" name="saved_view_id" value="' . esc_attr( $id ) . '" />';
 		foreach ( YoOhw_COS_Saved_Views::definition( wp_unslash( $_GET ) ) as $key => $value ) {
 			echo '<input type="hidden" name="' . esc_attr( $key ) . '" value="' . esc_attr( $value ) . '" />';
 		}
+		echo '<span class="yoohw-cos-saved-views__create">';
 		echo '<label class="screen-reader-text" for="yoohw-cos-saved-view-name">' . esc_html__( 'View name', 'yoohw-customer-intelligence' ) . '</label> ';
 		echo '<input type="text" id="yoohw-cos-saved-view-name" name="saved_view_name" maxlength="80" placeholder="' . esc_attr__( 'View name', 'yoohw-customer-intelligence' ) . '" value="" /> ';
-		echo '<button class="button" name="saved_view_action" value="create">' . esc_html__( 'Save current view', 'yoohw-customer-intelligence' ) . '</button> ';
+		echo '<button class="button" name="saved_view_action" value="create">' . esc_html__( 'Save current view', 'yoohw-customer-intelligence' ) . '</button></span> ';
 		if ( $active ) {
 			echo '<button class="button" name="saved_view_action" value="update">' . esc_html__( 'Update', 'yoohw-customer-intelligence' ) . '</button> ';
 			echo '<button class="button" name="saved_view_action" value="rename">' . esc_html__( 'Rename', 'yoohw-customer-intelligence' ) . '</button> ';

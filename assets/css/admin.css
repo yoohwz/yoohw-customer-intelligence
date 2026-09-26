@@ -1325,11 +1325,31 @@
 	flex: none;
 }
 
+.yoohw-cos-saved-views__controls .yoohw-cos-saved-views__save-form {
+	flex: 1 1 320px;
+	min-width: min(320px, 100%);
+}
+
+.yoohw-cos-saved-views__create {
+	align-items: center;
+	display: flex;
+	flex: 1 1 320px;
+	gap: 8px;
+	min-width: 0;
+}
+
 .yoohw-cos-saved-views__controls input[name="saved_view_name"] {
 	box-sizing: border-box;
+	flex: 0 1 260px;
+	max-width: 100%;
 	min-height: 30px;
-	min-width: min(220px, 100%);
+	min-width: 0;
 	padding: 0 8px;
+}
+
+.yoohw-cos-saved-views__create .button {
+	flex: none;
+	white-space: nowrap;
 }
 
 .yoohw-cos-saved-views,
