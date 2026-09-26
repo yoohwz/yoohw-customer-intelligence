@@ -28,6 +28,50 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 		delete_option( 'yoohw_cos_scoring_settings' );
 	}
 
+	public function test_customers_workspace_keeps_forms_and_controls_in_order(): void {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		$previous_get = $_GET;
+		$previous_post = $_POST;
+		$previous_request = $_REQUEST;
+		try {
+			$_GET = array();
+			$_POST = array();
+			$_REQUEST = array();
+			ob_start();
+			YoOhw_COS_Admin_Menu::render_customers_page();
+			$html = ob_get_clean();
+			$this->assertLessThan( strpos( $html, 'yoohw-cos-saved-views"' ), strpos( $html, 'yoohw-cos-customers-heading"' ) );
+			$this->assertLessThan( strpos( $html, 'yoohw-cos-customers-views"' ), strpos( $html, 'yoohw-cos-saved-views"' ) );
+			$this->assertLessThan( strpos( $html, 'yoohw-cos-filters"' ), strpos( $html, 'yoohw-cos-customers-views"' ) );
+			$this->assertLessThan( strpos( $html, 'wp-list-table' ), strpos( $html, 'yoohw-cos-filters"' ) );
+			$document = new DOMDocument();
+			$previous_libxml_errors = libxml_use_internal_errors( true );
+			try {
+				$this->assertTrue( $document->loadHTML( $html ) );
+			} finally {
+				libxml_clear_errors();
+				libxml_use_internal_errors( $previous_libxml_errors );
+			}
+			$xpath = new DOMXPath( $document );
+			$this->assertSame( 0, $xpath->query( '//form//form' )->length );
+			$this->assertSame( 1, $xpath->query( '//input[@name="s" and @form="yoohw-cos-customers-form"]' )->length );
+			$this->assertSame( 1, $xpath->query( '//form[@id="yoohw-cos-customers-form"]//input[@name="yoohw_cos_customers_bulk_nonce"]' )->length );
+			$this->assertSame( 1, $xpath->query( '//form[@id="yoohw-cos-customers-form"]//input[@name="filter_action"]' )->length );
+			$this->assertSame( 1, $xpath->query( '//*[@id="yoohw-cos-filters-body" and not(@hidden)]' )->length );
+			$this->assertSame( 7, $xpath->query( '//*[contains(concat(" ", normalize-space(@class), " "), " yoohw-cos-attention-views__links ")]/a' )->length );
+			$ids = array();
+			foreach ( $xpath->query( '//*[@id]' ) as $node ) {
+				$id = $node->getAttribute( 'id' );
+				$this->assertArrayNotHasKey( $id, $ids );
+				$ids[ $id ] = true;
+			}
+		} finally {
+			$_GET = $previous_get;
+			$_POST = $previous_post;
+			$_REQUEST = $previous_request;
+		}
+	}
+
 	public function test_profile_option_a_keeps_actions_and_counts_in_operational_order(): void {
 		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
 		$customer_id = YoOhw_COS_Customers::create_customer( array(

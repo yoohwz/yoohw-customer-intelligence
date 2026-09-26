@@ -755,6 +755,20 @@
 	}
 
 	ready(function() {
+		var filtersToggle = document.querySelector('[data-yoohw-cos-filters-toggle]');
+		var filtersBody = document.getElementById('yoohw-cos-filters-body');
+
+		if (filtersToggle && filtersBody) {
+			filtersToggle.hidden = false;
+			filtersToggle.addEventListener('click', function() {
+				var expanded = 'true' === filtersToggle.getAttribute('aria-expanded');
+
+				filtersBody.hidden = expanded;
+				filtersToggle.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+				filtersToggle.textContent = filtersToggle.getAttribute(expanded ? 'data-show-label' : 'data-hide-label');
+			});
+		}
+
 		updateBulkTargets();
 		initTaskSearchableSelects();
 		initTermSuggestions(window.jQuery);
