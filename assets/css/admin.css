@@ -1442,6 +1442,21 @@
 	margin: 0;
 }
 
+.yoohw-cos-filters__row--bulk .bulkactions:not(.hidden) {
+	align-items: stretch;
+	display: flex;
+	gap: 8px;
+}
+
+.yoohw-cos-filters__row--bulk .bulkactions select,
+.yoohw-cos-filters__row--bulk .bulkactions .button {
+	margin: 0;
+}
+
+.yoohw-cos-filters__row--bulk .bulkactions .button {
+	height: auto;
+}
+
 .yoohw-cos-filters__row input,
 .yoohw-cos-filters__row select {
 	max-width: 100%;
