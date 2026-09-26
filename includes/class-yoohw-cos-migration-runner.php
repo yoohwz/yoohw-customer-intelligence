@@ -71,6 +71,23 @@ final class YoOhw_COS_Migration_Runner {
 		return true;
 	}
 
+	/** Recover a missing currency migration on a current-schema site with legacy facts. */
+	public static function register_missing_currency_backfill(): void {
+		$state = self::get_state();
+		if ( isset( $state['commerce_currency_v3'] ) || ! YoOhw_COS_Install::schema_is_ready() ) { return; }
+		global $wpdb;
+		$legacy_fact = $wpdb->get_var( $wpdb->prepare(
+			"SELECT 1 FROM %i WHERE policy_version < %d OR (counts_as_order = 1 AND (currency IS NULL OR currency = '')) LIMIT 1",
+			YoOhw_COS_DB::order_facts_table(), YoOhw_COS_Commerce_Metrics_Policy::VERSION
+		) );
+		if ( ! $legacy_fact ) { return; }
+		$state['commerce_currency_v3'] = self::new_migration_state(
+			array( 'phase' => 'orders', 'next_page' => 1, 'last_customer_id' => 0 )
+		);
+		update_option( self::STATE_OPTION, $state, false );
+		self::maybe_schedule();
+	}
+
 	public static function run_next_batch(): void {
 		if ( ! YoOhw_COS_Install::schema_is_ready() ) { return; }
 		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
@@ -115,6 +132,8 @@ final class YoOhw_COS_Migration_Runner {
 				$migration = self::run_activity_semantics_batch( $migration );
 			}
 
+			// Order reconciliation may have resolved an older migration's ledger in this batch.
+			$state = self::get_state();
 			$state[ $migration_id ] = $migration;
 			update_option( self::STATE_OPTION, $state, false );
 			if ( 'completed' === ( $migration['status'] ?? '' )
@@ -159,21 +178,24 @@ final class YoOhw_COS_Migration_Runner {
 	}
 
 	public static function note_currency_reconciled( string $object_type, int $object_id ): void {
+		if ( ! in_array( $object_type, array( 'order', 'customer' ), true ) ) {
+			return;
+		}
 		$state = self::get_state();
-		$migration_id = isset( $state['commerce_currency_v3'] ) ? 'commerce_currency_v3' : 'commerce_facts_v2';
-		if ( ! isset( $state[ $migration_id ] ) || ! in_array( $object_type, array( 'order', 'customer' ), true ) ) {
-			return;
+		$changed = false;
+		foreach ( array( 'commerce_facts_v2', 'commerce_currency_v3' ) as $migration_id ) {
+			if ( ! isset( $state[ $migration_id ] ) ) { continue; }
+			self::resolve_issue( $migration_id, $object_type, absint( $object_id ) );
+			if ( 'completed_with_issues' !== ( $state[ $migration_id ]['status'] ?? '' )
+				|| self::count_issues( $migration_id, 'pending' ) > 0
+				|| self::count_issues( $migration_id, 'unresolved' ) > 0 ) { continue; }
+			$state[ $migration_id ]['status'] = 'completed';
+			$state[ $migration_id ]['pending_issues'] = 0;
+			$state[ $migration_id ]['unresolved_issues'] = 0;
+			$state[ $migration_id ]['completed_at'] = YoOhw_COS_DB::now();
+			$changed = true;
 		}
-		self::resolve_issue( $migration_id, $object_type, absint( $object_id ) );
-		if ( 'completed_with_issues' !== ( $state[ $migration_id ]['status'] ?? '' )
-			|| self::count_issues( $migration_id, 'pending' ) > 0
-			|| self::count_issues( $migration_id, 'unresolved' ) > 0 ) {
-			return;
-		}
-		$state[ $migration_id ]['status'] = 'completed';
-		$state[ $migration_id ]['pending_issues'] = 0;
-		$state[ $migration_id ]['unresolved_issues'] = 0;
-		$state[ $migration_id ]['completed_at'] = YoOhw_COS_DB::now();
+		if ( ! $changed ) { return; }
 		update_option( self::STATE_OPTION, $state, false );
 		YoOhw_COS_Intelligence::invalidate_monetary_decisions();
 	}

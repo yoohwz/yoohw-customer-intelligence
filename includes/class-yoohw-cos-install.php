@@ -720,6 +720,9 @@ final class YoOhw_COS_Install {
 		}
 		if ( version_compare( $current_db_version, self::db_version(), '<' ) || ! self::schema_is_ready() ) {
 			self::upgrade_schema( $current_db_version );
+		} elseif ( ! isset( YoOhw_COS_Migration_Runner::get_state()['commerce_currency_v3'] ) ) {
+			// Existing sites may already have the current schema but no currency backfill.
+			YoOhw_COS_Migration_Runner::register_missing_currency_backfill();
 		}
 	}
 
