@@ -4,7 +4,6 @@ defined( 'ABSPATH' ) || exit;
 /** Native, read-only WordPress personal data exporter. */
 final class YoOhw_COS_Privacy_Exporter {
 	private const PAGE_SIZE = 25;
-	private const DOMAIN = 'yoohw-customer-intelligence';
 
 	public static function init(): void {
 		add_filter( 'wp_privacy_personal_data_exporters', array( __CLASS__, 'register' ) );
@@ -12,7 +11,7 @@ final class YoOhw_COS_Privacy_Exporter {
 
 	public static function register( array $exporters ): array {
 		$exporters['yoohw-customer-intelligence'] = array(
-			'exporter_friendly_name' => __( 'Customer Intelligence', self::DOMAIN ),
+			'exporter_friendly_name' => __( 'Customer Intelligence', 'yoohw-customer-intelligence' ),
 			'callback'               => array( __CLASS__, 'export' ),
 		);
 		return $exporters;
@@ -84,7 +83,7 @@ final class YoOhw_COS_Privacy_Exporter {
 	}
 
 	private static function retry_error(): WP_Error {
-		return new WP_Error( 'yoohw_cos_privacy_retry', __( 'Customer Intelligence data is temporarily unavailable. Retry the personal data export after Reset or database recovery completes.', self::DOMAIN ) );
+		return new WP_Error( 'yoohw_cos_privacy_retry', __( 'Customer Intelligence data is temporarily unavailable. Retry the personal data export after Reset or database recovery completes.', 'yoohw-customer-intelligence' ) );
 	}
 
 	/** Fixed SQL projections exclude operator IDs, technical keys and opaque blobs. */
@@ -104,14 +103,18 @@ final class YoOhw_COS_Privacy_Exporter {
 
 	private static function count_rows( array $category ): ?int {
 		global $wpdb;
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- FROM and WHERE come only from the fixed categories() map; subject values use prepare placeholders.
 		$sql = $wpdb->prepare( 'SELECT COUNT(*) FROM ' . $category['from'] . ' WHERE ' . $category['where'], ...$category['args'] );
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Prepared immediately above from fixed category SQL and validated subject values.
 		$count = $wpdb->get_var( $sql );
 		return '' === $wpdb->last_error && null !== $count ? (int) $count : null;
 	}
 
 	private static function read_rows( array $category, int $limit, int $offset ): ?array {
 		global $wpdb;
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Projection, joins, predicate and ordering come only from the fixed categories() map; values use placeholders.
 		$sql = $wpdb->prepare( 'SELECT ' . $category['select'] . ' FROM ' . $category['from'] . ' WHERE ' . $category['where'] . ' ORDER BY ' . $category['order'] . ' ASC LIMIT %d OFFSET %d', ...array_merge( $category['args'], array( $limit, $offset ) ) );
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Prepared immediately above from fixed category SQL and validated subject values.
 		$rows = $wpdb->get_results( $sql, ARRAY_A );
 		return '' === $wpdb->last_error && is_array( $rows ) ? $rows : null;
 	}
@@ -129,15 +132,104 @@ final class YoOhw_COS_Privacy_Exporter {
 			$id = $row['id'];
 			$fields = self::fields( $category, $row );
 		}
-		$labels = array( 'profile' => 'Customer Intelligence profile', 'notes' => 'Customer note', 'tasks' => 'Customer task', 'events' => 'Customer activity', 'tags' => 'Customer tag', 'segments' => 'Customer static segment', 'views' => 'Personal saved customer view' );
+		$labels = array(
+			'profile' => __( 'Customer Intelligence profile', 'yoohw-customer-intelligence' ),
+			'notes' => __( 'Customer note', 'yoohw-customer-intelligence' ),
+			'tasks' => __( 'Customer task', 'yoohw-customer-intelligence' ),
+			'events' => __( 'Customer activity', 'yoohw-customer-intelligence' ),
+			'tags' => __( 'Customer tag', 'yoohw-customer-intelligence' ),
+			'segments' => __( 'Customer static segment', 'yoohw-customer-intelligence' ),
+			'views' => __( 'Personal saved customer view', 'yoohw-customer-intelligence' ),
+		);
 		$data = array();
 		foreach ( $fields as $label => $value ) {
 			if ( null === $value || '' === (string) $value || is_serialized( $value ) ) {
 				continue;
 			}
-			$data[] = array( 'name' => __( $label, self::DOMAIN ), 'value' => self::plain_text( (string) $value ) );
+			$data[] = array( 'name' => self::translated_label( $label ), 'value' => self::plain_text( (string) $value ) );
 		}
-		return array( 'group_id' => 'yoohw-cos-' . $category, 'group_label' => __( $labels[ $category ], self::DOMAIN ), 'item_id' => 'yoohw-cos-' . $category . '-' . $id, 'data' => $data );
+		return array( 'group_id' => 'yoohw-cos-' . $category, 'group_label' => $labels[ $category ], 'item_id' => 'yoohw-cos-' . $category . '-' . $id, 'data' => $data );
+	}
+
+	/** Register fixed export field labels for extraction by translation tooling. */
+	private static function translated_label( string $label ): string {
+		static $translations_by_locale = array();
+		$locale = get_locale();
+		if ( ! isset( $translations_by_locale[ $locale ] ) ) {
+			$translations_by_locale[ $locale ] = array(
+				'Archive reason' => __( 'Archive reason', 'yoohw-customer-intelligence' ),
+				'Archived date' => __( 'Archived date', 'yoohw-customer-intelligence' ),
+				'Available loyalty points' => __( 'Available loyalty points', 'yoohw-customer-intelligence' ),
+				'Average order value' => __( 'Average order value', 'yoohw-customer-intelligence' ),
+				'Completion date' => __( 'Completion date', 'yoohw-customer-intelligence' ),
+				'Created date' => __( 'Created date', 'yoohw-customer-intelligence' ),
+				'Customer Intelligence customer ID' => __( 'Customer Intelligence customer ID', 'yoohw-customer-intelligence' ),
+				'Customer status' => __( 'Customer status', 'yoohw-customer-intelligence' ),
+				'Description' => __( 'Description', 'yoohw-customer-intelligence' ),
+				'Display name' => __( 'Display name', 'yoohw-customer-intelligence' ),
+				'Due date' => __( 'Due date', 'yoohw-customer-intelligence' ),
+				'Earned loyalty points' => __( 'Earned loyalty points', 'yoohw-customer-intelligence' ),
+				'Email' => __( 'Email', 'yoohw-customer-intelligence' ),
+				'Event type' => __( 'Event type', 'yoohw-customer-intelligence' ),
+				'First name' => __( 'First name', 'yoohw-customer-intelligence' ),
+				'First recognized order ID' => __( 'First recognized order ID', 'yoohw-customer-intelligence' ),
+				'First recognized order date' => __( 'First recognized order date', 'yoohw-customer-intelligence' ),
+				'Last activity date' => __( 'Last activity date', 'yoohw-customer-intelligence' ),
+				'Last name' => __( 'Last name', 'yoohw-customer-intelligence' ),
+				'Last recognized order ID' => __( 'Last recognized order ID', 'yoohw-customer-intelligence' ),
+				'Last recognized order date' => __( 'Last recognized order date', 'yoohw-customer-intelligence' ),
+				'Lifecycle stage' => __( 'Lifecycle stage', 'yoohw-customer-intelligence' ),
+				'Loyalty level' => __( 'Loyalty level', 'yoohw-customer-intelligence' ),
+				'Loyalty score' => __( 'Loyalty score', 'yoohw-customer-intelligence' ),
+				'Membership date' => __( 'Membership date', 'yoohw-customer-intelligence' ),
+				'Monetary state' => __( 'Monetary state', 'yoohw-customer-intelligence' ),
+				'Name' => __( 'Name', 'yoohw-customer-intelligence' ),
+				'Note content' => __( 'Note content', 'yoohw-customer-intelligence' ),
+				'Note type' => __( 'Note type', 'yoohw-customer-intelligence' ),
+				'Object reference' => __( 'Object reference', 'yoohw-customer-intelligence' ),
+				'Object type' => __( 'Object type', 'yoohw-customer-intelligence' ),
+				'Phone' => __( 'Phone', 'yoohw-customer-intelligence' ),
+				'Priority' => __( 'Priority', 'yoohw-customer-intelligence' ),
+				'RFM frequency' => __( 'RFM frequency', 'yoohw-customer-intelligence' ),
+				'RFM monetary' => __( 'RFM monetary', 'yoohw-customer-intelligence' ),
+				'RFM recency' => __( 'RFM recency', 'yoohw-customer-intelligence' ),
+				'Recognized lifetime order count' => __( 'Recognized lifetime order count', 'yoohw-customer-intelligence' ),
+				'Recorded currency' => __( 'Recorded currency', 'yoohw-customer-intelligence' ),
+				'Related WooCommerce order ID' => __( 'Related WooCommerce order ID', 'yoohw-customer-intelligence' ),
+				'Risk score' => __( 'Risk score', 'yoohw-customer-intelligence' ),
+				'Severity' => __( 'Severity', 'yoohw-customer-intelligence' ),
+				'Source' => __( 'Source', 'yoohw-customer-intelligence' ),
+				'Static segment name' => __( 'Static segment name', 'yoohw-customer-intelligence' ),
+				'Status' => __( 'Status', 'yoohw-customer-intelligence' ),
+				'Tag name' => __( 'Tag name', 'yoohw-customer-intelligence' ),
+				'Title' => __( 'Title', 'yoohw-customer-intelligence' ),
+				'Total spent' => __( 'Total spent', 'yoohw-customer-intelligence' ),
+				'Trust score' => __( 'Trust score', 'yoohw-customer-intelligence' ),
+				'Updated date' => __( 'Updated date', 'yoohw-customer-intelligence' ),
+				'Value tier' => __( 'Value tier', 'yoohw-customer-intelligence' ),
+				'Visibility' => __( 'Visibility', 'yoohw-customer-intelligence' ),
+				'WordPress user ID' => __( 'WordPress user ID', 'yoohw-customer-intelligence' ),
+				// Saved View definition keys use the existing ucwords() display form.
+				'S' => __( 'S', 'yoohw-customer-intelligence' ),
+				'Customer Tag' => __( 'Customer Tag', 'yoohw-customer-intelligence' ),
+				'Customer Segment' => __( 'Customer Segment', 'yoohw-customer-intelligence' ),
+				'Customer Status' => __( 'Customer Status', 'yoohw-customer-intelligence' ),
+				'Vip Status' => __( 'Vip Status', 'yoohw-customer-intelligence' ),
+				'Risk Level' => __( 'Risk Level', 'yoohw-customer-intelligence' ),
+				'Customer Cohort' => __( 'Customer Cohort', 'yoohw-customer-intelligence' ),
+				'Customer Attention' => __( 'Customer Attention', 'yoohw-customer-intelligence' ),
+				'Rfm Recency Max Days' => __( 'Rfm Recency Max Days', 'yoohw-customer-intelligence' ),
+				'Rfm Frequency Min' => __( 'Rfm Frequency Min', 'yoohw-customer-intelligence' ),
+				'Rfm Monetary Min' => __( 'Rfm Monetary Min', 'yoohw-customer-intelligence' ),
+				'Loyalty Level' => __( 'Loyalty Level', 'yoohw-customer-intelligence' ),
+				'Loyalty Score' => __( 'Loyalty Score', 'yoohw-customer-intelligence' ),
+				'Lifecycle Stage' => __( 'Lifecycle Stage', 'yoohw-customer-intelligence' ),
+				'Customer View' => __( 'Customer View', 'yoohw-customer-intelligence' ),
+				'Orderby' => __( 'Orderby', 'yoohw-customer-intelligence' ),
+				'Order' => __( 'Order', 'yoohw-customer-intelligence' ),
+			);
+		}
+		return $translations_by_locale[ $locale ][ $label ] ?? $label;
 	}
 
 	private static function fields( string $category, array $row ): array {
@@ -151,7 +243,7 @@ final class YoOhw_COS_Privacy_Exporter {
 			$fields['Total spent'] = self::money( $row, 'total_spent' );
 			$fields['Average order value'] = self::money( $row, 'average_order_value' );
 			$days = YoOhw_COS_RFM::recency_days( $row );
-			$fields['RFM recency'] = null === $days ? __( 'Unavailable', self::DOMAIN ) : $days . ' days';
+			$fields['RFM recency'] = null === $days ? __( 'Unavailable', 'yoohw-customer-intelligence' ) : $days . ' days';
 			$fields['RFM frequency'] = (int) $row['total_orders'] . ' recognized orders';
 			$fields['RFM monetary'] = self::money( $row, 'total_spent' );
 			return $fields;
@@ -180,7 +272,7 @@ final class YoOhw_COS_Privacy_Exporter {
 			return '0 (no recognized orders)';
 		}
 		if ( ! YoOhw_COS_Commerce_Metrics_Policy::money_is_comparable( $row ) ) {
-			return __( 'Unavailable (mixed or unknown currency)', self::DOMAIN );
+			return __( 'Unavailable (mixed or unknown currency)', 'yoohw-customer-intelligence' );
 		}
 		return $row[ $key ] . ' ' . $row['money_currency'];
 	}

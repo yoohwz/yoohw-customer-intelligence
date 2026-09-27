@@ -14,6 +14,7 @@ final class YoOhw_COS_Attention {
 		$action_label = __( 'Add task', 'yoohw-customer-intelligence' );
 		if ( $overdue > 0 ) {
 			$id = 'core/overdue_follow_up';
+			/* translators: %s: number of overdue follow-up tasks. */
 			$message = sprintf( _n( '%s open follow-up task is overdue.', '%s open follow-up tasks are overdue.', $overdue, 'yoohw-customer-intelligence' ), number_format_i18n( $overdue ) );
 			$action_url = '#yoohw-cos-add-task';
 			$action_label = __( 'Review open tasks', 'yoohw-customer-intelligence' );

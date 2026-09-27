@@ -155,6 +155,7 @@ final class YoOhw_COS_Customer_Profile {
 		self::render_card( __( 'Last order', 'yoohw-customer-intelligence' ), $last_order . ( '—' !== $last_date ? '<small>' . esc_html( $last_date ) . '</small>' : '' ) );
 		$task_value = esc_html( number_format_i18n( $open_tasks ) );
 		if ( $overdue_tasks > 0 ) {
+			/* translators: %s: number of overdue tasks. */
 			$task_value .= '<small class="yoohw-cos-task-overdue">' . esc_html( sprintf( _n( '%s overdue', '%s overdue', $overdue_tasks, 'yoohw-customer-intelligence' ), number_format_i18n( $overdue_tasks ) ) ) . '</small>';
 		}
 		self::render_card( __( 'Open tasks', 'yoohw-customer-intelligence' ), $task_value );

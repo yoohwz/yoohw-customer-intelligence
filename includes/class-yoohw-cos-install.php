@@ -120,6 +120,7 @@ final class YoOhw_COS_Install {
 
 	private static function execute_ensure_ddl( string $sql ): void {
 		global $wpdb;
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Every caller passes a %i-prepared, fixed-schema DDL statement; DDL cannot be passed through a second prepare call.
 		if ( false === $wpdb->query( $sql ) ) { self::$ensure_failed = true; }
 	}
 
