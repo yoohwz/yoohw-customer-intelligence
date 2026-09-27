@@ -1,5 +1,15 @@
 === Customer Intelligence for WooCommerce Changelog ===
 
+= 1.4.0 (Sep 27, 2026) =
+
+* Added Saved Customer Views and retention and attention quick views for reusable operational customer filters.
+* Added explainable RFM facts and filters, with monetary values withheld when a customer's order currencies cannot be compared safely.
+* Reworked the Customers list as an operations workspace and Customer Profile as an action-first view while preserving customer actions, notes, tasks, direct email, tags, static segments, exports, and optional integrations.
+* Made recognized-order, refund, and order-reassignment monetary behavior consistent across customer lists, profiles, Overview, RFM, queries, and exports. Authoritative per-order currency tracking fails closed for genuine mixed or unknown currency without FX conversion; bounded recovery and backfill restore valid single-currency results after verification.
+* Integrated with WordPress Personal Data Export and Erase. Bounded, resumable erasure retains one-way suppression receipts to prevent routine re-creation while preserving WooCommerce-owned orders and WordPress users.
+* Expanded Diagnostics with data freshness, migration, and currency visibility; improved bounded large-data performance and introduced minimal Free extension contracts for future integrations.
+* Resolved staged Plugin Check errors and hardened migrations, admin interfaces, HPOS and legacy order-storage regressions, and deterministic distribution packaging.
+
 = 1.3.0 (Aug 28, 2026) =
 
 * Improved WooCommerce customer commerce tracking with persisted incremental order facts, consistent paid-order metrics, refund handling, order reassignment, and HPOS-compatible synchronization without repeatedly rescanning full order histories.

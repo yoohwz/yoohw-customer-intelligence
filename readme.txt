@@ -7,7 +7,7 @@ Requires PHP: 7.4
 Requires Plugins: woocommerce
 WC requires at least: 8.2
 WC tested up to: 11.0
-Stable tag: 1.3.0
+Stable tag: 1.4.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -123,17 +123,15 @@ Archive removes a CRM profile from the main customer list. It does not delete Wo
 
 == Changelog ==
 
-= 1.3.0 (Aug 28, 2026) =
+= 1.4.0 =
 
-* Improved WooCommerce customer commerce tracking with persisted incremental order facts, consistent paid-order metrics, refund handling, order reassignment, and HPOS-compatible synchronization without repeatedly rescanning full order histories.
-* Hardened customer identity resolution for registered and guest customers, including explicit order-profile links, normalized email and phone matching, conflict detection, and safer profile contact updates.
-* Added bounded, resumable data migrations with retry and unresolved-item accounting so large customer and order datasets can upgrade without long synchronous processing or silently skipped records.
-* Improved customer intelligence consistency so value tier, lifecycle, status, trust, risk, loyalty context, and activity data refresh whenever underlying commerce data changes.
-* Added deterministic event idempotency with backward-compatible adoption of legacy events to prevent duplicate WooCommerce, Loyalty, and Blacklist activity during synchronization and upgrades.
-* Improved CRM email notification reliability with atomic retry leases, bounded task batching, continuation for large assignee workloads, and timezone-safe due-soon, overdue, escalation, and daily-summary processing.
-* Made the Add task form in the WooCommerce order Customer task metabox collapsible, with balanced toggle icon and label alignment and colors that follow each user's WordPress admin color scheme.
-* Added an explicit data-retention contract that preserves Customer Intelligence data on uninstall by default while supporting administrator-controlled removal.
-* Improved optional Loyalty and Blacklist Manager integration boundaries while keeping integration-specific functionality isolated when related plugins or licenses are unavailable.
-* Expanded regression coverage for WooCommerce HPOS and legacy order storage, refunds, identity conflicts, migrations, event deduplication, notification retries, timezone handling, and large task batches.
+Released Sep 27, 2026.
+
+* Added Saved Customer Views, retention and attention quick views, and explainable RFM facts and filters to help teams find and revisit operational customer groups.
+* Reorganized Customers as an operations workspace and Customer Profile around immediate actions while keeping notes, tasks, email, tags, static segments, exports, and optional integrations available.
+* Aligned recognized-order, refund, and reassignment metrics across customer views. Per-order currency tracking keeps mixed or unknown currencies unavailable for combined monetary figures; no currency conversion is applied. Bounded backfill restores valid single-currency figures after convergence.
+* Added WordPress Personal Data Export and Erase support for Customer Intelligence data, with resumable erasure and retained one-way suppression receipts. WooCommerce orders and WordPress users remain under their own systems' control.
+* Expanded Diagnostics for data freshness, migrations, and currency state; improved large-data performance and added Free extension contracts for future integrations.
+* Hardened migrations, admin screens, HPOS and legacy order-storage coverage, Plugin Check compatibility, and deterministic distribution packaging.
 
 See `changelog.txt` for the complete release history.
