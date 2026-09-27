@@ -130,10 +130,16 @@ final class YCI_Privacy_Exporter_Test extends WP_UnitTestCase {
 			'22222222-2222-4222-8222-222222222222' => array( 'name' => 'Other private view', 'definition' => $definition ),
 		) );
 		$this->customer( 'matching-view-result@example.test' );
-		$text = $this->text( $this->all_pages( 'view-owner@example.test' ) );
+		$items = $this->all_pages( 'view-owner@example.test' );
+		$text = $this->text( $items );
 		$this->assertStringContainsString( 'My private view', $text );
 		$this->assertStringNotContainsString( 'Other private view', $text );
 		$this->assertStringNotContainsString( 'matching-view-result', $text );
+		$views = array_values( array_filter( $items, static function( $item ) { return 'yoohw-cos-views' === $item['group_id']; } ) );
+		$this->assertCount( 1, $views );
+		$this->assertSame( 'Personal saved customer view', $views[0]['group_label'] );
+		$this->assertContains( 'Name', array_column( $views[0]['data'], 'name' ) );
+		$this->assertContains( 'Orderby', array_column( $views[0]['data'], 'name' ) );
 	}
 
 	public function test_pending_reset_reports_retry_instead_of_false_completion(): void {

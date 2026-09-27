@@ -2574,7 +2574,7 @@ final class YoOhw_COS_Admin_Menu {
 			printf(
 				/* translators: 1: successful orders, 2: retryable orders, 3: unresolved orders in this batch. */
 				esc_html__( 'Last batch: %1$d successful, %2$d retryable, %3$d unresolved.', 'yoohw-customer-intelligence' ),
-				$sync_state['last_processed'], $sync_state['last_retryable'], $sync_state['last_unresolved']
+				esc_html( (string) absint( $sync_state['last_processed'] ) ), esc_html( (string) absint( $sync_state['last_retryable'] ) ), esc_html( (string) absint( $sync_state['last_unresolved'] ) )
 			);
 			echo '</p></div>';
 		}
@@ -3426,8 +3426,10 @@ final class YoOhw_COS_Admin_Menu {
 		echo '<div class="yoohw-cos-overview-data-status yoohw-cos-overview-data-status--' . esc_attr( $type ) . '">';
 		echo '<span class="dashicons dashicons-chart-area" aria-hidden="true"></span>';
 		echo '<span><strong>' . esc_html( ucfirst( $status ) ) . '.</strong> ';
+		/* translators: 1: number of active customer profiles, 2: number of recognized order facts. */
 		echo esc_html( sprintf( __( '%1$d active profiles, %2$d order facts. Background work can take time to converge.', 'yoohw-customer-intelligence' ), $diagnostics['data']['active_profiles'], $diagnostics['data']['order_facts'] ) ) . '</span>';
 		if ( $diagnostics['actionable'] ) {
+			/* translators: %s: comma-separated diagnostic action names. */
 			echo '<span>' . esc_html( sprintf( __( 'Check: %s.', 'yoohw-customer-intelligence' ), implode( ', ', $diagnostics['actionable'] ) ) ) . '</span>';
 		}
 		echo '<a href="' . esc_url( admin_url( 'admin.php?page=yoohw-customer-intelligence-settings#yoohw-cos-diagnostics' ) ) . '">' . esc_html__( 'View diagnostics', 'yoohw-customer-intelligence' ) . '</a>';

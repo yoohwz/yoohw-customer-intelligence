@@ -8,7 +8,6 @@ final class YoOhw_COS_Privacy_Erasure {
 	private const MAX_ALIAS_PROFILES = 1000;
 	private const MAX_ORDER_LINKS = 1000;
 	private const ORDER_LINK_OPTION_PREFIX = 'yoohw_cos_privacy_erasure_links_';
-	private const DOMAIN = 'yoohw-customer-intelligence';
 
 	public static function init(): void {
 		add_filter( 'wp_privacy_personal_data_erasers', array( __CLASS__, 'register' ) );
@@ -16,7 +15,7 @@ final class YoOhw_COS_Privacy_Erasure {
 
 	public static function register( array $erasers ): array {
 		$erasers['yoohw-customer-intelligence'] = array(
-			'eraser_friendly_name' => __( 'Customer Intelligence', self::DOMAIN ),
+			'eraser_friendly_name' => __( 'Customer Intelligence', 'yoohw-customer-intelligence' ),
 			'callback' => array( __CLASS__, 'erase' ),
 		);
 		return $erasers;
@@ -101,11 +100,11 @@ final class YoOhw_COS_Privacy_Erasure {
 	private static function result( bool $removed, bool $retained, bool $done, bool $retry = false ): array {
 		$messages = array();
 		if ( $retained ) {
-			$messages[] = __( 'Customer Intelligence retains a non-raw, one-way suppression receipt solely to prevent automatic recreation from source data.', self::DOMAIN );
+			$messages[] = __( 'Customer Intelligence retains a non-raw, one-way suppression receipt solely to prevent automatic recreation from source data.', 'yoohw-customer-intelligence' );
 		}
-		$messages[] = __( 'This plugin does not delete WooCommerce orders or WordPress user data. Those source systems have their own privacy and retention responsibilities.', self::DOMAIN );
+		$messages[] = __( 'This plugin does not delete WooCommerce orders or WordPress user data. Those source systems have their own privacy and retention responsibilities.', 'yoohw-customer-intelligence' );
 		if ( $retry ) {
-			$messages[] = __( 'Customer Intelligence erasure is temporarily unavailable. Retry after Reset or database recovery.', self::DOMAIN );
+			$messages[] = __( 'Customer Intelligence erasure is temporarily unavailable. Retry after Reset or database recovery.', 'yoohw-customer-intelligence' );
 		}
 		return array( 'items_removed' => $removed, 'items_retained' => $retained, 'messages' => $messages, 'done' => $done );
 	}
@@ -142,7 +141,7 @@ final class YoOhw_COS_Privacy_Erasure {
 				}
 				if ( count( $aliases ) > self::MAX_ALIAS_PROFILES ) {
 					$result = self::result( false, false, false, true );
-					$result['messages'][] = __( 'More linked Customer Intelligence profiles were found than can be safely prepared in one erasure page. Contact the site administrator; no Customer Intelligence data was deleted.', self::DOMAIN );
+					$result['messages'][] = __( 'More linked Customer Intelligence profiles were found than can be safely prepared in one erasure page. Contact the site administrator; no Customer Intelligence data was deleted.', 'yoohw-customer-intelligence' );
 					return $result;
 				}
 			}
@@ -158,14 +157,15 @@ final class YoOhw_COS_Privacy_Erasure {
 			if ( 'ok' !== $snapshot_status ) {
 				$result = self::result( false, true, false, true );
 				if ( 'limit' === $snapshot_status ) {
-					$result['messages'][] = __( 'More Customer Intelligence order facts were found than can be safely prepared in one erasure page. Contact the site administrator; no Customer Intelligence data was deleted.', self::DOMAIN );
+					$result['messages'][] = __( 'More Customer Intelligence order facts were found than can be safely prepared in one erasure page. Contact the site administrator; no Customer Intelligence data was deleted.', 'yoohw-customer-intelligence' );
 				}
 				return $result;
 			}
-			$profile = $wpdb->get_row( $wpdb->prepare(
-				'SELECT id, email FROM %i WHERE (email = %s AND BINARY email = BINARY %s)' . ( $user_id ? ' OR wp_user_id = %d' : '' ) . ' ORDER BY id ASC LIMIT 1',
-				...array_merge( array( $table, $email, $email ), $user_id ? array( $user_id ) : array() )
-			), ARRAY_A );
+			if ( $user_id ) {
+				$profile = $wpdb->get_row( $wpdb->prepare( 'SELECT id, email FROM %i WHERE (email = %s AND BINARY email = BINARY %s) OR wp_user_id = %d ORDER BY id ASC LIMIT 1', $table, $email, $email, $user_id ), ARRAY_A );
+			} else {
+				$profile = $wpdb->get_row( $wpdb->prepare( 'SELECT id, email FROM %i WHERE (email = %s AND BINARY email = BINARY %s) ORDER BY id ASC LIMIT 1', $table, $email, $email ), ARRAY_A );
+			}
 			if ( '' !== $wpdb->last_error ) {
 				return self::result( false, false, false, true );
 			}
@@ -242,10 +242,11 @@ final class YoOhw_COS_Privacy_Erasure {
 		global $wpdb;
 		$existing = get_option( $option, null );
 		if ( null !== $existing ) { return self::valid_order_link_snapshot( $existing ) ? 'ok' : 'retry'; }
-		$rows = $wpdb->get_results( $wpdb->prepare(
-			'SELECT f.order_id, f.customer_id FROM %i AS f INNER JOIN %i AS c ON c.id = f.customer_id WHERE (c.email = %s AND BINARY c.email = BINARY %s)' . ( $user_id ? ' OR c.wp_user_id = %d' : '' ) . ' ORDER BY f.id ASC LIMIT %d',
-			...array_merge( array( YoOhw_COS_DB::order_facts_table(), YoOhw_COS_DB::customers_table(), $email, $email ), $user_id ? array( $user_id, self::MAX_ORDER_LINKS + 1 ) : array( self::MAX_ORDER_LINKS + 1 ) )
-		), ARRAY_A );
+		if ( $user_id ) {
+			$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT f.order_id, f.customer_id FROM %i AS f INNER JOIN %i AS c ON c.id = f.customer_id WHERE (c.email = %s AND BINARY c.email = BINARY %s) OR c.wp_user_id = %d ORDER BY f.id ASC LIMIT %d', YoOhw_COS_DB::order_facts_table(), YoOhw_COS_DB::customers_table(), $email, $email, $user_id, self::MAX_ORDER_LINKS + 1 ), ARRAY_A );
+		} else {
+			$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT f.order_id, f.customer_id FROM %i AS f INNER JOIN %i AS c ON c.id = f.customer_id WHERE (c.email = %s AND BINARY c.email = BINARY %s) ORDER BY f.id ASC LIMIT %d', YoOhw_COS_DB::order_facts_table(), YoOhw_COS_DB::customers_table(), $email, $email, self::MAX_ORDER_LINKS + 1 ), ARRAY_A );
+		}
 		if ( '' !== $wpdb->last_error || ! is_array( $rows ) ) { return 'retry'; }
 		if ( count( $rows ) > self::MAX_ORDER_LINKS ) { return 'limit'; }
 		$links = array();
@@ -302,8 +303,11 @@ final class YoOhw_COS_Privacy_Erasure {
 	private static function first_rows( string $kind, int $customer_id ): ?array {
 		global $wpdb;
 		$table = YoOhw_COS_DB::table( $kind );
-		$projection = 'order_facts' === $kind ? 'id, order_id' : 'id';
-		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT {$projection} FROM %i WHERE customer_id = %d ORDER BY id ASC LIMIT %d", $table, $customer_id, self::PAGE_SIZE ), ARRAY_A );
+		if ( 'order_facts' === $kind ) {
+			$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT id, order_id FROM %i WHERE customer_id = %d ORDER BY id ASC LIMIT %d', $table, $customer_id, self::PAGE_SIZE ), ARRAY_A );
+		} else {
+			$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT id FROM %i WHERE customer_id = %d ORDER BY id ASC LIMIT %d', $table, $customer_id, self::PAGE_SIZE ), ARRAY_A );
+		}
 		return '' === $wpdb->last_error && is_array( $rows ) ? $rows : null;
 	}
 
