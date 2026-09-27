@@ -12,7 +12,7 @@ Prepared on 2026-09-27 (Asia/Ho_Chi_Minh) from admitted protected `main@f6adfaad
 | Changelog latest heading | `1.4.0 (Sep 27, 2026)` |
 | `YOOHW_COS_DB_VERSION` | `0.2.4`, unchanged |
 
-The readme's latest heading is `= 1.4.0 =` with the preparation date on the next line, so the existing release publisher's `changelog_notes()` extracts the public notes instead of falling back to a generic version sentence. `changelog.txt` retains the entire prior history byte-for-byte below the new entry. The exact staged readme and changelog were inspected: headings, links and WordPress.org readme syntax remain valid; no task ID, governance term, Premium automation/AI, FX conversion or publication claim appears in the new public notes. The translation template's historical generator header still identifies the catalog generation version `1.3.0`; it is not a current product version identity.
+The readme's latest heading is `= 1.4.0 =` with a neutral date line, `Sep 27, 2026.`, so the existing release publisher's `changelog_notes()` extracts the public notes instead of falling back to a generic version sentence. `changelog.txt` retains the entire prior history byte-for-byte below the new entry. The exact staged readme and changelog were inspected: headings, links and WordPress.org readme syntax remain valid; no task ID, governance term, Premium automation/AI, FX conversion or publication claim appears in the new public notes. The translation template's historical generator header still identifies the catalog generation version `1.3.0`; it is not a current product version identity.
 
 Final public `changelog.txt` entry:
 
@@ -34,9 +34,9 @@ Final public `changelog.txt` entry:
 
 | Artifact | SHA-256 or size |
 | --- | --- |
-| Product tree digest (`release_lib.tree_digest`) | `aa845154c0449ea358a68b7d75256bf808747680abd9774307a5eccd595d40ec` |
-| ZIP SHA-256 | `750db1d4d28b01ebcbdc90162aef37d9257eefcee0d67f8a6c3dc125f35f9be8` |
-| ZIP size | 1,294,107 bytes |
+| Product tree digest (`release_lib.tree_digest`) | `2609a2f3e7e8e3feaecdebb68bcaf4bbcc154fb0ee360494f1d90d158c489c3b` |
+| ZIP SHA-256 | `6391005b1271f8302ce5a7387b8c329e4bfe42fd135e6d6e294ad0a44669ad19` |
+| ZIP size | 1,294,098 bytes |
 
 Both staged trees reported version `1.4.0`; `changelog_notes()` extracted the dated readme notes. The staging helper's allowlist and forbidden-artifact checks found no `.git`, `.github`, tests, docs, scripts, Composer metadata, archives, logs, symlinks or other development-only material in the payload.
 

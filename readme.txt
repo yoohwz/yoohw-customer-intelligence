@@ -125,7 +125,7 @@ Archive removes a CRM profile from the main customer list. It does not delete Wo
 
 = 1.4.0 =
 
-Released Sep 27, 2026.
+Sep 27, 2026.
 
 * Added Saved Customer Views, retention and attention quick views, and explainable RFM facts and filters to help teams find and revisit operational customer groups.
 * Reorganized Customers as an operations workspace and Customer Profile around immediate actions while keeping notes, tasks, email, tags, static segments, exports, and optional integrations available.
