@@ -142,6 +142,28 @@ final class YCI_Privacy_Exporter_Test extends WP_UnitTestCase {
 		$this->assertContains( 'Orderby', array_column( $views[0]['data'], 'name' ) );
 	}
 
+	public function test_export_field_translation_work_is_bounded_across_items(): void {
+		$customer = $this->customer( 'labels@example.test', 0, array( 'archived_at' => '2026-01-03 00:00:00' ) );
+		$this->record( 'notes', array( 'customer_id' => $customer, 'note_content' => 'First synthetic note' ) );
+		$this->record( 'notes', array( 'customer_id' => $customer, 'note_content' => 'Second synthetic note' ) );
+		$calls = 0;
+		$observer = static function( $translation, $text, $domain ) use ( &$calls ) {
+			if ( 'Archived date' === $text && 'yoohw-customer-intelligence' === $domain ) {
+				++$calls;
+			}
+			return $translation;
+		};
+		add_filter( 'gettext', $observer, 10, 3 );
+		try {
+			$items = $this->all_pages( 'labels@example.test' );
+		} finally {
+			remove_filter( 'gettext', $observer, 10 );
+		}
+		$this->assertCount( 3, $items );
+		$this->assertStringContainsString( 'Archived date', $this->text( $items ) );
+		$this->assertLessThanOrEqual( 1, $calls );
+	}
+
 	public function test_pending_reset_reports_retry_instead_of_false_completion(): void {
 		$this->customer( 'pending@example.test' );
 		update_option( YoOhw_COS_Reset_Guard::OPTION, array( 'epoch' => wp_generate_uuid4(), 'status' => 'pending' ), false );

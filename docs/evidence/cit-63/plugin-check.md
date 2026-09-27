@@ -4,7 +4,7 @@ Admitted base: protected `main@b050fa03aecce7cdc23acb66a165274ae9af7bf8` (post-C
 
 ## Reproduction and staged boundary
 
-Both the baseline and corrected source were staged from their repository root with `bash scripts/stage-distribution.sh . <fresh-destination>`. The baseline stage contained 62 files. Two independent corrected stages contained 62 files each and compared byte-for-byte; the sorted per-file SHA-256 manifest digest was `01a2a55c27759aaaafaf4452fc65010c9c8b69d32181ad1230bbdd2462cf78de`. Plugin Check scanned only the staged plugin copied into a newly installed, disposable WordPress site. The staged plugin activated and loaded with WooCommerce active.
+Both the baseline and corrected source were staged from their repository root with `bash scripts/stage-distribution.sh . <fresh-destination>`. The baseline stage contained 62 files. Two independent corrected stages contained 62 files each and compared byte-for-byte; the sorted per-file SHA-256 manifest digest was `a746257e0f02b67edffb56efbd0afa0c2ff71442107603306437eb19ea2da1f9`. Plugin Check scanned only the staged plugin copied into a newly installed, disposable WordPress site. The staged plugin activated and loaded with WooCommerce active.
 
 Scan environment: WordPress 6.9.7, WooCommerce 10.9.4, PHP 8.4.21, MySQL 8.4.0, Plugin Check 2.1.0. Plugin Check 2.1.0 was the current WordPress.org stable version at the time of scanning. The CLI command used `--slug=yoohw-customer-intelligence --mode=new --format=csv`, once with `--ignore-warnings` and once without it. PHP 8.4 deprecation output from the installed WP-CLI PHAR was excluded from finding counts. Scan result rows, not WP-CLI process status, supply the counts.
 
@@ -22,12 +22,12 @@ The fresh error list affected attention, privacy erasure/export, schema installa
 
 ## Corrections
 
-- Translation calls now use literal text domains and literal, extractable privacy export field/group labels. Saved View keys use the same existing display words and have explicit translation entries. Translator comments describe each formatted placeholder.
+- Translation calls now use literal text domains and literal, extractable privacy export field/group labels. Saved View keys use the same existing display words and have explicit translation entries. The export field map is cached per locale for the request, avoiding repeated translation of every label for every exported field. Translator comments describe each formatted placeholder.
 - Admin batch counts are normalized to nonnegative integers and escaped at output. This preserves the displayed numeric result.
 - The optional `wp_user_id` privacy predicates and fixed privacy projection now use separate, literal SQL templates with `%i`, `%s` and `%d` placeholders. They retain email, alias, limit and ordering semantics.
 - The schema ensure helper accepts only statements prepared with `%i` at its fixed-schema callers. The privacy exporter constructs projection/join/order fragments only from its private fixed category map and prepares all subject values. Narrow, line-local PHPCS annotations document these two scanner data-flow limits; no category is disabled.
 
-The isolated HPOS=yes/no suite includes privacy exporter/eraser and suppression, monetary migration, Saved Views/RFM/attention, Customer Profile actions, Reset Guard and WooCommerce order-store flows. The Saved View exporter test now asserts the group and fixed field labels. No source behavior was intentionally expanded.
+The isolated HPOS=yes/no suite includes privacy exporter/eraser and suppression, monetary migration, Saved Views/RFM/attention, Customer Profile actions, Reset Guard and WooCommerce order-store flows. The Saved View exporter test now asserts the group and fixed field labels, and a multi-item export bounds field-label translation work. No source behavior was intentionally expanded.
 
 ## Warning triage
 
