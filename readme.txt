@@ -7,7 +7,7 @@ Requires PHP: 7.4
 Requires Plugins: woocommerce
 WC requires at least: 8.2
 WC tested up to: 11.0
-Stable tag: 1.4.0
+Stable tag: 1.4.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -122,6 +122,13 @@ Archive removes a CRM profile from the main customer list. It does not delete Wo
 8. Static segment management.
 
 == Changelog ==
+
+= 1.4.1 =
+
+Sep 29, 2026.
+
+* Corrected Reset Guard warnings so routine read and retryable sync contention no longer appears to be a lost customer-data operation. Interrupted Reset recovery and integration events that need manual replay now have clearer, separate notices; recovered notices can be dismissed without hiding a newer deferred operation.
+* Refreshed existing CRM task emails with clearer status, context, and next actions for assignments, reassignment, due-soon, completion, reopening, overdue, escalation, and daily summaries. Messages retain WooCommerce email branding and settings, with matching HTML and plain-text content and Customer Message block-email compatibility.
 
 = 1.4.0 =
 

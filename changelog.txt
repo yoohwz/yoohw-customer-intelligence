@@ -1,5 +1,10 @@
 === Customer Intelligence for WooCommerce Changelog ===
 
+= 1.4.1 (Sep 29, 2026) =
+
+* Corrected Reset Guard warnings so routine read and retryable sync contention no longer appears to be a lost customer-data operation. Interrupted Reset recovery and integration events that need manual replay now have clearer, separate notices; recovered notices can be dismissed without hiding a newer deferred operation.
+* Refreshed existing CRM task emails with clearer status, context, and next actions for assignments, reassignment, due-soon, completion, reopening, overdue, escalation, and daily summaries. Messages retain WooCommerce email branding and settings, with matching HTML and plain-text content and Customer Message block-email compatibility.
+
 = 1.4.0 (Sep 27, 2026) =
 
 * Added Saved Customer Views and retention and attention quick views for reusable operational customer filters.
