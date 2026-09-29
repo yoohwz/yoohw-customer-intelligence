@@ -66,6 +66,37 @@ final class YCI_Reset_Link_Integrity_Test extends WP_UnitTestCase {
 		}
 	}
 
+	public function test_second_deferred_callback_in_same_request_survives_intervening_resolution(): void {
+		global $wpdb;
+		YoOhw_COS_Customers::reset_data();
+		$user = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		get_user_by( 'id', $user )->add_cap( 'manage_woocommerce' );
+		$wpdb->query( 'COMMIT' );
+		$other = new mysqli( 'localhost', DB_USER, DB_PASSWORD, DB_NAME, 0, getenv( 'YCI_TEST_ROOT' ) . '/mysql.sock' );
+		$name = $other->real_escape_string( YoOhw_COS_Reset_Guard::lock_name() );
+		$this->assertSame( '1', (string) $other->query( "SELECT GET_LOCK('" . $name . "', 0)" )->fetch_row()[0] );
+		try { YoOhw_COS_Blacklist_Manager_Integration::handle_order_suspected( array() ); }
+		finally { $other->query( "SELECT RELEASE_LOCK('" . $name . "')" ); }
+		$first = $this->deferred_notice();
+		$this->assertNotSame( array(), $first );
+		$wpdb->query( 'COMMIT' );
+		list( $process, $pipes ) = $this->worker( 'notice-resolve' );
+		fwrite( $pipes[0], wp_json_encode( array( 'user' => $user, 'id' => $first['id'] ) ) . "\n" );
+		fclose( $pipes[0] );
+		$body = stream_get_contents( $pipes[1] );
+		$error = stream_get_contents( $pipes[2] );
+		fclose( $pipes[1] ); fclose( $pipes[2] );
+		$this->assertSame( 0, proc_close( $process ), $error );
+		$this->assertSame( '', $body, $error );
+		$this->assertSame( array(), $this->deferred_notice() );
+		$wpdb->query( 'COMMIT' );
+		$this->assertSame( '1', (string) $other->query( "SELECT GET_LOCK('" . $name . "', 0)" )->fetch_row()[0] );
+		try { YoOhw_COS_Blacklist_Manager_Integration::handle_order_suspected( array() ); }
+		finally { $other->query( "SELECT RELEASE_LOCK('" . $name . "')" ); $other->close(); }
+		$this->assertNotSame( $first['id'], $this->deferred_notice()['id'] ?? '' );
+		$wpdb->delete( $wpdb->options, array( 'option_name' => 'yoohw_cos_reset_notice' ) );
+	}
+
 	public function test_deferred_notice_distinguishes_read_contention_and_recovery(): void {
 		global $wpdb;
 		YoOhw_COS_Customers::reset_data();

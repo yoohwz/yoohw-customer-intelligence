@@ -53,8 +53,9 @@ notice. Provider and integration event callbacks without a guaranteed CIT-owned 
 set a payload-free, bounded notice for managers; they can resolve it after replaying
 the source or completing the relevant backfill. The notice is an expiring operational
 option read directly from SQL and serialized with a separate notice lock, so a later
-callback cannot be erased by an older dismissal or an in-flight Reset. A new
-deferral creates a fresh notice. An interrupted Reset has a separate persistent
+callback cannot be erased by an older dismissal or an in-flight Reset. Each
+deferral creates a fresh notice, including a second callback in the same request
+after an administrator resolved the first. An interrupted Reset has a separate persistent
 warning until recovery reaches a ready boundary, and its recovery clears stale
 deferred-notice state observed before Reset began. Pre-fix unclassified one-day flags retire on a ready admin
 request. Transient provider events with no persisted source cannot be reconstructed

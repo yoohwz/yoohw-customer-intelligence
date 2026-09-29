@@ -9,14 +9,12 @@ final class YoOhw_COS_Reset_Guard {
 	private static $depth = 0;
 	private static $resetting = false;
 	private static $connection = 0;
-	private static $reported = false;
 	private const DEFERRED_NOTICE = 'yoohw_cos_reset_deferred';
 	private const NOTICE_OPTION = 'yoohw_cos_reset_notice';
 	private const NOTICE_LOCK_SUFFIX = '-notice';
 
 	public static function init(): void {
 		self::$request_epoch = self::epoch();
-		self::$reported = false;
 		add_action( 'admin_notices', array( __CLASS__, 'render_notice' ) );
 		add_action( 'admin_post_yoohw_cos_resolve_reset_notice', array( __CLASS__, 'resolve_notice' ) );
 	}
@@ -131,11 +129,11 @@ final class YoOhw_COS_Reset_Guard {
 	}
 
 	private static function deferred( bool $report ): bool {
-		if ( $report && ! self::$reported && ! self::$resetting ) {
+		if ( $report && ! self::$resetting ) {
 			if ( self::lock_notice() ) {
 				try {
 					$notice = array( 'id' => wp_generate_uuid4(), 'expires' => time() + DAY_IN_SECONDS );
-					self::$reported = self::write_notice( $notice );
+					self::write_notice( $notice );
 				} finally { self::unlock_notice(); }
 			}
 			// No customer payload or credentials are retained in this operational notice.
