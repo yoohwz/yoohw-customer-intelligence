@@ -46,7 +46,7 @@ final class YoOhw_COS_Tasks_List extends WP_List_Table {
 	}
 
 	public function prepare_items(): void {
-		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+		if ( ! YoOhw_COS_Reset_Guard::enter( false ) ) {
 			return;
 		}
 		try {

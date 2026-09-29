@@ -69,7 +69,7 @@ final class YoOhw_COS_Order_Admin {
 			wp_send_json( array() );
 		}
 
-		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+		if ( ! YoOhw_COS_Reset_Guard::enter( false ) ) {
 			wp_send_json_error( array( 'message' => YoOhw_COS_Reset_Guard::rejection_message() ), 409 );
 		}
 		try {
@@ -228,7 +228,7 @@ final class YoOhw_COS_Order_Admin {
 	}
 
 	public static function render_customer_field( WC_Order $order ): void {
-		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+		if ( ! YoOhw_COS_Reset_Guard::enter( false ) ) {
 			return;
 		}
 		try {
@@ -389,7 +389,7 @@ final class YoOhw_COS_Order_Admin {
 	}
 
 	public static function render_customer_history_metabox( $order_or_post, array $metabox = array() ): void {
-		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+		if ( ! YoOhw_COS_Reset_Guard::enter( false ) ) {
 			return;
 		}
 		try {
@@ -518,7 +518,7 @@ final class YoOhw_COS_Order_Admin {
 	}
 
 	public static function render_task_metabox( $order_or_post, array $metabox = array() ): void {
-		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+		if ( ! YoOhw_COS_Reset_Guard::enter( false ) ) {
 			return;
 		}
 		try {
@@ -660,7 +660,7 @@ final class YoOhw_COS_Order_Admin {
 	}
 
 	private static function get_order_customer_profile_id( WC_Order $order ): int {
-		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+		if ( ! YoOhw_COS_Reset_Guard::enter( false ) ) {
 			return 0;
 		}
 		try {

@@ -90,7 +90,7 @@ final class YoOhw_COS_Migration_Runner {
 
 	public static function run_next_batch(): void {
 		if ( ! YoOhw_COS_Install::schema_is_ready() ) { return; }
-		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+		if ( ! YoOhw_COS_Reset_Guard::enter( false ) ) {
 			self::schedule_next();
 			return;
 		}

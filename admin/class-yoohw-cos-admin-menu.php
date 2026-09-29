@@ -235,7 +235,7 @@ final class YoOhw_COS_Admin_Menu {
 	}
 
 	public static function render_dashboard_tasks_widget(): void {
-		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+		if ( ! YoOhw_COS_Reset_Guard::enter( false ) ) {
 			return;
 		}
 		try {
@@ -1738,7 +1738,7 @@ final class YoOhw_COS_Admin_Menu {
 	}
 
 	private static function render_task_editor(): void {
-		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+		if ( ! YoOhw_COS_Reset_Guard::enter( false ) ) {
 			echo '<p>' . esc_html( YoOhw_COS_Reset_Guard::rejection_message() ) . '</p>';
 			return;
 		}

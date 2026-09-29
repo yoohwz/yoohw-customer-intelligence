@@ -84,7 +84,7 @@ final class YoOhw_COS_Customers {
 			return;
 		}
 
-		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+		if ( ! YoOhw_COS_Reset_Guard::enter( false ) ) {
 			self::schedule_failed_order_sync( new RuntimeException( 'Order deletion cleanup deferred by Reset boundary.' ), $order_id, 0 );
 			return;
 		}
@@ -109,7 +109,7 @@ final class YoOhw_COS_Customers {
 	}
 
 	public static function sync_from_order( WC_Order $order ): int {
-		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+		if ( ! YoOhw_COS_Reset_Guard::enter( false ) ) {
 			self::schedule_failed_order_sync( new RuntimeException( 'Reset boundary busy or changed.' ), $order->get_id(), 0 );
 			return 0;
 		}
@@ -1198,7 +1198,7 @@ final class YoOhw_COS_Customers {
 
 	/** Legacy cursor arguments are wakeups only; persisted state owns the cursor. */
 	public static function process_risk_score_cache_refresh( int $after_customer_id = 0 ): void {
-		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+		if ( ! YoOhw_COS_Reset_Guard::enter( false ) ) {
 			self::request_intelligence_refresh( 0 === $after_customer_id );
 			return;
 		}
@@ -1277,7 +1277,7 @@ final class YoOhw_COS_Customers {
 	}
 
 	public static function process_activity_semantics_recalculation(): void {
-		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+		if ( ! YoOhw_COS_Reset_Guard::enter( false ) ) {
 			wp_schedule_single_event( time() + MINUTE_IN_SECONDS, 'yoohw_cos_recalculate_activity_semantics' );
 			return;
 		}
