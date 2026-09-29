@@ -51,10 +51,12 @@ guarded read/render failure does not set the deferred-writer notice. Automatical
 rescheduled order sync and migration work likewise does not create a manual-replay
 notice. Provider and integration event callbacks without a guaranteed CIT-owned replay
 set a payload-free, bounded notice for managers; they can resolve it after replaying
-the source or completing the relevant backfill. A new
+the source or completing the relevant backfill. The notice is an expiring operational
+option read directly from SQL and serialized with a separate notice lock, so a later
+callback cannot be erased by an older dismissal or an in-flight Reset. A new
 deferral creates a fresh notice. An interrupted Reset has a separate persistent
 warning until recovery reaches a ready boundary, and its recovery clears stale
-deferred-notice state. Pre-fix unclassified one-day flags retire on a ready admin
+deferred-notice state observed before Reset began. Pre-fix unclassified one-day flags retire on a ready admin
 request. Transient provider events with no persisted source cannot be reconstructed
 by CIT; no new raw-payload queue is introduced. Reset
 still intentionally clears CRM history, and operators should retry interrupted Reset

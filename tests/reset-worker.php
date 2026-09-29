@@ -207,6 +207,16 @@ if ( 'lock-probe' === $mode ) {
 	fgets( STDIN );
 	YoOhw_COS_Reset_Guard::leave();
 	echo "RELEASED\n";
+} elseif ( 'notice-defer' === $mode ) {
+	YoOhw_COS_Blacklist_Manager_Integration::handle_order_suspected( array() );
+	$value = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, 'yoohw_cos_reset_notice' ) );
+	echo wp_json_encode( maybe_unserialize( $value ) ) . "\n";
+} elseif ( 'notice-resolve' === $mode ) {
+	$input = json_decode( (string) fgets( STDIN ), true );
+	wp_set_current_user( absint( $input['user'] ?? 0 ) );
+	$_POST = array( 'notice_id' => (string) ( $input['id'] ?? '' ), '_wpnonce' => wp_create_nonce( 'yoohw_cos_resolve_reset_notice' ) );
+	$_REQUEST = $_POST;
+	YoOhw_COS_Reset_Guard::resolve_notice();
 } elseif ( 'interrupt-reset' === $mode ) {
 	add_filter( 'query', static function( $query ) {
 		if ( false !== strpos( $query, 'TRUNCATE TABLE' ) && false !== strpos( $query, YoOhw_COS_DB::notes_table() ) ) {

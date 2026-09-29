@@ -11,6 +11,8 @@ final class YoOhw_COS_Reset_Guard {
 	private static $connection = 0;
 	private static $reported = false;
 	private const DEFERRED_NOTICE = 'yoohw_cos_reset_deferred';
+	private const NOTICE_OPTION = 'yoohw_cos_reset_notice';
+	private const NOTICE_LOCK_SUFFIX = '-notice';
 
 	public static function init(): void {
 		self::$request_epoch = self::epoch();
@@ -130,8 +132,12 @@ final class YoOhw_COS_Reset_Guard {
 
 	private static function deferred( bool $report ): bool {
 		if ( $report && ! self::$reported && ! self::$resetting ) {
-			self::$reported = true;
-			set_transient( self::DEFERRED_NOTICE, array( 'id' => wp_generate_uuid4() ), DAY_IN_SECONDS );
+			if ( self::lock_notice() ) {
+				try {
+					$notice = array( 'id' => wp_generate_uuid4(), 'expires' => time() + DAY_IN_SECONDS );
+					self::$reported = self::write_notice( $notice );
+				} finally { self::unlock_notice(); }
+			}
 			// No customer payload or credentials are retained in this operational notice.
 			error_log( 'YCI reset boundary deferred a customer-data operation; retry its source after recovery.' );
 		}
@@ -144,15 +150,19 @@ final class YoOhw_COS_Reset_Guard {
 			echo '<div class="notice notice-warning"><p>' . esc_html__( 'Customer Reset requires recovery. Retry Reset before customer-data operations.', 'yoohw-customer-intelligence' ) . '</p></div>';
 			return;
 		}
-		if ( false === get_transient( self::DEFERRED_NOTICE ) ) { return; }
+		if ( ! self::notice_exists() && false === get_transient( self::DEFERRED_NOTICE ) ) { return; }
 		if ( ! self::enter( false ) ) { return; }
 		try {
-			$notice = get_transient( self::DEFERRED_NOTICE );
-			if ( ! is_array( $notice ) || empty( $notice['id'] ) ) {
+			if ( ! self::lock_notice() ) { return; }
+			try {
+				$notice = self::notice_state();
 				// Earlier releases did not identify the deferred source; retire their historical flag only at a ready boundary.
-				if ( false !== $notice ) { delete_transient( self::DEFERRED_NOTICE ); }
-				return;
-			}
+				if ( false !== get_transient( self::DEFERRED_NOTICE ) ) { delete_transient( self::DEFERRED_NOTICE ); }
+				if ( array() === $notice ) {
+					self::delete_notice();
+					return;
+				}
+			} finally { self::unlock_notice(); }
 			echo '<div class="notice notice-warning"><p>' . esc_html__( 'A customer-data operation was deferred. Retry the operation; integration events may require replay from their source. Resolve this notice after recovery.', 'yoohw-customer-intelligence' ) . '</p>';
 			echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
 			echo '<input type="hidden" name="action" value="yoohw_cos_resolve_reset_notice" />';
@@ -167,11 +177,12 @@ final class YoOhw_COS_Reset_Guard {
 		check_admin_referer( 'yoohw_cos_resolve_reset_notice' );
 		if ( ! self::enter( false ) ) { wp_die( esc_html( self::rejection_message() ), '', array( 'response' => 409 ) ); }
 		try {
-			$notice = get_transient( self::DEFERRED_NOTICE );
-			$id = isset( $_POST['notice_id'] ) && is_string( $_POST['notice_id'] ) ? wp_unslash( $_POST['notice_id'] ) : '';
-			if ( is_array( $notice ) && isset( $notice['id'] ) && $id === $notice['id'] ) {
-				delete_transient( self::DEFERRED_NOTICE );
-			}
+			if ( ! self::lock_notice() ) { wp_die( esc_html( self::rejection_message() ), '', array( 'response' => 409 ) ); }
+			try {
+				$notice = self::notice_state( true );
+				$id = isset( $_POST['notice_id'] ) && is_string( $_POST['notice_id'] ) ? wp_unslash( $_POST['notice_id'] ) : '';
+				if ( $notice && $id === $notice['id'] ) { self::delete_notice(); }
+			} finally { self::unlock_notice(); }
 		} finally { self::leave(); }
 		wp_safe_redirect( admin_url( 'admin.php?page=yoohw-customer-intelligence' ) );
 		exit;
@@ -192,6 +203,42 @@ final class YoOhw_COS_Reset_Guard {
 		self::$connection = 0;
 	}
 
+	/** Serialize notice writes separately: a deferred caller cannot acquire the Reset lock. */
+	private static function lock_notice(): bool {
+		global $wpdb;
+		return '1' === (string) $wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK(%s, 10)', self::lock_name() . self::NOTICE_LOCK_SUFFIX ) );
+	}
+
+	private static function unlock_notice(): void {
+		global $wpdb;
+		$wpdb->get_var( $wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', self::lock_name() . self::NOTICE_LOCK_SUFFIX ) );
+	}
+
+	/** Direct SQL avoids a stale request-local options cache hiding a newer callback's signal. */
+	private static function notice_state( bool $current = false ): array {
+		global $wpdb;
+		$value = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, self::NOTICE_OPTION ) . ( $current ? ' FOR UPDATE' : '' ) );
+		$notice = maybe_unserialize( $value );
+		return is_array( $notice ) && isset( $notice['id'], $notice['expires'] )
+			&& is_string( $notice['id'] ) && preg_match( '/^[a-f0-9-]{36}$/D', $notice['id'] )
+			&& is_int( $notice['expires'] ) && $notice['expires'] > time() ? $notice : array();
+	}
+
+	private static function notice_exists(): bool {
+		global $wpdb;
+		return null !== $wpdb->get_var( $wpdb->prepare( 'SELECT option_id FROM %i WHERE option_name = %s', $wpdb->options, self::NOTICE_OPTION ) );
+	}
+
+	private static function write_notice( array $notice ): bool {
+		global $wpdb;
+		return false !== $wpdb->replace( $wpdb->options, array( 'option_name' => self::NOTICE_OPTION, 'option_value' => maybe_serialize( $notice ), 'autoload' => 'no' ), array( '%s', '%s', '%s' ) );
+	}
+
+	private static function delete_notice(): void {
+		global $wpdb;
+		$wpdb->delete( $wpdb->options, array( 'option_name' => self::NOTICE_OPTION ), array( '%s' ) );
+	}
+
 	private static function persist( array $state ): void {
 		update_option( self::OPTION, $state, false );
 		if ( self::state() !== $state ) {
@@ -208,6 +255,11 @@ final class YoOhw_COS_Reset_Guard {
 		self::$connection = (int) $wpdb->get_var( 'SELECT CONNECTION_ID()' );
 		self::$resetting = true;
 		try {
+			$notice_before_reset = array();
+			if ( self::lock_notice() ) {
+				try { $notice_before_reset = self::notice_state(); }
+				finally { self::unlock_notice(); }
+			}
 			$state = self::state();
 			if ( null !== $expected_epoch && $expected_epoch !== $state['epoch'] && 'ready' === $state['status'] ) {
 				return true; // A duplicate submission must not clear newly rebuilt data.
@@ -225,7 +277,13 @@ final class YoOhw_COS_Reset_Guard {
 			$state['status'] = 'ready';
 			self::persist( $state );
 			self::$request_epoch = $state['epoch'];
-			delete_transient( self::DEFERRED_NOTICE );
+			if ( $notice_before_reset && self::lock_notice() ) {
+				try {
+					if ( $notice_before_reset === self::notice_state( true ) ) {
+						self::delete_notice();
+					}
+				} finally { self::unlock_notice(); }
+			}
 			return true;
 		} finally {
 			self::$resetting = false;

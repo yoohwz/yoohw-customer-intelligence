@@ -3,25 +3,90 @@ require_once dirname( __DIR__ ) . '/environment.php';
 yci_test_environment();
 
 final class YCI_Reset_Link_Integrity_Test extends WP_UnitTestCase {
+	private function deferred_notice(): array {
+		global $wpdb;
+		$value = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s FOR UPDATE', $wpdb->options, 'yoohw_cos_reset_notice' ) );
+		$notice = maybe_unserialize( $value );
+		return is_array( $notice ) ? $notice : array();
+	}
+
+	public function test_reset_preserves_a_new_provider_deferral_during_recovery(): void {
+		global $wpdb;
+		YoOhw_COS_Customers::reset_data();
+		$old = array( 'id' => wp_generate_uuid4(), 'expires' => time() + DAY_IN_SECONDS );
+		$wpdb->replace( $wpdb->options, array( 'option_name' => 'yoohw_cos_reset_notice', 'option_value' => maybe_serialize( $old ), 'autoload' => 'no' ) );
+		$wpdb->query( 'COMMIT' ); // The independent callback must see persisted state, not this test's transaction.
+		YoOhw_COS_Reset_Guard::reset( function(): void {
+			list( $process, $pipes ) = $this->worker( 'notice-defer' );
+			fclose( $pipes[0] );
+			$reported = json_decode( (string) fgets( $pipes[1] ), true );
+			$error = stream_get_contents( $pipes[2] );
+			fclose( $pipes[1] ); fclose( $pipes[2] );
+			$this->assertSame( 0, proc_close( $process ), $error );
+			$this->assertIsArray( $reported );
+			$this->assertSame( $reported, $this->deferred_notice() );
+		} );
+		$this->assertTrue( YoOhw_COS_Reset_Guard::ready() );
+		$this->assertNotSame( $old['id'], $this->deferred_notice()['id'] ?? '' );
+		$this->assertNotSame( array(), $this->deferred_notice(), 'Reset must not erase a callback deferred after it began.' );
+		$wpdb->delete( $wpdb->options, array( 'option_name' => 'yoohw_cos_reset_notice' ) );
+	}
+
+	public function test_old_notice_form_cannot_dismiss_a_new_deferral(): void {
+		global $wpdb;
+		YoOhw_COS_Customers::reset_data();
+		$user = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		get_user_by( 'id', $user )->add_cap( 'manage_woocommerce' );
+		$old = array( 'id' => wp_generate_uuid4(), 'expires' => time() + DAY_IN_SECONDS );
+		$wpdb->replace( $wpdb->options, array( 'option_name' => 'yoohw_cos_reset_notice', 'option_value' => maybe_serialize( $old ), 'autoload' => 'no' ) );
+		$wpdb->query( 'COMMIT' );
+		$this->assertTrue( YoOhw_COS_Reset_Guard::enter() );
+		try {
+			list( $process, $pipes ) = $this->worker( 'notice-defer' );
+			fclose( $pipes[0] );
+			$new = json_decode( (string) fgets( $pipes[1] ), true );
+			$error = stream_get_contents( $pipes[2] );
+			fclose( $pipes[1] ); fclose( $pipes[2] );
+			$this->assertSame( 0, proc_close( $process ), $error );
+			$this->assertIsArray( $new );
+			$this->assertNotSame( $old['id'], $new['id'] );
+		} finally { YoOhw_COS_Reset_Guard::leave(); }
+		$wpdb->query( 'COMMIT' ); // Release the boundary row lock before separate admin requests.
+		foreach ( array( $old, $new ) as $index => $notice ) {
+			list( $process, $pipes ) = $this->worker( 'notice-resolve' );
+			fwrite( $pipes[0], wp_json_encode( array( 'user' => $user, 'id' => $notice['id'] ) ) . "\n" );
+			fclose( $pipes[0] );
+			$body = stream_get_contents( $pipes[1] );
+			$error = stream_get_contents( $pipes[2] );
+			fclose( $pipes[1] ); fclose( $pipes[2] );
+			$this->assertSame( 0, proc_close( $process ), $error );
+			$this->assertSame( '', $body, $error );
+			$this->assertSame( 0 === $index ? $new : array(), $this->deferred_notice() );
+			$wpdb->query( 'COMMIT' ); // Release the test's locking read before the next separate request.
+		}
+	}
+
 	public function test_deferred_notice_distinguishes_read_contention_and_recovery(): void {
+		global $wpdb;
 		YoOhw_COS_Customers::reset_data();
 		YoOhw_COS_Reset_Guard::init();
 		$user = self::factory()->user->create( array( 'role' => 'administrator' ) );
 		get_user_by( 'id', $user )->add_cap( 'manage_woocommerce' );
 		wp_set_current_user( $user );
 		delete_transient( 'yoohw_cos_reset_deferred' );
+		$wpdb->delete( $wpdb->options, array( 'option_name' => 'yoohw_cos_reset_notice' ) );
 		$other = new mysqli( 'localhost', DB_USER, DB_PASSWORD, DB_NAME, 0, getenv( 'YCI_TEST_ROOT' ) . '/mysql.sock' );
 		$name = $other->real_escape_string( YoOhw_COS_Reset_Guard::lock_name() );
 		$this->assertSame( '1', (string) $other->query( "SELECT GET_LOCK('" . $name . "', 0)" )->fetch_row()[0] );
 		try {
 			$this->assertSame( array(), YoOhw_COS_Reset_Guard::snapshot_rows( static function(): array { return array( array( 'id' => 1 ) ); } ) );
 			YoOhw_COS_Admin_Menu::render_dashboard_tasks_widget();
-			$this->assertFalse( get_transient( 'yoohw_cos_reset_deferred' ), 'Read contention must not claim a lost writer.' );
+			$this->assertSame( array(), $this->deferred_notice(), 'Read contention must not claim a lost writer.' );
 			YoOhw_COS_Migration_Runner::run_next_batch();
-			$this->assertFalse( get_transient( 'yoohw_cos_reset_deferred' ), 'A rescheduled migration must not claim a lost event.' );
+			$this->assertSame( array(), $this->deferred_notice(), 'A rescheduled migration must not claim a lost event.' );
 			YoOhw_COS_Blacklist_Manager_Integration::handle_order_suspected( array() );
 		} finally { $other->query( "SELECT RELEASE_LOCK('" . $name . "')" ); $other->close(); }
-		$first = get_transient( 'yoohw_cos_reset_deferred' );
+		$first = $this->deferred_notice();
 		$this->assertIsArray( $first );
 		ob_start();
 		YoOhw_COS_Reset_Guard::render_notice();
@@ -31,9 +96,9 @@ final class YCI_Reset_Link_Integrity_Test extends WP_UnitTestCase {
 		ob_start();
 		YoOhw_COS_Reset_Guard::render_notice();
 		$this->assertStringContainsString( 'Reset requires recovery', ob_get_clean() );
-		$this->assertSame( $first, get_transient( 'yoohw_cos_reset_deferred' ), 'Pending recovery must retain the signal.' );
+		$this->assertSame( $first, $this->deferred_notice(), 'Pending recovery must retain the signal.' );
 		YoOhw_COS_Customers::reset_data();
-		$this->assertFalse( get_transient( 'yoohw_cos_reset_deferred' ) );
+		$this->assertSame( array(), $this->deferred_notice() );
 		ob_start();
 		YoOhw_COS_Reset_Guard::render_notice();
 		$this->assertSame( '', ob_get_clean() );
@@ -43,8 +108,8 @@ final class YCI_Reset_Link_Integrity_Test extends WP_UnitTestCase {
 		$this->assertSame( '1', (string) $other->query( "SELECT GET_LOCK('" . $name . "', 0)" )->fetch_row()[0] );
 		try { YoOhw_COS_Blacklist_Manager_Integration::handle_order_suspected( array() ); }
 		finally { $other->query( "SELECT RELEASE_LOCK('" . $name . "')" ); $other->close(); }
-		$this->assertNotSame( $first, get_transient( 'yoohw_cos_reset_deferred' ) );
-		delete_transient( 'yoohw_cos_reset_deferred' );
+		$this->assertNotSame( $first, $this->deferred_notice() );
+		$wpdb->delete( $wpdb->options, array( 'option_name' => 'yoohw_cos_reset_notice' ) );
 	}
 
 	public function test_legacy_deferred_notice_retires_only_after_ready_boundary(): void {
@@ -2490,13 +2555,13 @@ final class YCI_Intelligence_Freshness_Test extends WP_UnitTestCase {
 		$this->assertSame( 'completed', $this->state()['status'] );
 		$this->clock_days = 1;
 		$other = new mysqli( 'localhost', DB_USER, DB_PASSWORD, DB_NAME, 0, getenv( 'YCI_TEST_ROOT' ) . '/mysql.sock' );
-		delete_transient( 'yoohw_cos_reset_deferred' );
+		delete_option( 'yoohw_cos_reset_notice' );
 		$name = $other->real_escape_string( YoOhw_COS_Reset_Guard::lock_name() );
 		$this->assertSame( '1', (string) $other->query( "SELECT GET_LOCK('" . $name . "', 0)" )->fetch_row()[0] );
 		try { do_action_ref_array( YoOhw_COS_Customers::RISK_SCORE_REFRESH_HOOK, array() ); }
 		finally { $other->query( "SELECT RELEASE_LOCK('" . $name . "')" ); $other->close(); }
 		$this->assertNotFalse( wp_next_scheduled( YoOhw_COS_Customers::RISK_SCORE_REFRESH_HOOK, array( 0 ) ) );
-		$this->assertFalse( get_transient( 'yoohw_cos_reset_deferred' ), 'A rescheduled job must not leave manual-replay warning state.' );
+		$this->assertFalse( get_option( 'yoohw_cos_reset_notice', false ), 'A rescheduled job must not leave manual-replay warning state.' );
 		$this->wake( array( 0 ) );
 		fwrite( STDERR, 'LOCK RETRY ' . wp_json_encode( array( 'state' => $this->state()['status'], 'persisted' => YoOhw_COS_Customers::get_customer( $id )['customer_status'], 'live' => YoOhw_COS_Intelligence::calculate_customer_status( YoOhw_COS_Customers::get_customer( $id ) ), 'next_retry' => wp_next_scheduled( YoOhw_COS_Customers::RISK_SCORE_REFRESH_HOOK, array( 0 ) ) ) ) . "\n" );
 		$this->reads( $id, 'at_risk', 'repeat' );
