@@ -59,7 +59,7 @@ abstract class YoOhw_COS_Email_Task_Digest extends YoOhw_COS_Email_CRM_Base {
 	protected function get_sections(): array {
 		return array(
 			array(
-				'title' => __( 'Tasks', 'yoohw-customer-intelligence' ),
+				'title' => __( 'Overdue tasks', 'yoohw-customer-intelligence' ),
 				'tasks' => $this->tasks,
 			),
 		);

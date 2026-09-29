@@ -12,7 +12,8 @@ if ( '' !== $customer_name ) {
 	echo "\n\n";
 }
 
-echo esc_html( $message_body ) . "\n";
+printf( /* translators: %s: store name. */ esc_html__( 'Message from %s', 'yoohw-customer-intelligence' ), esc_html( get_bloginfo( 'name' ) ) );
+echo "\n\n" . esc_html( $message_body ) . "\n";
 
 if ( $additional_content ) {
 	echo "\n" . esc_html( wp_strip_all_tags( wptexturize( $additional_content ) ) ) . "\n";

@@ -101,7 +101,7 @@ final class YoOhw_COS_Email_Customer_Message extends YoOhw_COS_Email_CRM_Base {
 	}
 
 	private function get_customer_message_template_args( bool $plain_text ): array {
-		return array(
+		return array_merge( array(
 			'email_heading'      => $this->get_heading(),
 			'additional_content' => $this->get_additional_content(),
 			'sent_to_admin'      => false,
@@ -110,6 +110,6 @@ final class YoOhw_COS_Email_Customer_Message extends YoOhw_COS_Email_CRM_Base {
 			'customer'           => $this->customer,
 			'customer_name'      => sanitize_text_field( (string) ( $this->placeholders['{customer_name}'] ?? '' ) ),
 			'message_body'       => $this->message_body,
-		);
+		), $this->get_woocommerce_email_palette_args() );
 	}
 }
