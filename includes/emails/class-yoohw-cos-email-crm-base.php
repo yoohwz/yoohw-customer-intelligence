@@ -274,6 +274,9 @@ abstract class YoOhw_COS_Email_CRM_Base extends WC_Email {
 
 	protected function get_task_url( array $task ): string {
 		$task_id = absint( $task['id'] ?? 0 );
+		if ( $task_id <= 0 ) {
+			return '';
+		}
 
 		return add_query_arg(
 			array(
