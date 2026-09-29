@@ -1121,6 +1121,89 @@ final class YCI_Notification_Recipient_Test extends WP_UnitTestCase {
 		$this->assertCount( 2, $this->messages );
 	}
 
+	public function test_email_content_states_render_with_both_woocommerce_shell_modes(): void {
+		$id = $this->staff();
+		$old_setting = get_option( 'woocommerce_feature_email_improvements_enabled', 'no' );
+		$task = $this->task();
+		$task['description'] = 'Synthetic internal note';
+		$task['assignee_name'] = 'Synthetic new owner';
+		$task['completed_by_name'] = 'Synthetic completer';
+		try {
+			foreach ( array( 'no', 'yes' ) as $mode ) {
+				update_option( 'woocommerce_feature_email_improvements_enabled', $mode );
+				$cases = array(
+					array( new YoOhw_COS_Email_Task_Assigned(), array(), 'New assignment', 'Open task' ),
+					array( new YoOhw_COS_Email_Task_Reassigned(), array(), 'Reassigned', 'Open task' ),
+					array( new YoOhw_COS_Email_Task_Reassigned(), array( 'previous_notice' => true ), 'Handoff complete', 'View task' ),
+					array( new YoOhw_COS_Email_Task_Due_Soon(), array(), 'Due soon', 'Open task' ),
+					array( new YoOhw_COS_Email_Task_Completed(), array(), 'Completed by', 'View task' ),
+					array( new YoOhw_COS_Email_Task_Reopened(), array(), 'Latest note', 'Open task' ),
+				);
+				foreach ( $cases as $case ) {
+					list( $email, $context, $label, $action ) = $case;
+					$email->enabled = 'yes';
+					$email->email_type = 'html';
+					$this->messages = array();
+					$this->assertTrue( $email->trigger( $task, $id, $context ) );
+					$this->assertCount( 1, $this->messages );
+					$html = $this->messages[0]['message'];
+					$this->assertStringContainsString( $label, $html );
+					$this->assertStringContainsString( $action, $html );
+					$this->assertStringContainsString( 'Synthetic confidential follow-up', $html );
+					$this->assertStringContainsString( 'id="template_container"', $html );
+					$this->assertStringContainsString( 'template_footer', $html );
+					$this->assertSame( 'yes' === $mode, false !== strpos( $html, 'class="email-introduction"' ) );
+					$this->assertStringNotContainsString( 'Veevee Store', $html );
+				}
+				$previous = new YoOhw_COS_Email_Task_Reassigned();
+				$previous->email_type = 'plain';
+				$this->messages = array();
+				$this->assertTrue( $previous->trigger( $task, $id, array( 'previous_notice' => true ) ) );
+				$this->assertStringContainsString( 'No action is required', $this->messages[0]['message'] );
+				$this->assertStringContainsString( 'View task:', $this->messages[0]['message'] );
+			}
+		} finally {
+			update_option( 'woocommerce_feature_email_improvements_enabled', $old_setting );
+		}
+	}
+
+	public function test_digest_content_uses_distinct_counts_sections_and_actions(): void {
+		$id = $this->staff();
+		$task = $this->task();
+		foreach ( array(
+			array( new YoOhw_COS_Email_Task_Overdue(), 'Overdue queue', 'Open task list' ),
+			array( new YoOhw_COS_Email_Task_Overdue_Escalation(), 'Escalation required.', 'Review overdue tasks' ),
+			array( new YoOhw_COS_Email_Daily_Followup_Summary(), "Today's queue", 'Open task list' ),
+		) as $case ) {
+			list( $email, $label, $action ) = $case;
+			$email->enabled = 'yes';
+			$email->email_type = 'html';
+			$this->messages = array();
+			$this->assertTrue( $email->trigger( array( $task ), $id ) );
+			$html = $this->messages[0]['message'];
+			$this->assertStringContainsString( $label, $html );
+			$this->assertStringContainsString( $action, $html );
+			$this->assertStringContainsString( 'Synthetic confidential follow-up', $html );
+		}
+	}
+
+	public function test_customer_message_html_plain_and_block_keep_authoritative_body(): void {
+		$email = new YoOhw_COS_Email_Customer_Message();
+		$email->email_type = 'html';
+		$this->assertTrue( $email->trigger(
+			array( 'email' => 'customer@example.test', 'display_name' => 'Synthetic customer' ),
+			'Synthetic subject',
+			'Please review <sample> & reply.'
+		) );
+		$this->assertCount( 1, $this->messages );
+		foreach ( array( $this->messages[0]['message'], $email->get_content_plain(), $email->get_block_editor_email_template_content() ) as $content ) {
+			$this->assertStringContainsString( 'Message from', $content );
+			$this->assertStringContainsString( 'Please review', $content );
+			$this->assertStringNotContainsString( 'Veevee Store', $content );
+			$this->assertStringNotContainsString( 'Open task', $content );
+		}
+	}
+
 	public function test_revoked_recipient_never_reaches_transport(): void {
 		$id = $this->staff();
 		( new WP_User( $id ) )->set_role( 'subscriber' );
