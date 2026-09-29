@@ -4,7 +4,7 @@ defined( 'ABSPATH' ) || exit;
 final class YoOhw_COS_Customer_Profile {
 
 	public static function render( int $customer_id ): void {
-		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+		if ( ! YoOhw_COS_Reset_Guard::enter( false ) ) {
 			echo '<p>' . esc_html( YoOhw_COS_Reset_Guard::rejection_message() ) . '</p>';
 			return;
 		}

@@ -29,7 +29,7 @@ final class YoOhw_COS_Blacklist_Manager_Integration {
 	}
 
 	public static function handle_order_suspected( $payload, $order = null ): void {
-		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+		if ( ! YoOhw_COS_Reset_Guard::enter( true ) ) {
 			return;
 		}
 		try {
@@ -50,7 +50,7 @@ final class YoOhw_COS_Blacklist_Manager_Integration {
 	}
 
 	public static function handle_order_blocked( $payload, $order = null ): void {
-		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+		if ( ! YoOhw_COS_Reset_Guard::enter( true ) ) {
 			return;
 		}
 		try {
@@ -71,7 +71,7 @@ final class YoOhw_COS_Blacklist_Manager_Integration {
 	}
 
 	public static function handle_order_blacklist_removed( $payload, $order = null ): void {
-		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+		if ( ! YoOhw_COS_Reset_Guard::enter( true ) ) {
 			return;
 		}
 		try {
@@ -92,7 +92,7 @@ final class YoOhw_COS_Blacklist_Manager_Integration {
 	}
 
 	public static function handle_order_suspect_detected( $payload, $order = null ): void {
-		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+		if ( ! YoOhw_COS_Reset_Guard::enter( true ) ) {
 			return;
 		}
 		try {
@@ -113,7 +113,7 @@ final class YoOhw_COS_Blacklist_Manager_Integration {
 	}
 
 	public static function handle_dashboard_row_changed( $event, $id, $row = array(), $record_type = 'main' ): void {
-		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+		if ( ! YoOhw_COS_Reset_Guard::enter( true ) ) {
 			return;
 		}
 		try {

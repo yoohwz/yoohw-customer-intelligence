@@ -70,7 +70,7 @@ final class YoOhw_COS_Blacklist_Manager_Premium_Integration {
 	}
 
 	public static function handle_after_risk_job( $order_id, $job_hook ): void {
-		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+		if ( ! YoOhw_COS_Reset_Guard::enter( true ) ) {
 			return;
 		}
 		try {
@@ -140,7 +140,7 @@ final class YoOhw_COS_Blacklist_Manager_Premium_Integration {
 	}
 
 	public static function handle_antibot_risk_failed( $decision, $context = '' ): void {
-		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+		if ( ! YoOhw_COS_Reset_Guard::enter( true ) ) {
 			return;
 		}
 		try {
@@ -163,7 +163,7 @@ final class YoOhw_COS_Blacklist_Manager_Premium_Integration {
 	}
 
 	public static function handle_antibot_challenge_required( $decision, $context = '' ): void {
-		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+		if ( ! YoOhw_COS_Reset_Guard::enter( true ) ) {
 			return;
 		}
 		try {
@@ -185,7 +185,7 @@ final class YoOhw_COS_Blacklist_Manager_Premium_Integration {
 	}
 
 	public static function handle_js_proof_failed( $reason, $context = '', $details = array() ): void {
-		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+		if ( ! YoOhw_COS_Reset_Guard::enter( true ) ) {
 			return;
 		}
 		try {
@@ -210,7 +210,7 @@ final class YoOhw_COS_Blacklist_Manager_Premium_Integration {
 	}
 
 	public static function handle_session_continuity_failed( $reasons, $context = '', $details = array() ): void {
-		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+		if ( ! YoOhw_COS_Reset_Guard::enter( true ) ) {
 			return;
 		}
 		try {
@@ -243,7 +243,7 @@ final class YoOhw_COS_Blacklist_Manager_Premium_Integration {
 	}
 
 	public static function handle_fp_anomalies_failed( $event, $context = '' ): void {
-		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+		if ( ! YoOhw_COS_Reset_Guard::enter( true ) ) {
 			return;
 		}
 		try {
@@ -265,7 +265,7 @@ final class YoOhw_COS_Blacklist_Manager_Premium_Integration {
 	}
 
 	public static function handle_payment_abuse_event_recorded( int $event_id, $order = null, array $event_data = array() ): bool {
-		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
+		if ( ! YoOhw_COS_Reset_Guard::enter( true ) ) {
 			return false;
 		}
 		try {

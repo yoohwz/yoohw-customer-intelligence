@@ -10,10 +10,13 @@ final class YoOhw_COS_Reset_Guard {
 	private static $resetting = false;
 	private static $connection = 0;
 	private static $reported = false;
+	private const DEFERRED_NOTICE = 'yoohw_cos_reset_deferred';
 
 	public static function init(): void {
 		self::$request_epoch = self::epoch();
+		self::$reported = false;
 		add_action( 'admin_notices', array( __CLASS__, 'render_notice' ) );
+		add_action( 'admin_post_yoohw_cos_resolve_reset_notice', array( __CLASS__, 'resolve_notice' ) );
 	}
 
 	/** Read through SQL: persistent object caches must not hide a reset. */
@@ -50,29 +53,29 @@ final class YoOhw_COS_Reset_Guard {
 		);
 	}
 
-	/** Every guarded operation starts before resolving any CRM reference. */
-	public static function enter(): bool {
+	/** Every guarded operation starts before resolving any CRM reference. Report only when the caller lacks an owned retry source. */
+	public static function enter( bool $report_deferred = false ): bool {
 		global $wpdb;
 		if ( self::$resetting ) {
-			return self::deferred();
+			return self::deferred( $report_deferred );
 		}
 		if ( null === self::$request_epoch ) {
 			self::init();
 		}
 		if ( self::$depth > 0 ) {
 			if ( ! self::owns_lock() || ! self::ready() || self::$request_epoch !== self::epoch() ) {
-				return self::deferred();
+				return self::deferred( $report_deferred );
 			}
 			self::$depth++;
 			return true;
 		}
 		if ( '1' !== (string) $wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK(%s, 2)', self::lock_name() ) ) ) {
-			return self::deferred();
+			return self::deferred( $report_deferred );
 		}
 		self::$connection = (int) $wpdb->get_var( 'SELECT CONNECTION_ID()' );
 		if ( ! self::ready() || self::$request_epoch !== self::epoch() ) {
 			self::unlock();
-			return self::deferred();
+			return self::deferred( $report_deferred );
 		}
 		self::$depth = 1;
 		return true;
@@ -92,7 +95,7 @@ final class YoOhw_COS_Reset_Guard {
 
 	/** Called after permission/nonce checks, before any submitted reference is read. */
 	public static function require_submission( array $source, bool $ajax = false ): void {
-		$entered = self::enter();
+		$entered = self::enter( false );
 		if ( $entered && self::matches_submission( $source ) ) {
 			return;
 		}
@@ -110,7 +113,7 @@ final class YoOhw_COS_Reset_Guard {
 
 	/** A bounded read can outlive its lock, but its action URLs keep this epoch. */
 	public static function snapshot_rows( callable $read ): array {
-		if ( ! self::enter() ) { return array(); }
+		if ( ! self::enter( false ) ) { return array(); }
 		try {
 			$epoch = self::epoch();
 			$rows = $read();
@@ -125,20 +128,53 @@ final class YoOhw_COS_Reset_Guard {
 		}
 	}
 
-	private static function deferred(): bool {
-		if ( ! self::$reported && ! self::$resetting ) {
+	private static function deferred( bool $report ): bool {
+		if ( $report && ! self::$reported && ! self::$resetting ) {
 			self::$reported = true;
-			set_transient( 'yoohw_cos_reset_deferred', 1, DAY_IN_SECONDS );
+			set_transient( self::DEFERRED_NOTICE, array( 'id' => wp_generate_uuid4() ), DAY_IN_SECONDS );
 			// No customer payload or credentials are retained in this operational notice.
-			error_log( 'YCI reset boundary deferred a CRM writer; retry sync/backfill or replay the upstream event.' );
+			error_log( 'YCI reset boundary deferred a customer-data operation; retry its source after recovery.' );
 		}
 		return false;
 	}
 
 	public static function render_notice(): void {
-		if ( current_user_can( 'manage_woocommerce' ) && ( ! self::ready() || get_transient( 'yoohw_cos_reset_deferred' ) ) ) {
-			echo '<div class="notice notice-warning"><p>' . esc_html__( 'A customer data operation was deferred. If Reset was interrupted, retry Reset first. Then retry order sync and relevant integration backfills; transient integration events require replay from their source.', 'yoohw-customer-intelligence' ) . '</p></div>';
+		if ( ! current_user_can( 'manage_woocommerce' ) ) { return; }
+		if ( ! self::ready() ) {
+			echo '<div class="notice notice-warning"><p>' . esc_html__( 'Customer Reset requires recovery. Retry Reset before customer-data operations.', 'yoohw-customer-intelligence' ) . '</p></div>';
+			return;
 		}
+		if ( false === get_transient( self::DEFERRED_NOTICE ) ) { return; }
+		if ( ! self::enter( false ) ) { return; }
+		try {
+			$notice = get_transient( self::DEFERRED_NOTICE );
+			if ( ! is_array( $notice ) || empty( $notice['id'] ) ) {
+				// Earlier releases did not identify the deferred source; retire their historical flag only at a ready boundary.
+				if ( false !== $notice ) { delete_transient( self::DEFERRED_NOTICE ); }
+				return;
+			}
+			echo '<div class="notice notice-warning"><p>' . esc_html__( 'A customer-data operation was deferred. Retry the operation; integration events may require replay from their source. Resolve this notice after recovery.', 'yoohw-customer-intelligence' ) . '</p>';
+			echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+			echo '<input type="hidden" name="action" value="yoohw_cos_resolve_reset_notice" />';
+			echo '<input type="hidden" name="notice_id" value="' . esc_attr( $notice['id'] ) . '" />';
+			wp_nonce_field( 'yoohw_cos_resolve_reset_notice' );
+			echo '<p><button type="submit" class="button">' . esc_html__( 'Recovery complete', 'yoohw-customer-intelligence' ) . '</button></p></form></div>';
+		} finally { self::leave(); }
+	}
+
+	public static function resolve_notice(): void {
+		if ( ! current_user_can( 'manage_woocommerce' ) ) { wp_die( esc_html__( 'You do not have permission to perform this action.', 'yoohw-customer-intelligence' ) ); }
+		check_admin_referer( 'yoohw_cos_resolve_reset_notice' );
+		if ( ! self::enter( false ) ) { wp_die( esc_html( self::rejection_message() ), '', array( 'response' => 409 ) ); }
+		try {
+			$notice = get_transient( self::DEFERRED_NOTICE );
+			$id = isset( $_POST['notice_id'] ) && is_string( $_POST['notice_id'] ) ? wp_unslash( $_POST['notice_id'] ) : '';
+			if ( is_array( $notice ) && isset( $notice['id'] ) && $id === $notice['id'] ) {
+				delete_transient( self::DEFERRED_NOTICE );
+			}
+		} finally { self::leave(); }
+		wp_safe_redirect( admin_url( 'admin.php?page=yoohw-customer-intelligence' ) );
+		exit;
 	}
 
 	public static function leave(): void {
@@ -189,6 +225,7 @@ final class YoOhw_COS_Reset_Guard {
 			$state['status'] = 'ready';
 			self::persist( $state );
 			self::$request_epoch = $state['epoch'];
+			delete_transient( self::DEFERRED_NOTICE );
 			return true;
 		} finally {
 			self::$resetting = false;

@@ -47,9 +47,16 @@ the order no longer exists when retried, the hook idempotently removes its persi
 fact/contribution. If deletion did not complete, normal order sync reconciles it. Scheduled migration,
 activity, loyalty and reassociation jobs reschedule their existing hooks; batch callers
 retain their cursor. A blocked adapter cannot publish stale customer references. A
-payload-free operational warning is logged and shown to managers for one day, calling
-for sync/backfill or upstream event replay. Transient provider events with no persisted
-source cannot be reconstructed by CIT; no new raw-payload queue is introduced. Reset
+guarded read/render failure does not set the deferred-writer notice. Automatically
+rescheduled order sync and migration work likewise does not create a manual-replay
+notice. Provider and integration event callbacks without a guaranteed CIT-owned replay
+set a payload-free, bounded notice for managers; they can resolve it after replaying
+the source or completing the relevant backfill. A new
+deferral creates a fresh notice. An interrupted Reset has a separate persistent
+warning until recovery reaches a ready boundary, and its recovery clears stale
+deferred-notice state. Pre-fix unclassified one-day flags retire on a ready admin
+request. Transient provider events with no persisted source cannot be reconstructed
+by CIT; no new raw-payload queue is introduced. Reset
 still intentionally clears CRM history, and operators should retry interrupted Reset
 before rebuilding. These provider-replay limits are separate from automatically
 recoverable WooCommerce order sync.
