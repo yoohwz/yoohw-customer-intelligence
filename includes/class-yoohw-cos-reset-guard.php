@@ -196,8 +196,7 @@ final class YoOhw_COS_Reset_Guard {
 			if ( ! self::lock_notice() ) { return; }
 			try {
 				$items = self::notice_state();
-				if ( false !== get_transient( self::DEFERRED_NOTICE ) ) { delete_transient( self::DEFERRED_NOTICE ); }
-				self::retire_legacy_notice();
+				$items = self::migrate_legacy_notice( $items );
 				if ( array() === $items ) { self::delete_notice(); }
 			} finally { self::unlock_notice(); }
 			if ( array() === $items ) { return; }
@@ -231,6 +230,8 @@ final class YoOhw_COS_Reset_Guard {
 			echo '<div class="notice notice-warning inline" role="status"><p><strong>' . esc_html( $source_label . ' / ' . str_replace( '_', ' ', $item['event'] ) ) . '</strong> — ';
 			if ( 'customer_intelligence:incident_capacity_reached' === $key ) {
 				echo esc_html__( 'The incident log reached its capacity. Check integration sources for missed operations before acknowledging this warning.', 'yoohw-customer-intelligence' );
+			} elseif ( 'customer_intelligence:legacy_deferred_unattributed' === $key ) {
+				echo esc_html__( 'A deferred callback was recorded by an earlier version without its source. Review integration activity and recover any missed operation before acknowledging this record.', 'yoohw-customer-intelligence' );
 			} elseif ( 'backfill_available' === $item['mode'] ) {
 				echo esc_html__( 'A source backfill is available. Run the relevant sync or backfill, then acknowledge this record.', 'yoohw-customer-intelligence' );
 				echo ' <a href="' . esc_url( admin_url( 'admin.php?page=yoohw-customer-intelligence-settings#yoohw-cos-sync-center' ) ) . '">' . esc_html__( 'Open sync center', 'yoohw-customer-intelligence' ) . '</a>';
@@ -340,9 +341,35 @@ final class YoOhw_COS_Reset_Guard {
 		$wpdb->delete( $wpdb->options, array( 'option_name' => self::NOTICE_OPTION ), array( '%s' ) );
 	}
 
-	private static function retire_legacy_notice(): void {
+	private static function migrate_legacy_notice( array $items ): array {
 		global $wpdb;
+		$value = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, self::LEGACY_NOTICE_OPTION ) );
+		$legacy = maybe_unserialize( $value );
+		$has_transient = false !== get_transient( self::DEFERRED_NOTICE );
+		$active_legacy = is_array( $legacy ) && isset( $legacy['id'], $legacy['expires'] )
+			&& is_string( $legacy['id'] ) && preg_match( '/^[a-f0-9-]{36}$/D', $legacy['id'] )
+			&& is_int( $legacy['expires'] ) && $legacy['expires'] > time();
+		if ( ( $active_legacy || $has_transient ) && ! isset( $items['customer_intelligence:legacy_deferred_unattributed'] ) ) {
+			if ( count( $items ) >= self::INCIDENT_LIMIT - 1 ) {
+				// Retain the legacy signal until a slot is available; never discard a recovery obligation.
+				return $items;
+			}
+			$now = time();
+			$items['customer_intelligence:legacy_deferred_unattributed'] = array(
+				'id'         => wp_generate_uuid4(),
+				'source'     => 'customer_intelligence',
+				'event'      => 'legacy_deferred_unattributed',
+				'mode'       => 'manual_replay_required',
+				'first_seen' => $now,
+				'last_seen'  => $now,
+				'count'      => 1,
+				'expires'    => $now + self::INCIDENT_TTL,
+			);
+			if ( ! self::write_notice( $items ) ) { return self::notice_state(); }
+		}
+		if ( $has_transient ) { delete_transient( self::DEFERRED_NOTICE ); }
 		$wpdb->delete( $wpdb->options, array( 'option_name' => self::LEGACY_NOTICE_OPTION ), array( '%s' ) );
+		return $items;
 	}
 
 	private static function persist( array $state ): void {
@@ -361,11 +388,6 @@ final class YoOhw_COS_Reset_Guard {
 		self::$connection = (int) $wpdb->get_var( 'SELECT CONNECTION_ID()' );
 		self::$resetting = true;
 		try {
-			$notice_before_reset = array();
-			if ( self::lock_notice() ) {
-				try { $notice_before_reset = self::notice_state(); }
-				finally { self::unlock_notice(); }
-			}
 			$state = self::state();
 			if ( null !== $expected_epoch && $expected_epoch !== $state['epoch'] && 'ready' === $state['status'] ) {
 				return true; // A duplicate submission must not clear newly rebuilt data.
@@ -383,17 +405,8 @@ final class YoOhw_COS_Reset_Guard {
 			$state['status'] = 'ready';
 			self::persist( $state );
 			self::$request_epoch = $state['epoch'];
-			if ( $notice_before_reset && self::lock_notice() ) {
-				try {
-					$current = self::notice_state( true );
-					foreach ( $notice_before_reset as $key => $item ) {
-						if ( isset( $current[ $key ] ) && $current[ $key ] === $item ) {
-							unset( $current[ $key ] );
-						}
-					}
-					self::write_notice( $current );
-				} finally { self::unlock_notice(); }
-			}
+			// Reset completion alone does not prove an integration callback was replayed.
+			// Incidents remain until the source obligation is addressed and acknowledged.
 			return true;
 		} finally {
 			self::$resetting = false;

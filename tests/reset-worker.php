@@ -209,6 +209,7 @@ if ( 'lock-probe' === $mode ) {
 	echo "RELEASED\n";
 } elseif ( 'notice-defer' === $mode ) {
 	YoOhw_COS_Blacklist_Manager_Integration::handle_order_suspected( array() );
+	$wpdb->query( 'COMMIT' ); // Publish the independent callback before the reset owner resumes.
 	$value = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, 'yoohw_cos_operational_incidents' ) );
 	echo wp_json_encode( maybe_unserialize( $value ) ) . "\n";
 } elseif ( 'notice-resolve' === $mode ) {

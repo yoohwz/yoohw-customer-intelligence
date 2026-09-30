@@ -127,6 +127,24 @@ final class YCI_Reset_Link_Integrity_Test extends WP_UnitTestCase {
 		ob_start(); YoOhw_COS_Reset_Guard::render_notice(); $this->assertSame( '', ob_get_clean() );
 	}
 
+	public function test_legacy_deferred_signal_is_not_silently_lost(): void {
+		global $wpdb;
+		YoOhw_COS_Customers::reset_data();
+		$wpdb->delete( $wpdb->options, array( 'option_name' => 'yoohw_cos_operational_incidents' ) );
+		$wpdb->replace( $wpdb->options, array(
+			'option_name'  => 'yoohw_cos_reset_notice',
+			'option_value' => maybe_serialize( array( 'id' => wp_generate_uuid4(), 'expires' => time() + DAY_IN_SECONDS ) ),
+			'autoload'     => 'no',
+		) );
+		$user = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		get_user_by( 'id', $user )->add_cap( 'manage_woocommerce' );
+		wp_set_current_user( $user );
+		ob_start(); YoOhw_COS_Reset_Guard::render_notice(); $html = ob_get_clean();
+		$this->assertStringContainsString( 'Review recovery options', $html );
+		$this->assertArrayHasKey( 'customer_intelligence:legacy_deferred_unattributed', $this->incidents() );
+		$this->assertFalse( get_option( 'yoohw_cos_reset_notice', false ) );
+	}
+
 	public function test_flash_result_is_consumed_once_and_url_is_cleaned(): void {
 		$user = self::factory()->user->create( array( 'role' => 'administrator' ) );
 		wp_set_current_user( $user );
