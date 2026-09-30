@@ -238,21 +238,119 @@ final class YCI_Reset_Link_Integrity_Test extends WP_UnitTestCase {
 		$this->assertFalse( get_option( 'yoohw_cos_reset_notice', false ) );
 	}
 
-	public function test_flash_result_is_consumed_once_and_url_is_cleaned(): void {
+	private function with_flash_admin_request( string $script, array $params, callable $callback ): void {
+		global $pagenow;
+		$previous_script = $pagenow;
+		$previous_get = $_GET;
+		$pagenow = $script;
+		$_GET = $params;
+		try { $callback(); }
+		finally { $pagenow = $previous_script; $_GET = $previous_get; }
+	}
+
+	public static function cit_flash_routes(): array {
+		return array(
+			'customers and saved views' => array( 'yoohw-customer-intelligence', 'saved_view_notice', 'created' ),
+			'profile' => array( 'yoohw-customer-intelligence', 'note_added', '1' ),
+			'tasks' => array( 'yoohw-customer-intelligence-tasks', 'yoohw_task_error', 'invalid' ),
+			'tags' => array( 'yoohw-customer-intelligence-tags', 'yoohw_tag_deleted', '1' ),
+			'segments' => array( 'yoohw-customer-intelligence-segments', 'yoohw_segment_created', '1' ),
+			'settings' => array( 'yoohw-customer-intelligence-settings', 'yoohw_cos_reset', '1' ),
+		);
+	}
+
+	/** @dataProvider cit_flash_routes */
+	public function test_flash_result_is_consumed_once_and_url_is_cleaned( string $page, string $flag, string $value ): void {
 		$user = self::factory()->user->create( array( 'role' => 'administrator' ) );
 		wp_set_current_user( $user );
-		$url = admin_url( 'admin.php?page=yoohw-customer-intelligence-tags&yoohw_tag_deleted=1' );
+		$url = add_query_arg( array( 'page' => $page, $flag => $value ), admin_url( 'admin.php' ) );
 		$redirect = YoOhw_COS_Flash_Notices::tokenize_redirect( $url );
 		$this->assertStringContainsString( 'yoohw_cos_flash=', $redirect );
-		parse_str( (string) wp_parse_url( $redirect, PHP_URL_QUERY ), $_GET );
-		YoOhw_COS_Flash_Notices::consume();
-		$this->assertSame( '1', $_GET['yoohw_tag_deleted'] );
-		ob_start(); YoOhw_COS_Flash_Notices::clean_url(); $script = ob_get_clean();
-		$this->assertStringContainsString( 'replaceState', $script );
-		YoOhw_COS_Flash_Notices::consume();
-		$this->assertArrayNotHasKey( 'yoohw_tag_deleted', $_GET );
-		$this->assertArrayHasKey( 'page', $_GET );
-		$_GET = array();
+		parse_str( (string) wp_parse_url( $redirect, PHP_URL_QUERY ), $params );
+		$this->with_flash_admin_request( 'admin.php', $params, function() use ( $flag, $value ): void {
+			YoOhw_COS_Flash_Notices::consume();
+			$this->assertSame( $value, $_GET[ $flag ] );
+			ob_start(); YoOhw_COS_Flash_Notices::clean_url(); $script = ob_get_clean();
+			$this->assertStringContainsString( 'replaceState', $script );
+			YoOhw_COS_Flash_Notices::consume();
+			$this->assertArrayNotHasKey( $flag, $_GET );
+			$this->assertArrayHasKey( 'page', $_GET );
+		} );
+	}
+
+	public static function unrelated_flash_routes(): array {
+		return array(
+			'other plugin' => array( 'admin.php', array( 'page' => 'other-plugin' ) ),
+			'unknown CIT prefix' => array( 'admin.php', array( 'page' => 'yoohw-customer-intelligence-other-plugin' ) ),
+			'core settings' => array( 'options-general.php', array() ),
+			'spoofed page on another script' => array( 'edit.php', array( 'page' => 'yoohw-customer-intelligence' ) ),
+			'order list' => array( 'admin.php', array( 'page' => 'wc-orders' ) ),
+			'ordinary post edit' => array( 'post.php', array( 'post' => '1', 'action' => 'edit' ) ),
+		);
+	}
+
+	/** @dataProvider unrelated_flash_routes */
+	public function test_unrelated_admin_flash_parameters_and_redirects_are_untouched( string $script, array $params ): void {
+		$user = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $user );
+		if ( 'post.php' === $script ) {
+			$params['post'] = (string) self::factory()->post->create( array( 'post_type' => 'post' ) );
+		}
+		$params += array( 'note_added' => '1', 'tag_added' => '1', 'saved_view_notice' => 'created', 'yoohw_task_created' => '1' );
+		$url = add_query_arg( $params, admin_url( $script ) );
+		$this->assertSame( $url, YoOhw_COS_Flash_Notices::tokenize_redirect( $url ) );
+		$this->with_flash_admin_request( $script, $params, function() use ( $params ): void {
+			YoOhw_COS_Flash_Notices::consume();
+			$this->assertSame( $params, $_GET );
+			ob_start(); YoOhw_COS_Flash_Notices::clean_url(); $this->assertSame( '', ob_get_clean() );
+		} );
+	}
+
+	public function test_order_edit_flash_only_consumes_cit_task_results(): void {
+		$user = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $user );
+		$order = wc_create_order();
+		$post = self::factory()->post->create( array( 'post_type' => 'shop_order' ) );
+		foreach ( array(
+			array( 'admin.php', array( 'page' => 'wc-orders', 'id' => $order->get_id(), 'action' => 'edit' ) ),
+			array( 'post.php', array( 'post' => $post, 'action' => 'edit' ) ),
+		) as list( $script, $params ) ) {
+			$generic_url = add_query_arg( $params + array( 'note_added' => '1' ), admin_url( $script ) );
+			$this->assertSame( $generic_url, YoOhw_COS_Flash_Notices::tokenize_redirect( $generic_url ) );
+			$params += array( 'yoohw_task_created' => '1', 'note_added' => '1', 'saved_view_notice' => 'created' );
+			$redirect = YoOhw_COS_Flash_Notices::tokenize_redirect( add_query_arg( $params, admin_url( $script ) ) );
+			$this->assertStringContainsString( 'yoohw_cos_flash=', $redirect );
+			parse_str( (string) wp_parse_url( $redirect, PHP_URL_QUERY ), $request );
+			$this->with_flash_admin_request( $script, $request, function(): void {
+				YoOhw_COS_Flash_Notices::consume();
+				$this->assertSame( '1', $_GET['yoohw_task_created'] );
+				ob_start(); YoOhw_COS_Flash_Notices::clean_url(); $cleaner = ob_get_clean();
+				$this->assertStringContainsString( 'yoohw_task_created', $cleaner );
+				$this->assertStringNotContainsString( 'note_added', $cleaner );
+				$this->assertStringNotContainsString( 'saved_view_notice', $cleaner );
+				YoOhw_COS_Flash_Notices::consume();
+				$this->assertArrayNotHasKey( 'yoohw_task_created', $_GET );
+				$this->assertSame( '1', $_GET['note_added'] );
+				$this->assertSame( 'created', $_GET['saved_view_notice'] );
+			} );
+		}
+	}
+
+	public function test_unrelated_request_cannot_consume_a_cit_token_or_emit_its_url_cleaner(): void {
+		$user = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $user );
+		$url = YoOhw_COS_Flash_Notices::tokenize_redirect( admin_url( 'admin.php?page=yoohw-customer-intelligence&note_added=1' ) );
+		parse_str( (string) wp_parse_url( $url, PHP_URL_QUERY ), $cit );
+		$unrelated = array( 'page' => 'other-plugin', 'note_added' => '1', 'yoohw_cos_flash' => $cit['yoohw_cos_flash'] );
+		$this->with_flash_admin_request( 'admin.php', $unrelated, function() use ( $cit, $unrelated ): void {
+			YoOhw_COS_Flash_Notices::consume();
+			$this->assertSame( $unrelated, $_GET );
+			$_GET = $cit;
+			YoOhw_COS_Flash_Notices::consume();
+			$this->assertSame( '1', $_GET['note_added'], 'The unrelated request must not consume the CIT token.' );
+			$_GET = $unrelated;
+			ob_start(); YoOhw_COS_Flash_Notices::clean_url(); $this->assertSame( '', ob_get_clean() );
+		} );
 	}
 
 	public function test_incident_store_is_bounded_and_contains_no_callback_payload(): void {

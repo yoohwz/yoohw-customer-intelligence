@@ -26,7 +26,7 @@ Admitted base: `main@0ac831c622b6ecf20323deb4bb88d0b23d2649db` (Customer Intelli
 | Reset pending/invalid | warning → same | State | Global blocking notice; derived from durable Reset boundary, non-dismissible |
 | Deferred integration callback | generic warning → source-specific warning | Incident | Compact global link to Settings recovery; per-incident details and acknowledgment after actual recovery |
 
-Flash tokens are generated on CIT redirect URLs, bound to the current user, and expire after five minutes. The first admin render consumes the token and cleans the browser URL. A repeated or stale URL has its flash flags removed server-side. Filter, pagination, sync progress and state parameters are not flash flags.
+Flash tokens are generated only for known CIT `admin.php` pages or the legacy/HPOS order edit routes displaying CIT task results, bound to the current user, and expire after five minutes. The first owned admin render consumes the token and cleans the browser URL. A repeated or stale owned URL has its flash flags removed server-side. On order edit screens, only CIT task result flags are consumed or cleaned; generic note, tag and Saved View parameters remain untouched. Unrelated admin requests and redirects retain their parameters and cannot consume a CIT token or emit the CIT URL cleaner. Filter, pagination, sync progress and state parameters are not flash flags.
 
 ## Deferred callback classification
 

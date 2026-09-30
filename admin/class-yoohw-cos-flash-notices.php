@@ -4,7 +4,7 @@ defined( 'ABSPATH' ) || exit;
 /** Consume redirect results once without changing state-derived admin notices. */
 final class YoOhw_COS_Flash_Notices {
 	private const TOKEN = 'yoohw_cos_flash';
-	private static $shown = false;
+	private static $shown = array();
 
 	private static function flags(): array {
 		return array(
@@ -25,6 +25,34 @@ final class YoOhw_COS_Flash_Notices {
 		);
 	}
 
+	/** Generic result names belong to CIT only on its own admin pages. */
+	private static function owned_flags( string $script, array $params ): array {
+		$page = isset( $params['page'] ) && is_string( $params['page'] ) ? $params['page'] : '';
+		if ( 'admin.php' === $script && in_array( $page, array(
+			'yoohw-customer-intelligence-overview', 'yoohw-customer-intelligence',
+			'yoohw-customer-intelligence-tasks', 'yoohw-customer-intelligence-tags',
+			'yoohw-customer-intelligence-segments', 'yoohw-customer-intelligence-activity',
+			'yoohw-customer-intelligence-settings', 'yoohw-customer-intelligence-email-settings',
+		), true ) ) {
+			return self::flags();
+		}
+		$action = isset( $params['action'] ) && is_string( $params['action'] ) ? $params['action'] : '';
+		if ( 'edit' !== $action ) { return array(); }
+		$is_order = false;
+		if ( 'post.php' === $script && isset( $params['post'] ) && is_scalar( $params['post'] ) ) {
+			$is_order = 'shop_order' === get_post_type( absint( $params['post'] ) );
+		} elseif ( 'admin.php' === $script && 'wc-orders' === $page
+			&& isset( $params['id'] ) && is_scalar( $params['id'] ) && function_exists( 'wc_get_order' ) ) {
+			$is_order = wc_get_order( absint( $params['id'] ) ) instanceof WC_Order;
+		}
+		return $is_order ? array( 'yoohw_task_created', 'yoohw_task_completed', 'yoohw_task_reopened', 'yoohw_task_error' ) : array();
+	}
+
+	private static function request_flags(): array {
+		global $pagenow;
+		return self::owned_flags( is_string( $pagenow ) ? $pagenow : '', $_GET );
+	}
+
 	public static function init(): void {
 		add_filter( 'wp_redirect', array( __CLASS__, 'tokenize_redirect' ) );
 		add_action( 'admin_init', array( __CLASS__, 'consume' ), 0 );
@@ -43,7 +71,10 @@ final class YoOhw_COS_Flash_Notices {
 			return $location;
 		}
 		parse_str( $query, $params );
-		if ( ! array_intersect( self::flags(), array_keys( $params ) ) ) {
+		$script = basename( $path );
+		$admin_path = wp_parse_url( admin_url( $script ), PHP_URL_PATH );
+		if ( ( $path !== $script && $path !== $admin_path )
+			|| ! array_intersect( self::owned_flags( $script, $params ), array_keys( $params ) ) ) {
 			return $location;
 		}
 		$token = wp_generate_uuid4();
@@ -52,34 +83,38 @@ final class YoOhw_COS_Flash_Notices {
 	}
 
 	public static function consume(): void {
+		self::$shown = array();
+		$flags = self::request_flags();
+		if ( ! $flags ) { return; }
 		$token = isset( $_GET[ self::TOKEN ] ) && is_string( $_GET[ self::TOKEN ] )
 			? wp_unslash( $_GET[ self::TOKEN ] ) : '';
 		if ( ! preg_match( '/^[a-f0-9-]{36}$/D', $token ) ) {
-			self::remove_flags();
+			self::remove_flags( $flags );
 			return;
 		}
 		$key = self::TOKEN . '_' . $token;
 		$owner = get_transient( $key );
 		delete_transient( $key );
 		if ( (int) $owner !== get_current_user_id() || 0 === (int) $owner ) {
-			self::remove_flags();
+			self::remove_flags( $flags );
 			return;
 		}
-		self::$shown = true;
+		self::$shown = $flags;
 	}
 
-	private static function remove_flags(): void {
-		foreach ( self::flags() as $flag ) {
+	private static function remove_flags( array $flags ): void {
+		foreach ( $flags as $flag ) {
 			unset( $_GET[ $flag ] );
 		}
 	}
 
 	public static function clean_url(): void {
-		if ( ! self::$shown ) { return; }
-		$flags = array_merge( self::flags(), array( self::TOKEN ) );
+		$owned = array_intersect( self::$shown, self::request_flags() );
+		if ( ! $owned ) { self::$shown = array(); return; }
+		$flags = array_merge( array_values( $owned ), array( self::TOKEN ) );
 		echo '<script>(function(){var url=new URL(window.location.href);';
 		echo 'var flags=' . wp_json_encode( $flags ) . ';flags.forEach(function(flag){url.searchParams.delete(flag);});';
 		echo 'window.history.replaceState(window.history.state,"",url.href);})();</script>';
-		self::$shown = false;
+		self::$shown = array();
 	}
 }
