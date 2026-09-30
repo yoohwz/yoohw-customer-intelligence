@@ -26,6 +26,9 @@ final class YoOhw_COS_Loader {
 	public static function init(): void {
 		self::includes();
 		YoOhw_COS_Reset_Guard::init();
+		if ( is_admin() ) {
+			YoOhw_COS_Flash_Notices::init();
+		}
 		YoOhw_COS_Privacy_Exporter::init();
 		YoOhw_COS_Privacy_Erasure::init();
 
@@ -92,6 +95,7 @@ final class YoOhw_COS_Loader {
 		require_once YOOHW_COS_PATH . 'includes/class-yoohw-cos-loyalty-integration.php';
 
 		require_once YOOHW_COS_PATH . 'admin/class-yoohw-cos-admin-ui.php';
+		require_once YOOHW_COS_PATH . 'admin/class-yoohw-cos-flash-notices.php';
 		require_once YOOHW_COS_PATH . 'admin/class-yoohw-cos-customers-list.php';
 		require_once YOOHW_COS_PATH . 'admin/class-yoohw-cos-customer-exporter.php';
 		require_once YOOHW_COS_PATH . 'admin/class-yoohw-cos-customer-profile.php';

@@ -209,12 +209,12 @@ if ( 'lock-probe' === $mode ) {
 	echo "RELEASED\n";
 } elseif ( 'notice-defer' === $mode ) {
 	YoOhw_COS_Blacklist_Manager_Integration::handle_order_suspected( array() );
-	$value = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, 'yoohw_cos_reset_notice' ) );
+	$value = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, 'yoohw_cos_operational_incidents' ) );
 	echo wp_json_encode( maybe_unserialize( $value ) ) . "\n";
 } elseif ( 'notice-resolve' === $mode ) {
 	$input = json_decode( (string) fgets( STDIN ), true );
 	wp_set_current_user( absint( $input['user'] ?? 0 ) );
-	$_POST = array( 'notice_id' => (string) ( $input['id'] ?? '' ), '_wpnonce' => wp_create_nonce( 'yoohw_cos_resolve_reset_notice' ) );
+	$_POST = array( 'incident_key' => (string) ( $input['key'] ?? '' ), 'notice_id' => (string) ( $input['id'] ?? '' ), '_wpnonce' => wp_create_nonce( 'yoohw_cos_resolve_reset_notice' ) );
 	$_REQUEST = $_POST;
 	YoOhw_COS_Reset_Guard::resolve_notice();
 } elseif ( 'interrupt-reset' === $mode ) {

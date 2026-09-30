@@ -8,7 +8,8 @@ final class YoOhw_COS_Events {
 	}
 
 	public static function record( array $args ): int {
-		if ( ! YoOhw_COS_Reset_Guard::enter( true ) ) {
+		// Record is a nested primitive; its owning operation supplies recovery semantics.
+		if ( ! YoOhw_COS_Reset_Guard::enter( false ) ) {
 			return 0;
 		}
 		try {
