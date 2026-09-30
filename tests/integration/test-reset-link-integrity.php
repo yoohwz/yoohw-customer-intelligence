@@ -83,6 +83,36 @@ final class YCI_Reset_Link_Integrity_Test extends WP_UnitTestCase {
 		$this->assertArrayHasKey( 'blacklist_core:order_suspected', $this->incidents() );
 	}
 
+	public function test_callback_racing_with_acknowledgment_survives(): void {
+		global $wpdb;
+		YoOhw_COS_Customers::reset_data();
+		YoOhw_COS_Reset_Guard::init();
+		$wpdb->delete( $wpdb->options, array( 'option_name' => 'yoohw_cos_operational_incidents' ) );
+		$this->with_busy_boundary( static function(): void {
+			YoOhw_COS_Blacklist_Manager_Premium_Integration::handle_js_proof_failed( 'failed' );
+		} );
+		$key = 'blacklist_premium:js_proof_failed';
+		$old = $this->incidents()[ $key ];
+		$user = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		get_user_by( 'id', $user )->add_cap( 'manage_woocommerce' );
+		$wpdb->query( 'COMMIT' );
+		list( $process, $pipes ) = $this->worker( 'notice-resolve-race' );
+		fwrite( $pipes[0], wp_json_encode( array( 'user' => $user, 'key' => $key, 'id' => $old['id'] ) ) . "\n" );
+		$this->assertSame( "HELD\n", fgets( $pipes[1] ) );
+		YoOhw_COS_Blacklist_Manager_Premium_Integration::handle_js_proof_failed( 'failed' );
+		$new = $this->incidents()[ $key ];
+		$this->assertNotSame( $old['id'], $new['id'] );
+		$wpdb->query( 'COMMIT' );
+		fwrite( $pipes[0], "RESOLVE\n" );
+		fclose( $pipes[0] );
+		$body = stream_get_contents( $pipes[1] );
+		$error = stream_get_contents( $pipes[2] );
+		fclose( $pipes[1] ); fclose( $pipes[2] );
+		$this->assertSame( 0, proc_close( $process ), $error );
+		$this->assertSame( '', $body, $error );
+		$this->assertSame( $new, $this->incidents()[ $key ] );
+	}
+
 	public function test_reset_preserves_new_incident_and_expires_old_records(): void {
 		global $wpdb;
 		YoOhw_COS_Customers::reset_data();
@@ -113,7 +143,9 @@ final class YCI_Reset_Link_Integrity_Test extends WP_UnitTestCase {
 	}
 
 	public function test_pending_reset_notice_is_state_derived(): void {
+		global $wpdb;
 		YoOhw_COS_Customers::reset_data();
+		$wpdb->delete( $wpdb->options, array( 'option_name' => 'yoohw_cos_operational_incidents' ) );
 		$user = self::factory()->user->create( array( 'role' => 'administrator' ) );
 		get_user_by( 'id', $user )->add_cap( 'manage_woocommerce' );
 		wp_set_current_user( $user );

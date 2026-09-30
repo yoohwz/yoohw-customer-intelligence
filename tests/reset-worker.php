@@ -218,6 +218,16 @@ if ( 'lock-probe' === $mode ) {
 	$_POST = array( 'incident_key' => (string) ( $input['key'] ?? '' ), 'notice_id' => (string) ( $input['id'] ?? '' ), '_wpnonce' => wp_create_nonce( 'yoohw_cos_resolve_reset_notice' ) );
 	$_REQUEST = $_POST;
 	YoOhw_COS_Reset_Guard::resolve_notice();
+} elseif ( 'notice-resolve-race' === $mode ) {
+	$input = json_decode( (string) fgets( STDIN ), true );
+	wp_set_current_user( absint( $input['user'] ?? 0 ) );
+	$_POST = array( 'incident_key' => (string) ( $input['key'] ?? '' ), 'notice_id' => (string) ( $input['id'] ?? '' ), '_wpnonce' => wp_create_nonce( 'yoohw_cos_resolve_reset_notice' ) );
+	$_REQUEST = $_POST;
+	if ( ! YoOhw_COS_Reset_Guard::enter() ) { exit( 3 ); }
+	echo "HELD\n";
+	fflush( STDOUT );
+	fgets( STDIN );
+	YoOhw_COS_Reset_Guard::resolve_notice();
 } elseif ( 'interrupt-reset' === $mode ) {
 	add_filter( 'query', static function( $query ) {
 		if ( false !== strpos( $query, 'TRUNCATE TABLE' ) && false !== strpos( $query, YoOhw_COS_DB::notes_table() ) ) {

@@ -48,7 +48,7 @@ All 16 integration callback `enter(true)` call sites at admission now provide ex
 | Blacklist Manager Premium | payment abuse event recorded | payment abuse event row | no | yes, premium payment abuse backfill | no | backfill_available; Settings source notice |
 | Loyalty | points log created | points log row | no | yes, points-log backfill | no | backfill_available; Settings source notice |
 | Loyalty | loyalty role updated | current role durable, prior transition may be lost | no | no transition replay | yes for transition | manual_replay_required; Settings source notice |
-| Loyalty | intelligence recalculated | customer intelligence facts | yes, recalculation can rerun | yes, Settings recalculation | no | automatic_retry; Settings source notice |
+| Loyalty | intelligence recalculated | customer intelligence facts | no scheduled callback retry | yes, Settings recalculation | no | backfill_available; Settings source notice |
 | Loyalty | points reconciliation issue found | current points can be reconciled, original finding may be transient | no | no guaranteed issue replay | yes for finding | manual_replay_required; Settings source notice |
 
 The classification is conservative where an upstream removal or transient decision cannot be proven recoverable. The action does not claim to run a backfill; the administrator must perform the source operation before acknowledgment. Reset is not suggested as a generic incident cure.
@@ -59,6 +59,6 @@ A valid legacy `yoohw_cos_reset_notice` record is migrated at a ready Reset boun
 
 ## Regression and validation record
 
-The topic #950 regression creates a transient premium incident, checks the global link and detailed source notice, acknowledges it, checks it is absent on the next render, creates a new incident, and checks its revision differs. Separate tests cover stale forms, equivalent aggregation, distinct incident preservation, capacity overflow visibility, Reset versus concurrent callback, expiry, state-derived pending Reset, and flash token consumption. Existing Reset/link integrity tests cover stale epoch, malformed boundary, read contention, migration and order retry behavior. The order-admin 409 handler updates one `role="alert"` element beside the field.
+The topic #950 regression creates a transient premium incident, checks the global link and detailed source notice, acknowledges it, checks it is absent on the next render, creates a new incident, and checks its revision differs. Separate tests cover stale forms, a callback racing with acknowledgment, equivalent aggregation, distinct incident preservation, capacity overflow visibility, Reset versus concurrent callback, expiry, state-derived pending Reset, and flash token consumption. Existing Reset/link integrity tests cover stale epoch, malformed boundary, read contention, migration and order retry behavior. The order-admin 409 handler updates one `role="alert"` element beside the field.
 
 Local syntax checks on PHP 8.4 and `node --check` pass. The disposable HPOS=yes/no integration runs, exact-head `YCI Required CI`, fresh Technical Review URL/SHA and any limitations must be entered in the PR evidence after those gates complete. No existing WordPress installation was used for integration tests.

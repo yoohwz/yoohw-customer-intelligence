@@ -197,7 +197,7 @@ final class YoOhw_COS_Loyalty_Integration {
 	}
 
 	public static function handle_customer_intelligence_recalculated( int $customer_id, array $customer, array $previous_customer = array(), bool $updated = false ): void {
-		if ( ! YoOhw_COS_Reset_Guard::enter( array( 'source' => 'loyalty', 'event' => 'intelligence_recalculated', 'mode' => 'automatic_retry' ) ) ) {
+		if ( ! YoOhw_COS_Reset_Guard::enter( array( 'source' => 'loyalty', 'event' => 'intelligence_recalculated', 'mode' => 'backfill_available' ) ) ) {
 			return;
 		}
 		try {
