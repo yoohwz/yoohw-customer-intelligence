@@ -237,7 +237,7 @@ final class YoOhw_COS_Reset_Guard {
 				echo esc_html__( 'A deferred callback was recorded by an earlier version without its source. Review integration activity and recover any missed operation before acknowledging this record.', 'yoohw-customer-intelligence' );
 			} elseif ( 'backfill_available' === $item['mode'] ) {
 				echo esc_html__( 'A source backfill is available. Run the relevant sync or backfill, then acknowledge this record.', 'yoohw-customer-intelligence' );
-				$target = 'loyalty:intelligence_recalculated' === $key ? '#yoohw-cos-recalculate-intelligence' : '#yoohw-cos-sync-center';
+				$target = 'loyalty:intelligence_recalculated' === $key ? '#yoohw-cos-recalculate-intelligence' : '#yoohw-cos-blacklist-signals';
 				echo ' <a href="' . esc_url( admin_url( 'admin.php?page=yoohw-customer-intelligence-settings' . $target ) ) . '">' . esc_html__( 'Open recovery operation', 'yoohw-customer-intelligence' ) . '</a>';
 			} elseif ( 'automatic_retry' === $item['mode'] ) {
 				echo esc_html__( 'Retry the CIT operation, then acknowledge this record.', 'yoohw-customer-intelligence' );

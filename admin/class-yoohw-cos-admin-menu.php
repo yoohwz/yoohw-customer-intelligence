@@ -2748,7 +2748,7 @@ final class YoOhw_COS_Admin_Menu {
 				? __( 'Backfill core blacklist signals, then premium risk signals from the active Premium license.', 'yoohw-customer-intelligence' )
 				: __( 'Backfill core Blacklist Manager signals.', 'yoohw-customer-intelligence' );
 
-			echo '<div class="yoohw-cos-operation-row" data-yoohw-cos-sync-container>';
+			echo '<div id="yoohw-cos-blacklist-signals" class="yoohw-cos-operation-row" data-yoohw-cos-sync-container>';
 			echo '<div class="yoohw-cos-operation-row__content">';
 			echo '<h4>' . esc_html__( 'Sync Blacklist Manager signals', 'yoohw-customer-intelligence' ) . '</h4>';
 			echo '<p>' . esc_html( $blacklist_description ) . '</p>';

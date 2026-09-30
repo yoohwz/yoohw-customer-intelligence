@@ -83,6 +83,25 @@ final class YCI_Reset_Link_Integrity_Test extends WP_UnitTestCase {
 		$this->assertArrayHasKey( 'blacklist_core:order_suspected', $this->incidents() );
 	}
 
+	public function test_blacklist_backfill_links_open_the_signal_sync_for_core_and_premium(): void {
+		global $wpdb;
+		YoOhw_COS_Customers::reset_data();
+		YoOhw_COS_Reset_Guard::init();
+		$wpdb->delete( $wpdb->options, array( 'option_name' => 'yoohw_cos_operational_incidents' ) );
+		$this->with_busy_boundary( static function(): void {
+			YoOhw_COS_Blacklist_Manager_Integration::handle_order_suspected( array() );
+			YoOhw_COS_Blacklist_Manager_Premium_Integration::handle_after_risk_job( 1, 'risk' );
+		} );
+		$this->assertArrayHasKey( 'blacklist_core:order_suspected', $this->incidents() );
+		$this->assertArrayHasKey( 'blacklist_premium:risk_job_completion', $this->incidents() );
+		$user = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		get_user_by( 'id', $user )->add_cap( 'manage_woocommerce' );
+		wp_set_current_user( $user );
+		ob_start(); YoOhw_COS_Reset_Guard::render_incidents(); $settings = ob_get_clean();
+		$this->assertSame( 2, substr_count( $settings, '#yoohw-cos-blacklist-signals' ) );
+		$this->assertStringNotContainsString( '#yoohw-cos-sync-center', $settings );
+	}
+
 	public function test_callback_racing_with_acknowledgment_survives(): void {
 		global $wpdb;
 		YoOhw_COS_Customers::reset_data();
