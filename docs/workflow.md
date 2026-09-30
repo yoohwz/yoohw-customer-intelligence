@@ -109,14 +109,14 @@ genuinely unresolved boundary. Tool availability does not replace any of these g
 
 Compute follows phase rather than mutable task metadata:
 
-- Root / main orchestration: GPT-6 Sol / MEDIUM.
-- Fast implementation: GPT-6 Sol / MEDIUM.
+- Root / main orchestration: GPT-6.1 Sol / MEDIUM.
+- Fast implementation: GPT-6.1 Sol / MEDIUM.
 - Controlled deterministic implementation and correction after the boundary is settled:
-  GPT-6 Sol / MEDIUM.
+  GPT-6.1 Sol / MEDIUM.
 - Controlled discovery/architecture when a separate Plan Review is actually needed:
-  GPT-6 Sol / HIGH.
-- Independent Technical Review, including every fresh re-review: GPT-6 Sol / HIGH.
-- GPT-6 Sol / XHIGH is exceptional for a specific unresolved architecture/security
+  GPT-6.1 Sol / HIGH.
+- Independent Technical Review, including every fresh re-review: GPT-6.1 Sol / HIGH.
+- GPT-6.1 Sol / XHIGH is exceptional for a specific unresolved architecture/security
   problem and requires an explicit reason.
 - GPT-6 Astra requires explicit exceptional manual escalation and is not the governed
   default.
@@ -160,7 +160,7 @@ For a Controlled candidate, after the exact candidate is pushed, `Run CIT-N` sho
 automatically delegate one fresh independent reviewer when the harness supports
 per-role delegation. The reviewer must:
 
-- use GPT-6 Sol / HIGH;
+- use GPT-6.1 Sol / HIGH;
 - start in a fresh context;
 - treat runtime/test source as read-only;
 - receive the Issue/approved Plan boundary, approved base, exact candidate SHA/diff,
@@ -184,7 +184,7 @@ the requirement. Preserve the candidate and return:
 for every Controlled task.
 
 If review finds blocking P0/P1/P2 issues, keep corrections in the same Issue/PR. Route
-the durable findings back to the same implementer at GPT-6 Sol / MEDIUM, rerun relevant
+the durable findings back to the same implementer at GPT-6.1 Sol / MEDIUM, rerun relevant
 checks, push a new exact candidate and use a **new fresh reviewer** at HIGH.
 
 Continue correction, validation and fresh re-review without a numeric round cap while
