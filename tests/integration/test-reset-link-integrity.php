@@ -98,7 +98,7 @@ final class YCI_Reset_Link_Integrity_Test extends WP_UnitTestCase {
 		$wpdb->query( 'COMMIT' );
 		list( $process, $pipes ) = $this->worker( 'notice-resolve-race' );
 		fwrite( $pipes[0], wp_json_encode( array( 'user' => $user, 'key' => $key, 'id' => $old['id'] ) ) . "\n" );
-		$this->assertSame( "HELD\n", fgets( $pipes[1] ) );
+		$this->assertSame( "HELD\n", fgets( $pipes[2] ) );
 		YoOhw_COS_Blacklist_Manager_Premium_Integration::handle_js_proof_failed( 'failed' );
 		$new = $this->incidents()[ $key ];
 		$this->assertNotSame( $old['id'], $new['id'] );
@@ -111,6 +111,24 @@ final class YCI_Reset_Link_Integrity_Test extends WP_UnitTestCase {
 		$this->assertSame( 0, proc_close( $process ), $error );
 		$this->assertSame( '', $body, $error );
 		$this->assertSame( $new, $this->incidents()[ $key ] );
+	}
+
+	public function test_loyalty_points_backfill_does_not_claim_to_recover_live_callbacks(): void {
+		global $wpdb;
+		YoOhw_COS_Customers::reset_data();
+		YoOhw_COS_Reset_Guard::init();
+		$wpdb->delete( $wpdb->options, array( 'option_name' => 'yoohw_cos_operational_incidents' ) );
+		$this->with_busy_boundary( static function(): void {
+			YoOhw_COS_Loyalty_Integration::handle_points_log_created( 1, array(
+				'user_id' => 1, 'action' => 'points_redeem', 'amount' => -600, 'points_balance' => 100,
+			) );
+			YoOhw_COS_Loyalty_Integration::handle_points_log_created( 2, array(
+				'user_id' => 1, 'action' => 'points_earned', 'amount' => 10, 'points_balance' => 110,
+			) );
+		} );
+		$incident = $this->incidents()['loyalty:points_log_created'];
+		$this->assertSame( 'manual_replay_required', $incident['mode'] );
+		$this->assertSame( 2, $incident['count'] );
 	}
 
 	public function test_reset_preserves_new_incident_and_expires_old_records(): void {
@@ -217,6 +235,30 @@ final class YCI_Reset_Link_Integrity_Test extends WP_UnitTestCase {
 		$this->assertStringNotContainsString( 'private-value-must-not-persist', maybe_serialize( $items ) );
 		YoOhw_COS_Customers::reset_data();
 		$wpdb->delete( $wpdb->options, array( 'option_name' => 'yoohw_cos_operational_incidents' ) );
+	}
+
+	public function test_unrecordable_transient_callback_fails_visibly(): void {
+		YoOhw_COS_Customers::reset_data();
+		YoOhw_COS_Reset_Guard::init();
+		$state = YoOhw_COS_Reset_Guard::state();
+		update_option( YoOhw_COS_Reset_Guard::OPTION, array( 'epoch' => $state['epoch'], 'status' => 'pending' ), false );
+		$other = new mysqli( 'localhost', DB_USER, DB_PASSWORD, DB_NAME, 0, getenv( 'YCI_TEST_ROOT' ) . '/mysql.sock' );
+		$name = $other->real_escape_string( YoOhw_COS_Reset_Guard::lock_name() . '-notice' );
+		$this->assertSame( '1', (string) $other->query( "SELECT GET_LOCK('" . $name . "', 0)" )->fetch_row()[0] );
+		try {
+			YoOhw_COS_Reset_Guard::enter( array(
+				'source' => 'blacklist_premium',
+				'event' => 'js_proof_failed',
+				'mode' => 'manual_replay_required',
+			) );
+			$this->fail( 'A non-replayable callback must not disappear when its incident cannot be persisted.' );
+		} catch ( RuntimeException $exception ) {
+			$this->assertStringContainsString( 'could not persist', $exception->getMessage() );
+		} finally {
+			$other->query( "SELECT RELEASE_LOCK('" . $name . "')" );
+			$other->close();
+			YoOhw_COS_Customers::reset_data();
+		}
 	}
 
 	public function test_reset_reordered_profiles_cannot_transfer_an_old_order(): void {

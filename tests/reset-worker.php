@@ -224,8 +224,8 @@ if ( 'lock-probe' === $mode ) {
 	$_POST = array( 'incident_key' => (string) ( $input['key'] ?? '' ), 'notice_id' => (string) ( $input['id'] ?? '' ), '_wpnonce' => wp_create_nonce( 'yoohw_cos_resolve_reset_notice' ) );
 	$_REQUEST = $_POST;
 	if ( ! YoOhw_COS_Reset_Guard::enter() ) { exit( 3 ); }
-	echo "HELD\n";
-	fflush( STDOUT );
+	fwrite( STDERR, "HELD\n" );
+	fflush( STDERR );
 	fgets( STDIN );
 	YoOhw_COS_Reset_Guard::resolve_notice();
 } elseif ( 'interrupt-reset' === $mode ) {

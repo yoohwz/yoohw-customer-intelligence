@@ -56,7 +56,7 @@ final class YoOhw_COS_Reset_Guard {
 		);
 	}
 
-	/** Every guarded operation starts before resolving any CRM reference. Report only when the caller lacks an owned retry source. */
+	/** Every guarded operation starts before resolving any CRM reference. */
 	public static function enter( $incident = null ): bool {
 		global $wpdb;
 		if ( self::$resetting ) {
@@ -132,45 +132,48 @@ final class YoOhw_COS_Reset_Guard {
 	}
 
 	private static function deferred( $incident ): bool {
-		if ( is_array( $incident ) && ! self::$resetting && self::valid_incident( $incident ) ) {
-			if ( self::lock_notice() ) {
-				try {
-					$items = self::notice_state();
-					$key   = $incident['source'] . ':' . $incident['event'];
-					$now   = time();
-					$old   = $items[ $key ] ?? array();
-					if ( isset( $items[ $key ] ) || count( $items ) < self::INCIDENT_LIMIT - 1 ) {
-						$items[ $key ] = array(
-							'id'         => wp_generate_uuid4(),
-							'source'     => $incident['source'],
-							'event'      => $incident['event'],
-							'mode'       => $incident['mode'],
-							'first_seen' => isset( $old['first_seen'] ) ? $old['first_seen'] : $now,
-							'last_seen'  => $now,
-							'count'      => min( 999999, (int) ( $old['count'] ?? 0 ) + 1 ),
-							'expires'    => $now + self::INCIDENT_TTL,
-						);
-						if ( ! self::write_notice( $items ) ) {
-							error_log( 'YCI could not persist an operational incident.' );
-						}
-					} else {
-						$capacity_key = 'customer_intelligence:incident_capacity_reached';
-						$capacity = $items[ $capacity_key ] ?? array();
-						$items[ $capacity_key ] = array(
-							'id'         => wp_generate_uuid4(),
-							'source'     => 'customer_intelligence',
-							'event'      => 'incident_capacity_reached',
-							'mode'       => 'manual_replay_required',
-							'first_seen' => $capacity['first_seen'] ?? $now,
-							'last_seen'  => $now,
-							'count'      => min( 999999, (int) ( $capacity['count'] ?? 0 ) + 1 ),
-							'expires'    => $now + self::INCIDENT_TTL,
-						);
-						self::write_notice( $items );
-						error_log( 'YCI operational incident capacity reached; existing obligations retained.' );
-					}
-				} finally { self::unlock_notice(); }
+		if ( is_array( $incident ) && ! self::$resetting ) {
+			if ( ! self::valid_incident( $incident ) || ! self::lock_notice() ) {
+				throw new RuntimeException( 'YCI could not persist a deferred operation; retry its source callback.' );
 			}
+			try {
+				$items = self::notice_state();
+				$key   = $incident['source'] . ':' . $incident['event'];
+				$now   = time();
+				$old   = $items[ $key ] ?? array();
+				if ( isset( $items[ $key ] ) || count( $items ) < self::INCIDENT_LIMIT - 1 ) {
+					$items[ $key ] = array(
+						'id'         => wp_generate_uuid4(),
+						'source'     => $incident['source'],
+						'event'      => $incident['event'],
+						'mode'       => $incident['mode'],
+						'first_seen' => isset( $old['first_seen'] ) ? $old['first_seen'] : $now,
+						'last_seen'  => $now,
+						'count'      => min( 999999, (int) ( $old['count'] ?? 0 ) + 1 ),
+						'expires'    => $now + self::INCIDENT_TTL,
+					);
+					if ( ! self::write_notice( $items ) ) {
+						throw new RuntimeException( 'YCI could not persist a deferred operation; retry its source callback.' );
+					}
+				} else {
+					$capacity_key = 'customer_intelligence:incident_capacity_reached';
+					$capacity = $items[ $capacity_key ] ?? array();
+					$items[ $capacity_key ] = array(
+						'id'         => wp_generate_uuid4(),
+						'source'     => 'customer_intelligence',
+						'event'      => 'incident_capacity_reached',
+						'mode'       => 'manual_replay_required',
+						'first_seen' => $capacity['first_seen'] ?? $now,
+						'last_seen'  => $now,
+						'count'      => min( 999999, (int) ( $capacity['count'] ?? 0 ) + 1 ),
+						'expires'    => $now + self::INCIDENT_TTL,
+					);
+					if ( ! self::write_notice( $items ) ) {
+						throw new RuntimeException( 'YCI could not persist a deferred operation; retry its source callback.' );
+					}
+					error_log( 'YCI operational incident capacity reached; existing obligations retained.' );
+				}
+			} finally { self::unlock_notice(); }
 			error_log( 'YCI reset boundary deferred an integration callback: ' . $incident['source'] . ':' . $incident['event'] );
 		}
 		return false;
@@ -307,6 +310,9 @@ final class YoOhw_COS_Reset_Guard {
 	private static function notice_state( bool $current = false ): array {
 		global $wpdb;
 		$value = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, self::NOTICE_OPTION ) . ( $current ? ' FOR UPDATE' : '' ) );
+		if ( '' !== $wpdb->last_error ) {
+			throw new RuntimeException( 'YCI could not read deferred operations; retry the request.' );
+		}
 		$stored = maybe_unserialize( $value );
 		$items = array();
 		if ( ! is_array( $stored ) || 1 !== ( $stored['version'] ?? null ) || ! isset( $stored['items'] ) || ! is_array( $stored['items'] ) ) {

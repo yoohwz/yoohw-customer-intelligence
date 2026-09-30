@@ -110,7 +110,8 @@ final class YoOhw_COS_Loyalty_Integration {
 	}
 
 	public static function handle_points_log_created( int $log_id, array $payload, array $context = array() ): void {
-		if ( ! YoOhw_COS_Reset_Guard::enter( array( 'source' => 'loyalty', 'event' => 'points_log_created', 'mode' => 'backfill_available' ) ) ) {
+		// The one-time legacy log backfill does not replay automation tasks or rerun after completion.
+		if ( ! YoOhw_COS_Reset_Guard::enter( array( 'source' => 'loyalty', 'event' => 'points_log_created', 'mode' => 'manual_replay_required' ) ) ) {
 			return;
 		}
 		try {
