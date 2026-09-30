@@ -132,6 +132,30 @@ final class YCI_Reset_Link_Integrity_Test extends WP_UnitTestCase {
 		$this->assertSame( $new, $this->incidents()[ $key ] );
 	}
 
+	public function test_deferred_callback_reads_current_incidents_after_an_old_transaction_snapshot(): void {
+		global $wpdb;
+		YoOhw_COS_Customers::reset_data();
+		YoOhw_COS_Reset_Guard::init();
+		$wpdb->delete( $wpdb->options, array( 'option_name' => 'yoohw_cos_operational_incidents' ) );
+		$state = YoOhw_COS_Reset_Guard::state();
+		update_option( YoOhw_COS_Reset_Guard::OPTION, array( 'epoch' => $state['epoch'], 'status' => 'pending' ), false );
+		$wpdb->query( 'COMMIT' );
+		$wpdb->query( 'START TRANSACTION' );
+		$this->incidents(); // Establish an empty repeatable-read snapshot before the other callback.
+		list( $process, $pipes ) = $this->worker( 'notice-defer' );
+		fclose( $pipes[0] );
+		$reported = json_decode( (string) fgets( $pipes[1] ), true );
+		$error = stream_get_contents( $pipes[2] );
+		fclose( $pipes[1] ); fclose( $pipes[2] );
+		$this->assertSame( 0, proc_close( $process ), $error );
+		$this->assertArrayHasKey( 'blacklist_core:order_suspected', $reported['items'] );
+		YoOhw_COS_Blacklist_Manager_Premium_Integration::handle_js_proof_failed( 'failed' );
+		$wpdb->query( 'COMMIT' );
+		$this->assertArrayHasKey( 'blacklist_core:order_suspected', $this->incidents() );
+		$this->assertArrayHasKey( 'blacklist_premium:js_proof_failed', $this->incidents() );
+		YoOhw_COS_Customers::reset_data();
+	}
+
 	public function test_loyalty_points_backfill_does_not_claim_to_recover_live_callbacks(): void {
 		global $wpdb;
 		YoOhw_COS_Customers::reset_data();

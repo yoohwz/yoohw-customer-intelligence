@@ -223,6 +223,9 @@ if ( 'lock-probe' === $mode ) {
 	wp_set_current_user( absint( $input['user'] ?? 0 ) );
 	$_POST = array( 'incident_key' => (string) ( $input['key'] ?? '' ), 'notice_id' => (string) ( $input['id'] ?? '' ), '_wpnonce' => wp_create_nonce( 'yoohw_cos_resolve_reset_notice' ) );
 	$_REQUEST = $_POST;
+	$wpdb->query( 'START TRANSACTION' );
+	$wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, 'yoohw_cos_operational_incidents' ) );
+	register_shutdown_function( static function() use ( $wpdb ): void { $wpdb->query( 'COMMIT' ); } );
 	if ( ! YoOhw_COS_Reset_Guard::enter() ) { exit( 3 ); }
 	fwrite( STDERR, "HELD\n" );
 	fflush( STDERR );

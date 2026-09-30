@@ -137,7 +137,7 @@ final class YoOhw_COS_Reset_Guard {
 				throw new RuntimeException( 'YCI could not persist a deferred operation; retry its source callback.' );
 			}
 			try {
-				$items = self::notice_state();
+				$items = self::notice_state( true );
 				$key   = $incident['source'] . ':' . $incident['event'];
 				$now   = time();
 				$old   = $items[ $key ] ?? array();
@@ -198,7 +198,7 @@ final class YoOhw_COS_Reset_Guard {
 		try {
 			if ( ! self::lock_notice() ) { return; }
 			try {
-				$items = self::notice_state();
+				$items = self::notice_state( true );
 				$items = self::migrate_legacy_notice( $items );
 				if ( array() === $items ) { self::delete_notice(); }
 			} finally { self::unlock_notice(); }
@@ -267,7 +267,7 @@ final class YoOhw_COS_Reset_Guard {
 		try {
 			if ( ! self::lock_notice() ) { wp_die( esc_html( self::rejection_message() ), '', array( 'response' => 409 ) ); }
 			try {
-				$items = self::notice_state();
+				$items = self::notice_state( true );
 				$key = isset( $_POST['incident_key'] ) && is_string( $_POST['incident_key'] ) ? wp_unslash( $_POST['incident_key'] ) : '';
 				$id = isset( $_POST['notice_id'] ) && is_string( $_POST['notice_id'] ) ? wp_unslash( $_POST['notice_id'] ) : '';
 				if ( isset( $items[ $key ] ) && $id === $items[ $key ]['id'] ) {
@@ -372,7 +372,7 @@ final class YoOhw_COS_Reset_Guard {
 				'count'      => 1,
 				'expires'    => $now + self::INCIDENT_TTL,
 			);
-			if ( ! self::write_notice( $items ) ) { return self::notice_state(); }
+			if ( ! self::write_notice( $items ) ) { return self::notice_state( true ); }
 		}
 		if ( $has_transient ) { delete_transient( self::DEFERRED_NOTICE ); }
 		$wpdb->delete( $wpdb->options, array( 'option_name' => self::LEGACY_NOTICE_OPTION ), array( '%s' ) );
