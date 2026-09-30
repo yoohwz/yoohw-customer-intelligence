@@ -266,11 +266,17 @@ final class YCI_Reset_Link_Integrity_Test extends WP_UnitTestCase {
 		$this->assertContains( 'notice-' . $severity, preg_split( '/\s+/', $matches[0]->getAttribute( 'class' ) ), $message );
 	}
 
+	private function set_notice_operator(): void {
+		$user = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		get_user_by( 'id', $user )->add_cap( 'manage_woocommerce' );
+		wp_set_current_user( $user );
+	}
+
 	public function test_profile_remove_and_delete_confirmations_render_as_success(): void {
 		require_once ABSPATH . 'wp-admin/includes/admin.php';
 		YoOhw_COS_Customers::reset_data();
 		YoOhw_COS_Reset_Guard::init();
-		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		$this->set_notice_operator();
 		$customer = YoOhw_COS_Customers::create_customer( array( 'email' => 'notice-severity@example.test' ) );
 		$this->assertGreaterThan( 0, $customer );
 		$this->with_flash_admin_request( 'admin.php', array(
@@ -288,7 +294,7 @@ final class YCI_Reset_Link_Integrity_Test extends WP_UnitTestCase {
 		require_once ABSPATH . 'wp-admin/includes/admin.php';
 		YoOhw_COS_Customers::reset_data();
 		YoOhw_COS_Reset_Guard::init();
-		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		$this->set_notice_operator();
 		$this->with_flash_admin_request( 'admin.php', array( 'page' => 'yoohw-customer-intelligence-settings', 'yoohw_cos_reset' => '1' ), function(): void {
 			ob_start(); YoOhw_COS_Admin_Menu::render_settings_page(); $html = ob_get_clean();
 			$this->assert_notice_severity( $html, 'Customer data has been reset.', 'success' );
@@ -313,7 +319,7 @@ final class YCI_Reset_Link_Integrity_Test extends WP_UnitTestCase {
 		require_once ABSPATH . 'wp-admin/includes/admin.php';
 		YoOhw_COS_Customers::reset_data();
 		YoOhw_COS_Reset_Guard::init();
-		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		$this->set_notice_operator();
 		$this->with_flash_admin_request( 'admin.php', array( 'page' => 'yoohw-customer-intelligence', 'yoohw_customers_bulk_err' => $result ), function() use ( $message, $severity ): void {
 			ob_start(); YoOhw_COS_Admin_Menu::render_customers_page(); $html = ob_get_clean();
 			$this->assert_notice_severity( $html, $message, $severity );
