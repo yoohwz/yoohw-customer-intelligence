@@ -9,6 +9,12 @@ for (const epoch of ['', '11111111-1111-4111-8111-111111111111']) {
   let configuration;
   let disabled = false;
   let notice = '';
+  let noticeCount = 0;
+  const noticeNode = {
+    length: 1,
+    text: value => { notice = value; return noticeNode; },
+    insertAfter: () => { noticeCount++; return noticeNode; }
+  };
   const field = {
     length: 1,
     hasClass: () => false,
@@ -16,14 +22,15 @@ for (const epoch of ['', '11111111-1111-4111-8111-111111111111']) {
     selectWoo: options => { configuration = options; return field; },
     addClass: () => field,
     closest: () => ({ find: () => ({ val: () => epoch }) }),
-    prop: (key, value) => { if (key === 'disabled') disabled = value; return field; }
+    prop: (key, value) => { if (key === 'disabled') disabled = value; return field; },
+    siblings: () => noticeCount ? noticeNode : { length: 0 }
   };
   const empty = { length: 0, addClass() { return this; }, hide() { return this; }, on() { return this; } };
   const $ = selector => {
     if (typeof selector === 'function') { selector(); return empty; }
     if (selector === '#yoohw_cos_customer_id') return field;
     if (typeof selector === 'string' && selector.startsWith('<p')) {
-      return { text: value => { notice = value; return { insertAfter: () => {} }; } };
+      return noticeNode;
     }
     return empty;
   };
@@ -40,6 +47,9 @@ for (const epoch of ['', '11111111-1111-4111-8111-111111111111']) {
   configuration.ajax.error({ status: 409, responseJSON: { data: { message: 'Reload the page.' } } });
   assert.equal(disabled, true);
   assert.equal(notice, 'Reload the page.');
+  configuration.ajax.error({ status: 409, responseJSON: { data: { message: 'Still blocked.' } } });
+  assert.equal(notice, 'Still blocked.');
+  assert.equal(noticeCount, 1, 'Repeated 409 updates one scoped alert');
   assert.equal(configuration.ajax.data({ term: 'Retry' }).yoohw_cos_epoch, epoch, 'Never upgrade an old form epoch');
 }
 console.log('PASS: editable customer selector carries explicit legacy/current epoch, renders rejection and never upgrades stale selections');
