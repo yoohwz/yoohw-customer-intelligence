@@ -845,7 +845,7 @@ final class YoOhw_COS_Admin_Menu {
 				$message     = self::get_customers_bulk_no_changes_message( $bulk_action, $bulk_target );
 			}
 
-			echo '<div class="notice notice-error is-dismissible"><p>';
+			echo '<div class="notice notice-' . ( 'no_changes' === $error ? 'info' : 'error' ) . ' is-dismissible"><p>';
 			echo esc_html( $message );
 			echo '</p></div>';
 		}
@@ -2566,6 +2566,7 @@ final class YoOhw_COS_Admin_Menu {
 
 		self::render_setup_panel( $readiness, $sync_state, $stats );
 		self::render_diagnostics( YoOhw_COS_Diagnostics::snapshot() );
+		YoOhw_COS_Reset_Guard::render_incidents();
 
 		if ( isset( $_GET['yoohw_cos_processed'] ) ) {
 			$summary = self::get_sync_status_summary( $sync_state );
@@ -2580,7 +2581,7 @@ final class YoOhw_COS_Admin_Menu {
 		}
 
 		if ( ! empty( $_GET['yoohw_cos_reset'] ) ) {
-			echo '<div class="notice notice-warning is-dismissible"><p>';
+			echo '<div class="notice notice-success is-dismissible"><p>';
 			echo esc_html__( 'Customer data has been reset.', 'yoohw-customer-intelligence' );
 			echo '</p></div>';
 		}
@@ -2747,7 +2748,7 @@ final class YoOhw_COS_Admin_Menu {
 				? __( 'Backfill core blacklist signals, then premium risk signals from the active Premium license.', 'yoohw-customer-intelligence' )
 				: __( 'Backfill core Blacklist Manager signals.', 'yoohw-customer-intelligence' );
 
-			echo '<div class="yoohw-cos-operation-row" data-yoohw-cos-sync-container>';
+			echo '<div id="yoohw-cos-blacklist-signals" class="yoohw-cos-operation-row" data-yoohw-cos-sync-container>';
 			echo '<div class="yoohw-cos-operation-row__content">';
 			echo '<h4>' . esc_html__( 'Sync Blacklist Manager signals', 'yoohw-customer-intelligence' ) . '</h4>';
 			echo '<p>' . esc_html( $blacklist_description ) . '</p>';

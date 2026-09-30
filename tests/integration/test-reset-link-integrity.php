@@ -3,19 +3,185 @@ require_once dirname( __DIR__ ) . '/environment.php';
 yci_test_environment();
 
 final class YCI_Reset_Link_Integrity_Test extends WP_UnitTestCase {
-	private function deferred_notice(): array {
+	private function incidents(): array {
 		global $wpdb;
-		$value = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s FOR UPDATE', $wpdb->options, 'yoohw_cos_reset_notice' ) );
-		$notice = maybe_unserialize( $value );
-		return is_array( $notice ) ? $notice : array();
+		$value = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, 'yoohw_cos_operational_incidents' ) );
+		$store = maybe_unserialize( $value );
+		return is_array( $store ) && is_array( $store['items'] ?? null ) ? $store['items'] : array();
 	}
 
-	public function test_reset_preserves_a_new_provider_deferral_during_recovery(): void {
+	private function with_busy_boundary( callable $callback ): void {
+		$other = new mysqli( 'localhost', DB_USER, DB_PASSWORD, DB_NAME, 0, getenv( 'YCI_TEST_ROOT' ) . '/mysql.sock' );
+		$name = $other->real_escape_string( YoOhw_COS_Reset_Guard::lock_name() );
+		$this->assertSame( '1', (string) $other->query( "SELECT GET_LOCK('" . $name . "', 0)" )->fetch_row()[0] );
+		try { $callback(); }
+		finally { $other->query( "SELECT RELEASE_LOCK('" . $name . "')" ); $other->close(); }
+	}
+
+	private function acknowledge( int $user, string $key, string $id ): void {
+		global $wpdb;
+		$wpdb->query( 'COMMIT' );
+		list( $process, $pipes ) = $this->worker( 'notice-resolve' );
+		fwrite( $pipes[0], wp_json_encode( array( 'user' => $user, 'key' => $key, 'id' => $id ) ) . "\n" );
+		fclose( $pipes[0] );
+		$body = stream_get_contents( $pipes[1] );
+		$error = stream_get_contents( $pipes[2] );
+		fclose( $pipes[1] ); fclose( $pipes[2] );
+		$this->assertSame( 0, proc_close( $process ), $error );
+		$this->assertSame( '', $body, $error );
+	}
+
+	public function test_topic_950_incident_lifecycle_and_stale_form(): void {
 		global $wpdb;
 		YoOhw_COS_Customers::reset_data();
-		$old = array( 'id' => wp_generate_uuid4(), 'expires' => time() + DAY_IN_SECONDS );
-		$wpdb->replace( $wpdb->options, array( 'option_name' => 'yoohw_cos_reset_notice', 'option_value' => maybe_serialize( $old ), 'autoload' => 'no' ) );
-		$wpdb->query( 'COMMIT' ); // The independent callback must see persisted state, not this test's transaction.
+		YoOhw_COS_Reset_Guard::init();
+		$user = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		get_user_by( 'id', $user )->add_cap( 'manage_woocommerce' );
+		wp_set_current_user( $user );
+		$wpdb->delete( $wpdb->options, array( 'option_name' => 'yoohw_cos_operational_incidents' ) );
+		$this->with_busy_boundary( static function(): void {
+			YoOhw_COS_Blacklist_Manager_Premium_Integration::handle_js_proof_failed( 'failed' );
+		} );
+		$key = 'blacklist_premium:js_proof_failed';
+		$first = $this->incidents()[ $key ];
+		$this->assertSame( 'manual_replay_required', $first['mode'] );
+		ob_start(); YoOhw_COS_Reset_Guard::render_notice(); $global = ob_get_clean();
+		$this->assertStringContainsString( 'Review recovery options', $global );
+		ob_start(); YoOhw_COS_Reset_Guard::render_incidents(); $settings = ob_get_clean();
+		$this->assertStringContainsString( 'js proof failed', $settings );
+		$this->assertStringContainsString( 'Acknowledge after recovery', $settings );
+		$this->acknowledge( $user, $key, $first['id'] );
+		$this->assertSame( array(), $this->incidents() );
+		ob_start(); YoOhw_COS_Reset_Guard::render_notice(); $this->assertSame( '', ob_get_clean() );
+		$this->with_busy_boundary( static function(): void {
+			YoOhw_COS_Blacklist_Manager_Premium_Integration::handle_js_proof_failed( 'failed' );
+		} );
+		$second = $this->incidents()[ $key ];
+		$this->assertNotSame( $first['id'], $second['id'] );
+		$this->acknowledge( $user, $key, $first['id'] );
+		$this->assertSame( $second, $this->incidents()[ $key ], 'An old form cannot dismiss a new incident.' );
+	}
+
+	public function test_equivalent_incidents_aggregate_and_distinct_incidents_survive(): void {
+		global $wpdb;
+		YoOhw_COS_Customers::reset_data();
+		YoOhw_COS_Reset_Guard::init();
+		$wpdb->delete( $wpdb->options, array( 'option_name' => 'yoohw_cos_operational_incidents' ) );
+		$this->with_busy_boundary( static function(): void {
+			YoOhw_COS_Blacklist_Manager_Premium_Integration::handle_js_proof_failed( 'failed' );
+			YoOhw_COS_Blacklist_Manager_Premium_Integration::handle_js_proof_failed( 'failed' );
+			YoOhw_COS_Blacklist_Manager_Integration::handle_order_suspected( array() );
+		} );
+		$items = $this->incidents();
+		$this->assertCount( 2, $items );
+		$this->assertSame( 2, $items['blacklist_premium:js_proof_failed']['count'] );
+		$this->assertSame( 'backfill_available', $items['blacklist_core:order_suspected']['mode'] );
+		$user = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		get_user_by( 'id', $user )->add_cap( 'manage_woocommerce' );
+		$this->acknowledge( $user, 'blacklist_premium:js_proof_failed', $items['blacklist_premium:js_proof_failed']['id'] );
+		$this->assertCount( 1, $this->incidents() );
+		$this->assertArrayHasKey( 'blacklist_core:order_suspected', $this->incidents() );
+	}
+
+	public function test_blacklist_backfill_links_open_the_signal_sync_for_core_and_premium(): void {
+		global $wpdb;
+		YoOhw_COS_Customers::reset_data();
+		YoOhw_COS_Reset_Guard::init();
+		$wpdb->delete( $wpdb->options, array( 'option_name' => 'yoohw_cos_operational_incidents' ) );
+		$this->with_busy_boundary( static function(): void {
+			YoOhw_COS_Blacklist_Manager_Integration::handle_order_suspected( array() );
+			YoOhw_COS_Blacklist_Manager_Premium_Integration::handle_after_risk_job( 1, 'risk' );
+		} );
+		$this->assertArrayHasKey( 'blacklist_core:order_suspected', $this->incidents() );
+		$this->assertArrayHasKey( 'blacklist_premium:risk_job_completion', $this->incidents() );
+		$user = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		get_user_by( 'id', $user )->add_cap( 'manage_woocommerce' );
+		wp_set_current_user( $user );
+		ob_start(); YoOhw_COS_Reset_Guard::render_incidents(); $settings = ob_get_clean();
+		$this->assertSame( 2, substr_count( $settings, '#yoohw-cos-blacklist-signals' ) );
+		$this->assertStringNotContainsString( '#yoohw-cos-sync-center', $settings );
+	}
+
+	public function test_callback_racing_with_acknowledgment_survives(): void {
+		global $wpdb;
+		YoOhw_COS_Customers::reset_data();
+		YoOhw_COS_Reset_Guard::init();
+		$wpdb->delete( $wpdb->options, array( 'option_name' => 'yoohw_cos_operational_incidents' ) );
+		$this->with_busy_boundary( static function(): void {
+			YoOhw_COS_Blacklist_Manager_Premium_Integration::handle_js_proof_failed( 'failed' );
+		} );
+		$key = 'blacklist_premium:js_proof_failed';
+		$old = $this->incidents()[ $key ];
+		$user = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		get_user_by( 'id', $user )->add_cap( 'manage_woocommerce' );
+		$wpdb->query( 'COMMIT' );
+		list( $process, $pipes ) = $this->worker( 'notice-resolve-race' );
+		fwrite( $pipes[0], wp_json_encode( array( 'user' => $user, 'key' => $key, 'id' => $old['id'] ) ) . "\n" );
+		$this->assertSame( "HELD\n", fgets( $pipes[2] ) );
+		YoOhw_COS_Blacklist_Manager_Premium_Integration::handle_js_proof_failed( 'failed' );
+		$new = $this->incidents()[ $key ];
+		$this->assertNotSame( $old['id'], $new['id'] );
+		$wpdb->query( 'COMMIT' );
+		fwrite( $pipes[0], "RESOLVE\n" );
+		fclose( $pipes[0] );
+		$body = stream_get_contents( $pipes[1] );
+		$error = stream_get_contents( $pipes[2] );
+		fclose( $pipes[1] ); fclose( $pipes[2] );
+		$this->assertSame( 0, proc_close( $process ), $error );
+		$this->assertSame( '', $body, $error );
+		$this->assertSame( $new, $this->incidents()[ $key ] );
+	}
+
+	public function test_deferred_callback_reads_current_incidents_after_an_old_transaction_snapshot(): void {
+		global $wpdb;
+		YoOhw_COS_Customers::reset_data();
+		YoOhw_COS_Reset_Guard::init();
+		$wpdb->delete( $wpdb->options, array( 'option_name' => 'yoohw_cos_operational_incidents' ) );
+		$state = YoOhw_COS_Reset_Guard::state();
+		update_option( YoOhw_COS_Reset_Guard::OPTION, array( 'epoch' => $state['epoch'], 'status' => 'pending' ), false );
+		$wpdb->query( 'COMMIT' );
+		$wpdb->query( 'START TRANSACTION' );
+		$this->incidents(); // Establish an empty repeatable-read snapshot before the other callback.
+		list( $process, $pipes ) = $this->worker( 'notice-defer' );
+		fclose( $pipes[0] );
+		$reported = json_decode( (string) fgets( $pipes[1] ), true );
+		$error = stream_get_contents( $pipes[2] );
+		fclose( $pipes[1] ); fclose( $pipes[2] );
+		$this->assertSame( 0, proc_close( $process ), $error );
+		$this->assertArrayHasKey( 'blacklist_core:order_suspected', $reported['items'] );
+		YoOhw_COS_Blacklist_Manager_Premium_Integration::handle_js_proof_failed( 'failed' );
+		$wpdb->query( 'COMMIT' );
+		$this->assertArrayHasKey( 'blacklist_core:order_suspected', $this->incidents() );
+		$this->assertArrayHasKey( 'blacklist_premium:js_proof_failed', $this->incidents() );
+		YoOhw_COS_Customers::reset_data();
+	}
+
+	public function test_loyalty_points_backfill_does_not_claim_to_recover_live_callbacks(): void {
+		global $wpdb;
+		YoOhw_COS_Customers::reset_data();
+		YoOhw_COS_Reset_Guard::init();
+		$wpdb->delete( $wpdb->options, array( 'option_name' => 'yoohw_cos_operational_incidents' ) );
+		$this->with_busy_boundary( static function(): void {
+			YoOhw_COS_Loyalty_Integration::handle_points_log_created( 1, array(
+				'user_id' => 1, 'action' => 'points_redeem', 'amount' => -600, 'points_balance' => 100,
+			) );
+			YoOhw_COS_Loyalty_Integration::handle_points_log_created( 2, array(
+				'user_id' => 1, 'action' => 'points_earned', 'amount' => 10, 'points_balance' => 110,
+			) );
+		} );
+		$incident = $this->incidents()['loyalty:points_log_created'];
+		$this->assertSame( 'manual_replay_required', $incident['mode'] );
+		$this->assertSame( 2, $incident['count'] );
+	}
+
+	public function test_reset_preserves_new_incident_and_expires_old_records(): void {
+		global $wpdb;
+		YoOhw_COS_Customers::reset_data();
+		YoOhw_COS_Reset_Guard::init();
+		$wpdb->delete( $wpdb->options, array( 'option_name' => 'yoohw_cos_operational_incidents' ) );
+		$this->with_busy_boundary( static function(): void { YoOhw_COS_Blacklist_Manager_Integration::handle_order_suspected( array() ); } );
+		$first = $this->incidents();
+		$wpdb->query( 'COMMIT' );
 		YoOhw_COS_Reset_Guard::reset( function(): void {
 			list( $process, $pipes ) = $this->worker( 'notice-defer' );
 			fclose( $pipes[0] );
@@ -24,140 +190,294 @@ final class YCI_Reset_Link_Integrity_Test extends WP_UnitTestCase {
 			fclose( $pipes[1] ); fclose( $pipes[2] );
 			$this->assertSame( 0, proc_close( $process ), $error );
 			$this->assertIsArray( $reported );
-			$this->assertSame( $reported, $this->deferred_notice() );
+			$this->assertSame( 2, $reported['items']['blacklist_core:order_suspected']['count'] );
 		} );
-		$this->assertTrue( YoOhw_COS_Reset_Guard::ready() );
-		$this->assertNotSame( $old['id'], $this->deferred_notice()['id'] ?? '' );
-		$this->assertNotSame( array(), $this->deferred_notice(), 'Reset must not erase a callback deferred after it began.' );
-		$wpdb->delete( $wpdb->options, array( 'option_name' => 'yoohw_cos_reset_notice' ) );
-	}
-
-	public function test_old_notice_form_cannot_dismiss_a_new_deferral(): void {
-		global $wpdb;
-		YoOhw_COS_Customers::reset_data();
+		$this->assertNotSame( $first['blacklist_core:order_suspected']['id'], $this->incidents()['blacklist_core:order_suspected']['id'] );
+		$items = $this->incidents();
+		$items['blacklist_core:order_suspected']['expires'] = time() - 1;
+		$wpdb->replace( $wpdb->options, array( 'option_name' => 'yoohw_cos_operational_incidents', 'option_value' => maybe_serialize( array( 'version' => 1, 'items' => $items ) ), 'autoload' => 'no' ) );
 		$user = self::factory()->user->create( array( 'role' => 'administrator' ) );
 		get_user_by( 'id', $user )->add_cap( 'manage_woocommerce' );
-		$old = array( 'id' => wp_generate_uuid4(), 'expires' => time() + DAY_IN_SECONDS );
-		$wpdb->replace( $wpdb->options, array( 'option_name' => 'yoohw_cos_reset_notice', 'option_value' => maybe_serialize( $old ), 'autoload' => 'no' ) );
-		$wpdb->query( 'COMMIT' );
-		$this->assertTrue( YoOhw_COS_Reset_Guard::enter() );
+		wp_set_current_user( $user );
+		ob_start(); YoOhw_COS_Reset_Guard::render_notice(); $this->assertSame( '', ob_get_clean() );
+		$this->assertSame( array(), $this->incidents() );
+	}
+
+	public function test_pending_reset_notice_is_state_derived(): void {
+		global $wpdb;
+		YoOhw_COS_Customers::reset_data();
+		$wpdb->delete( $wpdb->options, array( 'option_name' => 'yoohw_cos_operational_incidents' ) );
+		$user = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		get_user_by( 'id', $user )->add_cap( 'manage_woocommerce' );
+		wp_set_current_user( $user );
+		$state = YoOhw_COS_Reset_Guard::state();
+		update_option( YoOhw_COS_Reset_Guard::OPTION, array( 'epoch' => $state['epoch'], 'status' => 'pending' ), false );
+		ob_start(); YoOhw_COS_Reset_Guard::render_notice(); $first = ob_get_clean();
+		ob_start(); YoOhw_COS_Reset_Guard::render_notice(); $second = ob_get_clean();
+		$this->assertSame( $first, $second );
+		$this->assertStringContainsString( 'Reset requires recovery', $first );
+		YoOhw_COS_Customers::reset_data();
+		ob_start(); YoOhw_COS_Reset_Guard::render_notice(); $this->assertSame( '', ob_get_clean() );
+	}
+
+	public function test_legacy_deferred_signal_is_not_silently_lost(): void {
+		global $wpdb;
+		YoOhw_COS_Customers::reset_data();
+		$wpdb->delete( $wpdb->options, array( 'option_name' => 'yoohw_cos_operational_incidents' ) );
+		$wpdb->replace( $wpdb->options, array(
+			'option_name'  => 'yoohw_cos_reset_notice',
+			'option_value' => maybe_serialize( array( 'id' => wp_generate_uuid4(), 'expires' => time() + DAY_IN_SECONDS ) ),
+			'autoload'     => 'no',
+		) );
+		$user = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		get_user_by( 'id', $user )->add_cap( 'manage_woocommerce' );
+		wp_set_current_user( $user );
+		ob_start(); YoOhw_COS_Reset_Guard::render_notice(); $html = ob_get_clean();
+		$this->assertStringContainsString( 'Review recovery options', $html );
+		$this->assertArrayHasKey( 'customer_intelligence:legacy_deferred_unattributed', $this->incidents() );
+		$this->assertFalse( get_option( 'yoohw_cos_reset_notice', false ) );
+	}
+
+	private function with_flash_admin_request( string $script, array $params, callable $callback ): void {
+		global $pagenow;
+		$previous_script = $pagenow;
+		$previous_get = $_GET;
+		$previous_post = $_POST;
+		$previous_request = $_REQUEST;
+		$pagenow = $script;
+		$_GET = $params;
+		$_POST = array();
+		$_REQUEST = $params;
+		try { $callback(); }
+		finally { $pagenow = $previous_script; $_GET = $previous_get; $_POST = $previous_post; $_REQUEST = $previous_request; }
+	}
+
+	private function assert_notice_severity( string $html, string $message, string $severity ): void {
+		$document = new DOMDocument();
+		$previous_errors = libxml_use_internal_errors( true );
+		try { $this->assertTrue( $document->loadHTML( $html ) ); }
+		finally { libxml_clear_errors(); libxml_use_internal_errors( $previous_errors ); }
+		$xpath = new DOMXPath( $document );
+		$matches = array();
+		foreach ( $xpath->query( '//*[contains(concat(" ", normalize-space(@class), " "), " notice ")]' ) as $notice ) {
+			if ( false !== strpos( $notice->textContent, $message ) ) { $matches[] = $notice; }
+		}
+		$this->assertCount( 1, $matches, $message );
+		$this->assertContains( 'notice-' . $severity, preg_split( '/\s+/', $matches[0]->getAttribute( 'class' ) ), $message );
+	}
+
+	private function set_notice_operator(): void {
+		$user = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		get_user_by( 'id', $user )->add_cap( 'manage_woocommerce' );
+		wp_set_current_user( $user );
+	}
+
+	public function test_profile_remove_and_delete_confirmations_render_as_success(): void {
+		require_once ABSPATH . 'wp-admin/includes/admin.php';
+		YoOhw_COS_Customers::reset_data();
+		YoOhw_COS_Reset_Guard::init();
+		$this->set_notice_operator();
+		$customer = YoOhw_COS_Customers::create_customer( array( 'email' => 'notice-severity@example.test' ) );
+		$this->assertGreaterThan( 0, $customer );
+		$this->with_flash_admin_request( 'admin.php', array(
+			'page' => 'yoohw-customer-intelligence', 'customer_id' => $customer,
+			'tag_removed' => '1', 'segment_removed' => '1', 'note_deleted' => '1',
+		), function() use ( $customer ): void {
+			ob_start(); YoOhw_COS_Customer_Profile::render( $customer ); $html = ob_get_clean();
+			foreach ( array( 'Tag removed successfully.', 'Segment removed successfully.', 'Note deleted successfully.' ) as $message ) {
+				$this->assert_notice_severity( $html, $message, 'success' );
+			}
+		} );
+	}
+
+	public function test_reset_success_and_blocking_state_render_with_distinct_severity(): void {
+		require_once ABSPATH . 'wp-admin/includes/admin.php';
+		YoOhw_COS_Customers::reset_data();
+		YoOhw_COS_Reset_Guard::init();
+		$this->set_notice_operator();
+		$this->with_flash_admin_request( 'admin.php', array( 'page' => 'yoohw-customer-intelligence-settings', 'yoohw_cos_reset' => '1' ), function(): void {
+			ob_start(); YoOhw_COS_Admin_Menu::render_settings_page(); $html = ob_get_clean();
+			$this->assert_notice_severity( $html, 'Customer data has been reset.', 'success' );
+		} );
+		$state = YoOhw_COS_Reset_Guard::state();
+		update_option( YoOhw_COS_Reset_Guard::OPTION, array( 'epoch' => $state['epoch'], 'status' => 'pending' ), false );
 		try {
-			list( $process, $pipes ) = $this->worker( 'notice-defer' );
-			fclose( $pipes[0] );
-			$new = json_decode( (string) fgets( $pipes[1] ), true );
-			$error = stream_get_contents( $pipes[2] );
-			fclose( $pipes[1] ); fclose( $pipes[2] );
-			$this->assertSame( 0, proc_close( $process ), $error );
-			$this->assertIsArray( $new );
-			$this->assertNotSame( $old['id'], $new['id'] );
-		} finally { YoOhw_COS_Reset_Guard::leave(); }
-		$wpdb->query( 'COMMIT' ); // Release the boundary row lock before separate admin requests.
-		foreach ( array( $old, $new ) as $index => $notice ) {
-			list( $process, $pipes ) = $this->worker( 'notice-resolve' );
-			fwrite( $pipes[0], wp_json_encode( array( 'user' => $user, 'id' => $notice['id'] ) ) . "\n" );
-			fclose( $pipes[0] );
-			$body = stream_get_contents( $pipes[1] );
-			$error = stream_get_contents( $pipes[2] );
-			fclose( $pipes[1] ); fclose( $pipes[2] );
-			$this->assertSame( 0, proc_close( $process ), $error );
-			$this->assertSame( '', $body, $error );
-			$this->assertSame( 0 === $index ? $new : array(), $this->deferred_notice() );
-			$wpdb->query( 'COMMIT' ); // Release the test's locking read before the next separate request.
+			ob_start(); YoOhw_COS_Reset_Guard::render_notice(); $html = ob_get_clean();
+			$this->assert_notice_severity( $html, 'Customer Reset requires recovery.', 'warning' );
+		} finally { YoOhw_COS_Customers::reset_data(); }
+	}
+
+	public static function customers_result_severities(): array {
+		return array(
+			'no changes is informational' => array( 'no_changes', 'Bulk action did not change any selected customers.', 'info' ),
+			'invalid operation is an error' => array( 'missing_tag', 'Please select a tag before applying this bulk action.', 'error' ),
+		);
+	}
+
+	/** @dataProvider customers_result_severities */
+	public function test_customers_results_render_truthful_severity( string $result, string $message, string $severity ): void {
+		require_once ABSPATH . 'wp-admin/includes/admin.php';
+		YoOhw_COS_Customers::reset_data();
+		YoOhw_COS_Reset_Guard::init();
+		$this->set_notice_operator();
+		$this->with_flash_admin_request( 'admin.php', array( 'page' => 'yoohw-customer-intelligence', 'yoohw_customers_bulk_err' => $result ), function() use ( $message, $severity ): void {
+			ob_start(); YoOhw_COS_Admin_Menu::render_customers_page(); $html = ob_get_clean();
+			$this->assert_notice_severity( $html, $message, $severity );
+		} );
+	}
+
+	public static function cit_flash_routes(): array {
+		return array(
+			'customers and saved views' => array( 'yoohw-customer-intelligence', 'saved_view_notice', 'created' ),
+			'profile' => array( 'yoohw-customer-intelligence', 'note_added', '1' ),
+			'tasks' => array( 'yoohw-customer-intelligence-tasks', 'yoohw_task_error', 'invalid' ),
+			'tags' => array( 'yoohw-customer-intelligence-tags', 'yoohw_tag_deleted', '1' ),
+			'segments' => array( 'yoohw-customer-intelligence-segments', 'yoohw_segment_created', '1' ),
+			'settings' => array( 'yoohw-customer-intelligence-settings', 'yoohw_cos_reset', '1' ),
+		);
+	}
+
+	/** @dataProvider cit_flash_routes */
+	public function test_flash_result_is_consumed_once_and_url_is_cleaned( string $page, string $flag, string $value ): void {
+		$user = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $user );
+		$url = add_query_arg( array( 'page' => $page, $flag => $value ), admin_url( 'admin.php' ) );
+		$redirect = YoOhw_COS_Flash_Notices::tokenize_redirect( $url );
+		$this->assertStringContainsString( 'yoohw_cos_flash=', $redirect );
+		parse_str( (string) wp_parse_url( $redirect, PHP_URL_QUERY ), $params );
+		$this->with_flash_admin_request( 'admin.php', $params, function() use ( $flag, $value ): void {
+			YoOhw_COS_Flash_Notices::consume();
+			$this->assertSame( $value, $_GET[ $flag ] );
+			ob_start(); YoOhw_COS_Flash_Notices::clean_url(); $script = ob_get_clean();
+			$this->assertStringContainsString( 'replaceState', $script );
+			YoOhw_COS_Flash_Notices::consume();
+			$this->assertArrayNotHasKey( $flag, $_GET );
+			$this->assertArrayHasKey( 'page', $_GET );
+		} );
+	}
+
+	public static function unrelated_flash_routes(): array {
+		return array(
+			'other plugin' => array( 'admin.php', array( 'page' => 'other-plugin' ) ),
+			'unknown CIT prefix' => array( 'admin.php', array( 'page' => 'yoohw-customer-intelligence-other-plugin' ) ),
+			'core settings' => array( 'options-general.php', array() ),
+			'spoofed page on another script' => array( 'edit.php', array( 'page' => 'yoohw-customer-intelligence' ) ),
+			'order list' => array( 'admin.php', array( 'page' => 'wc-orders' ) ),
+			'ordinary post edit' => array( 'post.php', array( 'post' => '1', 'action' => 'edit' ) ),
+		);
+	}
+
+	/** @dataProvider unrelated_flash_routes */
+	public function test_unrelated_admin_flash_parameters_and_redirects_are_untouched( string $script, array $params ): void {
+		$user = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $user );
+		if ( 'post.php' === $script ) {
+			$params['post'] = (string) self::factory()->post->create( array( 'post_type' => 'post' ) );
+		}
+		$params += array( 'note_added' => '1', 'tag_added' => '1', 'saved_view_notice' => 'created', 'yoohw_task_created' => '1' );
+		$url = add_query_arg( $params, admin_url( $script ) );
+		$this->assertSame( $url, YoOhw_COS_Flash_Notices::tokenize_redirect( $url ) );
+		$this->with_flash_admin_request( $script, $params, function() use ( $params ): void {
+			YoOhw_COS_Flash_Notices::consume();
+			$this->assertSame( $params, $_GET );
+			ob_start(); YoOhw_COS_Flash_Notices::clean_url(); $this->assertSame( '', ob_get_clean() );
+		} );
+	}
+
+	public function test_order_edit_flash_only_consumes_cit_task_results(): void {
+		$user = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $user );
+		$order = wc_create_order();
+		$post = self::factory()->post->create( array( 'post_type' => 'shop_order' ) );
+		foreach ( array(
+			array( 'admin.php', array( 'page' => 'wc-orders', 'id' => $order->get_id(), 'action' => 'edit' ) ),
+			array( 'post.php', array( 'post' => $post, 'action' => 'edit' ) ),
+		) as list( $script, $params ) ) {
+			$generic_url = add_query_arg( $params + array( 'note_added' => '1' ), admin_url( $script ) );
+			$this->assertSame( $generic_url, YoOhw_COS_Flash_Notices::tokenize_redirect( $generic_url ) );
+			$params += array( 'yoohw_task_created' => '1', 'note_added' => '1', 'saved_view_notice' => 'created' );
+			$redirect = YoOhw_COS_Flash_Notices::tokenize_redirect( add_query_arg( $params, admin_url( $script ) ) );
+			$this->assertStringContainsString( 'yoohw_cos_flash=', $redirect );
+			parse_str( (string) wp_parse_url( $redirect, PHP_URL_QUERY ), $request );
+			$this->with_flash_admin_request( $script, $request, function(): void {
+				YoOhw_COS_Flash_Notices::consume();
+				$this->assertSame( '1', $_GET['yoohw_task_created'] );
+				ob_start(); YoOhw_COS_Flash_Notices::clean_url(); $cleaner = ob_get_clean();
+				$this->assertStringContainsString( 'yoohw_task_created', $cleaner );
+				$this->assertStringNotContainsString( 'note_added', $cleaner );
+				$this->assertStringNotContainsString( 'saved_view_notice', $cleaner );
+				YoOhw_COS_Flash_Notices::consume();
+				$this->assertArrayNotHasKey( 'yoohw_task_created', $_GET );
+				$this->assertSame( '1', $_GET['note_added'] );
+				$this->assertSame( 'created', $_GET['saved_view_notice'] );
+			} );
 		}
 	}
 
-	public function test_second_deferred_callback_in_same_request_survives_intervening_resolution(): void {
-		global $wpdb;
-		YoOhw_COS_Customers::reset_data();
+	public function test_unrelated_request_cannot_consume_a_cit_token_or_emit_its_url_cleaner(): void {
 		$user = self::factory()->user->create( array( 'role' => 'administrator' ) );
-		get_user_by( 'id', $user )->add_cap( 'manage_woocommerce' );
-		$wpdb->query( 'COMMIT' );
-		$other = new mysqli( 'localhost', DB_USER, DB_PASSWORD, DB_NAME, 0, getenv( 'YCI_TEST_ROOT' ) . '/mysql.sock' );
-		$name = $other->real_escape_string( YoOhw_COS_Reset_Guard::lock_name() );
-		$this->assertSame( '1', (string) $other->query( "SELECT GET_LOCK('" . $name . "', 0)" )->fetch_row()[0] );
-		try { YoOhw_COS_Blacklist_Manager_Integration::handle_order_suspected( array() ); }
-		finally { $other->query( "SELECT RELEASE_LOCK('" . $name . "')" ); }
-		$first = $this->deferred_notice();
-		$this->assertNotSame( array(), $first );
-		$wpdb->query( 'COMMIT' );
-		list( $process, $pipes ) = $this->worker( 'notice-resolve' );
-		fwrite( $pipes[0], wp_json_encode( array( 'user' => $user, 'id' => $first['id'] ) ) . "\n" );
-		fclose( $pipes[0] );
-		$body = stream_get_contents( $pipes[1] );
-		$error = stream_get_contents( $pipes[2] );
-		fclose( $pipes[1] ); fclose( $pipes[2] );
-		$this->assertSame( 0, proc_close( $process ), $error );
-		$this->assertSame( '', $body, $error );
-		$this->assertSame( array(), $this->deferred_notice() );
-		$wpdb->query( 'COMMIT' );
-		$this->assertSame( '1', (string) $other->query( "SELECT GET_LOCK('" . $name . "', 0)" )->fetch_row()[0] );
-		try { YoOhw_COS_Blacklist_Manager_Integration::handle_order_suspected( array() ); }
-		finally { $other->query( "SELECT RELEASE_LOCK('" . $name . "')" ); $other->close(); }
-		$this->assertNotSame( $first['id'], $this->deferred_notice()['id'] ?? '' );
-		$wpdb->delete( $wpdb->options, array( 'option_name' => 'yoohw_cos_reset_notice' ) );
+		wp_set_current_user( $user );
+		$url = YoOhw_COS_Flash_Notices::tokenize_redirect( admin_url( 'admin.php?page=yoohw-customer-intelligence&note_added=1' ) );
+		parse_str( (string) wp_parse_url( $url, PHP_URL_QUERY ), $cit );
+		$unrelated = array( 'page' => 'other-plugin', 'note_added' => '1', 'yoohw_cos_flash' => $cit['yoohw_cos_flash'] );
+		$this->with_flash_admin_request( 'admin.php', $unrelated, function() use ( $cit, $unrelated ): void {
+			YoOhw_COS_Flash_Notices::consume();
+			$this->assertSame( $unrelated, $_GET );
+			$_GET = $cit;
+			YoOhw_COS_Flash_Notices::consume();
+			$this->assertSame( '1', $_GET['note_added'], 'The unrelated request must not consume the CIT token.' );
+			$_GET = $unrelated;
+			ob_start(); YoOhw_COS_Flash_Notices::clean_url(); $this->assertSame( '', ob_get_clean() );
+		} );
 	}
 
-	public function test_deferred_notice_distinguishes_read_contention_and_recovery(): void {
+	public function test_incident_store_is_bounded_and_contains_no_callback_payload(): void {
 		global $wpdb;
 		YoOhw_COS_Customers::reset_data();
 		YoOhw_COS_Reset_Guard::init();
-		$user = self::factory()->user->create( array( 'role' => 'administrator' ) );
-		get_user_by( 'id', $user )->add_cap( 'manage_woocommerce' );
-		wp_set_current_user( $user );
-		delete_transient( 'yoohw_cos_reset_deferred' );
-		$wpdb->delete( $wpdb->options, array( 'option_name' => 'yoohw_cos_reset_notice' ) );
-		$other = new mysqli( 'localhost', DB_USER, DB_PASSWORD, DB_NAME, 0, getenv( 'YCI_TEST_ROOT' ) . '/mysql.sock' );
-		$name = $other->real_escape_string( YoOhw_COS_Reset_Guard::lock_name() );
-		$this->assertSame( '1', (string) $other->query( "SELECT GET_LOCK('" . $name . "', 0)" )->fetch_row()[0] );
-		try {
-			$this->assertSame( array(), YoOhw_COS_Reset_Guard::snapshot_rows( static function(): array { return array( array( 'id' => 1 ) ); } ) );
-			YoOhw_COS_Admin_Menu::render_dashboard_tasks_widget();
-			$this->assertSame( array(), $this->deferred_notice(), 'Read contention must not claim a lost writer.' );
-			YoOhw_COS_Migration_Runner::run_next_batch();
-			$this->assertSame( array(), $this->deferred_notice(), 'A rescheduled migration must not claim a lost event.' );
-			YoOhw_COS_Blacklist_Manager_Integration::handle_order_suspected( array() );
-		} finally { $other->query( "SELECT RELEASE_LOCK('" . $name . "')" ); $other->close(); }
-		$first = $this->deferred_notice();
-		$this->assertIsArray( $first );
-		ob_start();
-		YoOhw_COS_Reset_Guard::render_notice();
-		$this->assertStringContainsString( 'Recovery complete', ob_get_clean() );
+		$wpdb->delete( $wpdb->options, array( 'option_name' => 'yoohw_cos_operational_incidents' ) );
 		$state = YoOhw_COS_Reset_Guard::state();
 		update_option( YoOhw_COS_Reset_Guard::OPTION, array( 'epoch' => $state['epoch'], 'status' => 'pending' ), false );
-		ob_start();
-		YoOhw_COS_Reset_Guard::render_notice();
-		$this->assertStringContainsString( 'Reset requires recovery', ob_get_clean() );
-		$this->assertSame( $first, $this->deferred_notice(), 'Pending recovery must retain the signal.' );
+		for ( $index = 0; $index < 130; $index++ ) {
+			$this->assertFalse( YoOhw_COS_Reset_Guard::enter( array(
+				'source' => 'test_source',
+				'event'  => 'event_' . $index,
+				'mode'   => 'manual_replay_required',
+				'payload' => 'private-value-must-not-persist',
+			) ) );
+		}
+		$items = $this->incidents();
+		$this->assertCount( 128, $items );
+		$this->assertArrayHasKey( 'test_source:event_0', $items );
+		$this->assertArrayNotHasKey( 'test_source:event_129', $items );
+		$this->assertArrayHasKey( 'customer_intelligence:incident_capacity_reached', $items );
+		$this->assertStringNotContainsString( 'private-value-must-not-persist', maybe_serialize( $items ) );
 		YoOhw_COS_Customers::reset_data();
-		$this->assertSame( array(), $this->deferred_notice() );
-		ob_start();
-		YoOhw_COS_Reset_Guard::render_notice();
-		$this->assertSame( '', ob_get_clean() );
-		YoOhw_COS_Reset_Guard::init(); // A later normal request can report a new deferral.
-		$other = new mysqli( 'localhost', DB_USER, DB_PASSWORD, DB_NAME, 0, getenv( 'YCI_TEST_ROOT' ) . '/mysql.sock' );
-		$name = $other->real_escape_string( YoOhw_COS_Reset_Guard::lock_name() );
-		$this->assertSame( '1', (string) $other->query( "SELECT GET_LOCK('" . $name . "', 0)" )->fetch_row()[0] );
-		try { YoOhw_COS_Blacklist_Manager_Integration::handle_order_suspected( array() ); }
-		finally { $other->query( "SELECT RELEASE_LOCK('" . $name . "')" ); $other->close(); }
-		$this->assertNotSame( $first, $this->deferred_notice() );
-		$wpdb->delete( $wpdb->options, array( 'option_name' => 'yoohw_cos_reset_notice' ) );
+		$wpdb->delete( $wpdb->options, array( 'option_name' => 'yoohw_cos_operational_incidents' ) );
 	}
 
-	public function test_legacy_deferred_notice_retires_only_after_ready_boundary(): void {
+	public function test_unrecordable_transient_callback_fails_visibly(): void {
 		YoOhw_COS_Customers::reset_data();
-		$user = self::factory()->user->create( array( 'role' => 'administrator' ) );
-		get_user_by( 'id', $user )->add_cap( 'manage_woocommerce' );
-		wp_set_current_user( $user );
-		set_transient( 'yoohw_cos_reset_deferred', 1, DAY_IN_SECONDS );
+		YoOhw_COS_Reset_Guard::init();
 		$state = YoOhw_COS_Reset_Guard::state();
 		update_option( YoOhw_COS_Reset_Guard::OPTION, array( 'epoch' => $state['epoch'], 'status' => 'pending' ), false );
-		ob_start(); YoOhw_COS_Reset_Guard::render_notice(); ob_end_clean();
-		$this->assertSame( 1, get_transient( 'yoohw_cos_reset_deferred' ) );
-		YoOhw_COS_Customers::reset_data();
-		set_transient( 'yoohw_cos_reset_deferred', 1, DAY_IN_SECONDS );
-		ob_start(); YoOhw_COS_Reset_Guard::render_notice(); $html = ob_get_clean();
-		$this->assertSame( '', $html );
-		$this->assertFalse( get_transient( 'yoohw_cos_reset_deferred' ) );
+		$other = new mysqli( 'localhost', DB_USER, DB_PASSWORD, DB_NAME, 0, getenv( 'YCI_TEST_ROOT' ) . '/mysql.sock' );
+		$name = $other->real_escape_string( YoOhw_COS_Reset_Guard::lock_name() . '-notice' );
+		$this->assertSame( '1', (string) $other->query( "SELECT GET_LOCK('" . $name . "', 0)" )->fetch_row()[0] );
+		try {
+			YoOhw_COS_Reset_Guard::enter( array(
+				'source' => 'blacklist_premium',
+				'event' => 'js_proof_failed',
+				'mode' => 'manual_replay_required',
+			) );
+			$this->fail( 'A non-replayable callback must not disappear when its incident cannot be persisted.' );
+		} catch ( RuntimeException $exception ) {
+			$this->assertStringContainsString( 'could not persist', $exception->getMessage() );
+		} finally {
+			$other->query( "SELECT RELEASE_LOCK('" . $name . "')" );
+			$other->close();
+			YoOhw_COS_Customers::reset_data();
+		}
 	}
 
 	public function test_reset_reordered_profiles_cannot_transfer_an_old_order(): void {
@@ -2669,13 +2989,13 @@ final class YCI_Intelligence_Freshness_Test extends WP_UnitTestCase {
 		$this->assertSame( 'completed', $this->state()['status'] );
 		$this->clock_days = 1;
 		$other = new mysqli( 'localhost', DB_USER, DB_PASSWORD, DB_NAME, 0, getenv( 'YCI_TEST_ROOT' ) . '/mysql.sock' );
-		delete_option( 'yoohw_cos_reset_notice' );
+		delete_option( 'yoohw_cos_operational_incidents' );
 		$name = $other->real_escape_string( YoOhw_COS_Reset_Guard::lock_name() );
 		$this->assertSame( '1', (string) $other->query( "SELECT GET_LOCK('" . $name . "', 0)" )->fetch_row()[0] );
 		try { do_action_ref_array( YoOhw_COS_Customers::RISK_SCORE_REFRESH_HOOK, array() ); }
 		finally { $other->query( "SELECT RELEASE_LOCK('" . $name . "')" ); $other->close(); }
 		$this->assertNotFalse( wp_next_scheduled( YoOhw_COS_Customers::RISK_SCORE_REFRESH_HOOK, array( 0 ) ) );
-		$this->assertFalse( get_option( 'yoohw_cos_reset_notice', false ), 'A rescheduled job must not leave manual-replay warning state.' );
+		$this->assertFalse( get_option( 'yoohw_cos_operational_incidents', false ), 'A rescheduled job must not leave manual-replay warning state.' );
 		$this->wake( array( 0 ) );
 		fwrite( STDERR, 'LOCK RETRY ' . wp_json_encode( array( 'state' => $this->state()['status'], 'persisted' => YoOhw_COS_Customers::get_customer( $id )['customer_status'], 'live' => YoOhw_COS_Intelligence::calculate_customer_status( YoOhw_COS_Customers::get_customer( $id ) ), 'next_retry' => wp_next_scheduled( YoOhw_COS_Customers::RISK_SCORE_REFRESH_HOOK, array( 0 ) ) ) ) . "\n" );
 		$this->reads( $id, 'at_risk', 'repeat' );

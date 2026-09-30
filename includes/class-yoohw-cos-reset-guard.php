@@ -10,8 +10,11 @@ final class YoOhw_COS_Reset_Guard {
 	private static $resetting = false;
 	private static $connection = 0;
 	private const DEFERRED_NOTICE = 'yoohw_cos_reset_deferred';
-	private const NOTICE_OPTION = 'yoohw_cos_reset_notice';
+	private const NOTICE_OPTION = 'yoohw_cos_operational_incidents';
+	private const LEGACY_NOTICE_OPTION = 'yoohw_cos_reset_notice';
 	private const NOTICE_LOCK_SUFFIX = '-notice';
+	private const INCIDENT_TTL = 2592000;
+	private const INCIDENT_LIMIT = 128;
 
 	public static function init(): void {
 		self::$request_epoch = self::epoch();
@@ -53,29 +56,29 @@ final class YoOhw_COS_Reset_Guard {
 		);
 	}
 
-	/** Every guarded operation starts before resolving any CRM reference. Report only when the caller lacks an owned retry source. */
-	public static function enter( bool $report_deferred = false ): bool {
+	/** Every guarded operation starts before resolving any CRM reference. */
+	public static function enter( $incident = null ): bool {
 		global $wpdb;
 		if ( self::$resetting ) {
-			return self::deferred( $report_deferred );
+			return self::deferred( $incident );
 		}
 		if ( null === self::$request_epoch ) {
 			self::init();
 		}
 		if ( self::$depth > 0 ) {
 			if ( ! self::owns_lock() || ! self::ready() || self::$request_epoch !== self::epoch() ) {
-				return self::deferred( $report_deferred );
+				return self::deferred( $incident );
 			}
 			self::$depth++;
 			return true;
 		}
 		if ( '1' !== (string) $wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK(%s, 2)', self::lock_name() ) ) ) {
-			return self::deferred( $report_deferred );
+			return self::deferred( $incident );
 		}
 		self::$connection = (int) $wpdb->get_var( 'SELECT CONNECTION_ID()' );
 		if ( ! self::ready() || self::$request_epoch !== self::epoch() ) {
 			self::unlock();
-			return self::deferred( $report_deferred );
+			return self::deferred( $incident );
 		}
 		self::$depth = 1;
 		return true;
@@ -128,24 +131,66 @@ final class YoOhw_COS_Reset_Guard {
 		}
 	}
 
-	private static function deferred( bool $report ): bool {
-		if ( $report && ! self::$resetting ) {
-			if ( self::lock_notice() ) {
-				try {
-					$notice = array( 'id' => wp_generate_uuid4(), 'expires' => time() + DAY_IN_SECONDS );
-					self::write_notice( $notice );
-				} finally { self::unlock_notice(); }
+	private static function deferred( $incident ): bool {
+		if ( is_array( $incident ) && ! self::$resetting ) {
+			if ( ! self::valid_incident( $incident ) || ! self::lock_notice() ) {
+				throw new RuntimeException( 'YCI could not persist a deferred operation; retry its source callback.' );
 			}
-			// No customer payload or credentials are retained in this operational notice.
-			error_log( 'YCI reset boundary deferred a customer-data operation; retry its source after recovery.' );
+			try {
+				$items = self::notice_state( true );
+				$key   = $incident['source'] . ':' . $incident['event'];
+				$now   = time();
+				$old   = $items[ $key ] ?? array();
+				if ( isset( $items[ $key ] ) || count( $items ) < self::INCIDENT_LIMIT - 1 ) {
+					$items[ $key ] = array(
+						'id'         => wp_generate_uuid4(),
+						'source'     => $incident['source'],
+						'event'      => $incident['event'],
+						'mode'       => $incident['mode'],
+						'first_seen' => isset( $old['first_seen'] ) ? $old['first_seen'] : $now,
+						'last_seen'  => $now,
+						'count'      => min( 999999, (int) ( $old['count'] ?? 0 ) + 1 ),
+						'expires'    => $now + self::INCIDENT_TTL,
+					);
+					if ( ! self::write_notice( $items ) ) {
+						throw new RuntimeException( 'YCI could not persist a deferred operation; retry its source callback.' );
+					}
+				} else {
+					$capacity_key = 'customer_intelligence:incident_capacity_reached';
+					$capacity = $items[ $capacity_key ] ?? array();
+					$items[ $capacity_key ] = array(
+						'id'         => wp_generate_uuid4(),
+						'source'     => 'customer_intelligence',
+						'event'      => 'incident_capacity_reached',
+						'mode'       => 'manual_replay_required',
+						'first_seen' => $capacity['first_seen'] ?? $now,
+						'last_seen'  => $now,
+						'count'      => min( 999999, (int) ( $capacity['count'] ?? 0 ) + 1 ),
+						'expires'    => $now + self::INCIDENT_TTL,
+					);
+					if ( ! self::write_notice( $items ) ) {
+						throw new RuntimeException( 'YCI could not persist a deferred operation; retry its source callback.' );
+					}
+					error_log( 'YCI operational incident capacity reached; existing obligations retained.' );
+				}
+			} finally { self::unlock_notice(); }
+			error_log( 'YCI reset boundary deferred an integration callback: ' . $incident['source'] . ':' . $incident['event'] );
 		}
 		return false;
+	}
+
+	private static function valid_incident( array $incident ): bool {
+		return isset( $incident['source'], $incident['event'], $incident['mode'] )
+			&& is_string( $incident['source'] ) && is_string( $incident['event'] )
+			&& preg_match( '/^[a-z0-9_]{1,64}$/D', $incident['source'] )
+			&& preg_match( '/^[a-z0-9_]{1,64}$/D', $incident['event'] )
+			&& in_array( $incident['mode'], array( 'automatic_retry', 'backfill_available', 'manual_replay_required' ), true );
 	}
 
 	public static function render_notice(): void {
 		if ( ! current_user_can( 'manage_woocommerce' ) ) { return; }
 		if ( ! self::ready() ) {
-			echo '<div class="notice notice-warning"><p>' . esc_html__( 'Customer Reset requires recovery. Retry Reset before customer-data operations.', 'yoohw-customer-intelligence' ) . '</p></div>';
+			echo '<div class="notice notice-warning" role="alert"><p>' . esc_html__( 'Customer Reset requires recovery. Retry Reset before customer-data operations.', 'yoohw-customer-intelligence' ) . '</p></div>';
 			return;
 		}
 		if ( ! self::notice_exists() && false === get_transient( self::DEFERRED_NOTICE ) ) { return; }
@@ -153,21 +198,66 @@ final class YoOhw_COS_Reset_Guard {
 		try {
 			if ( ! self::lock_notice() ) { return; }
 			try {
-				$notice = self::notice_state();
-				// Earlier releases did not identify the deferred source; retire their historical flag only at a ready boundary.
-				if ( false !== get_transient( self::DEFERRED_NOTICE ) ) { delete_transient( self::DEFERRED_NOTICE ); }
-				if ( array() === $notice ) {
-					self::delete_notice();
-					return;
-				}
+				$items = self::notice_state( true );
+				$items = self::migrate_legacy_notice( $items );
+				if ( array() === $items ) { self::delete_notice(); }
 			} finally { self::unlock_notice(); }
-			echo '<div class="notice notice-warning"><p>' . esc_html__( 'A customer-data operation was deferred. Retry the operation; integration events may require replay from their source. Resolve this notice after recovery.', 'yoohw-customer-intelligence' ) . '</p>';
+			if ( array() === $items ) { return; }
+			$url = admin_url( 'admin.php?page=yoohw-customer-intelligence-settings#yoohw-cos-incidents' );
+			$page = isset( $_GET['page'] ) && is_string( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
+			if ( 'yoohw-customer-intelligence-settings' !== $page ) {
+				echo '<div class="notice notice-warning" role="status"><p>' . esc_html( sprintf(
+					/* translators: %d: number of unresolved operations. */
+					_n( 'Customer Intelligence has %d unresolved operation.', 'Customer Intelligence has %d unresolved operations.', count( $items ), 'yoohw-customer-intelligence' ),
+					count( $items )
+				) ) . ' <a href="' . esc_url( $url ) . '">' . esc_html__( 'Review recovery options', 'yoohw-customer-intelligence' ) . '</a></p></div>';
+			}
+		} finally { self::leave(); }
+	}
+
+	public static function render_incidents(): void {
+		if ( ! current_user_can( 'manage_woocommerce' ) ) { return; }
+		$items = self::notice_state();
+		echo '<section id="yoohw-cos-incidents"><h2>' . esc_html__( 'Operational recovery', 'yoohw-customer-intelligence' ) . '</h2>';
+		if ( ! $items ) {
+			echo '<p>' . esc_html__( 'No unresolved operations are recorded.', 'yoohw-customer-intelligence' ) . '</p></section>';
+			return;
+		}
+		foreach ( $items as $key => $item ) {
+			$sources = array(
+				'blacklist_core'    => __( 'Blacklist Manager Core', 'yoohw-customer-intelligence' ),
+				'blacklist_premium' => __( 'Blacklist Manager Premium', 'yoohw-customer-intelligence' ),
+				'loyalty'           => __( 'Loyalty', 'yoohw-customer-intelligence' ),
+			);
+			$source_label = $sources[ $item['source'] ] ?? $item['source'];
+			echo '<div class="notice notice-warning inline" role="status"><p><strong>' . esc_html( $source_label . ' / ' . str_replace( '_', ' ', $item['event'] ) ) . '</strong> — ';
+			if ( 'customer_intelligence:incident_capacity_reached' === $key ) {
+				echo esc_html__( 'The incident log reached its capacity. Check integration sources for missed operations before acknowledging this warning.', 'yoohw-customer-intelligence' );
+			} elseif ( 'customer_intelligence:legacy_deferred_unattributed' === $key ) {
+				echo esc_html__( 'A deferred callback was recorded by an earlier version without its source. Review integration activity and recover any missed operation before acknowledging this record.', 'yoohw-customer-intelligence' );
+			} elseif ( 'backfill_available' === $item['mode'] ) {
+				echo esc_html__( 'A source backfill is available. Run the relevant sync or backfill, then acknowledge this record.', 'yoohw-customer-intelligence' );
+				$target = 'loyalty:intelligence_recalculated' === $key ? '#yoohw-cos-recalculate-intelligence' : '#yoohw-cos-blacklist-signals';
+				echo ' <a href="' . esc_url( admin_url( 'admin.php?page=yoohw-customer-intelligence-settings' . $target ) ) . '">' . esc_html__( 'Open recovery operation', 'yoohw-customer-intelligence' ) . '</a>';
+			} elseif ( 'automatic_retry' === $item['mode'] ) {
+				echo esc_html__( 'Retry the CIT operation, then acknowledge this record.', 'yoohw-customer-intelligence' );
+				echo ' <a href="' . esc_url( admin_url( 'admin.php?page=yoohw-customer-intelligence-settings#yoohw-cos-recalculate-intelligence' ) ) . '">' . esc_html__( 'Open recalculation', 'yoohw-customer-intelligence' ) . '</a>';
+			} else {
+				echo esc_html__( 'This callback has no CIT replay source. Replay or recover it at the source before acknowledging this record.', 'yoohw-customer-intelligence' );
+			}
+			echo '</p><p>' . esc_html( sprintf(
+				/* translators: %d: number of deferred callback occurrences. */
+				__( 'Occurrences: %d', 'yoohw-customer-intelligence' ),
+				$item['count']
+			) ) . '</p>';
 			echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
 			echo '<input type="hidden" name="action" value="yoohw_cos_resolve_reset_notice" />';
-			echo '<input type="hidden" name="notice_id" value="' . esc_attr( $notice['id'] ) . '" />';
+			echo '<input type="hidden" name="incident_key" value="' . esc_attr( $key ) . '" />';
+			echo '<input type="hidden" name="notice_id" value="' . esc_attr( $item['id'] ) . '" />';
 			wp_nonce_field( 'yoohw_cos_resolve_reset_notice' );
-			echo '<p><button type="submit" class="button">' . esc_html__( 'Recovery complete', 'yoohw-customer-intelligence' ) . '</button></p></form></div>';
-		} finally { self::leave(); }
+			echo '<p><button type="submit" class="button">' . esc_html__( 'Acknowledge after recovery', 'yoohw-customer-intelligence' ) . '</button></p></form></div>';
+		}
+		echo '</section>';
 	}
 
 	public static function resolve_notice(): void {
@@ -177,12 +267,16 @@ final class YoOhw_COS_Reset_Guard {
 		try {
 			if ( ! self::lock_notice() ) { wp_die( esc_html( self::rejection_message() ), '', array( 'response' => 409 ) ); }
 			try {
-				$notice = self::notice_state( true );
+				$items = self::notice_state( true );
+				$key = isset( $_POST['incident_key'] ) && is_string( $_POST['incident_key'] ) ? wp_unslash( $_POST['incident_key'] ) : '';
 				$id = isset( $_POST['notice_id'] ) && is_string( $_POST['notice_id'] ) ? wp_unslash( $_POST['notice_id'] ) : '';
-				if ( $notice && $id === $notice['id'] ) { self::delete_notice(); }
+				if ( isset( $items[ $key ] ) && $id === $items[ $key ]['id'] ) {
+					unset( $items[ $key ] );
+					self::write_notice( $items );
+				}
 			} finally { self::unlock_notice(); }
 		} finally { self::leave(); }
-		wp_safe_redirect( admin_url( 'admin.php?page=yoohw-customer-intelligence' ) );
+		wp_safe_redirect( admin_url( 'admin.php?page=yoohw-customer-intelligence-settings#yoohw-cos-incidents' ) );
 		exit;
 	}
 
@@ -216,25 +310,73 @@ final class YoOhw_COS_Reset_Guard {
 	private static function notice_state( bool $current = false ): array {
 		global $wpdb;
 		$value = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, self::NOTICE_OPTION ) . ( $current ? ' FOR UPDATE' : '' ) );
-		$notice = maybe_unserialize( $value );
-		return is_array( $notice ) && isset( $notice['id'], $notice['expires'] )
-			&& is_string( $notice['id'] ) && preg_match( '/^[a-f0-9-]{36}$/D', $notice['id'] )
-			&& is_int( $notice['expires'] ) && $notice['expires'] > time() ? $notice : array();
+		if ( '' !== $wpdb->last_error ) {
+			throw new RuntimeException( 'YCI could not read deferred operations; retry the request.' );
+		}
+		$stored = maybe_unserialize( $value );
+		$items = array();
+		if ( ! is_array( $stored ) || 1 !== ( $stored['version'] ?? null ) || ! isset( $stored['items'] ) || ! is_array( $stored['items'] ) ) {
+			return $items;
+		}
+		foreach ( $stored['items'] as $key => $item ) {
+			if ( count( $items ) >= self::INCIDENT_LIMIT ) { break; }
+			if ( ! is_array( $item ) || ! self::valid_incident( $item )
+				|| $key !== $item['source'] . ':' . $item['event']
+				|| ! isset( $item['id'], $item['first_seen'], $item['last_seen'], $item['count'], $item['expires'] )
+				|| ! is_string( $item['id'] ) || ! preg_match( '/^[a-f0-9-]{36}$/D', $item['id'] )
+				|| ! is_int( $item['first_seen'] ) || ! is_int( $item['last_seen'] )
+				|| ! is_int( $item['count'] ) || ! is_int( $item['expires'] ) || $item['expires'] <= time() ) {
+				continue;
+			}
+			$items[ $key ] = $item;
+		}
+		return $items;
 	}
 
 	private static function notice_exists(): bool {
 		global $wpdb;
-		return null !== $wpdb->get_var( $wpdb->prepare( 'SELECT option_id FROM %i WHERE option_name = %s', $wpdb->options, self::NOTICE_OPTION ) );
+		return null !== $wpdb->get_var( $wpdb->prepare( 'SELECT option_id FROM %i WHERE option_name IN (%s, %s)', $wpdb->options, self::NOTICE_OPTION, self::LEGACY_NOTICE_OPTION ) );
 	}
 
-	private static function write_notice( array $notice ): bool {
+	private static function write_notice( array $items ): bool {
 		global $wpdb;
-		return false !== $wpdb->replace( $wpdb->options, array( 'option_name' => self::NOTICE_OPTION, 'option_value' => maybe_serialize( $notice ), 'autoload' => 'no' ), array( '%s', '%s', '%s' ) );
+		return false !== $wpdb->replace( $wpdb->options, array( 'option_name' => self::NOTICE_OPTION, 'option_value' => maybe_serialize( array( 'version' => 1, 'items' => $items ) ), 'autoload' => 'no' ), array( '%s', '%s', '%s' ) );
 	}
 
 	private static function delete_notice(): void {
 		global $wpdb;
 		$wpdb->delete( $wpdb->options, array( 'option_name' => self::NOTICE_OPTION ), array( '%s' ) );
+	}
+
+	private static function migrate_legacy_notice( array $items ): array {
+		global $wpdb;
+		$value = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, self::LEGACY_NOTICE_OPTION ) );
+		$legacy = maybe_unserialize( $value );
+		$has_transient = false !== get_transient( self::DEFERRED_NOTICE );
+		$active_legacy = is_array( $legacy ) && isset( $legacy['id'], $legacy['expires'] )
+			&& is_string( $legacy['id'] ) && preg_match( '/^[a-f0-9-]{36}$/D', $legacy['id'] )
+			&& is_int( $legacy['expires'] ) && $legacy['expires'] > time();
+		if ( ( $active_legacy || $has_transient ) && ! isset( $items['customer_intelligence:legacy_deferred_unattributed'] ) ) {
+			if ( count( $items ) >= self::INCIDENT_LIMIT - 1 ) {
+				// Retain the legacy signal until a slot is available; never discard a recovery obligation.
+				return $items;
+			}
+			$now = time();
+			$items['customer_intelligence:legacy_deferred_unattributed'] = array(
+				'id'         => wp_generate_uuid4(),
+				'source'     => 'customer_intelligence',
+				'event'      => 'legacy_deferred_unattributed',
+				'mode'       => 'manual_replay_required',
+				'first_seen' => $now,
+				'last_seen'  => $now,
+				'count'      => 1,
+				'expires'    => $now + self::INCIDENT_TTL,
+			);
+			if ( ! self::write_notice( $items ) ) { return self::notice_state( true ); }
+		}
+		if ( $has_transient ) { delete_transient( self::DEFERRED_NOTICE ); }
+		$wpdb->delete( $wpdb->options, array( 'option_name' => self::LEGACY_NOTICE_OPTION ), array( '%s' ) );
+		return $items;
 	}
 
 	private static function persist( array $state ): void {
@@ -253,11 +395,6 @@ final class YoOhw_COS_Reset_Guard {
 		self::$connection = (int) $wpdb->get_var( 'SELECT CONNECTION_ID()' );
 		self::$resetting = true;
 		try {
-			$notice_before_reset = array();
-			if ( self::lock_notice() ) {
-				try { $notice_before_reset = self::notice_state(); }
-				finally { self::unlock_notice(); }
-			}
 			$state = self::state();
 			if ( null !== $expected_epoch && $expected_epoch !== $state['epoch'] && 'ready' === $state['status'] ) {
 				return true; // A duplicate submission must not clear newly rebuilt data.
@@ -275,13 +412,8 @@ final class YoOhw_COS_Reset_Guard {
 			$state['status'] = 'ready';
 			self::persist( $state );
 			self::$request_epoch = $state['epoch'];
-			if ( $notice_before_reset && self::lock_notice() ) {
-				try {
-					if ( $notice_before_reset === self::notice_state( true ) ) {
-						self::delete_notice();
-					}
-				} finally { self::unlock_notice(); }
-			}
+			// Reset completion alone does not prove an integration callback was replayed.
+			// Incidents remain until the source obligation is addressed and acknowledged.
 			return true;
 		} finally {
 			self::$resetting = false;

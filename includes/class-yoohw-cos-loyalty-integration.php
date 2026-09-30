@@ -110,7 +110,8 @@ final class YoOhw_COS_Loyalty_Integration {
 	}
 
 	public static function handle_points_log_created( int $log_id, array $payload, array $context = array() ): void {
-		if ( ! YoOhw_COS_Reset_Guard::enter( true ) ) {
+		// The one-time legacy log backfill does not replay automation tasks or rerun after completion.
+		if ( ! YoOhw_COS_Reset_Guard::enter( array( 'source' => 'loyalty', 'event' => 'points_log_created', 'mode' => 'manual_replay_required' ) ) ) {
 			return;
 		}
 		try {
@@ -138,7 +139,7 @@ final class YoOhw_COS_Loyalty_Integration {
 	}
 
 	public static function handle_loyalty_role_updated( int $user_id, string $new_role, string $old_role = '' ): void {
-		if ( ! YoOhw_COS_Reset_Guard::enter( true ) ) {
+		if ( ! YoOhw_COS_Reset_Guard::enter( array( 'source' => 'loyalty', 'event' => 'loyalty_role_updated', 'mode' => 'manual_replay_required' ) ) ) {
 			return;
 		}
 		try {
@@ -197,7 +198,7 @@ final class YoOhw_COS_Loyalty_Integration {
 	}
 
 	public static function handle_customer_intelligence_recalculated( int $customer_id, array $customer, array $previous_customer = array(), bool $updated = false ): void {
-		if ( ! YoOhw_COS_Reset_Guard::enter( true ) ) {
+		if ( ! YoOhw_COS_Reset_Guard::enter( array( 'source' => 'loyalty', 'event' => 'intelligence_recalculated', 'mode' => 'backfill_available' ) ) ) {
 			return;
 		}
 		try {
@@ -218,7 +219,7 @@ final class YoOhw_COS_Loyalty_Integration {
 	}
 
 	public static function handle_points_reconciliation_issue_found( array $issue, array $context = array() ): void {
-		if ( ! YoOhw_COS_Reset_Guard::enter( true ) ) {
+		if ( ! YoOhw_COS_Reset_Guard::enter( array( 'source' => 'loyalty', 'event' => 'points_reconciliation_issue', 'mode' => 'manual_replay_required' ) ) ) {
 			return;
 		}
 		try {

@@ -72,7 +72,11 @@
 					error: function(xhr) {
 						if (xhr.status === 409) {
 							$field.prop('disabled', true);
-							$('<p class="notice notice-error"></p>').text(xhr.responseJSON.data.message).insertAfter($field);
+						var $message = $field.siblings('.yoohw-cos-reset-conflict');
+						if (!$message.length) {
+							$message = $('<p class="notice notice-error yoohw-cos-reset-conflict" role="alert"></p>').insertAfter($field);
+						}
+						$message.text(xhr.responseJSON.data.message);
 						}
 					},
 					cache: true

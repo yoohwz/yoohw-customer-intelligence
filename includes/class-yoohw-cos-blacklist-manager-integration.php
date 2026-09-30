@@ -29,7 +29,7 @@ final class YoOhw_COS_Blacklist_Manager_Integration {
 	}
 
 	public static function handle_order_suspected( $payload, $order = null ): void {
-		if ( ! YoOhw_COS_Reset_Guard::enter( true ) ) {
+		if ( ! YoOhw_COS_Reset_Guard::enter( array( 'source' => 'blacklist_core', 'event' => 'order_suspected', 'mode' => 'backfill_available' ) ) ) {
 			return;
 		}
 		try {
@@ -50,7 +50,7 @@ final class YoOhw_COS_Blacklist_Manager_Integration {
 	}
 
 	public static function handle_order_blocked( $payload, $order = null ): void {
-		if ( ! YoOhw_COS_Reset_Guard::enter( true ) ) {
+		if ( ! YoOhw_COS_Reset_Guard::enter( array( 'source' => 'blacklist_core', 'event' => 'order_blocked', 'mode' => 'backfill_available' ) ) ) {
 			return;
 		}
 		try {
@@ -71,7 +71,7 @@ final class YoOhw_COS_Blacklist_Manager_Integration {
 	}
 
 	public static function handle_order_blacklist_removed( $payload, $order = null ): void {
-		if ( ! YoOhw_COS_Reset_Guard::enter( true ) ) {
+		if ( ! YoOhw_COS_Reset_Guard::enter( array( 'source' => 'blacklist_core', 'event' => 'blacklist_removed', 'mode' => 'manual_replay_required' ) ) ) {
 			return;
 		}
 		try {
@@ -92,7 +92,7 @@ final class YoOhw_COS_Blacklist_Manager_Integration {
 	}
 
 	public static function handle_order_suspect_detected( $payload, $order = null ): void {
-		if ( ! YoOhw_COS_Reset_Guard::enter( true ) ) {
+		if ( ! YoOhw_COS_Reset_Guard::enter( array( 'source' => 'blacklist_core', 'event' => 'suspect_detected', 'mode' => 'backfill_available' ) ) ) {
 			return;
 		}
 		try {
@@ -113,7 +113,12 @@ final class YoOhw_COS_Blacklist_Manager_Integration {
 	}
 
 	public static function handle_dashboard_row_changed( $event, $id, $row = array(), $record_type = 'main' ): void {
-		if ( ! YoOhw_COS_Reset_Guard::enter( true ) ) {
+		$deleted = 'deleted' === sanitize_key( (string) $event );
+		if ( ! YoOhw_COS_Reset_Guard::enter( array(
+			'source' => 'blacklist_core',
+			'event'  => $deleted ? 'dashboard_row_deleted' : 'dashboard_row_changed',
+			'mode'   => $deleted ? 'manual_replay_required' : 'backfill_available',
+		) ) ) {
 			return;
 		}
 		try {

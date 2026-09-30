@@ -1155,7 +1155,7 @@ final class YoOhw_COS_Customer_Profile {
 		}
 
 		if ( ! empty( $_GET['tag_removed'] ) ) {
-			echo '<div class="notice notice-warning inline"><p>';
+			echo '<div class="notice notice-success inline"><p>';
 			echo esc_html__( 'Tag removed successfully.', 'yoohw-customer-intelligence' );
 			echo '</p></div>';
 		}
@@ -1209,7 +1209,7 @@ final class YoOhw_COS_Customer_Profile {
 		}
 
 		if ( ! empty( $_GET['segment_removed'] ) ) {
-			echo '<div class="notice notice-warning inline"><p>';
+			echo '<div class="notice notice-success inline"><p>';
 			echo esc_html__( 'Segment removed successfully.', 'yoohw-customer-intelligence' );
 			echo '</p></div>';
 		}
@@ -1451,7 +1451,7 @@ final class YoOhw_COS_Customer_Profile {
 		}
 
 		if ( ! empty( $_GET['note_deleted'] ) ) {
-			echo '<div class="notice notice-warning inline"><p>';
+			echo '<div class="notice notice-success inline"><p>';
 			echo esc_html__( 'Note deleted successfully.', 'yoohw-customer-intelligence' );
 			echo '</p></div>';
 		}
