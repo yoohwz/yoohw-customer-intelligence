@@ -242,10 +242,82 @@ final class YCI_Reset_Link_Integrity_Test extends WP_UnitTestCase {
 		global $pagenow;
 		$previous_script = $pagenow;
 		$previous_get = $_GET;
+		$previous_post = $_POST;
+		$previous_request = $_REQUEST;
 		$pagenow = $script;
 		$_GET = $params;
+		$_POST = array();
+		$_REQUEST = $params;
 		try { $callback(); }
-		finally { $pagenow = $previous_script; $_GET = $previous_get; }
+		finally { $pagenow = $previous_script; $_GET = $previous_get; $_POST = $previous_post; $_REQUEST = $previous_request; }
+	}
+
+	private function assert_notice_severity( string $html, string $message, string $severity ): void {
+		$document = new DOMDocument();
+		$previous_errors = libxml_use_internal_errors( true );
+		try { $this->assertTrue( $document->loadHTML( $html ) ); }
+		finally { libxml_clear_errors(); libxml_use_internal_errors( $previous_errors ); }
+		$xpath = new DOMXPath( $document );
+		$matches = array();
+		foreach ( $xpath->query( '//*[contains(concat(" ", normalize-space(@class), " "), " notice ")]' ) as $notice ) {
+			if ( false !== strpos( $notice->textContent, $message ) ) { $matches[] = $notice; }
+		}
+		$this->assertCount( 1, $matches, $message );
+		$this->assertContains( 'notice-' . $severity, preg_split( '/\s+/', $matches[0]->getAttribute( 'class' ) ), $message );
+	}
+
+	public function test_profile_remove_and_delete_confirmations_render_as_success(): void {
+		require_once ABSPATH . 'wp-admin/includes/admin.php';
+		YoOhw_COS_Customers::reset_data();
+		YoOhw_COS_Reset_Guard::init();
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		$customer = YoOhw_COS_Customers::create_customer( array( 'email' => 'notice-severity@example.test' ) );
+		$this->assertGreaterThan( 0, $customer );
+		$this->with_flash_admin_request( 'admin.php', array(
+			'page' => 'yoohw-customer-intelligence', 'customer_id' => $customer,
+			'tag_removed' => '1', 'segment_removed' => '1', 'note_deleted' => '1',
+		), function() use ( $customer ): void {
+			ob_start(); YoOhw_COS_Customer_Profile::render( $customer ); $html = ob_get_clean();
+			foreach ( array( 'Tag removed successfully.', 'Segment removed successfully.', 'Note deleted successfully.' ) as $message ) {
+				$this->assert_notice_severity( $html, $message, 'success' );
+			}
+		} );
+	}
+
+	public function test_reset_success_and_blocking_state_render_with_distinct_severity(): void {
+		require_once ABSPATH . 'wp-admin/includes/admin.php';
+		YoOhw_COS_Customers::reset_data();
+		YoOhw_COS_Reset_Guard::init();
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		$this->with_flash_admin_request( 'admin.php', array( 'page' => 'yoohw-customer-intelligence-settings', 'yoohw_cos_reset' => '1' ), function(): void {
+			ob_start(); YoOhw_COS_Admin_Menu::render_settings_page(); $html = ob_get_clean();
+			$this->assert_notice_severity( $html, 'Customer data has been reset.', 'success' );
+		} );
+		$state = YoOhw_COS_Reset_Guard::state();
+		update_option( YoOhw_COS_Reset_Guard::OPTION, array( 'epoch' => $state['epoch'], 'status' => 'pending' ), false );
+		try {
+			ob_start(); YoOhw_COS_Reset_Guard::render_notice(); $html = ob_get_clean();
+			$this->assert_notice_severity( $html, 'Customer Reset requires recovery.', 'warning' );
+		} finally { YoOhw_COS_Customers::reset_data(); }
+	}
+
+	public static function customers_result_severities(): array {
+		return array(
+			'no changes is informational' => array( 'no_changes', 'Bulk action did not change any selected customers.', 'info' ),
+			'invalid operation is an error' => array( 'missing_tag', 'Please select a tag before applying this bulk action.', 'error' ),
+		);
+	}
+
+	/** @dataProvider customers_result_severities */
+	public function test_customers_results_render_truthful_severity( string $result, string $message, string $severity ): void {
+		require_once ABSPATH . 'wp-admin/includes/admin.php';
+		YoOhw_COS_Customers::reset_data();
+		YoOhw_COS_Reset_Guard::init();
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		$this->with_flash_admin_request( 'admin.php', array( 'page' => 'yoohw-customer-intelligence', 'yoohw_customers_bulk_err' => $result ), function() use ( $message, $severity ): void {
+			ob_start(); YoOhw_COS_Admin_Menu::render_customers_page(); $html = ob_get_clean();
+			$this->assert_notice_severity( $html, $message, $severity );
+		} );
 	}
 
 	public static function cit_flash_routes(): array {
