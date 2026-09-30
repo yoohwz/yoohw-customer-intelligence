@@ -54,11 +54,11 @@ never store them as workflow state, and never let them replace GitHub facts.
 
 Compute is selected by phase, not stored as task lifecycle state.
 
-- Root / ordinary implementation / correction: GPT-6 Sol / MEDIUM.
+- Root / ordinary implementation / correction: GPT-6.1 Sol / MEDIUM.
 - Controlled discovery or architecture when a separate Plan Review is actually needed:
-  GPT-6 Sol / HIGH.
-- Every fresh independent Technical Reviewer and re-reviewer: GPT-6 Sol / HIGH.
-- GPT-6 Sol / XHIGH is exceptional and requires a specific unresolved
+  GPT-6.1 Sol / HIGH.
+- Every fresh independent Technical Reviewer and re-reviewer: GPT-6.1 Sol / HIGH.
+- GPT-6.1 Sol / XHIGH is exceptional and requires a specific unresolved
   architecture/security reason.
 - GPT-6 Astra is exceptional manual escalation, not a governed default.
 
