@@ -7,7 +7,7 @@ Requires PHP: 7.4
 Requires Plugins: woocommerce
 WC requires at least: 8.2
 WC tested up to: 11.0
-Stable tag: 1.4.1
+Stable tag: 1.4.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -122,6 +122,14 @@ Archive removes a CRM profile from the main customer list. It does not delete Wo
 8. Static segment management.
 
 == Changelog ==
+
+= 1.4.2 =
+
+Oct 1, 2026.
+
+* Replaced the generic deferred-operation warning with source-aware Operational recovery records and clearer guidance in Customer Intelligence Settings, including supported Blacklist and Loyalty recovery links. Blocking Reset states continue to prevent unsafe operations.
+* Clarified the “Acknowledge after recovery” action: it acknowledges an incident after its recovery has been completed. Handled legacy notices stay dismissed, while new or concurrent unresolved incidents remain visible and distinct.
+* Made redirect-result notices appear once on Customer Intelligence screens without consuming similarly named query parameters on unrelated admin screens. Improved notice severity consistency and prevented repeated order-admin Reset conflict messages from stacking.
 
 = 1.4.1 =
 
