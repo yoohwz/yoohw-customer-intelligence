@@ -44,13 +44,15 @@ final class YoOhw_COS_Customer_Query {
 		global $wpdb;
 
 		$args = self::sanitize_args( $args );
+		$predicates = isset( $args['extensions'] ) ? YoOhw_COS_Extensions::predicates( $args['extensions'] ) : array();
+		$requested_orderby = $args['orderby'];
 		if ( ! YoOhw_COS_Migration_Runner::currency_backfill_is_complete()
 			&& in_array( $args['orderby'], array( 'total_spent', 'average_order_value', 'risk_score', 'trust_score' ), true ) ) {
 			$args['orderby'] = 'last_activity_date';
 		}
 
 		$table      = YoOhw_COS_DB::customers_table();
-		$where_data = self::build_where_clause( $args );
+		$where_data = self::build_where_clause( $args, $predicates );
 		$where      = $where_data['where'];
 		$params     = $where_data['params'];
 		$offset     = null === $args['offset']
@@ -78,15 +80,30 @@ final class YoOhw_COS_Customer_Query {
 		);
 		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, PluginCheck.Security.DirectDB.UnescapedDBParameter
 
-		$generation = YoOhw_COS_Intelligence::get_scoring_generation();
+		$context = YoOhw_COS_Commerce_Metrics_Policy::read_context();
+		$generation = $context['generation'];
 		return array(
-			'items'       => is_array( $items ) ? array_map( static fn( array $item ): array => YoOhw_COS_Intelligence::safe_customer_decisions( $item, $generation ), $items ) : array(),
+			'items'       => is_array( $items ) ? array_map( static fn( array $item ): array => YoOhw_COS_Intelligence::safe_customer_decisions( $item, $generation ) + array( '_commerce_context' => $context ), $items ) : array(),
 			'total_items' => $total_items,
 			'args'        => $args,
+			'evaluation_reason' => self::evaluation_reason( $args, $predicates ),
+			'sort_reason' => $requested_orderby !== $args['orderby'] ? self::evaluation_reason( array( 'rfm_monetary_min' => '0' ) ) : '',
 		);
 	}
 
-	private static function build_where_clause( array $args ): array {
+	public static function evaluation_reason( array $args, ?array $predicates = null ): string {
+		$args = self::sanitize_args( $args );
+		$monetary = '' !== $args['rfm_monetary_min'];
+		if ( isset( $args['extensions'] ) ) {
+			foreach ( (array) ( $predicates ?? YoOhw_COS_Extensions::predicates( $args['extensions'] ) ) as $predicate ) {
+				if ( in_array( $predicate['field'], array( 'total_spent', 'average_order_value' ), true ) ) { $monetary = true; }
+			}
+		}
+		$site = YoOhw_COS_Commerce_Metrics_Policy::site_readiness();
+		return $monetary && 'ready' !== $site['state'] ? ( 'preparing' === $site['state'] ? 'preparing_currency_data' : 'currency_data_attention' ) : '';
+	}
+
+	private static function build_where_clause( array $args, ?array $predicates = null ): array {
 		global $wpdb;
 
 		$customer_tags_table     = YoOhw_COS_DB::customer_tags_table();
@@ -99,7 +116,6 @@ final class YoOhw_COS_Customer_Query {
 			}
 		}
 		if ( isset( $args['extensions'] ) ) {
-			$predicates = YoOhw_COS_Extensions::predicates( $args['extensions'] );
 			if ( null === $predicates ) {
 				return array( 'where' => 'WHERE 1=0', 'params' => array() );
 			}

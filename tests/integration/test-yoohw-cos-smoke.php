@@ -582,8 +582,8 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 		$this->assertSame( 0.0, (float) $customer['average_order_value'] );
 		$this->assertSame( 'none', $customer['vip_status'] );
 		$this->assertSame( 'mixed', YoOhw_COS_Overview::get_summary()['money_state'] );
-		$this->assertStringContainsString( 'Unavailable', YoOhw_COS_Commerce_Metrics_Policy::format_money( $customer, 'total_spent' ) );
-		$this->assertStringContainsString( 'Unavailable', YoOhw_COS_Commerce_Metrics_Policy::format_money( YoOhw_COS_Overview::get_summary(), 'average_order_value' ) );
+		$this->assertStringContainsString( 'Multiple currencies', YoOhw_COS_Commerce_Metrics_Policy::format_money( $customer, 'total_spent' ) );
+		$this->assertStringContainsString( 'Multiple currencies', YoOhw_COS_Commerce_Metrics_Policy::format_money( YoOhw_COS_Overview::get_summary(), 'average_order_value' ) );
 		$this->assertFalse( YoOhw_COS_Commerce_Metrics_Policy::money_is_comparable( $customer ) );
 		$other_id = YoOhw_COS_Customers::create_customer( array( 'email' => 'currency-reassigned@example.test' ) );
 		$second->update_meta_data( YoOhw_COS_Customers::ORDER_CUSTOMER_META_KEY, $other_id );
@@ -695,7 +695,8 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 			$this->assertSame( 'comparable', $partial['money_state'] );
 			$this->assertFalse( YoOhw_COS_Commerce_Metrics_Policy::money_is_comparable( $partial ) );
 			$this->assertSame( 'none', YoOhw_COS_Intelligence::calculate_vip_status( $partial ) );
-			$this->assertSame( 'unknown', YoOhw_COS_Overview::get_summary()['money_state'] );
+			$this->assertSame( 'comparable', YoOhw_COS_Overview::get_summary()['money_state'] );
+			$this->assertFalse( YoOhw_COS_Commerce_Metrics_Policy::money_is_comparable( YoOhw_COS_Overview::get_summary() ) );
 			$generation = YoOhw_COS_Intelligence::get_scoring_generation();
 			for ( $batch = 0; $batch < 10; ++$batch ) {
 				YoOhw_COS_Migration_Runner::run_next_batch();

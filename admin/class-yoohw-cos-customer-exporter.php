@@ -30,6 +30,8 @@ final class YoOhw_COS_Customer_Exporter {
 
 		$source             = wp_unslash( $_REQUEST );
 		$args               = YoOhw_COS_Customer_Query::sanitize_args( is_array( $source ) ? $source : array() );
+		$reason = YoOhw_COS_Customer_Query::evaluation_reason( $args );
+		if ( '' !== $reason ) { wp_die( esc_html( YoOhw_COS_Commerce_Metrics_Policy::reason_label( $reason ) ) ); }
 		$args['paged']      = 1;
 		$args['offset']     = 0;
 		$args['per_page']   = self::get_export_limit();
@@ -104,15 +106,17 @@ final class YoOhw_COS_Customer_Exporter {
 				__( 'Segments', 'yoohw-customer-intelligence' ),
 				__( 'Currency', 'yoohw-customer-intelligence' ),
 				__( 'Monetary state', 'yoohw-customer-intelligence' ),
+				__( 'Monetary reason', 'yoohw-customer-intelligence' ),
+				__( 'Currency readiness', 'yoohw-customer-intelligence' ),
+				__( 'Amount available', 'yoohw-customer-intelligence' ),
 			)
 		);
 
 		foreach ( $customers as $customer ) {
 			$customer_id = absint( $customer['id'] ?? 0 );
-			$money_comparable = YoOhw_COS_Commerce_Metrics_Policy::money_is_comparable( $customer );
-			$money_state = ! YoOhw_COS_Migration_Runner::currency_backfill_is_complete()
-				? 'unknown'
-				: ( $money_comparable ? 'comparable' : ( in_array( $customer['money_state'] ?? '', array( 'mixed', 'none' ), true ) ? $customer['money_state'] : 'unknown' ) );
+			$availability = YoOhw_COS_Commerce_Metrics_Policy::availability( $customer );
+			$money_comparable = $availability['amount_available'];
+			$money_state = $availability['customer_state'];
 
 			self::write_csv_row(
 				$output,
@@ -121,16 +125,19 @@ final class YoOhw_COS_Customer_Exporter {
 					sanitize_email( (string) ( $customer['email'] ?? '' ) ),
 					sanitize_text_field( (string) ( $customer['phone'] ?? '' ) ),
 					absint( $customer['total_orders'] ?? 0 ),
-					$money_comparable ? self::format_decimal( $customer['total_spent'] ?? 0 ) : '',
-					$money_comparable ? self::format_decimal( $customer['average_order_value'] ?? 0 ) : '',
+					$money_comparable ? self::format_decimal( 'none' === $availability['reason'] ? 0 : ( $customer['total_spent'] ?? 0 ) ) : '',
+					$money_comparable ? self::format_decimal( 'none' === $availability['reason'] ? 0 : ( $customer['average_order_value'] ?? 0 ) ) : '',
 					self::format_decimal( $customer['risk_score'] ?? 0 ),
 					self::format_decimal( $customer['trust_score'] ?? 0 ),
 					self::get_vip_label( (string) ( $customer['vip_status'] ?? 'none' ) ),
 					self::get_lifecycle_label( (string) ( $customer['lifecycle_stage'] ?? 'new' ) ),
 					implode( '; ', $tags[ $customer_id ] ?? array() ),
 					implode( '; ', $segments[ $customer_id ] ?? array() ),
-					$money_comparable ? $customer['money_currency'] : '',
+					$availability['currency'] ?? '',
 					$money_state,
+					$availability['reason'],
+					$availability['site_state'],
+					$availability['amount_available'] ? '1' : '0',
 				),
 				true
 			);

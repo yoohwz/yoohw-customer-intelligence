@@ -11,7 +11,7 @@ final class YoOhw_COS_Diagnostics {
 		$data = array(
 			'profiles' => 0, 'active_profiles' => 0, 'archived_profiles' => 0,
 			'order_facts' => 0, 'open_tasks' => 0, 'overdue_tasks' => 0,
-			'comparable' => 0, 'mixed' => 0, 'unknown' => 0, 'outdated_metrics' => 0,
+			'comparable' => 0, 'mixed' => 0, 'none' => 0, 'unknown' => 0, 'outdated_metrics' => 0,
 			'current_generation' => 0, 'stale_generation' => 0, 'currency_unready' => 0,
 		);
 		$generation = YoOhw_COS_Intelligence::get_scoring_generation();
@@ -24,7 +24,8 @@ final class YoOhw_COS_Diagnostics {
 				 SUM(archived_at IS NOT NULL) archived_profiles,
 				 SUM(archived_at IS NULL AND money_state = 'comparable' AND commerce_metrics_version >= %d AND money_currency IS NOT NULL AND money_currency <> '') comparable,
 				 SUM(archived_at IS NULL AND money_state = 'mixed' AND commerce_metrics_version >= %d) mixed,
-				 SUM(archived_at IS NULL AND (money_state NOT IN ('comparable', 'mixed') OR commerce_metrics_version < %d OR (money_state = 'comparable' AND (money_currency IS NULL OR money_currency = '')))) unknown,
+				 SUM(archived_at IS NULL AND money_state = 'none' AND total_orders = 0 AND commerce_metrics_version >= 2) none,
+				 SUM(archived_at IS NULL AND (money_state NOT IN ('comparable', 'mixed', 'none') OR commerce_metrics_version < %d OR (money_state = 'comparable' AND (money_currency IS NULL OR money_currency = '')))) unknown,
 				 SUM(archived_at IS NULL AND commerce_metrics_version < %d) outdated_metrics,
 				 SUM(archived_at IS NULL AND intelligence_currency_ready = 1 AND %s <> '' AND intelligence_generation = %s) current_generation,
 				 SUM(archived_at IS NULL AND intelligence_currency_ready = 1 AND (%s = '' OR intelligence_generation <> %s)) stale_generation,
@@ -187,7 +188,7 @@ final class YoOhw_COS_Diagnostics {
 			'schema' => $schema, 'data' => $data, 'sync' => $sync,
 			'migrations' => $migrations,
 			'woocommerce_blocks_migration' => $woocommerce_blocks_migration,
-			'currency' => array( 'backfill_complete' => $currency_complete, 'store_currency' => function_exists( 'get_woocommerce_currency' ) ? get_woocommerce_currency() : '' ),
+			'currency' => YoOhw_COS_Commerce_Metrics_Policy::site_readiness() + array( 'backfill_complete' => $currency_complete, 'store_currency' => function_exists( 'get_woocommerce_currency' ) ? get_woocommerce_currency() : '' ),
 			'intelligence' => array( 'generation' => substr( $generation, 0, 8 ), 'worker' => $worker, 'activity_worker' => $activity, 'data_updated_at' => sanitize_text_field( (string) get_option( 'yoohw_cos_customer_data_updated_at', '' ) ) ),
 			'cron' => $cron, 'disable_wp_cron' => defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON,
 			'reset' => array( 'status' => $reset['status'] ), 'privacy' => array( 'evaluable' => $privacy_ready, 'receipts' => $receipt_count ),
