@@ -232,6 +232,7 @@ final class YCI_Monetary_Availability_Test extends WP_UnitTestCase {
 		$this->assertSame( 'attention', YoOhw_COS_Commerce_Metrics_Policy::site_readiness()['state'] );
 		$state['commerce_currency_v3']['last_progress_at'] = time();
 		$state['commerce_currency_v3']['last_error'] = 'older synthetic error';
+		$state['commerce_currency_v3']['last_error_at'] = wp_date( 'Y-m-d H:i:s', time() - 60, wp_timezone() );
 		update_option( 'yoohw_cos_data_migrations', $state, false );
 		$this->assertSame( 'preparing', YoOhw_COS_Commerce_Metrics_Policy::site_readiness()['state'] );
 		$state['commerce_currency_v3']['last_progress_at'] = time() - 901;
@@ -245,6 +246,33 @@ final class YCI_Monetary_Availability_Test extends WP_UnitTestCase {
 		update_option( 'yoohw_cos_schema_status', array( 'status' => 'blocked' ) );
 		$this->assertSame( 'attention', YoOhw_COS_Commerce_Metrics_Policy::site_readiness()['state'] );
 		update_option( 'yoohw_cos_schema_status', $schema );
+	}
+
+	public function test_new_failure_overrides_recent_progress_and_preparing_dismissal(): void {
+		$progress = time() - 30;
+		$state = array( 'commerce_currency_v3' => array( 'status' => 'in_progress', 'started_at' => 'synthetic failure ordering', 'last_progress_at' => $progress ) );
+		update_option( 'yoohw_cos_data_migrations', $state, false );
+		wp_schedule_single_event( time() + 60, YoOhw_COS_Migration_Runner::HOOK );
+		$this->assertSame( 'preparing', YoOhw_COS_Commerce_Metrics_Policy::site_readiness()['state'] );
+		$preparing = YoOhw_COS_Notice_Preferences::descriptor( 'commerce_update' );
+		$post = array( 'key' => 'commerce_update', 'revision' => $preparing['revision'], 'nonce' => wp_create_nonce( 'yoohw_cos_dismiss_notice' ) );
+		$this->assertTrue( json_decode( $this->transport( $post ), true )['success'] );
+		$this->assertSame( '', YoOhw_COS_Notice_Preferences::opening_markup( 'commerce_update' ) );
+		$state['commerce_currency_v3']['last_error'] = 'new synthetic failure after progress';
+		$state['commerce_currency_v3']['last_error_at'] = wp_date( 'Y-m-d H:i:s', $progress + 10, wp_timezone() );
+		update_option( 'yoohw_cos_data_migrations', $state, false );
+		$this->assertSame( 'attention', YoOhw_COS_Commerce_Metrics_Policy::site_readiness()['state'] );
+		$this->assertNotSame( $preparing['revision'], YoOhw_COS_Notice_Preferences::descriptor( 'commerce_update' )['revision'] );
+		$this->assertNotSame( '', YoOhw_COS_Notice_Preferences::opening_markup( 'commerce_update' ) );
+		$this->assertFalse( json_decode( $this->transport( $post ), true )['success'] );
+		$state['commerce_currency_v3']['last_progress_at'] = $progress + 20;
+		update_option( 'yoohw_cos_data_migrations', $state, false );
+		$this->assertSame( 'preparing', YoOhw_COS_Commerce_Metrics_Policy::site_readiness()['state'] );
+		foreach ( array( '', 'invalid', '2026-02-31 12:00:00' ) as $invalid ) {
+			$state['commerce_currency_v3']['last_error_at'] = $invalid;
+			update_option( 'yoohw_cos_data_migrations', $state, false );
+			$this->assertSame( 'attention', YoOhw_COS_Commerce_Metrics_Policy::site_readiness()['state'] );
+		}
 	}
 
 }

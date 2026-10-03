@@ -70,8 +70,14 @@ final class YoOhw_COS_Commerce_Metrics_Policy {
 			// Recent successful progress can outlive cron rescheduling. Historical errors
 			// do not imply failure after later successful work. Grace is not a completion SLA.
 			$recent = $progress > time() - 15 * MINUTE_IN_SECONDS;
+			$error_at = (string) ( $migration['last_error_at'] ?? '' );
+			$error_date = preg_match( '/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/D', $error_at ) ? DateTimeImmutable::createFromFormat( '!Y-m-d H:i:s', $error_at, wp_timezone() ) : false;
+			$error_timestamp = $error_date && $error_date->format( 'Y-m-d H:i:s' ) === $error_at ? $error_date->getTimestamp() : null;
+			// Recent progress before a new failure is not recovery. Missing/invalid
+			// error ordering is attention until the worker clears the error on success.
+			$error_recovered = empty( $migration['last_error'] ) || ( $recent && null !== $error_timestamp && $progress > $error_timestamp );
 			$site = ( $recent || ( $scheduled && $scheduled >= time() - 15 * MINUTE_IN_SECONDS ) )
-				&& ( empty( $migration['last_error'] ) || $recent ) && empty( $migration['unresolved_issues'] )
+				&& $error_recovered && empty( $migration['unresolved_issues'] )
 				&& $issues_readable && empty( $issues['unresolved'] ) && 'blocked' !== ( $schema['status'] ?? '' )
 				&& empty( $state['_read_error'] ) && function_exists( 'wc_get_orders' ) ? 'preparing' : 'attention';
 		}

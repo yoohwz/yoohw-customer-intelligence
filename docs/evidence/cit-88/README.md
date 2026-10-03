@@ -41,7 +41,7 @@ checkpoints verify persistence. The existing order/refund/link/Reset contracts r
 Preparing requires pending/in-progress migration, WooCommerce, admitted schema,
 readable issue evidence, no unresolved issue and no unrecovered error, plus a worker
 scheduled within the fifteen-minute overdue grace or successful progress within that
-grace. Later successful progress supersedes an older error. A scheduled event is
+grace. Later successful progress supersedes an older error only when progress is strictly newer than its valid local WordPress timestamp. A newer error, or missing/invalid error timestamp, remains attention until verified later progress or the worker clears it. A scheduled event is
 reported as evidence, not proof of execution. `completed_with_issues`, blocked schema,
 missing/overdue scheduling without recent progress, and unreadable state are attention.
 Diagnostics retains issue counts, scheduling, last successful progress/error, customer
