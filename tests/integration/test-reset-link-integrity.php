@@ -353,6 +353,7 @@ final class YCI_Reset_Link_Integrity_Test extends WP_UnitTestCase {
 			YoOhw_COS_Flash_Notices::consume();
 			$this->assertArrayNotHasKey( $flag, $_GET );
 			$this->assertArrayHasKey( 'page', $_GET );
+			$this->assertSame( '', get_user_meta( get_current_user_id(), '_yoohw_cos_notice_preferences', true ) );
 		} );
 	}
 
@@ -1404,7 +1405,7 @@ final class YCI_CSV_Export_Safety_Test extends WP_UnitTestCase {
 		$this->assertSame( 0, proc_close( $process ), $error );
 		$rows = json_decode( $output, true );
 		$this->assertIsArray( $rows );
-		foreach ( $rows as $row ) { $this->assertCount( 14, $row ); }
+		foreach ( $rows as $row ) { $this->assertCount( 17, $row ); }
 		return $rows;
 	}
 
@@ -1523,7 +1524,7 @@ final class YCI_CSV_Export_Safety_Test extends WP_UnitTestCase {
 		$this->assertCount( 2, $rows ); $this->assertSame( 'AAA second CSV', $rows[1][0] );
 		$rows = $this->decode( $this->request( array(), array( 's' => 'no matching CSV row' ) ) );
 		$this->assertCount( 1, $rows );
-		$this->assertSame( array( 'Name', 'Email', 'Phone', 'Orders', 'Spent', 'AOV', 'Risk score', 'Trust score', 'Value tier', 'Lifecycle', 'Tags', 'Segments', 'Currency', 'Monetary state' ), $rows[0] );
+		$this->assertSame( array( 'Name', 'Email', 'Phone', 'Orders', 'Spent', 'AOV', 'Risk score', 'Trust score', 'Value tier', 'Lifecycle', 'Tags', 'Segments', 'Currency', 'Monetary state', 'Monetary reason', 'Currency readiness', 'Amount available' ), $rows[0] );
 		global $wpdb;
 		$wpdb->update( YoOhw_COS_DB::customers_table(), array( 'archived_at' => '2026-01-01 00:00:00' ), array( 'id' => $id ) );
 		$rows = $this->decode( $this->request( array(), array( 'customer_view' => 'archived' ) ) );
@@ -2203,7 +2204,8 @@ final class YCI_Identity_Lock_Test extends WP_UnitTestCase {
 		catch ( RuntimeException $exception ) { $this->assertSame( 'Synthetic sync exception', $exception->getMessage() ); }
 		finally { remove_filter( 'yoohw_cos_customer_sync_data', $throw ); }
 		$worker = $this->worker( 'lock-probe', 0, array( 'kind' => 'identity', 'identity' => YoOhw_COS_Customer_Identity::from_order( $order ) ) );
-		$this->assertTrue( json_decode( $this->line( $worker ), true )['acquired'] ); $this->stop( $worker );
+		$line = $this->line( $worker ); $answer = json_decode( $line, true );
+		$this->assertIsArray( $answer, $line ); $this->assertTrue( $answer['acquired'] ); $this->stop( $worker );
 	}
 	public function test_legacy_expired_and_malformed_options_are_not_ownership_authority(): void {
 		global $wpdb;
@@ -2265,11 +2267,13 @@ final class YCI_Identity_Lock_Test extends WP_UnitTestCase {
 		$this->assertSame( 900000, $current['last_customer_id'] ); $this->assertSame( 17, $current['processed'] ); $this->assertSame( 'pending', $current['status'] );
 		$this->refresh();
 		$worker = $this->worker( 'lock-probe', 0, array( 'kind' => 'migration' ) );
-		$this->assertTrue( json_decode( $this->line( $worker ), true )['acquired'] ); $this->stop( $worker );
+		$line = $this->line( $worker ); $answer = json_decode( $line, true );
+		$this->assertIsArray( $answer, $line ); $this->assertTrue( $answer['acquired'] ); $this->stop( $worker );
 		update_option( 'yoohw_cos_data_migrations', array(), false );
 		YoOhw_COS_Migration_Runner::run_next_batch(); $this->refresh();
 		$worker = $this->worker( 'lock-probe', 0, array( 'kind' => 'migration' ) );
-		$this->assertTrue( json_decode( $this->line( $worker ), true )['acquired'] ); $this->stop( $worker );
+		$line = $this->line( $worker ); $answer = json_decode( $line, true );
+		$this->assertIsArray( $answer, $line ); $this->assertTrue( $answer['acquired'] ); $this->stop( $worker );
 	}
 
 }

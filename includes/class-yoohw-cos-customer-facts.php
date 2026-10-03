@@ -10,9 +10,15 @@ final class YoOhw_COS_Customer_Facts {
 
 	/** The fixed, PII-minimized map supplied to external providers. */
 	public static function core_snapshot( array $customer, array $context = array() ): array {
+		$policy = $customer['_commerce_context'] ?? YoOhw_COS_Commerce_Metrics_Policy::read_context();
+		// Canonical query rows have already been evaluated against this page snapshot.
+		if ( ! isset( $customer['_commerce_context'] ) ) {
+			$customer = YoOhw_COS_Intelligence::safe_customer_decisions( $customer, $policy['generation'] );
+		}
+		$availability = YoOhw_COS_Commerce_Metrics_Policy::availability( $customer, $policy );
 		$orders = absint( $customer['total_orders'] ?? 0 );
-		$money_ready = YoOhw_COS_Commerce_Metrics_Policy::money_is_comparable( $customer );
-		$money_state = $money_ready ? 'comparable' : ( 'none' === ( $customer['money_state'] ?? '' ) && YoOhw_COS_Migration_Runner::currency_backfill_is_complete() ? 'none' : 'unavailable' );
+		$money_ready = 'comparable' === $availability['reason'];
+		$money_state = $money_ready ? 'comparable' : ( 'none' === $availability['reason'] ? 'none' : 'unavailable' );
 		$currency = $money_ready ? (string) $customer['money_currency'] : null;
 		$facts = array(
 			'core/recognized_order_count' => $orders,
@@ -23,6 +29,14 @@ final class YoOhw_COS_Customer_Facts {
 			'core/rfm_monetary' => $money_ready ? (float) $customer['total_spent'] : null,
 			'core/money_state' => $money_state,
 			'core/money_currency' => $currency,
+			'core/recorded_money_state' => $availability['customer_state'],
+			'core/recorded_money_currency' => $availability['currency'],
+			'core/money_reason' => $availability['reason'],
+			'core/money_site_state' => $availability['site_state'],
+			'core/money_amount_available' => $availability['amount_available'],
+			'core/available_total_spent' => $availability['amount_available'] ? ( 'none' === $availability['reason'] ? 0.0 : (float) $customer['total_spent'] ) : null,
+			'core/money_threshold_eligible' => $availability['matches_store_currency'],
+			'core/monetary_intelligence_fresh' => $availability['intelligence_fresh'],
 			'core/total_spent' => $money_ready ? (float) $customer['total_spent'] : null,
 			'core/average_order_value' => $money_ready ? (float) $customer['average_order_value'] : null,
 			'core/status' => (string) ( $customer['customer_status'] ?? '' ),

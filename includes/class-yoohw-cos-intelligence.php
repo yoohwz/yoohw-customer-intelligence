@@ -7,7 +7,18 @@ final class YoOhw_COS_Intelligence {
 	private static $settings_cache_generation = null;
 
 	public static function init(): void {
+		add_action( 'update_option_yoohw_cos_data_migrations', array( __CLASS__, 'migration_readiness_changed' ), 10, 2 );
 		add_action( 'update_option_woocommerce_currency', array( __CLASS__, 'currency_changed' ), 10, 2 );
+	}
+
+	/** All currency readiness transitions invalidate the existing bounded refresh. */
+	public static function migration_readiness_changed( $old, $new ): void {
+		$ready = static function( $state ): bool {
+			$state = is_array( $state ) ? $state : array();
+			$item = $state['commerce_currency_v3'] ?? $state['commerce_facts_v2'] ?? null;
+			return null === $item || 'completed' === ( $item['status'] ?? '' );
+		};
+		if ( $ready( $old ) !== $ready( $new ) ) { self::invalidate_monetary_decisions(); }
 	}
 
 	public static function currency_changed( $old_currency, $new_currency ): void {
@@ -117,7 +128,12 @@ final class YoOhw_COS_Intelligence {
 	/** Read uncached so an in-flight worker observes another request's invalidation. */
 	public static function get_scoring_generation(): string {
 		global $wpdb;
-		return (string) $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, 'yoohw_cos_intelligence_generation' ) );
+		$generation = (string) $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, 'yoohw_cos_intelligence_generation' ) );
+		if ( YoOhw_COS_Migration_Runner::currency_backfill_is_complete() ) { return $generation; }
+		// The active-readiness identity fences old decisions at the single state write,
+		// even if a companion invalidation fails or an in-flight worker cached options.
+		$hash = substr( hash( 'sha256', 'currency-unready|' . $generation ), 0, 32 );
+		return substr( $hash, 0, 8 ) . '-' . substr( $hash, 8, 4 ) . '-' . substr( $hash, 12, 4 ) . '-' . substr( $hash, 16, 4 ) . '-' . substr( $hash, 20 );
 	}
 
 	public static function get_scoring_settings_defaults(): array {
@@ -559,7 +575,7 @@ final class YoOhw_COS_Intelligence {
 					__( 'This customer has spent %s.', 'yoohw-customer-intelligence' ),
 					YoOhw_COS_Commerce_Metrics_Policy::format_money( $customer, 'total_spent' )
 				)
-				: __( 'Lifetime value unavailable because order currency is mixed or unknown.', 'yoohw-customer-intelligence' ),
+				: YoOhw_COS_Commerce_Metrics_Policy::reason_label( YoOhw_COS_Commerce_Metrics_Policy::availability( $customer )['reason'] ),
 		);
 
 		$factors[] = array(

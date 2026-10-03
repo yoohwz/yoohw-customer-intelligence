@@ -7,6 +7,8 @@ if ( ! class_exists( 'WP_List_Table' ) ) {
 
 final class YoOhw_COS_Customers_List extends WP_List_Table {
 
+	private $evaluation_reason = '';
+
 	private $tags_by_customer = array();
 
 	private $segments_by_customer = array();
@@ -113,6 +115,10 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 
 		$results      = YoOhw_COS_Customer_Query::query( $query_args );
 		$total_items  = absint( $results['total_items'] ?? 0 );
+		$this->evaluation_reason = $results['evaluation_reason'] ?? '';
+		if ( ! empty( $results['sort_reason'] ) ) {
+			echo '<div class="notice notice-info"><p>' . esc_html( YoOhw_COS_Commerce_Metrics_Policy::reason_label( $results['sort_reason'] ) ) . ' ' . esc_html__( 'Sorted by last activity while monetary sorting is unavailable.', 'yoohw-customer-intelligence' ) . '</p></div>';
+		}
 		$this->items  = is_array( $results['items'] ?? null ) ? $results['items'] : array();
 
 		$this->prime_customer_relationships();
@@ -204,6 +210,11 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 	}
 
 	public function no_items(): void {
+		if ( '' !== $this->evaluation_reason ) {
+			echo esc_html( YoOhw_COS_Commerce_Metrics_Policy::reason_label( $this->evaluation_reason ) ) . ' ';
+			echo esc_html__( 'Monetary filter evaluation is unavailable. Keep the saved definition or remove its monetary condition to use other filters.', 'yoohw-customer-intelligence' );
+			return;
+		}
 		if ( YoOhw_COS_Saved_Views::request_is_stale( $_REQUEST ) ) {
 			echo esc_html__( 'Saved view filters are unavailable. Correct them and update the view.', 'yoohw-customer-intelligence' );
 			return;
@@ -675,6 +686,10 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 			$value = YoOhw_COS_Customer_Query::sanitize_args( wp_unslash( $_REQUEST ) )[ $key ];
 			echo '<label class="screen-reader-text" for="yoohw-cos-' . esc_attr( $key ) . '">' . esc_html( $field[0] ) . '</label>';
 			if ( 'rfm_monetary_min' === $key ) {
+				$site = YoOhw_COS_Commerce_Metrics_Policy::site_readiness();
+				if ( 'ready' !== $site['state'] ) {
+					echo '<span class="description">' . esc_html( YoOhw_COS_Commerce_Metrics_Policy::reason_label( 'preparing' === $site['state'] ? 'preparing_currency_data' : 'currency_data_attention' ) ) . '</span>';
+				}
 				echo '<input type="text" inputmode="decimal" maxlength="21" id="yoohw-cos-' . esc_attr( $key ) . '" name="' . esc_attr( $key ) . '" placeholder="' . esc_attr( $field[0] ) . '" value="' . esc_attr( 'invalid' === $value ? '' : $value ) . '" />';
 			} else {
 				echo '<input type="number" id="yoohw-cos-' . esc_attr( $key ) . '" name="' . esc_attr( $key ) . '" min="0" max="' . esc_attr( $field[1] ) . '" step="' . esc_attr( $field[2] ) . '" placeholder="' . esc_attr( $field[0] ) . '" value="' . esc_attr( 'invalid' === $value ? '' : $value ) . '" />';
