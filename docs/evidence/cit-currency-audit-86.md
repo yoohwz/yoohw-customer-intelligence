@@ -9,8 +9,43 @@ Free 1.4.2, schema 0.2.4). This is an audit/design candidate, not a product fix.
 Healthy VND and EUR monetary aggregation works. The reported site was temporarily
 blocked by global currency migration despite valid VND customer/fact data; the UI
 incorrectly attributed that condition to mixed/unknown currency. Two additional
-recovery/freshness gaps are reproduced below. Release remains paused until the
-audit is accepted, follow-up blockers are resolved and the Human resumes release.
+recovery/freshness gaps are reproduced below. This is a **post-publication release
+blocker / corrective-release finding**: 1.4.2 is already public. Admit a separate
+runtime correction task, then prepare a new corrective patch release under normal
+versioned release controls after the blockers are resolved. Do not republish 1.4.2,
+move/delete/reseal its tag, or recommit the same SVN release. This audit grants no
+runtime implementation, merge or publication authority.
+
+### Corrected release-state evidence
+
+The original Issue and first audit candidate incorrectly assumed that 1.4.2 had
+not been production-published. [Acceptance finding A1](https://github.com/yoohwz/yoohw-customer-intelligence/pull/87#issuecomment-5965025018)
+required this factual correction; the historical Issue premise is not current release
+authority. Read-only rechecks on **2026-10-03** establish:
+
+- [Production run 36817211851](https://github.com/yoohwz/yoohw-customer-intelligence/actions/runs/36817211851)
+  executed on **2026-10-01** against `22cbb91c1ddd4a6c6723cd52c1f2b94485220ece`
+  and succeeded through the publication mutation boundary. Its logs record
+  `TAG_SEALED`, the atomic WordPress.org SVN revision **3722391**, and terminal
+  verification state `WPORG_PROPAGATION_PENDING`. That historical propagation
+  state does not mean the SVN mutation was absent.
+- [Annotated tag 1.4.2](https://api.github.com/repos/yoohwz/yoohw-customer-intelligence/git/tags/ed5f96bc34605e80bedff7c7eb058bd339566486)
+  exists, with tag object `ed5f96bc34605e80bedff7c7eb058bd339566486` pointing to
+  the audited baseline.
+- The [public WordPress.org listing](https://wordpress.org/plugins/yoohw-customer-intelligence/)
+  currently exposes **Version 1.4.2**, with its October 1 changelog. This listing
+  check is not a new certification of every package/propagation endpoint.
+- The authenticated GitHub Release-by-tag API returns **404** for `1.4.2` at
+  the same observation date; that GitHub Release object is absent. The earlier
+  workflow's GitHub Release job was skipped. An annotated Git tag, a GitHub
+  Release object and WordPress.org publication are separate facts; absence of
+  the GitHub Release does not imply absence of WordPress.org publication.
+
+Those external tag/SVN mutations were performed by the earlier release workflow,
+before CIT-86. CIT-86 itself performed no release/tag/SVN/publication mutation and
+does not authorize a release retry or corrective publication. Preserve the existing
+immutable release evidence; remediation requires a separately admitted correction
+and a new version, not resumption of the already-published 1.4.2 release.
 
 The Human corrected the original environment during execution: the affected CIT
 installation is **veeveestore.local**, not veevee.store. The correction is recorded
@@ -376,7 +411,9 @@ resolved with TLS-verifying curl plus canonical SHA-256 verification, not disabl
 
 No production plugin/file/option/data write, migration/cron trigger, Reset, sync,
 recalculation, install/update, currency change, release/tag/publication or deployment was
-performed. Affected Local site investigation also remained read-only. yoplay8 mutations
+performed **by CIT-86 audit execution**. The earlier production release workflow's
+tag/SVN mutations are recorded separately above. Affected Local site investigation
+also remained read-only. yoplay8 mutations
 were limited to admitted synthetic fixtures/options with verified restoration. Harness
 resources were privately owned and cleaned. No credentials, host configuration, real
 customer identifiers/contact data, order payloads, dumps or third-party payloads are
