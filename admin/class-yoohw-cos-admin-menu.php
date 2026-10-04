@@ -403,7 +403,7 @@ final class YoOhw_COS_Admin_Menu {
 			array( __CLASS__, 'render_overview_page' )
 		);
 
-		add_submenu_page(
+		$customers_hook = add_submenu_page(
 			'yoohw-customer-intelligence-overview',
 			__( 'Customers', 'yoohw-customer-intelligence' ),
 			__( 'Customers', 'yoohw-customer-intelligence' ),
@@ -411,6 +411,10 @@ final class YoOhw_COS_Admin_Menu {
 			'yoohw-customer-intelligence',
 			array( __CLASS__, 'render_customers_page' )
 		);
+		// Binary responses must terminate before WordPress loads the admin header.
+		if ( $customers_hook ) {
+			add_action( 'load-' . $customers_hook, array( 'YoOhw_COS_Customer_Exporter', 'maybe_handle_request' ) );
+		}
 
 		add_submenu_page(
 			'yoohw-customer-intelligence-overview',
@@ -755,7 +759,6 @@ final class YoOhw_COS_Admin_Menu {
 		self::maybe_handle_saved_view_action();
 		self::maybe_redirect_customers_filter_action();
 		YoOhw_COS_Saved_Views::apply_open_request();
-		YoOhw_COS_Customer_Exporter::maybe_handle_request();
 
 		if ( isset( $_GET['customer_id'] ) ) {
 			$customer_id = absint( wp_unslash( $_GET['customer_id'] ) );

@@ -24,9 +24,16 @@ final class YoOhw_COS_Customer_Exporter {
 			wp_die( esc_html__( 'Customer export request could not be verified.', 'yoohw-customer-intelligence' ) );
 		}
 
+		if ( ! YoOhw_COS_Reset_Guard::ready() ) {
+			wp_die( esc_html( YoOhw_COS_Reset_Guard::rejection_message() ), '', array( 'response' => 409 ) );
+		}
+
 		if ( YoOhw_COS_Saved_Views::request_is_stale( $_REQUEST ) ) {
 			wp_die( esc_html__( 'Saved view filters are unavailable; export was blocked.', 'yoohw-customer-intelligence' ) );
 		}
+
+		// Preserve opening-by-ID behavior before evaluating editable Saved View inputs.
+		YoOhw_COS_Saved_Views::apply_open_request();
 
 		$source             = wp_unslash( $_REQUEST );
 		$args               = YoOhw_COS_Customer_Query::sanitize_args( is_array( $source ) ? $source : array() );

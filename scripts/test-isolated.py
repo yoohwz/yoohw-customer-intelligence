@@ -9,6 +9,7 @@ import secrets
 import shutil
 import signal
 import subprocess
+import sys
 import tarfile
 import tempfile
 import time
@@ -26,6 +27,39 @@ INPUTS = {
 
 def run(args, **kwargs):
     return subprocess.run([str(a) for a in args], check=True, **kwargs)
+
+
+def run_owned(args, **kwargs):
+    """Contain persistent test descendants in this invocation's own process group."""
+    command = [str(a) for a in args]
+    process = subprocess.Popen(command, start_new_session=True, **kwargs)
+    def stop_group(signum):
+        try:
+            os.killpg(process.pid, signum)
+        except ProcessLookupError:
+            pass
+        except PermissionError:
+            # Darwin can report EPERM for a group containing only reparented zombies.
+            # Never hide refusal to signal a living process in the owned group.
+            if sys.platform != 'darwin':
+                raise
+            states = run(['ps', '-axo', 'pgid=,stat='], capture_output=True, text=True).stdout
+            if any(int(row[0]) == process.pid and not row[1].startswith('Z')
+                   for line in states.splitlines() if len(row := line.split()) == 2):
+                raise
+    try:
+        code = process.wait()
+        if code:
+            raise subprocess.CalledProcessError(code, command)
+    finally:
+        # PHPUnit teardown cannot run if the runner is interrupted during wait().
+        stop_group(signal.SIGTERM)
+        try:
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            stop_group(signal.SIGKILL)
+            process.wait(timeout=5)
+        stop_group(signal.SIGKILL)  # Stop any surviving owned grandchild, even after leader exit.
 
 
 def unpack(root, cache):
@@ -49,6 +83,7 @@ def unpack(root, cache):
                 t.extractall(root, **({'filter': 'data'} if hasattr(tarfile, 'data_filter') else {}))
     shutil.move(root / 'wordpress-develop-6.9.0/tests/phpunit', root / 'tests')
     shutil.copyfile(REPO / 'tests/wp-tests-config.php', root / 'wp-tests-config.php')
+    shutil.copyfile(REPO / 'tests/http-wp-config.php', root / 'wordpress/wp-config.php')
 
 
 def controls(root, env, php, sql, credentials):
@@ -59,7 +94,7 @@ def controls(root, env, php, sql, credentials):
     for p in paths:
         p.write_text('<?php file_put_contents(' + repr(str(marker)) + ', "mutated"); exit(0);')
     credential_file = root / 'environment.json'
-    entrypoints = [REPO / path for path in ('tests/bootstrap.php', 'tests/integration/test-yoohw-cos-smoke.php', 'tests/integration/test-reset-link-integrity.php', 'tests/reset-worker.php', 'tests/benchmark.php')]
+    entrypoints = [REPO / path for path in ('tests/bootstrap.php', 'tests/integration/test-yoohw-cos-smoke.php', 'tests/integration/test-reset-link-integrity.php', 'tests/reset-worker.php', 'tests/benchmark.php', 'tests/csv-http-router.php', 'tests/integration/test-csv-http.php', 'tests/http-wp-config.php')]
     cases = [({}, 'missing root'), ({'YCI_TEST_TOKEN': ''}, 'missing token'),
              ({'YCI_TEST_TOKEN': 'false'}, 'false token'), ({'YCI_TEST_TOKEN': '0' * 64}, 'wrong token'),
              ({'WP_TESTS_DIR': '/tmp/wordpress-tests-lib'}, 'wrong test path'),
@@ -75,7 +110,8 @@ def controls(root, env, php, sql, credentials):
                 result = subprocess.run([php, str(entry)], env=candidate, capture_output=True)
                 if result.returncode == 0 or marker.exists():
                     raise RuntimeError('Environment rejection failed: ' + label)
-        for label in ('wrong database', 'wrong ownership', 'modified config', 'global grants', 'predefined database', 'missing credentials', 'false credentials'):
+        config_cases = ('wrong database', 'wrong ownership', 'modified config', 'modified HTTP config', 'global grants', 'predefined database', 'missing credentials', 'false credentials')
+        for label in config_cases:
             altered = credentials.copy()
             if label == 'wrong database':
                 altered['database'] = 'yci' + '0' * 24
@@ -83,6 +119,9 @@ def controls(root, env, php, sql, credentials):
                 sql("UPDATE " + credentials['database'] + ".yci_environment_owner SET token='wrong'")
             if label == 'modified config':
                 with (root / 'wp-tests-config.php').open('a') as f:
+                    f.write('\nfile_put_contents(' + repr(str(marker)) + ', \"mutated\");\n')
+            if label == 'modified HTTP config':
+                with (root / 'wordpress/wp-config.php').open('a') as f:
                     f.write('\nfile_put_contents(' + repr(str(marker)) + ', \"mutated\");\n')
             if label == 'global grants':
                 sql("GRANT SELECT ON *.* TO '" + credentials['database'] + "'@'localhost'")
@@ -101,6 +140,7 @@ def controls(root, env, php, sql, credentials):
             credential_file.write_text(json.dumps(credentials))
             credential_file.chmod(0o600)
             shutil.copyfile(REPO / 'tests/wp-tests-config.php', root / 'wp-tests-config.php')
+            shutil.copyfile(REPO / 'tests/http-wp-config.php', root / 'wordpress/wp-config.php')
             sql("UPDATE " + credentials['database'] + ".yci_environment_owner SET token='" + credentials['token'] + "'")
             if label == 'global grants':
                 sql("REVOKE SELECT ON *.* FROM '" + credentials['database'] + "'@'localhost'")
@@ -125,13 +165,14 @@ def controls(root, env, php, sql, credentials):
         if sql('SELECT value FROM synthetic_sentinel.untouched') != credentials['token']:
             raise RuntimeError('Unrelated synthetic sentinel changed during rejection controls')
         run([php, '-r', "require " + repr(str(REPO / 'tests/environment.php')) + "; yci_test_environment(); wp_mail('fixture@example.test','probe','fixture'); if (($GLOBALS['yci_intercepted_mail'] ?? 0) !== 1) { exit(1); }"], env=env)
-        print('PASS: 68 entrypoint rejection controls; valid ownership/grants; early mail interception', flush=True)
+        print(f'PASS: {len(entrypoints) * (len(cases) + len(config_cases) + 2)} entrypoint rejection controls; valid ownership/grants; early mail interception', flush=True)
     finally:
         for p, original in zip(paths, originals):
             p.write_bytes(original)
 
 
 def main():
+    run([sys.executable, REPO / 'tests/owned-process-tests.py'])
     run(['node', '--version'])
     run(['node', REPO / 'tests/reset-selector-smoke.js'])
     parser = argparse.ArgumentParser(description=__doc__)
@@ -184,7 +225,7 @@ def main():
                 env['WC_HPOS_ENABLED'] = mode
                 if not args.benchmark_only:
                     report = root / ('junit-' + mode + '.xml')
-                    run([args.php, '-d', 'disable_functions=mail', REPO / 'vendor/bin/phpunit', '-c', REPO / 'phpunit.xml.dist', '--fail-on-skipped', '--fail-on-risky', '--log-junit', report], env=env, cwd=REPO)
+                    run_owned([args.php, '-d', 'disable_functions=mail', REPO / 'vendor/bin/phpunit', '-c', REPO / 'phpunit.xml.dist', '--fail-on-skipped', '--fail-on-risky', '--log-junit', report], env=env, cwd=REPO)
                     suite = ET.parse(report).getroot()
                     cases = suite.findall('.//testcase')
                     if not cases or suite.findall('.//skipped') or suite.findall('.//failure') or suite.findall('.//error'):
