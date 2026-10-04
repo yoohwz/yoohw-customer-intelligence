@@ -1,0 +1,241 @@
+{
+  "admitted_base": "c3e1ff954610f17952553d93cb932cf1807f9b8c",
+  "site": "yoplay8.local",
+  "runtime": {
+    "wordpress": "7.1.2",
+    "woocommerce": "11.1.2",
+    "php": "8.4.18",
+    "hpos": "enabled"
+  },
+  "fixture_model": "Three owned synthetic CRM profiles with persisted recognized-order counts 0, 1 and 2. No WC orders created; recognized-order population/sync is outside this query-seam confirmation.",
+  "browser": {
+    "all": {
+      "activeView": [],
+      "commerce": [
+        "R: Unavailable\nF: 2 orders\nM: $20,00",
+        "R: Unavailable\nF: 1 order\nM: $10,00",
+        "R: Unavailable\nF: 0 orders\nM: $0,00"
+      ],
+      "counts": [
+        "3 items",
+        "3 items"
+      ],
+      "health": [
+        "Active\nNo risk · 0",
+        "New\nNo risk · 0",
+        "New\nNo risk · 0"
+      ],
+      "names": [
+        "CIT94 QA Repeat",
+        "CIT94 QA One",
+        "CIT94 QA Zero"
+      ]
+    },
+    "first": {
+      "activeView": [
+        "First-time customers"
+      ],
+      "commerce": [
+        "R: Unavailable\nF: 1 order\nM: $10,00"
+      ],
+      "counts": [
+        "1 item",
+        "1 item"
+      ],
+      "health": [
+        "New\nNo risk · 0"
+      ],
+      "names": [
+        "CIT94 QA One"
+      ]
+    },
+    "repeat": {
+      "activeView": [
+        "Repeat customers"
+      ],
+      "commerce": [
+        "R: Unavailable\nF: 2 orders\nM: $20,00"
+      ],
+      "counts": [
+        "1 item",
+        "1 item"
+      ],
+      "health": [
+        "Active\nNo risk · 0"
+      ],
+      "names": [
+        "CIT94 QA Repeat"
+      ]
+    },
+    "new": {
+      "activeView": [],
+      "commerce": [
+        "R: Unavailable\nF: 1 order\nM: $10,00",
+        "R: Unavailable\nF: 0 orders\nM: $0,00"
+      ],
+      "counts": [
+        "2 items",
+        "2 items"
+      ],
+      "health": [
+        "New\nNo risk · 0",
+        "New\nNo risk · 0"
+      ],
+      "names": [
+        "CIT94 QA One",
+        "CIT94 QA Zero"
+      ]
+    },
+    "savedReopen": {
+      "activeView": [
+        "First-time customers"
+      ],
+      "commerce": [
+        "R: Unavailable\nF: 1 order\nM: $10,00"
+      ],
+      "counts": [
+        "1 item",
+        "1 item"
+      ],
+      "health": [
+        "New\nNo risk · 0"
+      ],
+      "names": [
+        "CIT94 QA One"
+      ]
+    },
+    "savedReload": {
+      "activeView": [
+        "First-time customers"
+      ],
+      "commerce": [
+        "R: Unavailable\nF: 1 order\nM: $10,00"
+      ],
+      "counts": [
+        "1 item",
+        "1 item"
+      ],
+      "health": [
+        "New\nNo risk · 0"
+      ],
+      "names": [
+        "CIT94 QA One"
+      ]
+    },
+    "zeroFirst": {
+      "activeView": [
+        "First-time customers"
+      ],
+      "commerce": [],
+      "counts": [
+        "0 items"
+      ],
+      "health": [],
+      "names": []
+    },
+    "zeroRepeat": {
+      "activeView": [
+        "Repeat customers"
+      ],
+      "commerce": [],
+      "counts": [
+        "0 items"
+      ],
+      "health": [],
+      "names": []
+    }
+  },
+  "csv": {
+    "status": 200,
+    "content_type": "text/csv; charset=utf-8",
+    "bom_at_byte_zero": true,
+    "matching_count": "1",
+    "subjects": [
+      {
+        "name": "CIT94 QA One",
+        "recognized_orders": "1"
+      }
+    ]
+  },
+  "source": {
+    "includes/class-yoohw-cos-customer-query.php": {
+      "original_sha256": "821a17c5fd0d3290ffe7b125888ff1bf7b711b9c1cf97996127afb5b0911724f",
+      "base_sha256": "821a17c5fd0d3290ffe7b125888ff1bf7b711b9c1cf97996127afb5b0911724f",
+      "tested_sha256": "ec7329082f9ce16d5e0e668e55ea50f5d6d141f0f98ea1afcf94107aebd328ce",
+      "original_matches_base": true,
+      "restored_sha256": "821a17c5fd0d3290ffe7b125888ff1bf7b711b9c1cf97996127afb5b0911724f",
+      "restored_exactly": true
+    },
+    "admin/class-yoohw-cos-admin-menu.php": {
+      "original_sha256": "acbf22c70fc35813a5668ab0cc8334dcba09642bbd951acf54a44ecc3a0f687b",
+      "base_sha256": "309497492ef9219c789a4d9a266636db3c0826de2ad69f911f99cebd2509cfd6",
+      "tested_sha256": "309497492ef9219c789a4d9a266636db3c0826de2ad69f911f99cebd2509cfd6",
+      "original_matches_base": false,
+      "restored_sha256": "acbf22c70fc35813a5668ab0cc8334dcba09642bbd951acf54a44ecc3a0f687b",
+      "restored_exactly": true
+    },
+    "admin/class-yoohw-cos-customer-exporter.php": {
+      "original_sha256": "199b8541a72eee78f45f0ccd48b53988d66aba4735f989c150a7602f12d98bf0",
+      "base_sha256": "34ebbb15ef60e58a9962830c650c3df486d097706959d30897486cb249805cca",
+      "tested_sha256": "34ebbb15ef60e58a9962830c650c3df486d097706959d30897486cb249805cca",
+      "original_matches_base": false,
+      "restored_sha256": "199b8541a72eee78f45f0ccd48b53988d66aba4735f989c150a7602f12d98bf0",
+      "restored_exactly": true
+    }
+  },
+  "unchanged_consumers": {
+    "admin/class-yoohw-cos-customers-list.php": {
+      "sha256": "7c22b09a0227d98a624230ebefeeb55447ed450e5fe24bbc2ad26c703412705b",
+      "matches_base": true
+    },
+    "includes/class-yoohw-cos-saved-views.php": {
+      "sha256": "fbe18c7680842be5d176525915c23d04dc6683993b5584e60ccf4928c2e7176e",
+      "matches_base": true
+    },
+    "includes/class-yoohw-cos-overview.php": {
+      "sha256": "35f09f3be515acc4f7746e7c5369e8a6f29a30f2db4b86e85bd70c2cb24fcd7c",
+      "matches_base": true
+    }
+  },
+  "cleanup": {
+    "owned_references_zero": true,
+    "checks": {
+      "events:0": 0,
+      "events:1": 0,
+      "events:2": 0,
+      "notes:0": 0,
+      "notes:1": 0,
+      "notes:2": 0,
+      "tasks:0": 0,
+      "tasks:1": 0,
+      "tasks:2": 0,
+      "customer_tags:0": 0,
+      "customer_tags:1": 0,
+      "customer_tags:2": 0,
+      "customer_segments:0": 0,
+      "customer_segments:1": 0,
+      "customer_segments:2": 0,
+      "order_facts:0": 0,
+      "order_facts:1": 0,
+      "order_facts:2": 0,
+      "notification_log:user": 0,
+      "customers:0": 0,
+      "customers:1": 0,
+      "customers:2": 0,
+      "wp_users": 0,
+      "wp_usermeta": 0
+    },
+    "protected_options_unchanged": {
+      "woocommerce_currency": true,
+      "yoohw_cos_scoring_settings": true,
+      "yoohw_cos_data_migrations": true,
+      "yoohw_cos_reset_boundary": true
+    },
+    "shared_timestamp_policy": "Preserve monotonic customer invalidation marker; no database rollback."
+  },
+  "limits": [
+    "Only three temporary runtime files were installed. Original query matched admitted base; the two older CSV admin originals did not. Tested CSV files came unchanged from admitted base. Entire installed plugin/main identity is not claimed.",
+    "Browser evidence is a minimized capture of native rendered DOM, not a screenshot. CSV bytes came from the native authenticated admin HTTP response for the browser-created personal Saved View, with a separate short-lived session for the same synthetic admin.",
+    "No whole-database snapshot restore or identity claim. Unrelated data was preserved; monotonic invalidation marker was not rewound."
+  ]
+}

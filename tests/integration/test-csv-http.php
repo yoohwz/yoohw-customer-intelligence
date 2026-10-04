@@ -105,6 +105,40 @@ final class YCI_CSV_HTTP_Test extends WP_UnitTestCase {
 		return $rows;
 	}
 
+	public function test_first_purchase_saved_view_reopens_and_exports_the_canonical_cohort(): void {
+		YoOhw_COS_Customers::reset_data();
+		foreach ( array( 0, 1, 2, 4 ) as $orders ) {
+			$this->assertGreaterThan( 0, YoOhw_COS_Customers::create_customer( array(
+				'display_name' => 'Purchase HTTP ' . $orders,
+				'email' => 'purchase-http-' . $orders . '@example.test',
+				'total_orders' => $orders,
+			) ) );
+		}
+		$cookie = $this->login();
+		$definition = array( 'customer_cohort' => 'first_time', 's' => 'Purchase HTTP', 'orderby' => 'total_orders', 'order' => 'ASC' );
+		$plain = $this->decode( $this->request( array_replace( $this->export_args(), $definition ), $cookie ) );
+		$this->assertCount( 2, $plain );
+		$this->assertSame( 'Purchase HTTP 1', $plain[1][0] );
+		$this->assertSame( 'ok', YoOhw_COS_Saved_Views::mutate( 'create', '', 'First purchase HTTP', $definition ) );
+		$id = array_key_first( YoOhw_COS_Saved_Views::all() );
+		$this->assertSame( 'first_time', YoOhw_COS_Saved_Views::get( $id )['definition']['customer_cohort'] );
+		// Reopen by ID with conflicting inputs: the native redirect must restore the personal definition.
+		$open = $this->request( array( 'saved_view_id' => $id, 'customer_cohort' => 'repeat', 's' => 'Purchase HTTP 0' ), $cookie );
+		$this->assertSame( 302, $open['status'] );
+		preg_match( '/^Location: ([^\r\n]+)/mi', $open['headers'], $location );
+		parse_str( parse_url( $location[1], PHP_URL_QUERY ), $restored );
+		$this->assertSame( 'first_time', $restored['customer_cohort'] );
+		$this->assertSame( 'Purchase HTTP', $restored['s'] );
+		$this->assertSame( '1', $restored['saved_view_context'] );
+		foreach ( array( 1, 2 ) as $reload ) {
+			$rows = $this->decode( $this->request( array_replace( $this->export_args(), $restored ), $cookie ) );
+			$this->assertSame( $plain, $rows );
+		}
+		$repeat = $this->decode( $this->request( $this->export_args() + array( 'customer_cohort' => 'repeat', 's' => 'Purchase HTTP' ), $cookie ) );
+		$names = array_column( array_slice( $repeat, 1 ), 0 ); sort( $names );
+		$this->assertSame( array( 'Purchase HTTP 2', 'Purchase HTTP 4' ), $names );
+	}
+
 	public function test_native_admin_response_plain_saved_view_and_rejections(): void {
 		YoOhw_COS_Customers::reset_data();
 		YoOhw_COS_Customers::create_customer( array( 'display_name' => 'CSV HTTP selected', 'email' => 'csv-http@example.test' ) );
