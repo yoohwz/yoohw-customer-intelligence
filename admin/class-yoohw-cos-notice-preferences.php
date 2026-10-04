@@ -104,7 +104,7 @@ final class YoOhw_COS_Notice_Preferences {
 
 	public static function enqueue(): void {
 		if ( ! current_user_can( 'manage_woocommerce' ) ) { return; }
-		wp_enqueue_script( 'yoohw-cos-notice-preferences', YOOHW_COS_URL . 'assets/js/notice-preferences.js', array( 'jquery' ), (string) filemtime( YOOHW_COS_PATH . 'assets/js/notice-preferences.js' ), true );
+		wp_enqueue_script( 'yoohw-cos-notice-preferences', YOOHW_COS_URL . 'assets/js/notice-preferences.js', array( 'jquery' ), YOOHW_COS_VERSION, true );
 		wp_localize_script( 'yoohw-cos-notice-preferences', 'yoohwCosNoticePreferences', array( 'url' => admin_url( 'admin-ajax.php' ), 'nonce' => wp_create_nonce( 'yoohw_cos_dismiss_notice' ) ) );
 	}
 }

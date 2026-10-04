@@ -26,17 +26,13 @@ final class YoOhw_COS_Order_Admin {
 			return;
 		}
 
-		$js_path  = YOOHW_COS_PATH . 'assets/js/order-admin.js';
-		$css_path = YOOHW_COS_PATH . 'assets/css/order-admin.css';
-		$js_ver   = file_exists( $js_path ) ? (string) filemtime( $js_path ) : YOOHW_COS_VERSION;
-		$css_ver  = file_exists( $css_path ) ? (string) filemtime( $css_path ) : YOOHW_COS_VERSION;
 
 		wp_enqueue_script( 'wc-enhanced-select' );
 		wp_enqueue_script(
 			'yoohw-cos-order-admin',
 			YOOHW_COS_URL . 'assets/js/order-admin.js',
 			array( 'jquery', 'wc-enhanced-select', 'jquery-tiptip' ),
-			$js_ver,
+			YOOHW_COS_VERSION,
 			true
 		);
 		wp_localize_script(
@@ -58,7 +54,7 @@ final class YoOhw_COS_Order_Admin {
 			'yoohw-cos-order-admin',
 			YOOHW_COS_URL . 'assets/css/order-admin.css',
 			array(),
-			$css_ver
+			YOOHW_COS_VERSION
 		);
 	}
 

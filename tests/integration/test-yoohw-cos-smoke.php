@@ -28,6 +28,59 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 		delete_option( 'yoohw_cos_scoring_settings' );
 	}
 
+	public function test_release_asset_urls_use_plugin_identity_and_preserve_scope(): void {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		$old_get = $_GET;
+		$old_scripts = $GLOBALS['wp_scripts'] ?? null;
+		$old_styles = $GLOBALS['wp_styles'] ?? null;
+		try {
+			$GLOBALS['wp_scripts'] = new WP_Scripts();
+			$GLOBALS['wp_styles'] = new WP_Styles();
+			wp_register_script( 'wc-enhanced-select', plugins_url( 'woocommerce/assets/js/admin/wc-enhanced-select.min.js' ), array( 'jquery' ), WC_VERSION, true );
+			wp_register_script( 'jquery-tiptip', plugins_url( 'woocommerce/assets/js/jquery-tiptip/jquery.tipTip.min.js' ), array( 'jquery' ), WC_VERSION, true );
+			$_GET = array( 'page' => 'yoohw-customer-intelligence' );
+			YoOhw_COS_Admin_Menu::enqueue_admin_assets( 'toplevel_page_yoohw-customer-intelligence' );
+			YoOhw_COS_Notice_Preferences::enqueue();
+			$this->assertSame( YOOHW_COS_VERSION, wp_styles()->registered['yoohw-cos-admin']->ver );
+			$this->assertSame( YOOHW_COS_VERSION, wp_scripts()->registered['yoohw-cos-admin']->ver );
+			$this->assertSame( YOOHW_COS_VERSION, wp_scripts()->registered['yoohw-cos-notice-preferences']->ver );
+			$this->assertSame( WC_VERSION, wp_styles()->registered['select2']->ver );
+			$this->assertSame( WC_VERSION, wp_scripts()->registered['wc-enhanced-select']->ver );
+			$_GET = array( 'page' => 'wc-orders', 'action' => 'edit' );
+			YoOhw_COS_Order_Admin::enqueue_assets( 'woocommerce_page_wc-orders' );
+			$this->assertSame( YOOHW_COS_VERSION, wp_scripts()->registered['yoohw-cos-order-admin']->ver );
+			$this->assertSame( YOOHW_COS_VERSION, wp_styles()->registered['yoohw-cos-order-admin']->ver );
+			ob_start();
+			wp_styles()->do_items( array( 'yoohw-cos-admin', 'yoohw-cos-order-admin' ) );
+			wp_scripts()->do_items( array( 'yoohw-cos-admin', 'yoohw-cos-order-admin', 'yoohw-cos-notice-preferences' ) );
+			$html = ob_get_clean();
+			preg_match_all( '~(?:src|href)=[\'"]([^\'"]+/assets/(?:css|js)/(?:admin|order-admin|notice-preferences)\.(?:css|js)\?[^\'"]+)~', $html, $matches );
+			$this->assertCount( 5, $matches[1], 'Every product asset must emit an actual versioned URL.' );
+			foreach ( $matches[1] as $url ) {
+				parse_str( (string) parse_url( html_entity_decode( $url, ENT_QUOTES ), PHP_URL_QUERY ), $query );
+				$this->assertSame( YOOHW_COS_VERSION, $query['ver'] ?? '' );
+			}
+			$this->assertSame( array( 'jquery', 'jquery-ui-autocomplete', 'wc-enhanced-select' ), wp_scripts()->registered['yoohw-cos-admin']->deps );
+			$this->assertSame( array( 'jquery', 'wc-enhanced-select', 'jquery-tiptip' ), wp_scripts()->registered['yoohw-cos-order-admin']->deps );
+			$this->assertSame( array( 'jquery' ), wp_scripts()->registered['yoohw-cos-notice-preferences']->deps );
+			wp_dequeue_style( 'yoohw-cos-admin' );
+			wp_dequeue_script( 'yoohw-cos-admin' );
+			wp_dequeue_style( 'yoohw-cos-order-admin' );
+			wp_dequeue_script( 'yoohw-cos-order-admin' );
+			$_GET = array();
+			YoOhw_COS_Admin_Menu::enqueue_admin_assets( 'plugins.php' );
+			YoOhw_COS_Order_Admin::enqueue_assets( 'plugins.php' );
+			$this->assertFalse( wp_style_is( 'yoohw-cos-admin', 'enqueued' ) );
+			$this->assertFalse( wp_script_is( 'yoohw-cos-admin', 'enqueued' ) );
+			$this->assertFalse( wp_style_is( 'yoohw-cos-order-admin', 'enqueued' ) );
+			$this->assertFalse( wp_script_is( 'yoohw-cos-order-admin', 'enqueued' ) );
+		} finally {
+			$_GET = $old_get;
+			$GLOBALS['wp_scripts'] = $old_scripts;
+			$GLOBALS['wp_styles'] = $old_styles;
+		}
+	}
+
 	public function test_customers_workspace_keeps_forms_and_controls_in_order(): void {
 		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
 		$previous_get = $_GET;

@@ -40,10 +40,6 @@ final class YoOhw_COS_Admin_Menu {
 			return;
 		}
 
-		$admin_css_path = YOOHW_COS_PATH . 'assets/css/admin.css';
-		$admin_js_path  = YOOHW_COS_PATH . 'assets/js/admin.js';
-		$admin_css_ver  = file_exists( $admin_css_path ) ? (string) filemtime( $admin_css_path ) : YOOHW_COS_VERSION;
-		$admin_js_ver   = file_exists( $admin_js_path ) ? (string) filemtime( $admin_js_path ) : YOOHW_COS_VERSION;
 
 		if ( $is_plugin_page ) {
 			self::enqueue_select2_styles();
@@ -53,7 +49,7 @@ final class YoOhw_COS_Admin_Menu {
 			'yoohw-cos-admin',
 			YOOHW_COS_URL . 'assets/css/admin.css',
 			array(),
-			$admin_css_ver
+			YOOHW_COS_VERSION
 		);
 
 		if ( ! $is_plugin_page ) {
@@ -65,7 +61,7 @@ final class YoOhw_COS_Admin_Menu {
 			'yoohw-cos-admin',
 			YOOHW_COS_URL . 'assets/js/admin.js',
 			array( 'jquery', 'jquery-ui-autocomplete', 'wc-enhanced-select' ),
-			$admin_js_ver,
+			YOOHW_COS_VERSION,
 			true
 		);
 
