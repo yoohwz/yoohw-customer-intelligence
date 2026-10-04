@@ -136,6 +136,11 @@ final class YoOhw_COS_Commerce_Metrics_Policy {
 		return $formatted;
 	}
 
+	/** Plain text for sentence contexts; retain canonical monetary/localization policy. */
+	public static function format_money_text( array $source, string $key ): string {
+		return wp_strip_all_tags( html_entity_decode( self::format_money( $source, $key ), ENT_QUOTES | ENT_HTML5, 'UTF-8' ) );
+	}
+
 	private static function currency_data_ready(): bool {
 		return YoOhw_COS_Migration_Runner::currency_backfill_is_complete();
 	}
