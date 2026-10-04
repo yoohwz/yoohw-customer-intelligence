@@ -1,0 +1,61 @@
+{
+  "unavailable": [
+    {
+      "description": "No recognized orders",
+      "text": "Lifetime valueNo recognized orders"
+    }
+  ],
+  "foreign": {
+    "factor": [
+      {
+        "descendantElements": 0,
+        "innerHtml": "This customer has spent ₫100.000,00 (VND).",
+        "text": "This customer has spent ₫100.000,00 (VND)."
+      }
+    ],
+    "kpis": [
+      {
+        "priceElements": 1,
+        "text": "Total spent₫100.000,00 (VND)"
+      },
+      {
+        "priceElements": 1,
+        "text": "Average order value₫100.000,00 (VND)"
+      }
+    ],
+    "priceSurfaces": [
+      {
+        "classes": "woocommerce-Price-amount amount",
+        "text": "₫100.000,00"
+      },
+      {
+        "classes": "woocommerce-Price-amount amount",
+        "text": "₫100.000,00"
+      },
+      {
+        "classes": "woocommerce-Price-amount amount",
+        "context": "₫100.000,00",
+        "text": "₫100.000,00"
+      },
+      {
+        "classes": "woocommerce-Price-amount amount",
+        "context": "₫100.000,00 (VND)",
+        "text": "₫100.000,00"
+      }
+    ],
+    "rfm": [
+      {
+        "price": "₫100.000,00",
+        "priceElements": 1,
+        "text": "M · Lifetime net revenue in recorded currency₫100.000,00 (VND)"
+      }
+    ],
+    "recentOrder": [
+      {
+        "orderId": 101838,
+        "price": "₫100.000,00",
+        "priceElements": 1
+      }
+    ]
+  }
+}

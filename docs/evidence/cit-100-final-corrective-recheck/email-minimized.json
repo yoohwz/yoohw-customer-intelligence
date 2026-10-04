@@ -1,0 +1,152 @@
+{
+  "notification": {
+    "plain": {
+      "rendered": true,
+      "urls": [
+        {
+          "literal_ampersand": true,
+          "scheme": "https",
+          "host": "yoplay8.local",
+          "path": "/wp-admin/admin.php",
+          "page": "yoohw-customer-intelligence-tasks",
+          "task_id": 960100,
+          "fragment": "",
+          "html_anchor_equal": true
+        }
+      ],
+      "plain_entities": false,
+      "plain_markup": false,
+      "daily_copy_readable": false,
+      "html_table_present": true,
+      "html_title_escaped": true,
+      "plain_sha256": "aa6092ea2fc8e8ffab5896ccfdd6e06de71fd0fa349bb61823c023e5f7ccfb97",
+      "html_sha256": "a7be08f81575caaf39f56abf9e55fe712aee9f0a031bd98a8a721c7f172a68c1",
+      "synthetic_in_memory_task_ids": [
+        960100
+      ],
+      "transport_intercepted": true
+    },
+    "html": {
+      "rendered": true,
+      "urls": [
+        {
+          "literal_ampersand": true,
+          "scheme": "https",
+          "host": "yoplay8.local",
+          "path": "/wp-admin/admin.php",
+          "page": "yoohw-customer-intelligence-tasks",
+          "task_id": 960100,
+          "fragment": "",
+          "html_anchor_equal": true
+        }
+      ],
+      "plain_entities": false,
+      "plain_markup": false,
+      "daily_copy_readable": false,
+      "html_table_present": true,
+      "html_title_escaped": true,
+      "plain_sha256": "aa6092ea2fc8e8ffab5896ccfdd6e06de71fd0fa349bb61823c023e5f7ccfb97",
+      "html_sha256": "a7be08f81575caaf39f56abf9e55fe712aee9f0a031bd98a8a721c7f172a68c1",
+      "synthetic_in_memory_task_ids": [
+        960100
+      ],
+      "transport_intercepted": true
+    }
+  },
+  "daily": {
+    "plain": {
+      "rendered": true,
+      "urls": [
+        {
+          "literal_ampersand": true,
+          "scheme": "https",
+          "host": "yoplay8.local",
+          "path": "/wp-admin/admin.php",
+          "page": "yoohw-customer-intelligence-tasks",
+          "task_id": 960100,
+          "fragment": "",
+          "html_anchor_equal": true
+        },
+        {
+          "literal_ampersand": true,
+          "scheme": "https",
+          "host": "yoplay8.local",
+          "path": "/wp-admin/admin.php",
+          "page": "yoohw-customer-intelligence-tasks",
+          "task_id": 960101,
+          "fragment": "",
+          "html_anchor_equal": true
+        },
+        {
+          "literal_ampersand": false,
+          "scheme": "https",
+          "host": "yoplay8.local",
+          "path": "/wp-admin/admin.php",
+          "page": "yoohw-customer-intelligence-tasks",
+          "task_id": null,
+          "fragment": "",
+          "html_anchor_equal": true
+        }
+      ],
+      "plain_entities": false,
+      "plain_markup": false,
+      "daily_copy_readable": true,
+      "html_table_present": true,
+      "html_title_escaped": true,
+      "plain_sha256": "9b2f29acfacfa728e2dd2ec6abafa24b95dac3c9dfa92dadae9737684a962bc8",
+      "html_sha256": "9bf404a759918ea577ca9a1e959e636883d8711e86a2241767a6366660f9b3cb",
+      "synthetic_in_memory_task_ids": [
+        960100,
+        960101
+      ],
+      "transport_intercepted": true
+    },
+    "html": {
+      "rendered": true,
+      "urls": [
+        {
+          "literal_ampersand": true,
+          "scheme": "https",
+          "host": "yoplay8.local",
+          "path": "/wp-admin/admin.php",
+          "page": "yoohw-customer-intelligence-tasks",
+          "task_id": 960100,
+          "fragment": "",
+          "html_anchor_equal": true
+        },
+        {
+          "literal_ampersand": true,
+          "scheme": "https",
+          "host": "yoplay8.local",
+          "path": "/wp-admin/admin.php",
+          "page": "yoohw-customer-intelligence-tasks",
+          "task_id": 960101,
+          "fragment": "",
+          "html_anchor_equal": true
+        },
+        {
+          "literal_ampersand": false,
+          "scheme": "https",
+          "host": "yoplay8.local",
+          "path": "/wp-admin/admin.php",
+          "page": "yoohw-customer-intelligence-tasks",
+          "task_id": null,
+          "fragment": "",
+          "html_anchor_equal": true
+        }
+      ],
+      "plain_entities": false,
+      "plain_markup": false,
+      "daily_copy_readable": true,
+      "html_table_present": true,
+      "html_title_escaped": true,
+      "plain_sha256": "9b2f29acfacfa728e2dd2ec6abafa24b95dac3c9dfa92dadae9737684a962bc8",
+      "html_sha256": "9bf404a759918ea577ca9a1e959e636883d8711e86a2241767a6366660f9b3cb",
+      "synthetic_in_memory_task_ids": [
+        960100,
+        960101
+      ],
+      "transport_intercepted": true
+    }
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "Zero": {
+    "id": "1797",
+    "total_orders": "0",
+    "total_spent": "0.000000",
+    "average_order_value": "0.000000",
+    "customer_status": "new",
+    "commerce_metrics_version": "2",
+    "money_state": "none",
+    "money_currency": null,
+    "reason": "none"
+  },
+  "One": {
+    "id": "1798",
+    "total_orders": "1",
+    "total_spent": "100.000000",
+    "average_order_value": "100.000000",
+    "customer_status": "new",
+    "commerce_metrics_version": "2",
+    "money_state": "comparable",
+    "money_currency": "USD",
+    "reason": "comparable"
+  },
+  "Repeat": {
+    "id": "1799",
+    "total_orders": "2",
+    "total_spent": "200.000000",
+    "average_order_value": "100.000000",
+    "customer_status": "active",
+    "commerce_metrics_version": "2",
+    "money_state": "comparable",
+    "money_currency": "USD",
+    "reason": "comparable"
+  },
+  "VND": {
+    "id": "1800",
+    "total_orders": "1",
+    "total_spent": "100000.000000",
+    "average_order_value": "100000.000000",
+    "customer_status": "new",
+    "commerce_metrics_version": "2",
+    "money_state": "comparable",
+    "money_currency": "VND",
+    "reason": "comparable"
+  }
+}

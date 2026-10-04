@@ -1,0 +1,62 @@
+[
+  {
+    "kind": "saved-first-time",
+    "response_status": 200,
+    "headers": [
+      "Content-Type: text/csv; charset=utf-8",
+      "Content-Disposition: attachment; filename=\"yoohw-customers-2026-10-04-062545.csv\"",
+      "X-YoOhw-COS-Export-Limit: 5000",
+      "X-YoOhw-COS-Export-Matching-Customers: 1"
+    ],
+    "bom_at_byte_zero": true,
+    "strict_parse": true,
+    "column_count": 17,
+    "row_count": 1,
+    "subjects": [
+      {
+        "label": "CIT100 Synthetic One",
+        "orders": 1
+      }
+    ],
+    "admin_html_prefix": false,
+    "request_token_values_checked": 2,
+    "request_token_value_leakage": false,
+    "response_sha256": "333bb11b1da85d7b325fde0c3ae080a6e59d2f6345a2f539818656ad1bb9c7cf",
+    "byte_length": 320,
+    "capture": "byte-preserving MU output buffer of native browser Export CSV POST"
+  },
+  {
+    "kind": "filtered-all",
+    "response_status": 200,
+    "headers": [
+      "Content-Type: text/csv; charset=utf-8",
+      "Content-Disposition: attachment; filename=\"yoohw-customers-2026-10-04-062506.csv\"",
+      "X-YoOhw-COS-Export-Limit: 5000",
+      "X-YoOhw-COS-Export-Matching-Customers: 3"
+    ],
+    "bom_at_byte_zero": true,
+    "strict_parse": true,
+    "column_count": 17,
+    "row_count": 3,
+    "subjects": [
+      {
+        "label": "CIT100 Synthetic Repeat",
+        "orders": 2
+      },
+      {
+        "label": "CIT100 Synthetic One",
+        "orders": 1
+      },
+      {
+        "label": "CIT100 Synthetic Zero",
+        "orders": 0
+      }
+    ],
+    "admin_html_prefix": false,
+    "request_token_values_checked": 2,
+    "request_token_value_leakage": false,
+    "response_sha256": "a8284d2d8d79b1ecc26f8bc57c4f50b9e434336cb4703d868482c53f5702706c",
+    "byte_length": 579,
+    "capture": "byte-preserving MU output buffer of native browser Export CSV POST"
+  }
+]
