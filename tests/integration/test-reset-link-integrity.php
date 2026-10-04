@@ -1720,7 +1720,7 @@ final class YCI_Notification_Recipient_Test extends WP_UnitTestCase {
 		$method = new ReflectionMethod( $email, 'get_task_template_args' );
 		$args = $method->invoke( $email, true );
 		$args['task'] = $this->task();
-		foreach ( array( 'javascript:alert(1)', 'javascript&#58;alert(1)', 'data:text/html,<script>evil()</script>', "https://example.test/\r\nBcc: injected@example.test", 'https://example.test/?x=%0d%0aBcc:injected', 'https://example.test/&NewLine;Bcc:injected' ) as $url ) {
+		foreach ( array( 'javascript:alert(1)', 'javascript&#58;alert(1)', 'data:text/html,<script>evil()</script>', "https://example.test/\r\nBcc: injected@example.test", 'https://example.test/?x=%0d%0aBcc:injected', 'https://example.test/&NewLine;Bcc:injected', 'https://example.test/&#13;&#10;Bcc:injected', 'https://example.test/?x=%0D%0ABcc:injected' ) as $url ) {
 			$args['task_url'] = $url;
 			$plain = wc_get_template_html( 'emails/plain/crm-task-notification.php', $args, '', YOOHW_COS_PATH . 'templates/' );
 			$this->assertStringNotContainsString( $url, $plain );
@@ -1738,7 +1738,7 @@ final class YCI_Notification_Recipient_Test extends WP_UnitTestCase {
 		};
 		$method = new ReflectionMethod( $digest, 'get_digest_template_args' );
 		$digest_args = $method->invoke( $digest, true, array( array( 'title' => 'Synthetic queue', 'tasks' => array( $this->task() ) ) ), 'Synthetic digest' );
-		foreach ( array( 'javascript:alert(1)', 'data:text/html,evil', "https://example.test/\r\nBcc: injected@example.test", 'https://example.test/?x=%0d%0aBcc:injected', 'https://example.test/&NewLine;Bcc:injected' ) as $url ) {
+		foreach ( array( 'javascript:alert(1)', 'data:text/html,evil', "https://example.test/\r\nBcc: injected@example.test", 'https://example.test/?x=%0d%0aBcc:injected', 'https://example.test/&NewLine;Bcc:injected', 'https://example.test/&#13;&#10;Bcc:injected', 'https://example.test/?x=%0D%0ABcc:injected' ) as $url ) {
 			$digest->fixture_url = $url;
 			$digest_args['task_list_url'] = $url;
 			$plain = wc_get_template_html( 'emails/plain/crm-task-digest.php', $digest_args, '', YOOHW_COS_PATH . 'templates/' );

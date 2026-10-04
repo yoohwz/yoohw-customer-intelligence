@@ -69,6 +69,15 @@ abstract class YoOhw_COS_Email_CRM_Base extends WC_Email {
 		return esc_url_raw( $url, array( 'http', 'https' ) );
 	}
 
+	/**
+	 * Emit already serialized text/plain body copy, never headers or transport fields.
+	 * Callers serialize dynamic text/URLs with plain_text()/plain_url() before this sink.
+	 */
+	public static function output_plain_body( string $serialized_body ): void {
+		// HTML escaping would reintroduce entities and corrupt literal URL query separators in text/plain.
+		echo $serialized_body; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Audited body-only sink; callers use the plain text/URL serializers.
+	}
+
 	public function get_template_task_summary( array $task ): array {
 		return array(
 			'id'             => absint( $task['id'] ?? 0 ),
