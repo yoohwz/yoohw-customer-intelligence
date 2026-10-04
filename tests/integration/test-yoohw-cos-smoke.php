@@ -28,6 +28,73 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 		delete_option( 'yoohw_cos_scoring_settings' );
 	}
 
+	public function test_settings_auto_continuation_requires_incoming_nonce_and_reset_epoch(): void {
+		$old_get = $_GET;
+		$old_user = get_current_user_id();
+		$old_cookies = $_COOKIE;
+		$admin = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		update_option( YoOhw_COS_Reset_Guard::OPTION, array( 'epoch' => wp_generate_uuid4(), 'status' => 'ready' ) );
+		wp_set_current_user( $admin );
+		$method = new ReflectionMethod( YoOhw_COS_Admin_Menu::class, 'has_valid_continuation_nonce' );
+		$method->setAccessible( true );
+		$operations = array( 'sync_customers', 'recalculate_intelligence', 'backfill_first_orders', 'sync_blacklist_signals' );
+		try {
+			$_GET = array(
+				'yoohw_cos_recalculate_more' => '1', 'yoohw_cos_recalculate_auto' => '1',
+				'yoohw_cos_backfill_more' => '1', 'yoohw_cos_backfill_auto' => '1',
+				'yoohw_cos_has_more' => '1', 'yoohw_cos_auto_sync' => '1',
+				'yoohw_cos_blacklist_sync_more' => '1', 'yoohw_cos_blacklist_sync_auto' => '1',
+			);
+			ob_start();
+			YoOhw_COS_Admin_Menu::render_settings_page();
+			$html = ob_get_clean();
+			$this->assertStringNotContainsString( 'data-yoohw-cos-auto-submit="1"', $html, 'Forged GET flags must never mint authority to auto-submit a fresh POST nonce.' );
+			foreach ( $operations as $operation ) {
+				$action = YoOhw_COS_Admin_Tools::continuation_nonce_action( $operation );
+				$nonce = wp_create_nonce( $action );
+				foreach ( array( null, array( $nonce ), 'forged' ) as $invalid ) {
+					$_GET['yoohw_cos_continue_nonce'] = $invalid;
+					$this->assertFalse( $method->invoke( null, $operation ) );
+				}
+				$tick = wp_nonce_tick( $action ) - 2;
+				$_GET['yoohw_cos_continue_nonce'] = substr( wp_hash( $tick . '|' . $action . '|' . $admin . '|' . wp_get_session_token(), 'nonce' ), -12, 10 );
+				$this->assertFalse( $method->invoke( null, $operation ), 'Expired authentic nonce must fail.' );
+				$_GET['yoohw_cos_continue_nonce'] = $nonce;
+				$this->assertTrue( $method->invoke( null, $operation ) );
+				$sessions = WP_Session_Tokens::get_instance( $admin );
+				$session = $sessions->create( time() + HOUR_IN_SECONDS );
+				$_COOKIE[ LOGGED_IN_COOKIE ] = wp_generate_auth_cookie( $admin, time() + HOUR_IN_SECONDS, 'logged_in', $session );
+				$_GET['yoohw_cos_continue_nonce'] = wp_create_nonce( $action );
+				$this->assertTrue( $method->invoke( null, $operation ) );
+				$other_session = $sessions->create( time() + HOUR_IN_SECONDS );
+				$_COOKIE[ LOGGED_IN_COOKIE ] = wp_generate_auth_cookie( $admin, time() + HOUR_IN_SECONDS, 'logged_in', $other_session );
+				$this->assertFalse( $method->invoke( null, $operation ), 'Continuation cannot cross sessions of the same user.' );
+				$_COOKIE = $old_cookies;
+				$_GET['yoohw_cos_continue_nonce'] = $nonce;
+				$this->assertFalse( $method->invoke( null, $operation . '_other' ), 'Continuation cannot cross operations.' );
+				wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+				$this->assertFalse( $method->invoke( null, $operation ), 'Continuation cannot cross users.' );
+				wp_set_current_user( $admin );
+				$state = get_option( YoOhw_COS_Reset_Guard::OPTION );
+				update_option( YoOhw_COS_Reset_Guard::OPTION, array( 'epoch' => wp_generate_uuid4(), 'status' => 'ready' ) );
+				$this->assertFalse( $method->invoke( null, $operation ), 'An old continuation cannot cross Reset.' );
+				update_option( YoOhw_COS_Reset_Guard::OPTION, $state );
+			}
+			foreach ( array( 'recalculate_intelligence' => 'yoohw-cos-recalculate-form', 'backfill_first_orders' => 'yoohw-cos-backfill-form' ) as $operation => $form_class ) {
+				$_GET['yoohw_cos_continue_nonce'] = wp_create_nonce( YoOhw_COS_Admin_Tools::continuation_nonce_action( $operation ) );
+				ob_start();
+				YoOhw_COS_Admin_Menu::render_settings_page();
+				$html = ob_get_clean();
+				$this->assertSame( 1, substr_count( $html, 'data-yoohw-cos-auto-submit="1"' ) );
+				$this->assertMatchesRegularExpression( '/<form class="' . preg_quote( $form_class, '/' ) . '[^>]*data-yoohw-cos-auto-submit="1"/', $html );
+			}
+		} finally {
+			$_GET = $old_get;
+			$_COOKIE = $old_cookies;
+			wp_set_current_user( $old_user );
+		}
+	}
+
 	public function test_release_asset_urls_use_plugin_identity_and_preserve_scope(): void {
 		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
 		$old_get = $_GET;

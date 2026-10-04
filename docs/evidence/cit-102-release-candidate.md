@@ -4,7 +4,7 @@ Prepared 2026-10-04 (Asia/Ho_Chi_Minh). [CIT-102](https://github.com/yoohwz/yooh
 
 Original admitted protected main: `1e4dd12261f065394dd755cd7b3c367eb7379dd2`. Final implementation/review base: `e88e8fef80bb15e603e031a49ce1f458cf4ad55c`, the protected main after separately admitted [CIT-103 / PR104](https://github.com/yoohwz/yoohw-customer-intelligence/pull/104) was accepted and merged. The branch was fast-forwarded without discarding the bounded CIT-102 changes. CIT-103's serializer sink is inherited base content, not an additional runtime correction inside CIT-102. Governance is unchanged.
 
-This record supersedes the provisional packages, the 64-error certification blocker and the earlier 0-error/907-warning candidate. The Human expanded scope to require zero warnings and to retain the readme name while matching the main-file Plugin Name; the durable [scope addendum](https://github.com/yoohwz/yoohw-customer-intelligence/issues/102#issuecomment-5978458994) owns these corrections. Earlier candidate reviews are invalid for this changed candidate. All staged-package checks below were repeated on the final zero-warning payload (R3). Exact final candidate SHA, PR diff/base, native CI run ID and fresh Technical Review URL/SHA are bound by the owning PR's final evidence comment. Those self-referential post-push identities are deliberately not fabricated or embedded through a source-only handoff commit; Acceptance must read that exact-head PR evidence together with this record. This document alone does not grant Acceptance, merge or release authority.
+This record supersedes the provisional packages, the 64-error certification blocker and the earlier 0-error/907-warning candidate. The Human expanded scope to require zero warnings and to retain the readme name while matching the main-file Plugin Name; the durable [scope addendum](https://github.com/yoohwz/yoohw-customer-intelligence/issues/102#issuecomment-5978458994) owns these corrections. Earlier candidate reviews are invalid for this changed candidate. All staged-package checks below were repeated on the final zero-warning payload (R4). Exact final candidate SHA, PR diff/base, native CI run ID and fresh Technical Review URL/SHA are bound by the owning PR's final evidence comment. Those self-referential post-push identities are deliberately not fabricated or embedded through a source-only handoff commit; Acceptance must read that exact-head PR evidence together with this record. This document alone does not grant Acceptance, merge or release authority.
 
 ## Identity and public metadata
 
@@ -38,8 +38,8 @@ Two fresh canonical `bash scripts/stage-distribution.sh . <destination>` invocat
 | Artifact | Exact value |
 | --- | --- |
 | File count | 65 |
-| Product tree SHA-256 | `16951f40a6c3d7a7c40dece4a83ab6b7575da585025f317c63a0b7632472e0ca` |
-| `yoohw-customer-intelligence-1.4.3.zip` SHA-256 | `6c9f3bffcf625a16521eff7a6c6445c357f97ad90c196d12531de3c0fc9cd626` |
+| Product tree SHA-256 | `da4238e2fa53bcb814879ebd15305f4f22bad6a80a40594df680bd2ec2f60fe4` |
+| `yoohw-customer-intelligence-1.4.3.zip` SHA-256 | `f7d0e49255c6e4854539b5b43446d43d1bb21a7b0e77635ff927bf1b75a158cf` |
 | Real public 1.4.2 ZIP SHA-256 | `6480ace7fa5a40c40094e24a92398964129f4d54a18bf06460ec5dd4cae30124` |
 | Plugin Check 2.1.0 ZIP SHA-256 | `6ff4bd2145f3befcf907df158cc466b1649dafed5686de8369907403c3013fc4` |
 | WP-CLI 2.12.0 PHAR SHA-256 | `ce34ddd838f7351d6759068d09793f26755463b4a4610a5a5c0a97b68220d85c` |
@@ -55,8 +55,8 @@ Tools: PHP 8.4.18, MySQL 8.0.35, WordPress 6.9, WooCommerce 10.8.0, WP-CLI 2.12.
 | Required-gate self-test | PASS, 2 tests |
 | Release contracts | PASS, `release-contracts-ok` |
 | Local tracked syntax | PASS, 77 PHP / 4 JavaScript / 9 Python files |
-| Full canonical HPOS=yes | PASS, 292 tests / 6,539 assertions |
-| Full canonical HPOS=no | PASS, 292 tests / 6,539 assertions |
+| Full canonical HPOS=yes | PASS, 293 tests / 6,584 assertions |
+| Full canonical HPOS=no | PASS, 293 tests / 6,584 assertions |
 | Entrypoint rejection / grant-option controls | PASS, 144 controls per topology |
 | Both owned benchmark smokes / unrelated sentinel / cleanup | PASS |
 | Public 1.4.2 ready upgrade, HPOS=yes | PASS |
@@ -103,6 +103,8 @@ All five distributed CIT enqueues now use `YOOHW_COS_VERSION`; physical filename
 
 Native browser DOM supplied these URLs; independent loopback requests fetched all five with status 200 and matched exact staged file SHA-256/bytes. Customers/Settings screenshots showed styled controls, active Saved View and dismissed notice; Profile rendered its task/user selectors and recent-order formatted VND amount; order-edit rendered the CIT customer/task panels and enhanced customer selector. The new integration regression uses native WordPress loaders to parse all five URLs, assert dependency version ownership, dependency arrays and unrelated-page exclusion in both HPOS modes.
 
+An initial normal login redirected to `/wp-admin/`, outside the fixture router, and produced a browser error tab. A fresh tab with a normal login and explicit admitted redirect completed the UI smoke; the browser tool refused cleanup of the error tab because its generated data URL is outside its URL policy. The active successful fixture tab was closed and all owned server/DB/private credential resources were cleaned. This UI cleanup limitation does not weaken authentication or broaden the router.
+
 The private loopback fixture blocks outbound WordPress HTTP/mail/cron and routes only admitted admin endpoints. WooCommerce background REST/recommendation requests to `/index.php` were consequently rejected by that fixture; browser console contained opaque `Object` errors and the order page displayed its recommendations-loading message. This is a recorded offline-fixture limitation, not a claim of zero browser console errors or full WooCommerce-network QA. No CIT asset failed the direct HTTP/hash checks; no PHP fatal/error appeared in the native HTTP server log. CLI WP-CLI reports include its pre-defined-ABSPATH advisory and dependency early-translation notices; these are not silently counted as product failures or proof of broad runtime compatibility.
 
 ## Plugin Check and warning disposition
@@ -114,11 +116,11 @@ wp plugin check yoohw-customer-intelligence --mode=new --format=csv --ignore-war
 wp plugin check yoohw-customer-intelligence --mode=new --format=csv
 ```
 
-The final native scan of the exact R3 staged payload reports **0 ERROR / 0 WARNING** in both accepted invocations. Both outputs state `Success: Checks complete. No errors found.`; full CSV record parsing independently counted zero errors and warnings. No checks, paths or error codes were excluded and no scanner configuration was weakened.
+The final native scan of the exact R4 staged payload reports **0 ERROR / 0 WARNING** in both accepted invocations. Both outputs state `Success: Checks complete. No errors found.`; full CSV record parsing independently counted zero errors and warnings. No checks, paths or error codes were excluded and no scanner configuration was weakened.
 
 The paired prior baseline is comparison evidence only: public 1.4.2 had 0 ERROR / 888 WARNING; the earlier post-CIT-103 candidate had 0 ERROR / 907 WARNING. Neither earlier result certifies the final package. The following counts explain the complete warning disposition:
 
-| Warning code | Public 1.4.2 | Prior candidate | Final R3 |
+| Warning code | Public 1.4.2 | Prior candidate | Final R4 |
 | --- | ---: | ---: | ---: |
 | `PluginCheck.Security.DirectDB.UnescapedDBParameter` | 1 | 1 | 0 |
 | `WordPress.DB.DirectDatabaseQuery.DirectQuery` | 244 | 251 | 0 |
@@ -145,7 +147,15 @@ DirectQuery/NoCaching exceptions cover custom CRM/integration tables without a W
 
 Nonce/input annotations identify read-only display/filter selection, sanitized filter POST redirects excluding mutation/export/Saved View actions, or the separate capability/nonce/Reset guard that admits order saves. Notice keys/revisions and Reset epochs retain exact validation instead of normalization that could alter replay checks. Bulk input is counted before bounded ID normalization; scoring schema and integration array accessors own their documented validation. Required WooCommerce interoperability hooks keep their fixed upstream names. The annotations do not add mutation authority or remove authentication, capability, nonce, escaping, preparation or Reset/privacy guards.
 
-PHP token comparison across all 46 changed product PHP files against the earlier candidate found identical executable tokens after reversing the template-local variable prefixes; comments and Plugin Name metadata do not alter operations. The final underlying Plugin Check component scans (plugin-review, direct database, DirectDB security, configured prefix and slow-query standards) also report 0 errors / 0 warnings. A separate, undistributed unsafe PHP canary still triggers eight relevant diagnostic codes, including SQLNotPrepared, DirectQuery, NoCaching, nonce, output escaping and input validation/sanitization/unslash diagnostics. This verifies the rules remain active outside the exact local exceptions. The complete native scanner, full regression suite, staged upgrades and native fresh-install transport checks independently validate the final package; fresh Technical Review owns independent assessment of these exceptions.
+The R3 warning correction compared all 46 changed product PHP files against its predecessor and found identical executable tokens after reversing template-local prefixes. That historical parity check does not characterize the final R4 runtime correction described below. Supporting R3 component scans (plugin-review, direct database, DirectDB security, configured prefix and slow-query standards) reported 0 errors / 0 warnings. The two R4 admin files repeated plugin-review with 0 errors / 0 warnings, and the complete native R4 default scan above certifies the final product. A separate, undistributed unsafe PHP canary still triggers eight relevant diagnostic codes, including SQLNotPrepared, DirectQuery, NoCaching, nonce, output escaping and input validation/sanitization/unslash diagnostics. This verifies the rules remain active outside the exact local exceptions. The complete native scanner, full regression suite, staged upgrades and native fresh-install transport checks independently validate the final package; fresh Technical Review owns independent assessment of these exceptions.
+
+## Technical Review correction: authenticated automatic continuation
+
+Fresh independent Technical Review of candidate `53462b5996d592e4cfecb183bfa251bec6fcf489` recorded one [blocking P2 finding](https://github.com/yoohwz/yoohw-customer-intelligence/pull/105#issuecomment-5978658191): GET maintenance flags were incorrectly described as read-only even though they enabled JavaScript auto-submit with a newly rendered POST nonce. The POST handler nonce could not authenticate the GET that initiated the write. That candidate is superseded; its otherwise successful CI does not certify R4.
+
+The bounded warning correction now authenticates the incoming continuation before enabling auto-submit for sync, intelligence recalculation, first-order backfill or Blacklist signals. Only capability/nonce-checked admin-post handlers mint the continuation nonce in their redirect. Its action is bound to operation and current Reset epoch; WordPress also binds the nonce to the user and login session. Settings requires `manage_woocommerce`, a ready Reset boundary and a valid incoming string nonce. Missing, malformed, expired, cross-operation, cross-user, cross-session or pre-Reset continuations do not auto-submit. Normal explicit buttons and the existing AJAX batch loop remain available; valid fallback redirects preserve automatic continuation. Each POST keeps its existing capability, nonce and Reset checks. No schema, caching or release-control change is involved.
+
+The new integration regression exercises all four operation bindings with absent/array/forged/expired nonces, valid current nonces, distinct sessions of the same user, another administrator, another action and a changed Reset epoch. Native Settings rendering with crafted GET flags and fresh POST nonces emits zero auto-submit forms; valid recalculate/backfill continuation emits only its own auto-submit form. Native browser Settings independently confirms crafted query flags emit zero auto-submit forms despite intact POST nonce fields. The exact R4 package was rescanned and all five upgrades/fresh native CSV/AJAX/asset checks repeated after this correction. An exploratory earlier local suite was interrupted after the test fixture was finalized; its owned environment cleaned up and it is not PASS evidence. The final full-suite results above are from the completed final-source invocation.
 
 ## Safety, limitations and release boundary
 
@@ -160,8 +170,8 @@ No Prepare/Publish workflow dispatch, tag, GitHub Release, WordPress.org SVN wri
 | Path | Bytes | SHA-256 |
 | --- | ---: | --- |
 | `admin/class-yoohw-cos-activity-list.php` | 19461 | `cbd30021c1143a66a9c899abbefad037dbe7a01bcfd2a9b7ecbc03a43c49d455` |
-| `admin/class-yoohw-cos-admin-menu.php` | 200090 | `409d5c969007ca99c37e119066c27735f926d9aa39bcc8bbd718c36b28e040f2` |
-| `admin/class-yoohw-cos-admin-tools.php` | 63422 | `3bddf8e6cf7f445a35aa1c0060a8ac9b1f633a125490894f73dc6324c1d09a38` |
+| `admin/class-yoohw-cos-admin-menu.php` | 200941 | `4f846da059cb5fa93f9fef90ed96f1f23d46195561c99f762e9f7a6cb47f2a89` |
+| `admin/class-yoohw-cos-admin-tools.php` | 64136 | `0764ad84fd1d77772f0541db5b3ffe9e66266211599acae8e3b2615af8e01765` |
 | `admin/class-yoohw-cos-admin-ui.php` | 4065 | `e3074a55ff288245babe129e8090c5a29599d9603a5d8182fc58915fa8849a81` |
 | `admin/class-yoohw-cos-customer-exporter.php` | 11506 | `e09cfbbee463906e16184d35adc6eb475c10a8f21397cfe210e064cf413c4e07` |
 | `admin/class-yoohw-cos-customer-profile.php` | 76685 | `b228b7b340baa19d997388f1689f89719cae5eacddbe4e4bda6d7809215d06da` |

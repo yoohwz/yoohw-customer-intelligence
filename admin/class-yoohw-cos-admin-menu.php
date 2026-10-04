@@ -2551,6 +2551,17 @@ final class YoOhw_COS_Admin_Menu {
 		echo '</div>';
 	}
 
+	private static function has_valid_continuation_nonce( string $operation ): bool {
+		if ( ! current_user_can( 'manage_woocommerce' ) || ! YoOhw_COS_Reset_Guard::ready() || ! isset( $_GET['yoohw_cos_continue_nonce'] ) || ! is_string( $_GET['yoohw_cos_continue_nonce'] ) ) {
+			return false;
+		}
+
+		return (bool) wp_verify_nonce(
+			sanitize_text_field( wp_unslash( $_GET['yoohw_cos_continue_nonce'] ) ),
+			YoOhw_COS_Admin_Tools::continuation_nonce_action( $operation )
+		);
+	}
+
 	public static function render_settings_page(): void {
 		if ( ! current_user_can( 'manage_woocommerce' ) ) {
 			wp_die( esc_html__( 'You do not have permission to access this page.', 'yoohw-customer-intelligence' ) );
@@ -2675,7 +2686,7 @@ final class YoOhw_COS_Admin_Menu {
 		$has_more        = ! empty( $sync_state['has_more'] );
 		$next_page       = absint( $sync_state['next_page'] ?? 1 );
 		$next_page       = $has_more ? max( 1, $next_page ) : 1;
-		$sync_auto_submit = $has_more && $query_has_more && ! empty( $_GET['yoohw_cos_auto_sync'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+		$sync_auto_submit = self::has_valid_continuation_nonce( 'sync_customers' ) && $has_more && $query_has_more && ! empty( $_GET['yoohw_cos_auto_sync'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Auto-submit requires the incoming operation/session/Reset-bound continuation nonce; POST handlers additionally enforce their own controls.
 		$sync_percent    = absint( $sync_state['percent'] ?? 0 );
 
 		if ( 'completed' === $sync_state['status'] && empty( $sync_state['has_more'] ) && ! empty( $sync_state['last_run_at'] ) ) {
@@ -2711,7 +2722,7 @@ final class YoOhw_COS_Admin_Menu {
 
 		$recalculate_next = isset( $_GET['yoohw_cos_recalculate_next'] ) ? absint( wp_unslash( $_GET['yoohw_cos_recalculate_next'] ) ) : 1; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 		$recalculate_more = ! empty( $_GET['yoohw_cos_recalculate_more'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
-		$recalculate_auto_submit = $recalculate_more && ( ! empty( $_GET['yoohw_cos_recalculate_auto'] ) || isset( $_GET['yoohw_cos_recalculated'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+		$recalculate_auto_submit = self::has_valid_continuation_nonce( 'recalculate_intelligence' ) && $recalculate_more && ( ! empty( $_GET['yoohw_cos_recalculate_auto'] ) || isset( $_GET['yoohw_cos_recalculated'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Auto-submit requires the incoming operation/session/Reset-bound continuation nonce; POST handlers additionally enforce their own controls.
 
 		echo '<div id="yoohw-cos-recalculate-intelligence" class="yoohw-cos-operation-row" data-yoohw-cos-sync-container>';
 		echo '<div class="yoohw-cos-operation-row__content">';
@@ -2742,7 +2753,7 @@ final class YoOhw_COS_Admin_Menu {
 			$blacklist_next = isset( $_GET['yoohw_cos_blacklist_sync_next'] ) ? absint( wp_unslash( $_GET['yoohw_cos_blacklist_sync_next'] ) ) : 1; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 			$blacklist_more = ! empty( $_GET['yoohw_cos_blacklist_sync_more'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 			$blacklist_stage = isset( $_GET['yoohw_cos_blacklist_sync_stage'] ) ? sanitize_key( wp_unslash( $_GET['yoohw_cos_blacklist_sync_stage'] ) ) : 'core'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
-			$blacklist_auto_submit = $blacklist_more && ( ! empty( $_GET['yoohw_cos_blacklist_sync_auto'] ) || isset( $_GET['yoohw_cos_blacklist_synced'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			$blacklist_auto_submit = self::has_valid_continuation_nonce( 'sync_blacklist_signals' ) && $blacklist_more && ( ! empty( $_GET['yoohw_cos_blacklist_sync_auto'] ) || isset( $_GET['yoohw_cos_blacklist_synced'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Auto-submit requires the incoming operation/session/Reset-bound continuation nonce; POST handlers additionally enforce their own controls.
 			$blacklist_description = $blacklist_premium_active
 				? __( 'Backfill core blacklist signals, then premium risk signals from the active Premium license.', 'yoohw-customer-intelligence' )
 				: __( 'Backfill core Blacklist Manager signals.', 'yoohw-customer-intelligence' );
@@ -2776,7 +2787,7 @@ final class YoOhw_COS_Admin_Menu {
 
 		$backfill_next = isset( $_GET['yoohw_cos_backfill_next'] ) ? absint( wp_unslash( $_GET['yoohw_cos_backfill_next'] ) ) : 1; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 		$backfill_more = ! empty( $_GET['yoohw_cos_backfill_more'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
-		$backfill_auto_submit = $backfill_more && ( ! empty( $_GET['yoohw_cos_backfill_auto'] ) || isset( $_GET['yoohw_cos_backfilled'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+		$backfill_auto_submit = self::has_valid_continuation_nonce( 'backfill_first_orders' ) && $backfill_more && ( ! empty( $_GET['yoohw_cos_backfill_auto'] ) || isset( $_GET['yoohw_cos_backfilled'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Auto-submit requires the incoming operation/session/Reset-bound continuation nonce; POST handlers additionally enforce their own controls.
 
 		echo '<div class="yoohw-cos-operation-row" data-yoohw-cos-sync-container>';
 		echo '<div class="yoohw-cos-operation-row__content">';

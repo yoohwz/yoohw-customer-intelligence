@@ -3,6 +3,11 @@ defined( 'ABSPATH' ) || exit;
 
 final class YoOhw_COS_Admin_Tools {
 
+	/** Bind automatic continuation to the current user session, operation and Reset epoch. */
+	public static function continuation_nonce_action( string $operation ): string {
+		return 'yoohw_cos_continue_' . $operation . '_' . YoOhw_COS_Reset_Guard::epoch();
+	}
+
 	public static function init(): void {
 		add_action( 'wp_ajax_yoohw_cos_send_customer_email', array( __CLASS__, 'handle_send_customer_email' ) );
 		add_action( 'wp_ajax_yoohw_cos_ajax_sync_customers', array( __CLASS__, 'handle_ajax_sync_customers' ) );
@@ -173,6 +178,7 @@ final class YoOhw_COS_Admin_Tools {
 					'yoohw_cos_next_page'  => absint( $result['next_page'] ),
 					'yoohw_cos_has_more'   => ! empty( $result['has_more'] ) ? 1 : 0,
 					'yoohw_cos_auto_sync'  => ! empty( $_POST['auto_sync'] ) ? 1 : 0,
+					'yoohw_cos_continue_nonce' => wp_create_nonce( self::continuation_nonce_action( 'sync_customers' ) ),
 				),
 				admin_url( 'admin.php' )
 			)
@@ -967,6 +973,7 @@ final class YoOhw_COS_Admin_Tools {
 					'yoohw_cos_recalculate_next'   => absint( $result['next_page'] ),
 					'yoohw_cos_recalculate_more'   => ! empty( $result['has_more'] ) ? 1 : 0,
 					'yoohw_cos_recalculate_auto'   => ! empty( $_POST['auto_recalculate'] ) ? 1 : 0,
+					'yoohw_cos_continue_nonce' => wp_create_nonce( self::continuation_nonce_action( 'recalculate_intelligence' ) ),
 				),
 				admin_url( 'admin.php' )
 			)
@@ -1006,6 +1013,7 @@ final class YoOhw_COS_Admin_Tools {
 					'yoohw_cos_backfill_next' => absint( $result['next_page'] ),
 					'yoohw_cos_backfill_more' => ! empty( $result['has_more'] ) ? 1 : 0,
 					'yoohw_cos_backfill_auto' => ! empty( $_POST['auto_backfill'] ) ? 1 : 0,
+					'yoohw_cos_continue_nonce' => wp_create_nonce( self::continuation_nonce_action( 'backfill_first_orders' ) ),
 				),
 				admin_url( 'admin.php' )
 			)
@@ -1055,6 +1063,7 @@ final class YoOhw_COS_Admin_Tools {
 					'yoohw_cos_blacklist_sync_next'     => absint( $result['next_page'] ?? $page ),
 					'yoohw_cos_blacklist_sync_more'     => ! empty( $result['has_more'] ) ? 1 : 0,
 					'yoohw_cos_blacklist_sync_auto'     => ! empty( $_POST['auto_blacklist_sync'] ) ? 1 : 0,
+					'yoohw_cos_continue_nonce' => wp_create_nonce( self::continuation_nonce_action( 'sync_blacklist_signals' ) ),
 				),
 				admin_url( 'admin.php' )
 			)
