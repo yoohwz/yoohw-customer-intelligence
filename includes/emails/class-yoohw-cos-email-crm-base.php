@@ -55,6 +55,20 @@ abstract class YoOhw_COS_Email_CRM_Base extends WC_Email {
 		return '';
 	}
 
+	/** Serialize body copy for text/plain, including encoded markup from translations/settings. */
+	public static function plain_text( string $text ): string {
+		return wp_strip_all_tags( html_entity_decode( $text, ENT_QUOTES | ENT_HTML5, 'UTF-8' ) );
+	}
+
+	/** Task actions use HTTP(S); reject line breaks before URL sanitization. */
+	public static function plain_url( string $url ): string {
+		$url = html_entity_decode( $url, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+		if ( preg_match( '/[\r\n]|%0[ad]/i', $url ) ) {
+			return '';
+		}
+		return esc_url_raw( $url, array( 'http', 'https' ) );
+	}
+
 	public function get_template_task_summary( array $task ): array {
 		return array(
 			'id'             => absint( $task['id'] ?? 0 ),

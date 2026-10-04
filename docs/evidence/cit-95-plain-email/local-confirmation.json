@@ -1,0 +1,293 @@
+{
+  "runtime": {
+    "wordpress": "7.1.2",
+    "woocommerce": "11.1.2",
+    "php": "8.4.18",
+    "hpos": true
+  },
+  "fixture_model": "In-memory joined task/customer arrays only; no user/customer/task/order created or endpoint accessed.",
+  "states": {
+    "yoohw_cos_task_assigned": {
+      "entity_free": true,
+      "markup_free": true,
+      "task_title_readable": true,
+      "daily_apostrophe_readable": true,
+      "actions": [
+        {
+          "scheme": "https",
+          "host": "yoplay8.local",
+          "path": "/wp-admin/admin.php",
+          "page": "yoohw-customer-intelligence-tasks",
+          "task_id": 960001,
+          "fragment": "",
+          "html_same_destination": true
+        }
+      ]
+    },
+    "yoohw_cos_task_reassigned": {
+      "entity_free": true,
+      "markup_free": true,
+      "task_title_readable": true,
+      "daily_apostrophe_readable": true,
+      "actions": [
+        {
+          "scheme": "https",
+          "host": "yoplay8.local",
+          "path": "/wp-admin/admin.php",
+          "page": "yoohw-customer-intelligence-tasks",
+          "task_id": 960001,
+          "fragment": "",
+          "html_same_destination": true
+        }
+      ]
+    },
+    "yoohw_cos_task_due_soon": {
+      "entity_free": true,
+      "markup_free": true,
+      "task_title_readable": true,
+      "daily_apostrophe_readable": true,
+      "actions": [
+        {
+          "scheme": "https",
+          "host": "yoplay8.local",
+          "path": "/wp-admin/admin.php",
+          "page": "yoohw-customer-intelligence-tasks",
+          "task_id": 960001,
+          "fragment": "",
+          "html_same_destination": true
+        }
+      ]
+    },
+    "yoohw_cos_task_completed": {
+      "entity_free": true,
+      "markup_free": true,
+      "task_title_readable": true,
+      "daily_apostrophe_readable": true,
+      "actions": [
+        {
+          "scheme": "https",
+          "host": "yoplay8.local",
+          "path": "/wp-admin/admin.php",
+          "page": "yoohw-customer-intelligence-tasks",
+          "task_id": 960001,
+          "fragment": "",
+          "html_same_destination": true
+        }
+      ]
+    },
+    "yoohw_cos_task_reopened": {
+      "entity_free": true,
+      "markup_free": true,
+      "task_title_readable": true,
+      "daily_apostrophe_readable": true,
+      "actions": [
+        {
+          "scheme": "https",
+          "host": "yoplay8.local",
+          "path": "/wp-admin/admin.php",
+          "page": "yoohw-customer-intelligence-tasks",
+          "task_id": 960001,
+          "fragment": "",
+          "html_same_destination": true
+        }
+      ]
+    },
+    "yoohw_cos_task_overdue": {
+      "entity_free": true,
+      "markup_free": true,
+      "task_title_readable": true,
+      "daily_apostrophe_readable": true,
+      "actions": [
+        {
+          "scheme": "https",
+          "host": "yoplay8.local",
+          "path": "/wp-admin/admin.php",
+          "page": "yoohw-customer-intelligence-tasks",
+          "task_id": 960001,
+          "fragment": "",
+          "html_same_destination": true
+        },
+        {
+          "scheme": "https",
+          "host": "yoplay8.local",
+          "path": "/wp-admin/admin.php",
+          "page": "yoohw-customer-intelligence-tasks",
+          "task_id": 960002,
+          "fragment": "",
+          "html_same_destination": true
+        },
+        {
+          "scheme": "https",
+          "host": "yoplay8.local",
+          "path": "/wp-admin/admin.php",
+          "page": "yoohw-customer-intelligence-tasks",
+          "task_id": 960003,
+          "fragment": "",
+          "html_same_destination": true
+        },
+        {
+          "scheme": "https",
+          "host": "yoplay8.local",
+          "path": "/wp-admin/admin.php",
+          "page": "yoohw-customer-intelligence-tasks",
+          "task_id": null,
+          "fragment": "",
+          "html_same_destination": true
+        }
+      ]
+    },
+    "yoohw_cos_task_overdue_escalation": {
+      "entity_free": true,
+      "markup_free": true,
+      "task_title_readable": true,
+      "daily_apostrophe_readable": true,
+      "actions": [
+        {
+          "scheme": "https",
+          "host": "yoplay8.local",
+          "path": "/wp-admin/admin.php",
+          "page": "yoohw-customer-intelligence-tasks",
+          "task_id": 960001,
+          "fragment": "",
+          "html_same_destination": true
+        },
+        {
+          "scheme": "https",
+          "host": "yoplay8.local",
+          "path": "/wp-admin/admin.php",
+          "page": "yoohw-customer-intelligence-tasks",
+          "task_id": 960002,
+          "fragment": "",
+          "html_same_destination": true
+        },
+        {
+          "scheme": "https",
+          "host": "yoplay8.local",
+          "path": "/wp-admin/admin.php",
+          "page": "yoohw-customer-intelligence-tasks",
+          "task_id": 960003,
+          "fragment": "",
+          "html_same_destination": true
+        },
+        {
+          "scheme": "https",
+          "host": "yoplay8.local",
+          "path": "/wp-admin/admin.php",
+          "page": "yoohw-customer-intelligence-tasks",
+          "task_id": null,
+          "fragment": "",
+          "html_same_destination": true
+        }
+      ]
+    },
+    "yoohw_cos_daily_followup_summary": {
+      "entity_free": true,
+      "markup_free": true,
+      "task_title_readable": true,
+      "daily_apostrophe_readable": true,
+      "actions": [
+        {
+          "scheme": "https",
+          "host": "yoplay8.local",
+          "path": "/wp-admin/admin.php",
+          "page": "yoohw-customer-intelligence-tasks",
+          "task_id": 960001,
+          "fragment": "",
+          "html_same_destination": true
+        },
+        {
+          "scheme": "https",
+          "host": "yoplay8.local",
+          "path": "/wp-admin/admin.php",
+          "page": "yoohw-customer-intelligence-tasks",
+          "task_id": 960002,
+          "fragment": "",
+          "html_same_destination": true
+        },
+        {
+          "scheme": "https",
+          "host": "yoplay8.local",
+          "path": "/wp-admin/admin.php",
+          "page": "yoohw-customer-intelligence-tasks",
+          "task_id": 960003,
+          "fragment": "",
+          "html_same_destination": true
+        },
+        {
+          "scheme": "https",
+          "host": "yoplay8.local",
+          "path": "/wp-admin/admin.php",
+          "page": "yoohw-customer-intelligence-tasks",
+          "task_id": null,
+          "fragment": "",
+          "html_same_destination": true
+        }
+      ]
+    }
+  },
+  "protected_options_unchanged": true,
+  "mail_attempts": 0,
+  "external_delivery": "No trigger/send/transport invoked; CLI-scoped wp_mail and external HTTP blocked.",
+  "admitted_base": "288ffcf49957c5f6e09d1f3e0cf0c7bc4e44b866",
+  "site": "yoplay8.local",
+  "source": {
+    "includes/emails/class-yoohw-cos-email-crm-base.php": {
+      "original_sha256": "8569e0f5b6bd325d4ef897dd5cd8ec5541d51881e683576ccfedd2c58c7505df",
+      "base_sha256": "8569e0f5b6bd325d4ef897dd5cd8ec5541d51881e683576ccfedd2c58c7505df",
+      "tested_sha256": "9e2291ddbfd18071dc0dc63dd208cf2f6619b13814c595c1d8f587ad3f78fed1",
+      "original_matches_base": true,
+      "restored_sha256": "8569e0f5b6bd325d4ef897dd5cd8ec5541d51881e683576ccfedd2c58c7505df",
+      "restored_exactly": true
+    },
+    "templates/emails/plain/crm-task-notification.php": {
+      "original_sha256": "40644c578c424e7683594a8e5a6da6888dd6fd7edf119084cf93c66b2f180125",
+      "base_sha256": "40644c578c424e7683594a8e5a6da6888dd6fd7edf119084cf93c66b2f180125",
+      "tested_sha256": "67d3547735827384b1de0d38ceac8637d4a3cf895a19e62a7e4379d472cfb47b",
+      "original_matches_base": true,
+      "restored_sha256": "40644c578c424e7683594a8e5a6da6888dd6fd7edf119084cf93c66b2f180125",
+      "restored_exactly": true
+    },
+    "templates/emails/plain/crm-task-digest.php": {
+      "original_sha256": "0e30344e34cea869a383f9769642c4591f01000d0a99b6ce55f3e92b5de1743d",
+      "base_sha256": "0e30344e34cea869a383f9769642c4591f01000d0a99b6ce55f3e92b5de1743d",
+      "tested_sha256": "58843eb00c87fbfcf80aff069278f57b7ca93041d78cf3e5c5e42b6f296d9f0d",
+      "original_matches_base": true,
+      "restored_sha256": "0e30344e34cea869a383f9769642c4591f01000d0a99b6ce55f3e92b5de1743d",
+      "restored_exactly": true
+    }
+  },
+  "unchanged_sources": {
+    "templates/emails/crm-task-notification.php": {
+      "sha256": "b7428bbadf568907bdc840499e20339cd6908a3d816bd2471b1a41d334e417ab",
+      "matches_base": true
+    },
+    "templates/emails/crm-task-digest.php": {
+      "sha256": "9834ee3c7afee7b24a3a68a4769d3c8b142b7a69a2b77a5b02a7bc97e60604ff",
+      "matches_base": true
+    },
+    "includes/emails/class-yoohw-cos-email-task-events.php": {
+      "sha256": "a8538e953478e495ad49410899bce13191e231658d7fa799484f57ed52ddf40c",
+      "matches_base": true
+    },
+    "includes/emails/class-yoohw-cos-email-task-digests.php": {
+      "sha256": "6792bbabb315f54c3e48de2dff37787cf3fd285e927b01f9e61e8098bf28d621",
+      "matches_base": true
+    },
+    "templates/emails/plain/customer-message.php": {
+      "sha256": "56ccddd3a70ec2ba313c032d35c784c337c7852651f4d381382a914a3ac074be",
+      "matches_base": true
+    }
+  },
+  "cleanup": {
+    "temporary_source_restored_exactly": true,
+    "qa_guard_removed": true,
+    "persistent_fixture_records_created": 0,
+    "raw_captures_and_helpers_removed": true,
+    "private_source_recovery_copies_retained": true
+  },
+  "limits": [
+    "Native render-only confirmation used joined synthetic arrays in memory and inspected direct public renderer output; no database tasks/users/customers/orders, notification job, trigger/send or delivery were exercised on Local.",
+    "Entire installed-plugin/main identity and whole-database identity are not claimed. Only three changed runtime files were temporarily installed, and unchanged relevant HTML/event/digest/Customer Message sources matched base.",
+    "No shared database rollback, production/staging mutation, permanent Local deployment or release/publication."
+  ]
+}

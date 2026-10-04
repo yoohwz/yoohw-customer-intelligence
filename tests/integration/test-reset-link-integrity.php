@@ -1599,6 +1599,161 @@ final class YCI_Notification_Recipient_Test extends WP_UnitTestCase {
 		$this->assertCount( 2, $this->messages );
 	}
 
+	public static function plain_task_email_states(): array {
+		return array(
+			'assignment' => array( 'YoOhw_COS_Email_Task_Assigned', array() ),
+			'reassignment' => array( 'YoOhw_COS_Email_Task_Reassigned', array() ),
+			'handoff' => array( 'YoOhw_COS_Email_Task_Reassigned', array( 'previous_notice' => true ) ),
+			'due soon' => array( 'YoOhw_COS_Email_Task_Due_Soon', array() ),
+			'completed' => array( 'YoOhw_COS_Email_Task_Completed', array() ),
+			'reopened' => array( 'YoOhw_COS_Email_Task_Reopened', array() ),
+			'overdue' => array( 'YoOhw_COS_Email_Task_Overdue', array() ),
+			'escalation' => array( 'YoOhw_COS_Email_Task_Overdue_Escalation', array() ),
+			'daily summary' => array( 'YoOhw_COS_Email_Daily_Followup_Summary', array() ),
+		);
+	}
+
+	private function assert_plain_action_url( string $url, ?int $task_id ): void {
+		$actual = parse_url( $url );
+		$expected = parse_url( admin_url( 'admin.php' ) );
+		$this->assertSame( $expected['scheme'], $actual['scheme'] );
+		$this->assertSame( $expected['host'], $actual['host'] );
+		$this->assertSame( $expected['path'], $actual['path'] );
+		$this->assertSame( '', $actual['fragment'] ?? '' );
+		$this->assertDoesNotMatchRegularExpression( '/[\r\n]|%0[ad]/i', $url );
+		parse_str( $actual['query'] ?? '', $query );
+		$this->assertSame( 'yoohw-customer-intelligence-tasks', $query['page'] ?? '' );
+		if ( null === $task_id ) { $this->assertArrayNotHasKey( 'task_id', $query ); }
+		else { $this->assertSame( (string) $task_id, $query['task_id'] ?? '' ); }
+	}
+
+	/** @dataProvider plain_task_email_states */
+	public function test_plain_task_emails_preserve_action_urls_copy_and_html_counterpart( string $class, array $context ): void {
+		$id = $this->staff();
+		wp_update_user( array( 'ID' => $id, 'display_name' => "Owner&#039;s <b>team</b> &amp; QA" ) );
+		$email = new $class();
+		$email->enabled = 'yes';
+		$email->settings['additional_content'] = "Today's <b>extra</b> &amp; &lt;img src=x onerror=evil()&gt;";
+		$tasks = array();
+		foreach ( array( -DAY_IN_SECONDS, HOUR_IN_SECONDS, 2 * DAY_IN_SECONDS ) as $index => $offset ) {
+			$task = $this->task();
+			$task['id'] = 13 + $index;
+			$task['title'] = "Today's synthetic " . $index . ' &amp; <img src=x onerror=evil()> follow-up';
+			$task['customer_name'] = "Customer&#039;s <b>team</b> &amp; QA";
+			$task['description'] = "Owner&#039;s <b>note</b> &amp; &lt;script&gt;evil()&lt;/script&gt;\r\nBcc: injected@example.test";
+			$task['assignee_name'] = "Owner&#039;s <b>team</b>";
+			$task['completed_by_name'] = "Completer&#039;s <b>team</b>";
+			$task['due_date'] = wp_date( 'Y-m-d H:i:s', time() + $offset );
+			$task['priority'] = 'urgent';
+			$task['status'] = 'YoOhw_COS_Email_Task_Completed' === $class ? 'completed' : 'open';
+			$tasks[] = $task;
+		}
+		$digest = $email instanceof YoOhw_COS_Email_Task_Digest;
+		$payload = $digest ? $tasks : $tasks[0];
+		$headers = '';
+		$rendered_plain = '';
+		$capture = static function( $params ) use ( &$headers, &$rendered_plain, $email ) {
+			$headers = $params[3];
+			if ( 'plain' === $email->email_type ) { $rendered_plain = $email->get_content_plain(); }
+			return $params;
+		};
+		$translate = static function( $translated, $text, $domain ) {
+			return 'yoohw-customer-intelligence' === $domain && 'Customer:' === $text ? 'Customer&#039;s context:' : $translated;
+		};
+		$footer = static function() { return '<b>Footer&#039;s team</b> &amp; QA &lt;img src=x onerror=evil()&gt;'; };
+		add_filter( 'woocommerce_mail_callback_params', $capture );
+		add_filter( 'gettext', $translate, 10, 3 );
+		add_filter( 'woocommerce_email_footer_text', $footer );
+		try {
+			$email->email_type = 'plain';
+			$this->messages = array();
+			$this->assertTrue( $email->trigger( $payload, $id, $context ) );
+			$this->assertCount( 1, $this->messages );
+			$plain = $rendered_plain; // Inspect the public plain renderer before WC transport normalization.
+			$this->assertNotSame( '', $plain );
+			preg_match_all( '~https?://[^\s]+~', $plain, $matches );
+			$urls = array_values( array_filter( $matches[0], static fn( $url ) => false !== strpos( $url, 'admin.php' ) ) );
+			$this->assertCount( $digest ? 4 : 1, $urls );
+			foreach ( $urls as $index => $url ) { $this->assert_plain_action_url( $url, $digest && 3 === $index ? null : 13 + $index ); }
+			$this->assertDoesNotMatchRegularExpression( '/&(?:#(?:[0-9]+|x[0-9a-f]+)|[a-z][a-z0-9]+);/i', $plain );
+			$this->assertDoesNotMatchRegularExpression( '/<[^>]+>/', $plain );
+			$transport = $this->messages[0]['message'];
+			$this->assertDoesNotMatchRegularExpression( '/&(?:#(?:[0-9]+|x[0-9a-f]+)|[a-z][a-z0-9]+);/i', $transport );
+			$this->assertDoesNotMatchRegularExpression( '/<[^>]+>/', $transport );
+			foreach ( $urls as $url ) { $this->assertStringContainsString( $url, $transport ); }
+			$this->assertStringContainsString( "Today's synthetic", $plain );
+			$this->assertStringContainsString( "Customer's context: Customer's team & QA", $plain );
+			$this->assertMatchesRegularExpression( "/Today['’]s extra &/u", $plain );
+			$this->assertStringContainsString( "Footer's team & QA", $plain );
+			$this->assertStringNotContainsString( 'Bcc:', $headers );
+			$this->assertStringNotContainsString( 'injected@example.test', $this->messages[0]['subject'] );
+			if ( 'YoOhw_COS_Email_Daily_Followup_Summary' === $class ) { $this->assertStringContainsString( "Today's queue: 3", $plain ); }
+			$email->email_type = 'html';
+			$this->messages = array();
+			$this->assertTrue( $email->trigger( $payload, $id, $context ) );
+			$html = $this->messages[0]['message'];
+			$this->assertStringContainsString( 'template_container', $html );
+			$this->assertStringContainsString( '&amp;', $html );
+			$this->assertStringNotContainsString( '<img src=x onerror=evil()>', $html );
+			$document = new DOMDocument();
+			$previous = libxml_use_internal_errors( true );
+			try { $this->assertTrue( $document->loadHTML( $html ) ); }
+			finally { libxml_clear_errors(); libxml_use_internal_errors( $previous ); }
+			$links = array();
+			foreach ( $document->getElementsByTagName( 'a' ) as $link ) {
+				$url = $link->getAttribute( 'href' );
+				if ( false !== strpos( $url, 'admin.php' ) && false !== strpos( $url, 'yoohw-customer-intelligence-tasks' ) ) { $links[] = $url; }
+			}
+			foreach ( $urls as $index => $url ) {
+				$this->assertContains( $url, $links );
+				$this->assert_plain_action_url( $url, $digest && 3 === $index ? null : 13 + $index );
+			}
+		} finally {
+			remove_filter( 'woocommerce_mail_callback_params', $capture );
+			remove_filter( 'gettext', $translate, 10, 3 );
+			remove_filter( 'woocommerce_email_footer_text', $footer );
+		}
+	}
+
+	public function test_plain_task_templates_reject_unsafe_and_injected_action_urls(): void {
+		$email = new YoOhw_COS_Email_Task_Assigned();
+		$method = new ReflectionMethod( $email, 'get_task_template_args' );
+		$args = $method->invoke( $email, true );
+		$args['task'] = $this->task();
+		foreach ( array( 'javascript:alert(1)', 'javascript&#58;alert(1)', 'data:text/html,<script>evil()</script>', "https://example.test/\r\nBcc: injected@example.test", 'https://example.test/?x=%0d%0aBcc:injected', 'https://example.test/&NewLine;Bcc:injected' ) as $url ) {
+			$args['task_url'] = $url;
+			$plain = wc_get_template_html( 'emails/plain/crm-task-notification.php', $args, '', YOOHW_COS_PATH . 'templates/' );
+			$this->assertStringNotContainsString( $url, $plain );
+			$this->assertStringNotContainsString( 'Bcc:', $plain );
+			$this->assertStringNotContainsString( 'javascript:', $plain );
+			$this->assertStringNotContainsString( 'data:', $plain );
+		}
+		$digest = new class extends YoOhw_COS_Email_Task_Overdue {
+			public $fixture_url = '';
+			public function get_template_task_summary( array $task ): array {
+				$summary = parent::get_template_task_summary( $task );
+				$summary['task_url'] = $this->fixture_url;
+				return $summary;
+			}
+		};
+		$method = new ReflectionMethod( $digest, 'get_digest_template_args' );
+		$digest_args = $method->invoke( $digest, true, array( array( 'title' => 'Synthetic queue', 'tasks' => array( $this->task() ) ) ), 'Synthetic digest' );
+		foreach ( array( 'javascript:alert(1)', 'data:text/html,evil', "https://example.test/\r\nBcc: injected@example.test", 'https://example.test/?x=%0d%0aBcc:injected', 'https://example.test/&NewLine;Bcc:injected' ) as $url ) {
+			$digest->fixture_url = $url;
+			$digest_args['task_list_url'] = $url;
+			$plain = wc_get_template_html( 'emails/plain/crm-task-digest.php', $digest_args, '', YOOHW_COS_PATH . 'templates/' );
+			$this->assertStringNotContainsString( $url, $plain );
+			$this->assertStringNotContainsString( 'Bcc:', $plain );
+			$this->assertStringNotContainsString( 'javascript:', $plain );
+			$this->assertStringNotContainsString( 'data:', $plain );
+		}
+		$url = admin_url( 'admin.php?page=yoohw-customer-intelligence-tasks&task_id=13' );
+		$args['task_url'] = esc_url( $url );
+		$plain = wc_get_template_html( 'emails/plain/crm-task-notification.php', $args, '', YOOHW_COS_PATH . 'templates/' );
+		preg_match( '~https?://[^\s]+~', $plain, $match );
+		$this->assert_plain_action_url( $match[0], 13 );
+	}
+
 	public function test_email_content_states_render_with_both_woocommerce_shell_modes(): void {
 		$id = $this->staff();
 		$old_setting = get_option( 'woocommerce_feature_email_improvements_enabled', 'no' );
