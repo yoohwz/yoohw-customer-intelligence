@@ -1,11 +1,14 @@
 <?php
 /** Fail closed before loading any WordPress, plugin, Composer or supplied PHP config. */
-function yci_test_environment(): array {
+function yci_test_environment( bool $http_request = false ): array {
 	$fail = static function ( string $reason ): void {
 		throw new RuntimeException( 'YCI unsafe test environment: ' . $reason );
 	};
 	$root = getenv( 'YCI_TEST_ROOT' );
-	if ( 'cli' !== PHP_SAPI || ! $root || realpath( $root ) !== $root || is_link( $root )
+	$allowed_sapi = 'cli' === PHP_SAPI || ( $http_request && 'cli-server' === PHP_SAPI
+		&& '127.0.0.1' === ( $_SERVER['REMOTE_ADDR'] ?? '' )
+		&& hash_equals( (string) getenv( 'YCI_TEST_TOKEN' ), (string) ( $_SERVER['HTTP_X_YCI_TEST_TOKEN'] ?? '' ) ) );
+	if ( ! $allowed_sapi || ! $root || realpath( $root ) !== $root || is_link( $root )
 		|| ! preg_match( '~/yci-test-[a-zA-Z0-9_-]+$~D', $root )
 		|| ( fileperms( $root ) & 0777 ) !== 0700 || fileowner( $root ) !== posix_geteuid() ) {
 		$fail( 'missing owned private root' );
@@ -29,7 +32,9 @@ function yci_test_environment(): array {
 	}
 	if ( ! in_array( getenv( 'WC_HPOS_ENABLED' ), array( 'yes', 'no' ), true )
 		|| ! is_file( $root . '/wordpress/wp-settings.php' )
-		|| file_get_contents( $root . '/wp-tests-config.php' ) !== file_get_contents( __DIR__ . '/wp-tests-config.php' ) ) {
+		|| file_get_contents( $root . '/wp-tests-config.php' ) !== file_get_contents( __DIR__ . '/wp-tests-config.php' )
+		|| ! is_file( $root . '/wordpress/wp-config.php' )
+		|| file_get_contents( $root . '/wordpress/wp-config.php' ) !== file_get_contents( __DIR__ . '/http-wp-config.php' ) ) {
 		$fail( 'storage mode or canonical WordPress config mismatch' );
 	}
 	$constants = array(

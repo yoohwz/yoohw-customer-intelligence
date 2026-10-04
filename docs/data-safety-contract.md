@@ -35,6 +35,16 @@ persist raw messages or addresses. The PHPUnit process also disables PHP
 `mail`. The WordPress HTTP API is blocked before plugin hooks. No browser is needed; if browser QA is later admitted, use a fresh disposable
 profile, synthetic data and persisted-state checks, never an existing signed-in profile.
 
+The CSV HTTP regression starts only its own PHP development server on 127.0.0.1
+inside the owned runner. Its router admits `cli-server` only with a loopback peer and
+matching private ownership-token header, then repeats all root/path/config/grant/DB
+checks before WordPress. Other entrypoints remain CLI-only. It routes only the native
+admin.php path, uses synthetic WordPress auth/session cookies (no auth bypass), and
+keeps early mail interception, external WordPress HTTP blocking and disabled WP-Cron.
+Offline update probes are disabled, and the synthetic configured store clears WC's
+one-time fresh-install setup redirect; neither changes authentication/export controls.
+The test terminates its server in teardown; the runner removes private server logs.
+
 ## Evidence and cleanup
 
 Every integration invocation executes positive and negative controls: missing/false/
