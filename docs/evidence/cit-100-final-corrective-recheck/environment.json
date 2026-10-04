@@ -1,0 +1,12 @@
+{
+  "site": "yoplay8.local",
+  "wp": "7.1.2",
+  "wc": "11.1.2",
+  "php": "8.4.18",
+  "hpos": true,
+  "cit": "1.4.2",
+  "store_currency": "USD",
+  "monetary_readiness": "ready",
+  "recovery_bytes": 166862334,
+  "recovery_sha256": "65b97be653e62d36906a716d91390f6bd27a4f04ba65bb56b088f038dd4d7527"
+}

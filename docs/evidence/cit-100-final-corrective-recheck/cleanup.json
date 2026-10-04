@@ -1,0 +1,160 @@
+{
+  "owned_reference_counts": {
+    "wp_yoohw_cos_customer_order_facts": 0,
+    "wp_yoohw_cos_customer_segments": 0,
+    "wp_yoohw_cos_customer_tags": 0,
+    "wp_yoohw_cos_events": 0,
+    "wp_yoohw_cos_notes": 0,
+    "wp_yoohw_cos_tasks": 0,
+    "customers": 0,
+    "user": 0,
+    "user_meta": 0,
+    "order_101838": 0,
+    "notes_101838": 0,
+    "hpos_order_101838": 0,
+    "hpos_meta_101838": 0,
+    "order_fact_101838": 0,
+    "post_101838": 0,
+    "postmeta_101838": 0,
+    "wc_order_stats_101838": 0,
+    "wc_order_product_lookup_101838": 0,
+    "wc_order_tax_lookup_101838": 0,
+    "wc_order_coupon_lookup_101838": 0,
+    "action_args_101838": 0,
+    "namespaced_posts": 0
+  },
+  "existing_cit_row_comparison": {
+    "wp_yoohw_cos_customer_order_facts": {
+      "original_row_count": 4075,
+      "missing_original_rows": 0,
+      "changed_original_rows": 0,
+      "changed_fields": [],
+      "current_row_count": 4077
+    },
+    "wp_yoohw_cos_customer_segments": {
+      "original_row_count": 1,
+      "missing_original_rows": 0,
+      "changed_original_rows": 0,
+      "changed_fields": [],
+      "current_row_count": 1
+    },
+    "wp_yoohw_cos_customer_tags": {
+      "original_row_count": 0,
+      "missing_original_rows": 0,
+      "changed_original_rows": 0,
+      "changed_fields": [],
+      "current_row_count": 0
+    },
+    "wp_yoohw_cos_customers": {
+      "original_row_count": 1707,
+      "missing_original_rows": 0,
+      "changed_original_rows": 1,
+      "changed_fields": {
+        "total_orders": 1,
+        "total_spent": 1,
+        "risk_score": 1,
+        "trust_score": 1,
+        "customer_status": 1,
+        "lifecycle_stage": 1,
+        "last_order_id": 1,
+        "last_order_date": 1,
+        "last_activity_date": 1,
+        "updated_at": 1
+      },
+      "current_row_count": 1708
+    },
+    "wp_yoohw_cos_events": {
+      "original_row_count": 38732,
+      "missing_original_rows": 0,
+      "changed_original_rows": 0,
+      "changed_fields": [],
+      "current_row_count": 38737
+    },
+    "wp_yoohw_cos_migration_issues": {
+      "original_row_count": 18,
+      "missing_original_rows": 0,
+      "changed_original_rows": 0,
+      "changed_fields": [],
+      "current_row_count": 18
+    },
+    "wp_yoohw_cos_notes": {
+      "original_row_count": 0,
+      "missing_original_rows": 0,
+      "changed_original_rows": 0,
+      "changed_fields": [],
+      "current_row_count": 0
+    },
+    "wp_yoohw_cos_notification_log": {
+      "original_row_count": 44,
+      "missing_original_rows": 0,
+      "changed_original_rows": 0,
+      "changed_fields": [],
+      "current_row_count": 44
+    },
+    "wp_yoohw_cos_privacy_suppression": {
+      "original_row_count": 0,
+      "missing_original_rows": 0,
+      "changed_original_rows": 0,
+      "changed_fields": [],
+      "current_row_count": 0
+    },
+    "wp_yoohw_cos_segments": {
+      "original_row_count": 2,
+      "missing_original_rows": 0,
+      "changed_original_rows": 0,
+      "changed_fields": [],
+      "current_row_count": 2
+    },
+    "wp_yoohw_cos_tags": {
+      "original_row_count": 1,
+      "missing_original_rows": 0,
+      "changed_original_rows": 0,
+      "changed_fields": [],
+      "current_row_count": 1
+    },
+    "wp_yoohw_cos_tasks": {
+      "original_row_count": 23,
+      "missing_original_rows": 0,
+      "changed_original_rows": 0,
+      "changed_fields": [],
+      "current_row_count": 24
+    }
+  },
+  "changed_original_options": [
+    "yoohw_cos_customer_data_updated_at"
+  ],
+  "owned_analytics_actions_removed": 1,
+  "external_deliveries": 0,
+  "intercepted_mail_attempts": 11,
+  "whole_database_rollback": false,
+  "owned_order_notes_removed": 3,
+  "concurrent_activity": {
+    "wp_yoohw_cos_customer_order_facts": {
+      "added_nonowned_rows": 2,
+      "changed_nonowned_rows": 0,
+      "owned_fixture_references_absent": true,
+      "preserved": true
+    },
+    "wp_yoohw_cos_customers": {
+      "added_nonowned_rows": 1,
+      "changed_nonowned_rows": 1,
+      "owned_fixture_references_absent": true,
+      "preserved": true
+    },
+    "wp_yoohw_cos_events": {
+      "added_nonowned_rows": 5,
+      "changed_nonowned_rows": 0,
+      "owned_fixture_references_absent": true,
+      "preserved": true
+    },
+    "wp_yoohw_cos_tasks": {
+      "added_nonowned_rows": 1,
+      "changed_nonowned_rows": 0,
+      "owned_fixture_references_absent": true,
+      "preserved": true
+    }
+  },
+  "monotonic_invalidation_marker_preserved": true,
+  "owned_signup_coupons_removed": 1,
+  "owned_delete_report_actions_removed": 1
+}
