@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name: YoOhw Customer Intelligence for WooCommerce
+ * Plugin Name: Customer Intelligence for WooCommerce
  * Plugin URI: https://yoohw.com/product/customer-intelligence/
  * Description: Unified customer intelligence and operations platform for WooCommerce.
  * Version: 1.4.3

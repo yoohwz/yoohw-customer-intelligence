@@ -55,7 +55,7 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 	}
 
 	protected function get_bulk_actions(): array {
-		$customer_view = isset( $_REQUEST['customer_view'] ) ? sanitize_key( wp_unslash( $_REQUEST['customer_view'] ) ) : '';
+		$customer_view = isset( $_REQUEST['customer_view'] ) ? sanitize_key( wp_unslash( $_REQUEST['customer_view'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 
 		if ( 'archived' === $customer_view ) {
 			return array(
@@ -101,9 +101,9 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 
 	private function prepare_items_guarded(): void {
 		$per_page   = 20;
-		$query_args = YoOhw_COS_Customer_Query::sanitize_args( wp_unslash( $_REQUEST ) );
+		$query_args = YoOhw_COS_Customer_Query::sanitize_args( wp_unslash( $_REQUEST ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 
-		if ( YoOhw_COS_Saved_Views::request_is_stale( $_REQUEST ) ) {
+		if ( YoOhw_COS_Saved_Views::request_is_stale( $_REQUEST ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 			$this->items = array();
 			$this->_column_headers = array( $this->get_columns(), array(), $this->get_sortable_columns() );
 			$this->set_pagination_args( array( 'total_items' => 0, 'per_page' => $per_page ) );
@@ -215,11 +215,11 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 			echo esc_html__( 'Monetary filter evaluation is unavailable. Keep the saved definition or remove its monetary condition to use other filters.', 'yoohw-customer-intelligence' );
 			return;
 		}
-		if ( YoOhw_COS_Saved_Views::request_is_stale( $_REQUEST ) ) {
+		if ( YoOhw_COS_Saved_Views::request_is_stale( $_REQUEST ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 			echo esc_html__( 'Saved view filters are unavailable. Correct them and update the view.', 'yoohw-customer-intelligence' );
 			return;
 		}
-		$customer_view = isset( $_REQUEST['customer_view'] ) ? sanitize_key( wp_unslash( $_REQUEST['customer_view'] ) ) : '';
+		$customer_view = isset( $_REQUEST['customer_view'] ) ? sanitize_key( wp_unslash( $_REQUEST['customer_view'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 
 		if ( 'archived' === $customer_view ) {
 			YoOhw_COS_Admin_UI::render_empty_state(
@@ -257,12 +257,12 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 	}
 
 	protected function get_views(): array {
-		$filters       = YoOhw_COS_Saved_Views::definition( wp_unslash( $_GET ) );
-		$stale         = YoOhw_COS_Saved_Views::request_is_stale( $_GET );
-		$current_view  = isset( $_GET['customer_view'] ) ? sanitize_key( wp_unslash( $_GET['customer_view'] ) ) : '';
+		$filters       = YoOhw_COS_Saved_Views::definition( wp_unslash( $_GET ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+		$stale         = YoOhw_COS_Saved_Views::request_is_stale( $_GET ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+		$current_view  = isset( $_GET['customer_view'] ) ? sanitize_key( wp_unslash( $_GET['customer_view'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 		$current       = 'archived' === $current_view
 			? 'archived'
-			: ( isset( $_GET['customer_status'] ) ? sanitize_key( wp_unslash( $_GET['customer_status'] ) ) : '' );
+			: ( isset( $_GET['customer_status'] ) ? sanitize_key( wp_unslash( $_GET['customer_status'] ) ) : '' ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 
 		$labels = array(
 			''         => __( 'All', 'yoohw-customer-intelligence' ),
@@ -277,8 +277,8 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 
 		foreach ( $labels as $status => $label ) {
 			$args = array_merge( $filters, array( 'page' => 'yoohw-customer-intelligence', 'customer_status' => $status, 'customer_view' => '' ) );
-			if ( isset( $_GET['saved_view_id'] ) ) {
-				$args['saved_view_id'] = YoOhw_COS_Saved_Views::active_id( $_GET );
+			if ( isset( $_GET['saved_view_id'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+				$args['saved_view_id'] = YoOhw_COS_Saved_Views::active_id( $_GET ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 				$args['saved_view_context'] = '1';
 			}
 			$count = $stale ? 0 : YoOhw_COS_Customer_Query::query( array_merge( $filters, array( 'customer_status' => $status, 'customer_view' => '', 'per_page' => 1 ) ) )['total_items'];
@@ -304,8 +304,8 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 			) ),
 			admin_url( 'admin.php' )
 		);
-		if ( isset( $_GET['saved_view_id'] ) ) {
-			$archived_url = add_query_arg( array( 'saved_view_id' => YoOhw_COS_Saved_Views::active_id( $_GET ), 'saved_view_context' => '1' ), $archived_url );
+		if ( isset( $_GET['saved_view_id'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			$archived_url = add_query_arg( array( 'saved_view_id' => YoOhw_COS_Saved_Views::active_id( $_GET ), 'saved_view_context' => '1' ), $archived_url ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 		}
 		$archived_class = 'archived' === $current ? ' class="current" aria-current="page"' : '';
 
@@ -330,11 +330,11 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 			array( 'customer_attention', 'overdue_follow_up', __( 'Overdue follow-up', 'yoohw-customer-intelligence' ) ),
 			array( 'customer_attention', 'high_value_needs_follow_up', __( 'High-value needs follow-up', 'yoohw-customer-intelligence' ) ),
 		);
-		$filters = YoOhw_COS_Saved_Views::definition( wp_unslash( $_GET ) );
+		$filters = YoOhw_COS_Saved_Views::definition( wp_unslash( $_GET ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 		$filters = array_filter( $filters, static function ( $value ) { return '' !== (string) $value; } );
 		unset( $filters['paged'] );
-		if ( isset( $_GET['saved_view_id'] ) ) {
-			$filters['saved_view_id'] = YoOhw_COS_Saved_Views::active_id( $_GET );
+		if ( isset( $_GET['saved_view_id'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			$filters['saved_view_id'] = YoOhw_COS_Saved_Views::active_id( $_GET ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 			$filters['saved_view_context'] = '1';
 		}
 
@@ -535,7 +535,7 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 		echo '</div><div class="yoohw-cos-filters__row yoohw-cos-filters__row--classification">';
 
 		if ( ! empty( $tags ) ) {
-			$current_tag = isset( $_GET['customer_tag'] ) ? absint( wp_unslash( $_GET['customer_tag'] ) ) : 0;
+			$current_tag = isset( $_GET['customer_tag'] ) ? absint( wp_unslash( $_GET['customer_tag'] ) ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 
 			echo '<label class="screen-reader-text" for="yoohw-cos-customer-tag-filter">';
 			echo esc_html__( 'Filter by tag', 'yoohw-customer-intelligence' );
@@ -554,7 +554,7 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 		}
 
 		if ( ! empty( $segments ) ) {
-			$current_segment = isset( $_GET['customer_segment'] ) ? absint( wp_unslash( $_GET['customer_segment'] ) ) : 0;
+			$current_segment = isset( $_GET['customer_segment'] ) ? absint( wp_unslash( $_GET['customer_segment'] ) ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 
 			echo '<label class="screen-reader-text" for="yoohw-cos-customer-segment-filter">' . esc_html__( 'Filter by segment', 'yoohw-customer-intelligence' ) . '</label>';
 			echo '<select name="customer_segment" id="yoohw-cos-customer-segment-filter">';
@@ -569,7 +569,7 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 			echo '</select>';
 		}
 
-		$current_vip = isset( $_GET['vip_status'] ) ? sanitize_key( wp_unslash( $_GET['vip_status'] ) ) : '';
+		$current_vip = isset( $_GET['vip_status'] ) ? sanitize_key( wp_unslash( $_GET['vip_status'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 
 		$vip_statuses = array_merge(
 			array(
@@ -588,7 +588,7 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 		}
 		echo '</select>';
 
-		$current_risk = isset( $_GET['risk_level'] ) ? sanitize_key( wp_unslash( $_GET['risk_level'] ) ) : '';
+		$current_risk = isset( $_GET['risk_level'] ) ? sanitize_key( wp_unslash( $_GET['risk_level'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 
 		$risk_levels = array(
 			''       => __( 'All risk levels', 'yoohw-customer-intelligence' ),
@@ -608,7 +608,7 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 		echo '</select>';
 
 		if ( self::is_loyalty_integration_active() ) {
-			$current_loyalty_level = isset( $_GET['loyalty_level'] ) ? sanitize_key( wp_unslash( $_GET['loyalty_level'] ) ) : '';
+			$current_loyalty_level = isset( $_GET['loyalty_level'] ) ? sanitize_key( wp_unslash( $_GET['loyalty_level'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 			$loyalty_levels        = $this->get_loyalty_level_filter_options( $current_loyalty_level );
 
 			echo '<label class="screen-reader-text" for="yoohw-cos-loyalty-filter">' . esc_html__( 'Filter by loyalty level', 'yoohw-customer-intelligence' ) . '</label>';
@@ -622,7 +622,7 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 		}
 
 		echo '</div><div class="yoohw-cos-filters__row yoohw-cos-filters__row--behavior">';
-		$current_lifecycle = isset( $_GET['lifecycle_stage'] ) ? sanitize_key( wp_unslash( $_GET['lifecycle_stage'] ) ) : '';
+		$current_lifecycle = isset( $_GET['lifecycle_stage'] ) ? sanitize_key( wp_unslash( $_GET['lifecycle_stage'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 
 		$lifecycle_options = array(
 			''        => __( 'All lifecycle stages', 'yoohw-customer-intelligence' ),
@@ -642,7 +642,7 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 		}
 		echo '</select>';
 
-		$current_cohort = isset( $_GET['customer_cohort'] ) ? sanitize_key( wp_unslash( $_GET['customer_cohort'] ) ) : '';
+		$current_cohort = isset( $_GET['customer_cohort'] ) ? sanitize_key( wp_unslash( $_GET['customer_cohort'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 		$cohort_options = array(
 			''           => __( 'All purchase cohorts', 'yoohw-customer-intelligence' ),
 			'first_time' => __( 'First-time customers', 'yoohw-customer-intelligence' ),
@@ -658,7 +658,7 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 		}
 		echo '</select>';
 
-		$current_attention = isset( $_GET['customer_attention'] ) ? sanitize_key( wp_unslash( $_GET['customer_attention'] ) ) : '';
+		$current_attention = isset( $_GET['customer_attention'] ) ? sanitize_key( wp_unslash( $_GET['customer_attention'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 		$attention_options = array(
 			''                     => __( 'All attention states', 'yoohw-customer-intelligence' ),
 			'high_value_retention' => __( 'High-value retention risk', 'yoohw-customer-intelligence' ),
@@ -683,7 +683,7 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 			'rfm_monetary_min'     => array( __( 'M: minimum net revenue in store currency', 'yoohw-customer-intelligence' ), '99999999999999.999999', '0.000001' ),
 		);
 		foreach ( $rfm_fields as $key => $field ) {
-			$value = YoOhw_COS_Customer_Query::sanitize_args( wp_unslash( $_REQUEST ) )[ $key ];
+			$value = YoOhw_COS_Customer_Query::sanitize_args( wp_unslash( $_REQUEST ) )[ $key ]; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 			echo '<label class="screen-reader-text" for="yoohw-cos-' . esc_attr( $key ) . '">' . esc_html( $field[0] ) . '</label>';
 			if ( 'rfm_monetary_min' === $key ) {
 				$site = YoOhw_COS_Commerce_Metrics_Policy::site_readiness();
@@ -744,7 +744,7 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 		$customer_tags_table = YoOhw_COS_DB::customer_tags_table();
 
 		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- IN placeholders are generated from absint customer IDs.
-		$tag_rows = $wpdb->get_results(
+		$tag_rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				"SELECT ct.customer_id, t.*
 				FROM %i t
@@ -772,7 +772,7 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 		$customer_segments_table = YoOhw_COS_DB::customer_segments_table();
 
 		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- IN placeholders are generated from absint customer IDs.
-		$segment_rows = $wpdb->get_results(
+		$segment_rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				"SELECT cs.customer_id, s.*
 				FROM %i s
@@ -919,7 +919,7 @@ final class YoOhw_COS_Customers_List extends WP_List_Table {
 
 		$levels = array_merge( $levels, YoOhw_COS_Integrations::loyalty_roles() );
 
-		$stored_levels = $wpdb->get_col(
+		$stored_levels = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				"SELECT DISTINCT loyalty_level
 				FROM %i

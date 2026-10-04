@@ -27,7 +27,7 @@ final class YoOhw_COS_Notes {
 			return 0;
 		}
 
-		$inserted = $wpdb->insert(
+		$inserted = $wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			YoOhw_COS_DB::notes_table(),
 			array(
 				'customer_id'  => absint( $customer_id ),
@@ -69,7 +69,7 @@ final class YoOhw_COS_Notes {
 	public static function get_customer_notes( int $customer_id, int $limit = 20 ): array {
 		global $wpdb;
 
-		$notes = $wpdb->get_results(
+		$notes = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				"SELECT *
 				FROM %i
@@ -89,7 +89,7 @@ final class YoOhw_COS_Notes {
 	public static function get_customer_note_count( int $customer_id ): int {
 		global $wpdb;
 
-		return (int) $wpdb->get_var(
+		return (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				"SELECT COUNT(*)
 				FROM %i
@@ -103,7 +103,7 @@ final class YoOhw_COS_Notes {
 	public static function get_note( int $note_id ): array {
 		global $wpdb;
 
-		$note = $wpdb->get_row(
+		$note = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				'SELECT * FROM %i WHERE id = %d LIMIT 1',
 				YoOhw_COS_DB::notes_table(),
@@ -147,7 +147,7 @@ final class YoOhw_COS_Notes {
 			return false;
 		}
 
-		$updated = $wpdb->update(
+		$updated = $wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			YoOhw_COS_DB::notes_table(),
 			array(
 				'note_content' => $content,
@@ -198,7 +198,7 @@ final class YoOhw_COS_Notes {
 			return false;
 		}
 
-		$deleted = $wpdb->delete(
+		$deleted = $wpdb->delete( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			YoOhw_COS_DB::notes_table(),
 			array( 'id' => absint( $note_id ) ),
 			array( '%d' )

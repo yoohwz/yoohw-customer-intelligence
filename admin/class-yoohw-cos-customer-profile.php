@@ -1148,13 +1148,13 @@ final class YoOhw_COS_Customer_Profile {
 		echo '<div class="postbox-header"><h3 class="hndle">' . esc_html__( 'Tags', 'yoohw-customer-intelligence' ) . '</h3></div>';
 		echo '<div class="inside">';
 
-		if ( ! empty( $_GET['tag_added'] ) ) {
+		if ( ! empty( $_GET['tag_added'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 			echo '<div class="notice notice-success inline"><p>';
 			echo esc_html__( 'Tag assigned successfully.', 'yoohw-customer-intelligence' );
 			echo '</p></div>';
 		}
 
-		if ( ! empty( $_GET['tag_removed'] ) ) {
+		if ( ! empty( $_GET['tag_removed'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 			echo '<div class="notice notice-success inline"><p>';
 			echo esc_html__( 'Tag removed successfully.', 'yoohw-customer-intelligence' );
 			echo '</p></div>';
@@ -1202,13 +1202,13 @@ final class YoOhw_COS_Customer_Profile {
 		echo '<div class="postbox-header"><h3 class="hndle">' . esc_html__( 'Segments', 'yoohw-customer-intelligence' ) . '</h3></div>';
 		echo '<div class="inside">';
 
-		if ( ! empty( $_GET['segment_added'] ) ) {
+		if ( ! empty( $_GET['segment_added'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 			echo '<div class="notice notice-success inline"><p>';
 			echo esc_html__( 'Segment assigned successfully.', 'yoohw-customer-intelligence' );
 			echo '</p></div>';
 		}
 
-		if ( ! empty( $_GET['segment_removed'] ) ) {
+		if ( ! empty( $_GET['segment_removed'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 			echo '<div class="notice notice-success inline"><p>';
 			echo esc_html__( 'Segment removed successfully.', 'yoohw-customer-intelligence' );
 			echo '</p></div>';
@@ -1256,25 +1256,25 @@ final class YoOhw_COS_Customer_Profile {
 		echo '<div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Open tasks', 'yoohw-customer-intelligence' ) . '</h2></div>';
 		echo '<div class="inside">';
 
-		if ( ! empty( $_GET['yoohw_task_created'] ) ) {
+		if ( ! empty( $_GET['yoohw_task_created'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 			echo '<div class="notice notice-success inline"><p>';
 			echo esc_html__( 'Task created successfully.', 'yoohw-customer-intelligence' );
 			echo '</p></div>';
 		}
 
-		if ( ! empty( $_GET['yoohw_task_completed'] ) ) {
+		if ( ! empty( $_GET['yoohw_task_completed'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 			echo '<div class="notice notice-success inline"><p>';
 			echo esc_html__( 'Task marked complete.', 'yoohw-customer-intelligence' );
 			echo '</p></div>';
 		}
 
-		if ( ! empty( $_GET['yoohw_task_reopened'] ) ) {
+		if ( ! empty( $_GET['yoohw_task_reopened'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 			echo '<div class="notice notice-success inline"><p>';
 			echo esc_html__( 'Task reopened.', 'yoohw-customer-intelligence' );
 			echo '</p></div>';
 		}
 
-		if ( ! empty( $_GET['yoohw_task_error'] ) ) {
+		if ( ! empty( $_GET['yoohw_task_error'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 			echo '<div class="notice notice-error inline"><p>';
 			echo esc_html__( 'Task action could not be completed.', 'yoohw-customer-intelligence' );
 			echo '</p></div>';
@@ -1438,19 +1438,19 @@ final class YoOhw_COS_Customer_Profile {
 		echo '<div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Internal notes', 'yoohw-customer-intelligence' ) . '</h2></div>';
 		echo '<div class="inside">';
 
-		if ( ! empty( $_GET['note_added'] ) ) {
+		if ( ! empty( $_GET['note_added'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 			echo '<div class="notice notice-success inline"><p>';
 			echo esc_html__( 'Note added successfully.', 'yoohw-customer-intelligence' );
 			echo '</p></div>';
 		}
 
-		if ( ! empty( $_GET['note_updated'] ) ) {
+		if ( ! empty( $_GET['note_updated'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 			echo '<div class="notice notice-success inline"><p>';
 			echo esc_html__( 'Note updated successfully.', 'yoohw-customer-intelligence' );
 			echo '</p></div>';
 		}
 
-		if ( ! empty( $_GET['note_deleted'] ) ) {
+		if ( ! empty( $_GET['note_deleted'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 			echo '<div class="notice notice-success inline"><p>';
 			echo esc_html__( 'Note deleted successfully.', 'yoohw-customer-intelligence' );
 			echo '</p></div>';

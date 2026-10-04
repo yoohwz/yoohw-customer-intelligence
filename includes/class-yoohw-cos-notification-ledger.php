@@ -28,7 +28,7 @@ final class YoOhw_COS_Notification_Ledger {
 		$expires_at   = $now_datetime->modify( '+' . self::RETENTION_DAYS . ' days' )->format( 'Y-m-d H:i:s' );
 		$token        = str_replace( '-', '', wp_generate_uuid4() );
 		$previous_error_suppression = $wpdb->suppress_errors();
-		$inserted = $wpdb->query(
+		$inserted = $wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM coordination/readiness state requires a live database result, not cached obligations.
 			$wpdb->prepare(
 				"INSERT INTO %i
 					(notification_key, notification_type, task_id, recipient_user_id, status, claim_token, lease_until, attempts, created_at, updated_at, expires_at)
@@ -72,7 +72,7 @@ final class YoOhw_COS_Notification_Ledger {
 			return;
 		}
 
-		$wpdb->query(
+		$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM coordination/readiness state requires a live database result, not cached obligations.
 			$wpdb->prepare(
 				"UPDATE %i
 				SET status = 'sent', sent_at = %s, updated_at = %s, lease_until = NULL
@@ -97,7 +97,7 @@ final class YoOhw_COS_Notification_Ledger {
 			return;
 		}
 
-		$wpdb->query(
+		$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM coordination/readiness state requires a live database result, not cached obligations.
 			$wpdb->prepare(
 				"DELETE FROM %i WHERE notification_key = %s AND status = 'pending' AND claim_token = %s",
 				YoOhw_COS_DB::notification_log_table(),
@@ -119,7 +119,7 @@ final class YoOhw_COS_Notification_Ledger {
 			$limit
 		);
 
-		$deleted = $wpdb->query( $sql ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Dynamic placeholders are prepared above.
+		$deleted = $wpdb->query( $sql ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Dynamic placeholders are prepared above. Owned CRM coordination/readiness state requires a live database result, not cached obligations.
 
 		return false === $deleted ? 0 : absint( $deleted );
 	}

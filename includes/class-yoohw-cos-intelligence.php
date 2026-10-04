@@ -128,7 +128,7 @@ final class YoOhw_COS_Intelligence {
 	/** Read uncached so an in-flight worker observes another request's invalidation. */
 	public static function get_scoring_generation(): string {
 		global $wpdb;
-		$generation = (string) $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, 'yoohw_cos_intelligence_generation' ) );
+		$generation = (string) $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, 'yoohw_cos_intelligence_generation' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 		if ( YoOhw_COS_Migration_Runner::currency_backfill_is_complete() ) { return $generation; }
 		// The active-readiness identity fences old decisions at the single state write,
 		// even if a companion invalidation fails or an in-flight worker cached options.

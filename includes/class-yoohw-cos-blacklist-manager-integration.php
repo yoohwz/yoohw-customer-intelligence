@@ -199,7 +199,7 @@ final class YoOhw_COS_Blacklist_Manager_Integration {
 		$blacklist_rows  = array();
 
 		if ( self::table_exists( $blacklist_table ) ) {
-			$blacklist_rows = $wpdb->get_results(
+			$blacklist_rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 				$wpdb->prepare(
 					"SELECT id, first_name, last_name, phone_number, email_address, ip_address, domain, device_id, order_id, reason_code, description, date_added, is_blocked
 					FROM %i
@@ -248,11 +248,11 @@ final class YoOhw_COS_Blacklist_Manager_Integration {
 		$total           = 0;
 
 		if ( self::table_exists( $blacklist_table ) ) {
-			$total += (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i', $blacklist_table ) );
+			$total += (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i', $blacklist_table ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 		}
 
 		if ( self::table_exists( $log_table ) ) {
-			$total += (int) $wpdb->get_var(
+			$total += (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 				$wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE source LIKE %s', $log_table, 'woo_order_%' )
 			);
 		}
@@ -578,7 +578,7 @@ final class YoOhw_COS_Blacklist_Manager_Integration {
 			return $result;
 		}
 
-		$rows = $wpdb->get_results(
+		$rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				"SELECT id, `timestamp`, type, source, action, details
 				FROM %i
@@ -830,7 +830,7 @@ final class YoOhw_COS_Blacklist_Manager_Integration {
 			return false;
 		}
 
-		$found = $wpdb->get_var(
+		$found = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				'SHOW TABLES LIKE %s',
 				$table

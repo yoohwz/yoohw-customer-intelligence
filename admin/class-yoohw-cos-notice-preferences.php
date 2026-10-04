@@ -75,8 +75,8 @@ final class YoOhw_COS_Notice_Preferences {
 		if ( ! current_user_can( 'manage_woocommerce' ) || ! get_current_user_id() ) { wp_send_json_error( array(), 403 ); }
 		check_ajax_referer( 'yoohw_cos_dismiss_notice', 'nonce' );
 		if ( isset( $_POST['user_id'] ) || ! is_string( $_POST['key'] ?? null ) || ! is_string( $_POST['revision'] ?? null ) ) { wp_send_json_error( array(), 400 ); }
-		$key = wp_unslash( $_POST['key'] );
-		$revision = wp_unslash( $_POST['revision'] );
+		$key = wp_unslash( $_POST['key'] ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Unslashed key must match a known descriptor and revision must be exactly 64 hex characters/current revision; do not normalize replay input.
+		$revision = wp_unslash( $_POST['revision'] ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Unslashed key must match a known descriptor and revision must be exactly 64 hex characters/current revision; do not normalize replay input.
 		if ( ! preg_match( '/^[a-f0-9]{64}$/D', $revision ) || ! self::dismiss( $key, $revision ) ) { wp_send_json_error( array(), 409 ); }
 		wp_send_json_success();
 	}
@@ -89,7 +89,7 @@ final class YoOhw_COS_Notice_Preferences {
 
 	public static function render_commerce_notice(): void {
 		if ( ! current_user_can( 'manage_woocommerce' ) ) { return; }
-		$page = isset( $_GET['page'] ) && is_string( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
+		$page = isset( $_GET['page'] ) && is_string( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 		if ( 0 !== strpos( $page, 'yoohw-customer-intelligence' ) ) { return; }
 		$current = self::descriptor( 'commerce_update' );
 		if ( ! $current ) { return; }

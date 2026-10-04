@@ -18,7 +18,7 @@ final class YoOhw_COS_Diagnostics {
 		$generation = preg_match( '/^[a-f0-9-]{36}$/D', $generation ) ? $generation : '';
 		$tables_ready = 'ready' === $schema['status'] || 'upgrade-required' === $schema['status'];
 		if ( $tables_ready ) {
-			$row = $wpdb->get_row( $wpdb->prepare(
+			$row = $wpdb->get_row( $wpdb->prepare( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 				"SELECT COUNT(*) profiles,
 				 SUM(archived_at IS NULL) active_profiles,
 				 SUM(archived_at IS NOT NULL) archived_profiles,
@@ -40,8 +40,8 @@ final class YoOhw_COS_Diagnostics {
 			if ( is_array( $row ) ) {
 				foreach ( $row as $key => $value ) { $data[ $key ] = absint( $value ); }
 			}
-			$data['order_facts'] = absint( $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i', YoOhw_COS_DB::order_facts_table() ) ) );
-			$tasks = $wpdb->get_row( $wpdb->prepare(
+			$data['order_facts'] = absint( $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i', YoOhw_COS_DB::order_facts_table() ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
+			$tasks = $wpdb->get_row( $wpdb->prepare( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 				'SELECT SUM(status <> %s) open_tasks, SUM(status <> %s AND due_date IS NOT NULL AND due_date < %s) overdue_tasks FROM %i',
 				YoOhw_COS_Tasks::STATUS_COMPLETED, YoOhw_COS_Tasks::STATUS_COMPLETED, YoOhw_COS_DB::now(), YoOhw_COS_DB::tasks_table()
 			), ARRAY_A );
@@ -94,7 +94,7 @@ final class YoOhw_COS_Diagnostics {
 				$migration['unresolved_issues'] = 0;
 			}
 			unset( $migration );
-			$issues = $wpdb->get_results( $wpdb->prepare(
+			$issues = $wpdb->get_results( $wpdb->prepare( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 				"SELECT migration_id, status, COUNT(*) total FROM %i WHERE status IN ('pending', 'unresolved') GROUP BY migration_id, status",
 				YoOhw_COS_DB::migration_issues_table()
 			), ARRAY_A );
@@ -143,7 +143,7 @@ final class YoOhw_COS_Diagnostics {
 		$privacy_ready = null !== $privacy;
 		$currency_complete = YoOhw_COS_Migration_Runner::currency_backfill_is_complete();
 		$receipt_count = $privacy_ready && $tables_ready
-			? absint( $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i', YoOhw_COS_DB::table( 'privacy_suppression' ) ) ) ) : null;
+			? absint( $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i', YoOhw_COS_DB::table( 'privacy_suppression' ) ) ) ) : null; // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 		$warnings = array();
 		if ( 'ready' !== $schema['status'] ) { $warnings[] = 'schema'; }
 		if ( 'ready' !== $reset['status'] ) { $warnings[] = 'reset'; }

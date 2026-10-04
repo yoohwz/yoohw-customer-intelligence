@@ -382,7 +382,7 @@ final class YoOhw_COS_Admin_Tools {
 		check_admin_referer( 'yoohw_cos_save_scoring_settings' );
 
 		$source = isset( $_POST['scoring'] ) && is_array( $_POST['scoring'] )
-			? wp_unslash( $_POST['scoring'] )
+			? wp_unslash( $_POST['scoring'] ) // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- update_scoring_settings() sanitizes the array against its fixed numeric scoring schema.
 			: array();
 
 		YoOhw_COS_Intelligence::update_scoring_settings( $source );
@@ -1136,7 +1136,7 @@ final class YoOhw_COS_Admin_Tools {
 	private static function count_customer_rows(): int {
 		global $wpdb;
 
-		return (int) $wpdb->get_var(
+		return (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				'SELECT COUNT(*) FROM %i',
 				YoOhw_COS_DB::customers_table()
@@ -1450,8 +1450,8 @@ final class YoOhw_COS_Admin_Tools {
 
 	private static function get_task_action_redirect( array $args = array() ): string {
 		$default = admin_url( 'admin.php?page=yoohw-customer-intelligence-tasks' );
-		$target  = isset( $_REQUEST['_redirect'] )
-			? rawurldecode( esc_url_raw( wp_unslash( $_REQUEST['_redirect'] ) ) )
+		$target  = isset( $_REQUEST['_redirect'] ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			? rawurldecode( esc_url_raw( wp_unslash( $_REQUEST['_redirect'] ) ) ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 			: $default;
 
 		$target = wp_validate_redirect( $target, $default );
@@ -1611,7 +1611,7 @@ final class YoOhw_COS_Admin_Tools {
 							'page'                    => 'yoohw-customer-intelligence-tags',
 							'yoohw_tag_delete_block'  => $tag_id,
 							'tag_customer_count'      => $count,
-							YoOhw_COS_Reset_Guard::FORM_FIELD => wp_unslash( $_GET[ YoOhw_COS_Reset_Guard::FORM_FIELD ] ),
+							YoOhw_COS_Reset_Guard::FORM_FIELD => wp_unslash( $_GET[ YoOhw_COS_Reset_Guard::FORM_FIELD ] ), // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized, WordPress.Security.ValidatedSanitizedInput.InputNotValidated -- require_submission() already checked existence/string type and exact captured epoch while holding the Reset guard.
 						),
 						admin_url( 'admin.php' )
 					)
@@ -1724,7 +1724,7 @@ final class YoOhw_COS_Admin_Tools {
 							'page'                       => 'yoohw-customer-intelligence-segments',
 							'yoohw_segment_delete_block' => $segment_id,
 							'segment_customer_count'     => $count,
-							YoOhw_COS_Reset_Guard::FORM_FIELD => wp_unslash( $_GET[ YoOhw_COS_Reset_Guard::FORM_FIELD ] ),
+							YoOhw_COS_Reset_Guard::FORM_FIELD => wp_unslash( $_GET[ YoOhw_COS_Reset_Guard::FORM_FIELD ] ), // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized, WordPress.Security.ValidatedSanitizedInput.InputNotValidated -- require_submission() already checked existence/string type and exact captured epoch while holding the Reset guard.
 						),
 						admin_url( 'admin.php' )
 					)

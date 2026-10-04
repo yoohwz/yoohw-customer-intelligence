@@ -31,10 +31,10 @@ $yoohw_cos_table_suffixes = array(
 
 foreach ( $yoohw_cos_table_suffixes as $yoohw_cos_table_suffix ) {
 	$yoohw_cos_table = $wpdb->prefix . $yoohw_cos_table_suffix;
-	$wpdb->query( $wpdb->prepare( 'DROP TABLE IF EXISTS %i', $yoohw_cos_table ) );
+	$wpdb->query( $wpdb->prepare( 'DROP TABLE IF EXISTS %i', $yoohw_cos_table ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange -- Owned CRM schema inspection/setup has no WordPress object API; query live database state. Uninstall removes only this plugin's owned CRM tables.
 }
 
-$wpdb->query(
+$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM schema inspection/setup has no WordPress object API; query live database state.
 	$wpdb->prepare(
 		'DELETE FROM %i WHERE option_name LIKE %s',
 		$wpdb->options,

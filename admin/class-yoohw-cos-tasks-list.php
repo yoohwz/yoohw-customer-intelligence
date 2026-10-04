@@ -67,12 +67,12 @@ final class YoOhw_COS_Tasks_List extends WP_List_Table {
 		$per_page     = 20;
 		$current_page = $this->get_pagenum();
 		$offset       = ( $current_page - 1 ) * $per_page;
-		$view         = isset( $_REQUEST['task_view'] ) ? sanitize_key( wp_unslash( $_REQUEST['task_view'] ) ) : 'open';
-		$priority     = isset( $_REQUEST['priority'] ) ? sanitize_key( wp_unslash( $_REQUEST['priority'] ) ) : '';
-		$assignee     = isset( $_REQUEST['assigned_user_id'] ) ? absint( wp_unslash( $_REQUEST['assigned_user_id'] ) ) : 0;
-		$customer_id  = isset( $_REQUEST['customer_id'] ) ? absint( wp_unslash( $_REQUEST['customer_id'] ) ) : 0;
-		$order_id     = isset( $_REQUEST['order_id'] ) ? absint( wp_unslash( $_REQUEST['order_id'] ) ) : 0;
-		$search       = isset( $_REQUEST['s'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['s'] ) ) : '';
+		$view         = isset( $_REQUEST['task_view'] ) ? sanitize_key( wp_unslash( $_REQUEST['task_view'] ) ) : 'open'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+		$priority     = isset( $_REQUEST['priority'] ) ? sanitize_key( wp_unslash( $_REQUEST['priority'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+		$assignee     = isset( $_REQUEST['assigned_user_id'] ) ? absint( wp_unslash( $_REQUEST['assigned_user_id'] ) ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+		$customer_id  = isset( $_REQUEST['customer_id'] ) ? absint( wp_unslash( $_REQUEST['customer_id'] ) ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+		$order_id     = isset( $_REQUEST['order_id'] ) ? absint( wp_unslash( $_REQUEST['order_id'] ) ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+		$search       = isset( $_REQUEST['s'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['s'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 		$now          = YoOhw_COS_DB::now();
 
 		$where  = 'WHERE 1=1';
@@ -152,7 +152,7 @@ final class YoOhw_COS_Tasks_List extends WP_List_Table {
 		}
 
 		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Filter SQL fragments are hardcoded; values are passed through placeholders.
-		$total_items = (int) $wpdb->get_var(
+		$total_items = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				"SELECT COUNT(*)
 				FROM %i t
@@ -163,7 +163,7 @@ final class YoOhw_COS_Tasks_List extends WP_List_Table {
 			)
 		);
 
-		$this->items = $wpdb->get_results(
+		$this->items = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				"SELECT
 					t.*,
@@ -204,7 +204,7 @@ final class YoOhw_COS_Tasks_List extends WP_List_Table {
 	}
 
 	protected function get_views(): array {
-		$current = isset( $_GET['task_view'] ) ? sanitize_key( wp_unslash( $_GET['task_view'] ) ) : 'open';
+		$current = isset( $_GET['task_view'] ) ? sanitize_key( wp_unslash( $_GET['task_view'] ) ) : 'open'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 		$counts  = YoOhw_COS_Tasks::get_counts();
 
 		$labels = array(
@@ -225,8 +225,8 @@ final class YoOhw_COS_Tasks_List extends WP_List_Table {
 			);
 
 			foreach ( array( 'priority', 'assigned_user_id', 'customer_id', 'order_id', 's' ) as $key ) {
-				if ( ! empty( $_GET[ $key ] ) ) {
-					$args[ $key ] = sanitize_text_field( wp_unslash( $_GET[ $key ] ) );
+				if ( ! empty( $_GET[ $key ] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+					$args[ $key ] = sanitize_text_field( wp_unslash( $_GET[ $key ] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 				}
 			}
 
@@ -249,8 +249,8 @@ final class YoOhw_COS_Tasks_List extends WP_List_Table {
 			return;
 		}
 
-		$current_priority = isset( $_GET['priority'] ) ? sanitize_key( wp_unslash( $_GET['priority'] ) ) : '';
-		$current_assignee = isset( $_GET['assigned_user_id'] ) ? absint( wp_unslash( $_GET['assigned_user_id'] ) ) : 0;
+		$current_priority = isset( $_GET['priority'] ) ? sanitize_key( wp_unslash( $_GET['priority'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+		$current_assignee = isset( $_GET['assigned_user_id'] ) ? absint( wp_unslash( $_GET['assigned_user_id'] ) ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 
 		echo '<div class="alignleft actions">';
 		echo '<select name="priority">';
@@ -371,7 +371,7 @@ final class YoOhw_COS_Tasks_List extends WP_List_Table {
 	}
 
 	public function no_items(): void {
-		$view = isset( $_REQUEST['task_view'] ) ? sanitize_key( wp_unslash( $_REQUEST['task_view'] ) ) : 'open';
+		$view = isset( $_REQUEST['task_view'] ) ? sanitize_key( wp_unslash( $_REQUEST['task_view'] ) ) : 'open'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 
 		if ( YoOhw_COS_Admin_UI::has_request_filters( array( 's', 'priority', 'assigned_user_id', 'customer_id', 'order_id' ) ) ) {
 			YoOhw_COS_Admin_UI::render_empty_state(
@@ -483,8 +483,8 @@ final class YoOhw_COS_Tasks_List extends WP_List_Table {
 		);
 
 		foreach ( array( 'task_view', 'priority', 'assigned_user_id', 'customer_id', 'order_id', 's', 'paged' ) as $key ) {
-			if ( ! empty( $_REQUEST[ $key ] ) ) {
-				$args[ $key ] = sanitize_text_field( wp_unslash( $_REQUEST[ $key ] ) );
+			if ( ! empty( $_REQUEST[ $key ] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+				$args[ $key ] = sanitize_text_field( wp_unslash( $_REQUEST[ $key ] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 			}
 		}
 

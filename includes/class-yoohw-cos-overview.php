@@ -15,7 +15,7 @@ final class YoOhw_COS_Overview {
 			return self::empty_summary();
 		}
 
-		$row = $wpdb->get_row(
+		$row = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				"SELECT
 					COUNT(*) AS total_customers,
@@ -87,7 +87,7 @@ final class YoOhw_COS_Overview {
 		$tasks_table     = YoOhw_COS_DB::tasks_table();
 
 		if ( self::table_exists( $customers_table ) ) {
-			$customer_row = $wpdb->get_row(
+			$customer_row = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 				$wpdb->prepare(
 					"SELECT
 						SUM(
@@ -125,7 +125,7 @@ final class YoOhw_COS_Overview {
 		if ( self::table_exists( $tasks_table ) ) {
 			$now      = YoOhw_COS_DB::now();
 			$due_soon = date_i18n( 'Y-m-d H:i:s', current_time( 'timestamp' ) + ( 7 * DAY_IN_SECONDS ) );
-			$task_row = $wpdb->get_row(
+			$task_row = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 				$wpdb->prepare(
 					"SELECT
 						SUM(
@@ -174,7 +174,7 @@ final class YoOhw_COS_Overview {
 			return array();
 		}
 
-		$customers = $wpdb->get_results(
+		$customers = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				"SELECT
 					id,
@@ -244,7 +244,7 @@ final class YoOhw_COS_Overview {
 			return array();
 		}
 
-		$tasks = $wpdb->get_results(
+		$tasks = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				"SELECT
 					t.*,
@@ -313,7 +313,7 @@ final class YoOhw_COS_Overview {
 			return self::$table_exists_cache[ $table ];
 		}
 
-		$exists = $wpdb->get_var(
+		$exists = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				'SHOW TABLES LIKE %s',
 				$table

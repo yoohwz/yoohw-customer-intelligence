@@ -50,7 +50,7 @@ final class YoOhw_COS_Flash_Notices {
 
 	private static function request_flags(): array {
 		global $pagenow;
-		return self::owned_flags( is_string( $pagenow ) ? $pagenow : '', $_GET );
+		return self::owned_flags( is_string( $pagenow ) ? $pagenow : '', $_GET ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Display receipt only; consume() checks the bounded token and current-user transient owner before showing notices.
 	}
 
 	public static function init(): void {
@@ -86,8 +86,8 @@ final class YoOhw_COS_Flash_Notices {
 		self::$shown = array();
 		$flags = self::request_flags();
 		if ( ! $flags ) { return; }
-		$token = isset( $_GET[ self::TOKEN ] ) && is_string( $_GET[ self::TOKEN ] )
-			? wp_unslash( $_GET[ self::TOKEN ] ) : '';
+		$token = isset( $_GET[ self::TOKEN ] ) && is_string( $_GET[ self::TOKEN ] ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Display receipt only; consume() checks the bounded token and current-user transient owner before showing notices.
+			? wp_unslash( $_GET[ self::TOKEN ] ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Display receipt only; consume() checks the bounded token and current-user transient owner before showing notices. The unslashed token is checked against the exact bounded UUID-shaped pattern before transient lookup.
 		if ( ! preg_match( '/^[a-f0-9-]{36}$/D', $token ) ) {
 			self::remove_flags( $flags );
 			return;

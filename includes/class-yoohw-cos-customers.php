@@ -383,14 +383,14 @@ final class YoOhw_COS_Customers {
 			return false;
 		}
 
-		$order_activity = $wpdb->get_var(
+		$order_activity = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				'SELECT MAX(order_date) FROM %i WHERE customer_id = %d',
 				YoOhw_COS_DB::order_facts_table(),
 				$customer_id
 			)
 		);
-		$loyalty_activity = $wpdb->get_var(
+		$loyalty_activity = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				'SELECT MAX(created_at) FROM %i WHERE customer_id = %d AND event_source = %s',
 				YoOhw_COS_DB::events_table(),
@@ -626,7 +626,7 @@ final class YoOhw_COS_Customers {
 		$prepared           = self::prepare_customer_data( $data );
 		if ( false !== YoOhw_COS_Privacy_Erasure::is_suppressed( $prepared ) ) { return 0; }
 
-		$inserted = $wpdb->insert(
+		$inserted = $wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$table,
 			$prepared,
 			self::customer_data_formats( $prepared )
@@ -656,7 +656,7 @@ final class YoOhw_COS_Customers {
 		$existing = self::get_customer( $customer_id );
 		if ( empty( $existing ) || false !== YoOhw_COS_Privacy_Erasure::is_suppressed( $existing ) || false !== YoOhw_COS_Privacy_Erasure::is_suppressed( array_merge( $existing, $prepared ) ) ) { return false; }
 
-		$updated = $wpdb->update(
+		$updated = $wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$table,
 			$prepared,
 			array( 'id' => absint( $customer_id ) ),
@@ -813,7 +813,7 @@ final class YoOhw_COS_Customers {
 	public static function get_archived_count(): int {
 		global $wpdb;
 
-		return (int) $wpdb->get_var(
+		return (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				'SELECT COUNT(*) FROM %i WHERE archived_at IS NOT NULL',
 				YoOhw_COS_DB::customers_table()
@@ -826,7 +826,7 @@ final class YoOhw_COS_Customers {
 
 		$table = YoOhw_COS_DB::customers_table();
 
-		$customer = $wpdb->get_row(
+		$customer = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				'SELECT * FROM %i WHERE id = %d LIMIT 1',
 				$table,
@@ -943,7 +943,7 @@ final class YoOhw_COS_Customers {
 				$outcome = array( 'status' => 'retry', 'code' => 'privacy_state_unavailable' );
 			} elseif ( ! array_filter( $identity ) ) {
 				global $wpdb;
-				$fact = $wpdb->get_var( $wpdb->prepare(
+				$fact = $wpdb->get_var( $wpdb->prepare( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 					'SELECT 1 FROM %i WHERE order_id = %d LIMIT 1', YoOhw_COS_DB::order_facts_table(), $order_id
 				) );
 				$outcome = $wpdb->last_error ? array( 'status' => 'retry', 'code' => 'fact_lookup_failed' )
@@ -1031,7 +1031,7 @@ final class YoOhw_COS_Customers {
 			YoOhw_COS_DB::migration_issues_table(),
 		);
 		foreach ( $tables as $table ) {
-			if ( false === $wpdb->query( $wpdb->prepare( 'TRUNCATE TABLE %i', $table ) ) || '0' !== (string) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i', $table ) ) ) {
+			if ( false === $wpdb->query( $wpdb->prepare( 'TRUNCATE TABLE %i', $table ) ) || '0' !== (string) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i', $table ) ) ) { // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 				throw new RuntimeException( 'Reset recovery required: customer tables were not fully cleared. Retry Reset.' );
 			}
 		}
@@ -1053,7 +1053,7 @@ final class YoOhw_COS_Customers {
 		);
 		foreach ( $options as $option ) {
 			delete_option( $option );
-			if ( null !== $wpdb->get_var( $wpdb->prepare( 'SELECT option_id FROM %i WHERE option_name = %s', $wpdb->options, $option ) ) || '' !== $wpdb->last_error ) {
+			if ( null !== $wpdb->get_var( $wpdb->prepare( 'SELECT option_id FROM %i WHERE option_name = %s', $wpdb->options, $option ) ) || '' !== $wpdb->last_error ) { // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 				throw new RuntimeException( 'Reset recovery required: worker state was not cleared.' );
 			}
 		}
@@ -1091,7 +1091,7 @@ final class YoOhw_COS_Customers {
 		$page   = max( 1, absint( $page ) );
 		$offset = ( $page - 1 ) * $limit;
 
-		$customers = $wpdb->get_results(
+		$customers = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				"SELECT *
 				FROM %i
@@ -1147,7 +1147,7 @@ final class YoOhw_COS_Customers {
 
 		$table = YoOhw_COS_DB::customers_table();
 		$limit = min( 1000, max( 1, absint( $limit ) ) );
-		$rows  = $wpdb->get_results(
+		$rows  = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				"SELECT *
 				FROM %i
@@ -1231,7 +1231,7 @@ final class YoOhw_COS_Customers {
 		// Settings may have been read before a concurrent request saved new values.
 		wp_cache_delete( 'yoohw_cos_scoring_settings', 'options' );
 		wp_cache_delete( 'alloptions', 'options' );
-		$ids = $wpdb->get_col( $wpdb->prepare(
+		$ids = $wpdb->get_col( $wpdb->prepare( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			'SELECT id FROM %i WHERE id > %d ORDER BY id ASC LIMIT %d',
 			YoOhw_COS_DB::customers_table(), absint( $state['cursor'] ), self::RISK_SCORE_REFRESH_BATCH_SIZE
 		) );
@@ -1260,7 +1260,7 @@ final class YoOhw_COS_Customers {
 		global $wpdb;
 		$option = 'yoohw_cos_intelligence_freshness';
 		update_option( $option, $state, false );
-		$stored = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, $option ) );
+		$stored = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, $option ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 		if ( '' !== $wpdb->last_error || $state !== maybe_unserialize( $stored ) ) {
 			throw new RuntimeException( 'Intelligence refresh checkpoint was not persisted.' );
 		}
@@ -1353,7 +1353,7 @@ final class YoOhw_COS_Customers {
 		$table = YoOhw_COS_DB::customers_table();
 		$generation = YoOhw_COS_Intelligence::get_scoring_generation();
 
-		$rows = $wpdb->get_results(
+		$rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				"SELECT CASE WHEN intelligence_currency_ready = 1 AND intelligence_generation = %s THEN customer_status ELSE 'unavailable' END AS safe_status, COUNT(*) as total
 				FROM %i
@@ -1393,7 +1393,7 @@ final class YoOhw_COS_Customers {
 		$table = YoOhw_COS_DB::customers_table();
 		$generation = YoOhw_COS_Intelligence::get_scoring_generation();
 
-		$rows = $wpdb->get_results(
+		$rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				"SELECT vip_status, COUNT(*) as total
 				FROM %i
@@ -1438,7 +1438,7 @@ final class YoOhw_COS_Customers {
 			'high'   => 0,
 		);
 
-		$row = $wpdb->get_row(
+		$row = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				"SELECT
 				SUM(CASE WHEN risk_score < 15 THEN 1 ELSE 0 END) AS none_count,
@@ -1479,7 +1479,7 @@ final class YoOhw_COS_Customers {
 			return array();
 		}
 
-		$order_ids = $wpdb->get_col(
+		$order_ids = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				'SELECT order_id FROM %i WHERE customer_id = %d ORDER BY order_date DESC, order_id DESC LIMIT %d',
 				YoOhw_COS_DB::order_facts_table(),
@@ -1600,7 +1600,7 @@ final class YoOhw_COS_Customers {
 		$where .= ' AND archived_at IS NULL';
 
 		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Search SQL fragments are hardcoded; values are passed through placeholders.
-		$matches = $wpdb->get_col(
+		$matches = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				"SELECT id FROM %i {$where} LIMIT 2",
 				...array_merge( array( $table ), $params )
@@ -1679,7 +1679,7 @@ final class YoOhw_COS_Customers {
 		$page   = max( 1, absint( $page ) );
 		$offset = ( $page - 1 ) * $limit;
 
-		$customers = $wpdb->get_results(
+		$customers = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				"SELECT id, wp_user_id, email
 				FROM %i
@@ -1736,7 +1736,7 @@ final class YoOhw_COS_Customers {
 		$table = YoOhw_COS_DB::customers_table();
 		$generation = YoOhw_COS_Intelligence::get_scoring_generation();
 
-		$rows = $wpdb->get_results(
+		$rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				"SELECT lifecycle_stage, COUNT(*) as total
 				FROM %i

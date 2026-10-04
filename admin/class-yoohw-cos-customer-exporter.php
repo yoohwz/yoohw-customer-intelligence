@@ -202,7 +202,7 @@ final class YoOhw_COS_Customer_Exporter {
 
 			if ( 'tags' === $relationship ) {
 				// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- IN placeholders are generated from absint customer IDs.
-				$rows = $wpdb->get_results(
+				$rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 					$wpdb->prepare(
 						"SELECT rel.customer_id, item.name
 						FROM %i item
@@ -216,7 +216,7 @@ final class YoOhw_COS_Customer_Exporter {
 				// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
 			} else {
 				// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- IN placeholders are generated from absint customer IDs.
-				$rows = $wpdb->get_results(
+				$rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 					$wpdb->prepare(
 						"SELECT rel.customer_id, item.name
 						FROM %i item

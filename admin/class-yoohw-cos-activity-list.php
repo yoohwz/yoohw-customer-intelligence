@@ -39,11 +39,11 @@ final class YoOhw_COS_Activity_List extends WP_List_Table {
 		$current_page = $this->get_pagenum();
 		$offset       = ( $current_page - 1 ) * $per_page;
 
-		$event_type   = isset( $_REQUEST['event_type'] ) ? sanitize_key( wp_unslash( $_REQUEST['event_type'] ) ) : '';
-		$event_source = isset( $_REQUEST['event_source'] ) ? sanitize_key( wp_unslash( $_REQUEST['event_source'] ) ) : '';
-		$severity     = isset( $_REQUEST['severity'] ) ? sanitize_key( wp_unslash( $_REQUEST['severity'] ) ) : '';
-		$customer_id  = isset( $_REQUEST['customer_id'] ) ? absint( wp_unslash( $_REQUEST['customer_id'] ) ) : 0;
-		$search       = isset( $_REQUEST['s'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['s'] ) ) : '';
+		$event_type   = isset( $_REQUEST['event_type'] ) ? sanitize_key( wp_unslash( $_REQUEST['event_type'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+		$event_source = isset( $_REQUEST['event_source'] ) ? sanitize_key( wp_unslash( $_REQUEST['event_source'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+		$severity     = isset( $_REQUEST['severity'] ) ? sanitize_key( wp_unslash( $_REQUEST['severity'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+		$customer_id  = isset( $_REQUEST['customer_id'] ) ? absint( wp_unslash( $_REQUEST['customer_id'] ) ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+		$search       = isset( $_REQUEST['s'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['s'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 
 		$where  = 'WHERE 1=1';
 		$params = array();
@@ -87,7 +87,7 @@ final class YoOhw_COS_Activity_List extends WP_List_Table {
 		}
 
 		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Filter SQL fragments are hardcoded; values are passed through placeholders.
-		$total_items = (int) $wpdb->get_var(
+		$total_items = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				"SELECT COUNT(*)
 				FROM %i e
@@ -97,7 +97,7 @@ final class YoOhw_COS_Activity_List extends WP_List_Table {
 			)
 		);
 
-		$this->items = $wpdb->get_results(
+		$this->items = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				"SELECT e.*, c.display_name, c.email, c.phone
 				FROM %i e
@@ -127,7 +127,7 @@ final class YoOhw_COS_Activity_List extends WP_List_Table {
 	}
 
 	protected function get_views(): array {
-		$current = isset( $_GET['severity'] ) ? sanitize_key( wp_unslash( $_GET['severity'] ) ) : '';
+		$current = isset( $_GET['severity'] ) ? sanitize_key( wp_unslash( $_GET['severity'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 		$counts  = $this->get_severity_view_counts();
 
 		$labels = array(
@@ -146,8 +146,8 @@ final class YoOhw_COS_Activity_List extends WP_List_Table {
 			);
 
 			foreach ( array( 'event_type', 'event_source', 'customer_id', 's' ) as $key ) {
-				if ( ! empty( $_GET[ $key ] ) ) {
-					$args[ $key ] = sanitize_text_field( wp_unslash( $_GET[ $key ] ) );
+				if ( ! empty( $_GET[ $key ] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+					$args[ $key ] = sanitize_text_field( wp_unslash( $_GET[ $key ] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 				}
 			}
 
@@ -180,23 +180,23 @@ final class YoOhw_COS_Activity_List extends WP_List_Table {
 		$where  = 'WHERE 1=1';
 		$params = array();
 
-		if ( ! empty( $_GET['event_type'] ) ) {
+		if ( ! empty( $_GET['event_type'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 			$where   .= ' AND e.event_type = %s';
-			$params[] = sanitize_key( wp_unslash( $_GET['event_type'] ) );
+			$params[] = sanitize_key( wp_unslash( $_GET['event_type'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 		}
 
-		if ( ! empty( $_GET['event_source'] ) ) {
+		if ( ! empty( $_GET['event_source'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 			$where   .= ' AND e.event_source = %s';
-			$params[] = sanitize_key( wp_unslash( $_GET['event_source'] ) );
+			$params[] = sanitize_key( wp_unslash( $_GET['event_source'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 		}
 
-		if ( ! empty( $_GET['customer_id'] ) ) {
+		if ( ! empty( $_GET['customer_id'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 			$where   .= ' AND e.customer_id = %d';
-			$params[] = absint( wp_unslash( $_GET['customer_id'] ) );
+			$params[] = absint( wp_unslash( $_GET['customer_id'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 		}
 
-		if ( ! empty( $_GET['s'] ) ) {
-			$search = sanitize_text_field( wp_unslash( $_GET['s'] ) );
+		if ( ! empty( $_GET['s'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			$search = sanitize_text_field( wp_unslash( $_GET['s'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 			$like   = '%' . $wpdb->esc_like( $search ) . '%';
 
 			$where .= ' AND (
@@ -216,7 +216,7 @@ final class YoOhw_COS_Activity_List extends WP_List_Table {
 
 		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Filter SQL fragments are hardcoded; values are passed through placeholders.
 		$counts = array(
-			'all'     => (int) $wpdb->get_var(
+			'all'     => (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 				$wpdb->prepare(
 					"SELECT COUNT(*)
 					FROM %i e
@@ -231,7 +231,7 @@ final class YoOhw_COS_Activity_List extends WP_List_Table {
 			'error'   => 0,
 		);
 
-		$rows = $wpdb->get_results(
+		$rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				"SELECT e.severity AS label, COUNT(*) AS total
 				FROM %i e
@@ -262,8 +262,8 @@ final class YoOhw_COS_Activity_List extends WP_List_Table {
 			return;
 		}
 
-		$current_type   = isset( $_GET['event_type'] ) ? sanitize_key( wp_unslash( $_GET['event_type'] ) ) : '';
-		$current_source = isset( $_GET['event_source'] ) ? sanitize_key( wp_unslash( $_GET['event_source'] ) ) : '';
+		$current_type   = isset( $_GET['event_type'] ) ? sanitize_key( wp_unslash( $_GET['event_type'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+		$current_source = isset( $_GET['event_source'] ) ? sanitize_key( wp_unslash( $_GET['event_source'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 
 		echo '<div class="alignleft actions">';
 

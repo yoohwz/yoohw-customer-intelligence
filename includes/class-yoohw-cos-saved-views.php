@@ -150,8 +150,8 @@ final class YoOhw_COS_Saved_Views {
 
 	/** Opening by ID restores the definition; later requests carry editable inputs. */
 	public static function apply_open_request(): void {
-		$id = self::active_id( $_GET );
-		if ( '' === $id || isset( $_GET['saved_view_context'] ) ) {
+		$id = self::active_id( $_GET ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+		if ( '' === $id || isset( $_GET['saved_view_context'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 			return;
 		}
 		$view = self::get( $id );

@@ -37,7 +37,7 @@ final class YoOhw_COS_Privacy_Exporter {
 
 		// A nonblocking read lock excludes Reset during all subject-bound queries.
 		$lock = YoOhw_COS_Reset_Guard::lock_name();
-		if ( '1' !== (string) $wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK(%s, 0)', $lock ) ) ) {
+		if ( '1' !== (string) $wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK(%s, 0)', $lock ) ) ) { // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Database advisory locking requires the live connection, never a cached value.
 			return self::retry_error();
 		}
 		try {
@@ -78,7 +78,7 @@ final class YoOhw_COS_Privacy_Exporter {
 			}
 			return array( 'data' => $data, 'done' => $page * self::PAGE_SIZE >= $total );
 		} finally {
-			$wpdb->get_var( $wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', $lock ) );
+			$wpdb->get_var( $wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', $lock ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Database advisory locking requires the live connection, never a cached value.
 		}
 	}
 
@@ -104,18 +104,18 @@ final class YoOhw_COS_Privacy_Exporter {
 	private static function count_rows( array $category ): ?int {
 		global $wpdb;
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- FROM and WHERE come only from the fixed categories() map; subject values use prepare placeholders.
-		$sql = $wpdb->prepare( 'SELECT COUNT(*) FROM ' . $category['from'] . ' WHERE ' . $category['where'], ...$category['args'] );
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Prepared immediately above from fixed category SQL and validated subject values.
-		$count = $wpdb->get_var( $sql );
+		$sql = $wpdb->prepare( 'SELECT COUNT(*) FROM ' . $category['from'] . ' WHERE ' . $category['where'], ...$category['args'] ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- FROM and WHERE come only from the fixed categories() map; subject values use prepare placeholders. SQL fragments come only from the fixed categories() map; variadic subject/pagination values fill its placeholders.
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, PluginCheck.Security.DirectDB.UnescapedDBParameter -- FROM and WHERE come only from the fixed categories() map; subject values use prepare placeholders. SQL fragments come only from the fixed categories() map; variadic subject/pagination values fill its placeholders. Prepared immediately above from fixed category SQL and validated subject values.
+		$count = $wpdb->get_var( $sql ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, PluginCheck.Security.DirectDB.UnescapedDBParameter, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- FROM and WHERE come only from the fixed categories() map; subject values use prepare placeholders. SQL fragments come only from the fixed categories() map; variadic subject/pagination values fill its placeholders. Prepared immediately above from fixed category SQL and validated subject values. Owned CRM privacy/export state must reflect current rows; no WordPress object API exists.
 		return '' === $wpdb->last_error && null !== $count ? (int) $count : null;
 	}
 
 	private static function read_rows( array $category, int $limit, int $offset ): ?array {
 		global $wpdb;
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Projection, joins, predicate and ordering come only from the fixed categories() map; values use placeholders.
-		$sql = $wpdb->prepare( 'SELECT ' . $category['select'] . ' FROM ' . $category['from'] . ' WHERE ' . $category['where'] . ' ORDER BY ' . $category['order'] . ' ASC LIMIT %d OFFSET %d', ...array_merge( $category['args'], array( $limit, $offset ) ) );
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Prepared immediately above from fixed category SQL and validated subject values.
-		$rows = $wpdb->get_results( $sql, ARRAY_A );
+		$sql = $wpdb->prepare( 'SELECT ' . $category['select'] . ' FROM ' . $category['from'] . ' WHERE ' . $category['where'] . ' ORDER BY ' . $category['order'] . ' ASC LIMIT %d OFFSET %d', ...array_merge( $category['args'], array( $limit, $offset ) ) ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- Projection, joins, predicate and ordering come only from the fixed categories() map; values use placeholders. SQL fragments come only from the fixed categories() map; variadic subject/pagination values fill its placeholders.
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Projection, joins, predicate and ordering come only from the fixed categories() map; values use placeholders. SQL fragments come only from the fixed categories() map; variadic subject/pagination values fill its placeholders. Prepared immediately above from fixed category SQL and validated subject values.
+		$rows = $wpdb->get_results( $sql, ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, PluginCheck.Security.DirectDB.UnescapedDBParameter, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Projection, joins, predicate and ordering come only from the fixed categories() map; values use placeholders. SQL fragments come only from the fixed categories() map; variadic subject/pagination values fill its placeholders. Prepared immediately above from fixed category SQL and validated subject values. Owned CRM privacy/export state must reflect current rows; no WordPress object API exists.
 		return '' === $wpdb->last_error && is_array( $rows ) ? $rows : null;
 	}
 

@@ -80,14 +80,14 @@ final class YoOhw_COS_Migration_Runner {
 		global $wpdb;
 		if ( isset( $state['_currency_customer_probe'] ) && 'completed_with_issues' !== ( $state['commerce_facts_v2']['status'] ?? '' ) && null === self::currency_customer_probe_cursor( $state['_currency_customer_probe'] ) ) { return; }
 		if ( ! isset( $state['_currency_customer_probe'] ) && 'completed_with_issues' !== ( $state['commerce_facts_v2']['status'] ?? '' ) ) {
-			$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT commerce_metrics_version, total_orders FROM %i ORDER BY id LIMIT %d', YoOhw_COS_DB::customers_table(), self::BATCH_SIZE ), ARRAY_A );
+			$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT commerce_metrics_version, total_orders FROM %i ORDER BY id LIMIT %d', YoOhw_COS_DB::customers_table(), self::BATCH_SIZE ), ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM coordination/readiness state requires a live database result, not cached obligations.
 			if ( '' !== $wpdb->last_error ) { return; }
 			$stale = false;
 			foreach ( (array) $rows as $row ) {
 				$v = absint( $row['commerce_metrics_version'] );
 				if ( $v < YoOhw_COS_Commerce_Metrics_Policy::VERSION && ( $v > 0 || absint( $row['total_orders'] ) > 0 ) ) { $stale = true; break; }
 			}
-			$legacy = $wpdb->get_var( $wpdb->prepare( "SELECT 1 FROM %i WHERE policy_version < %d OR (counts_as_order = 1 AND (currency IS NULL OR currency = '')) LIMIT 1", YoOhw_COS_DB::order_facts_table(), YoOhw_COS_Commerce_Metrics_Policy::VERSION ) );
+			$legacy = $wpdb->get_var( $wpdb->prepare( "SELECT 1 FROM %i WHERE policy_version < %d OR (counts_as_order = 1 AND (currency IS NULL OR currency = '')) LIMIT 1", YoOhw_COS_DB::order_facts_table(), YoOhw_COS_Commerce_Metrics_Policy::VERSION ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM coordination/readiness state requires a live database result, not cached obligations.
 			if ( '' !== $wpdb->last_error || ( ! $legacy && ! $stale && count( (array) $rows ) < self::BATCH_SIZE ) ) { return; }
 		}
 		if ( ! YoOhw_COS_Reset_Guard::enter( false ) ) { return; }
@@ -106,7 +106,7 @@ final class YoOhw_COS_Migration_Runner {
 		if ( absint( $probe['policy_version'] ?? 0 ) !== YoOhw_COS_Commerce_Metrics_Policy::VERSION || absint( $probe['revalidate_after'] ?? 0 ) <= time() ) { return 0; }
 		global $wpdb;
 		// Primary-key endpoint lookup, never a full-table stale predicate on ordinary requests.
-		$highest_id = $wpdb->get_var( $wpdb->prepare( 'SELECT id FROM %i ORDER BY id DESC LIMIT 1', YoOhw_COS_DB::customers_table() ) );
+		$highest_id = $wpdb->get_var( $wpdb->prepare( 'SELECT id FROM %i ORDER BY id DESC LIMIT 1', YoOhw_COS_DB::customers_table() ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM coordination/readiness state requires a live database result, not cached obligations.
 		if ( '' !== $wpdb->last_error || absint( $highest_id ) <= absint( $probe['cursor'] ?? 0 ) ) { return null; }
 		return absint( $probe['cursor'] ?? 0 );
 	}
@@ -121,14 +121,14 @@ final class YoOhw_COS_Migration_Runner {
 		$cursor = $cursor ?? 0;
 		// Appended rows must not postpone the periodic check of previously scanned rows.
 		$revalidate_after = 0 === $cursor ? 0 : absint( $probe['revalidate_after'] ?? 0 );
-		$legacy_fact = $wpdb->get_var( $wpdb->prepare(
+		$legacy_fact = $wpdb->get_var( $wpdb->prepare( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM coordination/readiness state requires a live database result, not cached obligations.
 			"SELECT 1 FROM %i WHERE policy_version < %d OR (counts_as_order = 1 AND (currency IS NULL OR currency = '')) LIMIT 1",
 			YoOhw_COS_DB::order_facts_table(), YoOhw_COS_Commerce_Metrics_Policy::VERSION
 		) );
 		if ( '' !== $wpdb->last_error ) { return; }
 		// Inspect at most one primary-key page per request, including archived rows.
 		// A WHERE version < ... LIMIT 1 alone could scan the entire unindexed table.
-		$rows = $wpdb->get_results( $wpdb->prepare(
+		$rows = $wpdb->get_results( $wpdb->prepare( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM coordination/readiness state requires a live database result, not cached obligations.
 			'SELECT id, commerce_metrics_version, total_orders FROM %i WHERE id > %d ORDER BY id LIMIT %d',
 			YoOhw_COS_DB::customers_table(), $cursor, self::BATCH_SIZE
 		), ARRAY_A );
@@ -245,7 +245,7 @@ final class YoOhw_COS_Migration_Runner {
 
 	public static function get_state(): array {
 		global $wpdb;
-		$value = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, self::STATE_OPTION ) );
+		$value = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, self::STATE_OPTION ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM coordination/readiness state requires a live database result, not cached obligations.
 		if ( '' !== $wpdb->last_error ) { return array( '_read_error' => true ); }
 		$state = null === $value ? array() : maybe_unserialize( $value );
 		return is_array( $state ) ? $state : array( '_read_error' => true );
@@ -266,7 +266,7 @@ final class YoOhw_COS_Migration_Runner {
 			return false;
 		}
 		global $wpdb;
-		$issue = $wpdb->get_var( $wpdb->prepare(
+		$issue = $wpdb->get_var( $wpdb->prepare( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM coordination/readiness state requires a live database result, not cached obligations.
 			"SELECT 1 FROM %i WHERE migration_id IN ('commerce_facts_v2', 'commerce_currency_v3') AND status IN ('pending', 'unresolved') LIMIT 1",
 			YoOhw_COS_DB::migration_issues_table()
 		) );
@@ -362,7 +362,7 @@ final class YoOhw_COS_Migration_Runner {
 		global $wpdb;
 
 		$last_id = absint( $migration['last_customer_id'] ?? 0 );
-		$ids = $wpdb->get_col(
+		$ids = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM coordination/readiness state requires a live database result, not cached obligations.
 			$wpdb->prepare(
 				'SELECT id FROM %i WHERE id > %d ORDER BY id ASC LIMIT %d',
 				YoOhw_COS_DB::customers_table(),
@@ -409,7 +409,7 @@ final class YoOhw_COS_Migration_Runner {
 		}
 
 		$last_id = absint( $migration['last_customer_id'] ?? 0 );
-		$rows = $wpdb->get_results(
+		$rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM coordination/readiness state requires a live database result, not cached obligations.
 			$wpdb->prepare(
 				'SELECT id, email, phone FROM %i WHERE id > %d ORDER BY id ASC LIMIT %d',
 				YoOhw_COS_DB::customers_table(),
@@ -452,7 +452,7 @@ final class YoOhw_COS_Migration_Runner {
 		global $wpdb;
 
 		$last_id = absint( $migration['last_customer_id'] ?? 0 );
-		$rows = $wpdb->get_results(
+		$rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM coordination/readiness state requires a live database result, not cached obligations.
 			$wpdb->prepare(
 				'SELECT id, last_order_date FROM %i WHERE id > %d ORDER BY id ASC LIMIT %d',
 				YoOhw_COS_DB::customers_table(),
@@ -464,7 +464,7 @@ final class YoOhw_COS_Migration_Runner {
 
 		foreach ( is_array( $rows ) ? $rows : array() as $row ) {
 			$customer_id = absint( $row['id'] ?? 0 );
-			$loyalty_date = $wpdb->get_var(
+			$loyalty_date = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM coordination/readiness state requires a live database result, not cached obligations.
 				$wpdb->prepare(
 					'SELECT MAX(created_at) FROM %i WHERE customer_id = %d AND event_source = %s',
 					YoOhw_COS_DB::events_table(),
@@ -542,7 +542,7 @@ final class YoOhw_COS_Migration_Runner {
 	private static function retry_issues( string $migration_id, string $object_type, callable $callback ): int {
 		global $wpdb;
 
-		$issues = $wpdb->get_results(
+		$issues = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM coordination/readiness state requires a live database result, not cached obligations.
 			$wpdb->prepare(
 				"SELECT id, object_id, attempts FROM %i
 				WHERE migration_id = %s AND object_type = %s AND status = 'pending'
@@ -615,14 +615,14 @@ final class YoOhw_COS_Migration_Runner {
 			YoOhw_COS_DB::now(),
 			YoOhw_COS_DB::now()
 		);
-		$written = $wpdb->query( $sql ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Prepared immediately above.
+		$written = $wpdb->query( $sql ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Prepared immediately above. Owned CRM coordination/readiness state requires a live database result, not cached obligations.
 
 		if ( false === $written ) {
 			throw new RuntimeException( 'Unable to persist migration issue.' );
 		}
 
 		$attempts = absint(
-			$wpdb->get_var(
+			$wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM coordination/readiness state requires a live database result, not cached obligations.
 				$wpdb->prepare(
 					'SELECT attempts FROM %i WHERE migration_id = %s AND object_type = %s AND object_id = %d',
 					YoOhw_COS_DB::migration_issues_table(),
@@ -643,7 +643,7 @@ final class YoOhw_COS_Migration_Runner {
 	private static function resolve_issue( string $migration_id, string $object_type, int $object_id ): void {
 		global $wpdb;
 
-		$wpdb->query(
+		$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM coordination/readiness state requires a live database result, not cached obligations.
 			$wpdb->prepare(
 				"UPDATE %i SET status = 'resolved', resolved_at = %s, updated_at = %s
 				WHERE migration_id = %s AND object_type = %s AND object_id = %d AND status <> 'resolved'",
@@ -660,7 +660,7 @@ final class YoOhw_COS_Migration_Runner {
 	private static function mark_issue_unresolved( string $migration_id, string $object_type, int $object_id, string $error_code ): void {
 		global $wpdb;
 
-		$wpdb->query(
+		$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM coordination/readiness state requires a live database result, not cached obligations.
 			$wpdb->prepare(
 				"UPDATE %i SET status = 'unresolved', error_code = %s, updated_at = %s
 				WHERE migration_id = %s AND object_type = %s AND object_id = %d",
@@ -678,7 +678,7 @@ final class YoOhw_COS_Migration_Runner {
 		global $wpdb;
 
 		return absint(
-			$wpdb->get_var(
+			$wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM coordination/readiness state requires a live database result, not cached obligations.
 				$wpdb->prepare(
 					'SELECT COUNT(*) FROM %i WHERE migration_id = %s AND status = %s',
 					YoOhw_COS_DB::migration_issues_table(),

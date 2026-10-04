@@ -21,7 +21,7 @@ final class YoOhw_COS_Admin_Menu {
 	}
 
 	public static function enqueue_admin_assets( string $hook ): void {
-		$screen_page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
+		$screen_page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 
 		$plugin_pages = array(
 			'yoohw-customer-intelligence-overview',
@@ -756,30 +756,30 @@ final class YoOhw_COS_Admin_Menu {
 		self::maybe_redirect_customers_filter_action();
 		YoOhw_COS_Saved_Views::apply_open_request();
 
-		if ( isset( $_GET['customer_id'] ) ) {
-			$customer_id = absint( wp_unslash( $_GET['customer_id'] ) );
+		if ( isset( $_GET['customer_id'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			$customer_id = absint( wp_unslash( $_GET['customer_id'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 			YoOhw_COS_Customer_Profile::render( $customer_id );
 			return;
 		}
 
 		if (
-			! isset( $_GET['saved_view_id'] )
-			&& ! empty( $_GET['s'] )
-			&& empty( $_GET['customer_status'] )
-			&& empty( $_GET['vip_status'] )
-			&& empty( $_GET['risk_level'] )
-			&& empty( $_GET['lifecycle_stage'] )
-			&& empty( $_GET['customer_cohort'] )
-			&& empty( $_GET['customer_attention'] )
-			&& ( ! isset( $_GET['rfm_recency_max_days'] ) || '' === $_GET['rfm_recency_max_days'] )
-			&& ( ! isset( $_GET['rfm_frequency_min'] ) || '' === $_GET['rfm_frequency_min'] )
-			&& ( ! isset( $_GET['rfm_monetary_min'] ) || '' === $_GET['rfm_monetary_min'] )
-			&& ( ! self::is_loyalty_integration_active() || empty( $_GET['loyalty_level'] ) )
-			&& empty( $_GET['customer_tag'] )
-			&& empty( $_GET['customer_segment'] )
+			! isset( $_GET['saved_view_id'] ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			&& ! empty( $_GET['s'] ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			&& empty( $_GET['customer_status'] ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			&& empty( $_GET['vip_status'] ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			&& empty( $_GET['risk_level'] ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			&& empty( $_GET['lifecycle_stage'] ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			&& empty( $_GET['customer_cohort'] ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			&& empty( $_GET['customer_attention'] ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			&& ( ! isset( $_GET['rfm_recency_max_days'] ) || '' === $_GET['rfm_recency_max_days'] ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			&& ( ! isset( $_GET['rfm_frequency_min'] ) || '' === $_GET['rfm_frequency_min'] ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			&& ( ! isset( $_GET['rfm_monetary_min'] ) || '' === $_GET['rfm_monetary_min'] ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			&& ( ! self::is_loyalty_integration_active() || empty( $_GET['loyalty_level'] ) ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			&& empty( $_GET['customer_tag'] ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			&& empty( $_GET['customer_segment'] ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 		) {
 			$matched_customer_id = YoOhw_COS_Customers::find_customer_id_by_search(
-				sanitize_text_field( wp_unslash( $_GET['s'] ) )
+				sanitize_text_field( wp_unslash( $_GET['s'] ) ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 			);
 
 			if ( $matched_customer_id > 0 ) {
@@ -796,7 +796,7 @@ final class YoOhw_COS_Admin_Menu {
 			}
 		}
 
-		if ( ! YoOhw_COS_Saved_Views::request_is_stale( $_REQUEST ) ) {
+		if ( ! YoOhw_COS_Saved_Views::request_is_stale( $_REQUEST ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 			self::maybe_handle_customers_bulk_action();
 		}
 
@@ -809,14 +809,14 @@ final class YoOhw_COS_Admin_Menu {
 		echo '<p>' . esc_html__( 'Search, filter, export, and manage customer profiles synced from WooCommerce orders.', 'yoohw-customer-intelligence' ) . '</p>';
 		echo '</div><div class="yoohw-cos-customers-search">';
 		echo '<label for="yoohw-cos-customers-search">' . esc_html__( 'Search customers', 'yoohw-customer-intelligence' ) . '</label>';
-		echo '<div><input type="search" id="yoohw-cos-customers-search" name="s" form="yoohw-cos-customers-form" value="' . esc_attr( isset( $_GET['s'] ) ? sanitize_text_field( wp_unslash( $_GET['s'] ) ) : '' ) . '" /> ';
+		echo '<div><input type="search" id="yoohw-cos-customers-search" name="s" form="yoohw-cos-customers-form" value="' . esc_attr( isset( $_GET['s'] ) ? sanitize_text_field( wp_unslash( $_GET['s'] ) ) : '' ) . '" /> '; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 		echo '<button type="submit" class="button" form="yoohw-cos-customers-form">' . esc_html__( 'Search', 'yoohw-customer-intelligence' ) . '</button></div></div></div>';
 		self::render_saved_views_control();
 
-		if ( isset( $_GET['yoohw_customers_bulk'] ) ) {
-			$updated      = absint( wp_unslash( $_GET['yoohw_customers_bulk'] ) );
-			$bulk_action  = isset( $_GET['yoohw_customers_bulk_action'] ) ? sanitize_key( wp_unslash( $_GET['yoohw_customers_bulk_action'] ) ) : '';
-			$bulk_target  = isset( $_GET['yoohw_customers_bulk_target'] ) ? sanitize_text_field( wp_unslash( $_GET['yoohw_customers_bulk_target'] ) ) : '';
+		if ( isset( $_GET['yoohw_customers_bulk'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			$updated      = absint( wp_unslash( $_GET['yoohw_customers_bulk'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			$bulk_action  = isset( $_GET['yoohw_customers_bulk_action'] ) ? sanitize_key( wp_unslash( $_GET['yoohw_customers_bulk_action'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			$bulk_target  = isset( $_GET['yoohw_customers_bulk_target'] ) ? sanitize_text_field( wp_unslash( $_GET['yoohw_customers_bulk_target'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 			$bulk_message = self::get_customers_bulk_success_message( $bulk_action, $updated, $bulk_target );
 
 			echo '<div class="notice notice-success is-dismissible"><p>';
@@ -824,8 +824,8 @@ final class YoOhw_COS_Admin_Menu {
 			echo '</p></div>';
 		}
 
-		if ( ! empty( $_GET['yoohw_customers_bulk_err'] ) ) {
-			$error = sanitize_key( wp_unslash( $_GET['yoohw_customers_bulk_err'] ) );
+		if ( ! empty( $_GET['yoohw_customers_bulk_err'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			$error = sanitize_key( wp_unslash( $_GET['yoohw_customers_bulk_err'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 
 			$messages = array(
 				'no_customers'    => __( 'Please select at least one customer before applying a bulk action.', 'yoohw-customer-intelligence' ),
@@ -839,8 +839,8 @@ final class YoOhw_COS_Admin_Menu {
 			$message = $messages[ $error ] ?? __( 'Bulk action could not be completed.', 'yoohw-customer-intelligence' );
 
 			if ( 'no_changes' === $error ) {
-				$bulk_action = isset( $_GET['yoohw_customers_bulk_action'] ) ? sanitize_key( wp_unslash( $_GET['yoohw_customers_bulk_action'] ) ) : '';
-				$bulk_target = isset( $_GET['yoohw_customers_bulk_target'] ) ? sanitize_text_field( wp_unslash( $_GET['yoohw_customers_bulk_target'] ) ) : '';
+				$bulk_action = isset( $_GET['yoohw_customers_bulk_action'] ) ? sanitize_key( wp_unslash( $_GET['yoohw_customers_bulk_action'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+				$bulk_target = isset( $_GET['yoohw_customers_bulk_target'] ) ? sanitize_text_field( wp_unslash( $_GET['yoohw_customers_bulk_target'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 				$message     = self::get_customers_bulk_no_changes_message( $bulk_action, $bulk_target );
 			}
 
@@ -861,8 +861,8 @@ final class YoOhw_COS_Admin_Menu {
 		wp_nonce_field( 'yoohw_cos_customers_bulk_action', 'yoohw_cos_customers_bulk_nonce' );
 		wp_nonce_field( 'yoohw_cos_export_customers', 'yoohw_cos_customers_export_nonce' );
 		self::render_customers_list_hidden_state();
-		if ( isset( $_GET['saved_view_id'] ) ) {
-			echo '<input type="hidden" name="saved_view_id" value="' . esc_attr( YoOhw_COS_Saved_Views::context_id( $_GET ) ) . '" />';
+		if ( isset( $_GET['saved_view_id'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			echo '<input type="hidden" name="saved_view_id" value="' . esc_attr( YoOhw_COS_Saved_Views::context_id( $_GET ) ) . '" />'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 			echo '<input type="hidden" name="saved_view_context" value="1" />';
 		}
 		$list_table->display();
@@ -872,15 +872,15 @@ final class YoOhw_COS_Admin_Menu {
 	}
 
 	private static function maybe_redirect_customers_filter_action(): void {
-		if ( ! self::is_post_request() || ( ! isset( $_POST['s'] ) && ! isset( $_POST['filter_action'] ) ) || isset( $_POST['yoohw_cos_export_customers'] ) || isset( $_POST['saved_view_action'] ) ) {
+		if ( ! self::is_post_request() || ( ! isset( $_POST['s'] ) && ! isset( $_POST['filter_action'] ) ) || isset( $_POST['yoohw_cos_export_customers'] ) || isset( $_POST['saved_view_action'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Read-only filter POST redirects to sanitized GET parameters; mutation/export/Saved View actions are excluded.
 			return;
 		}
-		$action = isset( $_POST['action'] ) && is_string( $_POST['action'] ) ? sanitize_key( wp_unslash( $_POST['action'] ) ) : '';
-		$action2 = isset( $_POST['action2'] ) && is_string( $_POST['action2'] ) ? sanitize_key( wp_unslash( $_POST['action2'] ) ) : '';
+		$action = isset( $_POST['action'] ) && is_string( $_POST['action'] ) ? sanitize_key( wp_unslash( $_POST['action'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Read-only filter POST redirects to sanitized GET parameters; mutation/export/Saved View actions are excluded.
+		$action2 = isset( $_POST['action2'] ) && is_string( $_POST['action2'] ) ? sanitize_key( wp_unslash( $_POST['action2'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Read-only filter POST redirects to sanitized GET parameters; mutation/export/Saved View actions are excluded.
 		if ( ! in_array( $action, array( '', '-1' ), true ) || ! in_array( $action2, array( '', '-1' ), true ) ) {
 			return;
 		}
-		$source = wp_unslash( $_POST );
+		$source = wp_unslash( $_POST ); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Read-only filter POST redirects to sanitized GET parameters; mutation/export/Saved View actions are excluded.
 		$args = array_merge( array( 'page' => 'yoohw-customer-intelligence' ), YoOhw_COS_Saved_Views::definition( $source ) );
 		if ( isset( $source['saved_view_id'] ) ) {
 			$args['saved_view_id'] = YoOhw_COS_Saved_Views::context_id( $source );
@@ -921,10 +921,10 @@ final class YoOhw_COS_Admin_Menu {
 
 	private static function render_saved_views_control(): void {
 		$views = YoOhw_COS_Saved_Views::all();
-		$id = YoOhw_COS_Saved_Views::active_id( $_GET );
+		$id = YoOhw_COS_Saved_Views::active_id( $_GET ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 		$active = YoOhw_COS_Saved_Views::get( $id );
-		$stale = isset( $_GET['saved_view_id'] ) && YoOhw_COS_Saved_Views::request_is_stale( $_GET );
-		$dirty = $active && ! $stale && YoOhw_COS_Saved_Views::definition( wp_unslash( $_GET ) ) !== YoOhw_COS_Saved_Views::definition( $active['definition'] );
+		$stale = isset( $_GET['saved_view_id'] ) && YoOhw_COS_Saved_Views::request_is_stale( $_GET ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+		$dirty = $active && ! $stale && YoOhw_COS_Saved_Views::definition( wp_unslash( $_GET ) ) !== YoOhw_COS_Saved_Views::definition( $active['definition'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 		$messages = array(
 			'created' => __( 'Saved view created.', 'yoohw-customer-intelligence' ),
 			'updated' => __( 'Saved view updated.', 'yoohw-customer-intelligence' ),
@@ -937,7 +937,7 @@ final class YoOhw_COS_Admin_Menu {
 			'limit' => __( 'You can save up to 20 views.', 'yoohw-customer-intelligence' ),
 			'invalid' => __( 'Saved view request was invalid.', 'yoohw-customer-intelligence' ),
 		);
-		$notice = isset( $_GET['saved_view_notice'] ) && is_string( $_GET['saved_view_notice'] ) ? sanitize_key( wp_unslash( $_GET['saved_view_notice'] ) ) : '';
+		$notice = isset( $_GET['saved_view_notice'] ) && is_string( $_GET['saved_view_notice'] ) ? sanitize_key( wp_unslash( $_GET['saved_view_notice'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 		if ( isset( $messages[ $notice ] ) ) {
 			echo '<div class="notice notice-' . ( in_array( $notice, array( 'created', 'updated', 'renamed', 'deleted' ), true ) ? 'success' : 'error' ) . ' is-dismissible"><p>' . esc_html( $messages[ $notice ] ) . '</p></div>';
 		}
@@ -956,7 +956,7 @@ final class YoOhw_COS_Admin_Menu {
 		echo '<form class="yoohw-cos-saved-views__save-form" method="post" action="' . esc_url( admin_url( 'admin.php?page=yoohw-customer-intelligence' ) ) . '">';
 		wp_nonce_field( 'yoohw_cos_saved_view', 'saved_view_nonce' );
 		echo '<input type="hidden" name="page" value="yoohw-customer-intelligence" /><input type="hidden" name="saved_view_id" value="' . esc_attr( $id ) . '" />';
-		foreach ( YoOhw_COS_Saved_Views::definition( wp_unslash( $_GET ) ) as $key => $value ) {
+		foreach ( YoOhw_COS_Saved_Views::definition( wp_unslash( $_GET ) ) as $key => $value ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 			echo '<input type="hidden" name="' . esc_attr( $key ) . '" value="' . esc_attr( $value ) . '" />';
 		}
 		echo '<span class="yoohw-cos-saved-views__create">';
@@ -1027,7 +1027,7 @@ final class YoOhw_COS_Admin_Menu {
 			return;
 		}
 
-		YoOhw_COS_Reset_Guard::check_bulk_size( isset( $_POST['customer_ids'] ) && is_array( $_POST['customer_ids'] ) ? $_POST['customer_ids'] : array() );
+		YoOhw_COS_Reset_Guard::check_bulk_size( isset( $_POST['customer_ids'] ) && is_array( $_POST['customer_ids'] ) ? $_POST['customer_ids'] : array() ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized, WordPress.Security.ValidatedSanitizedInput.MissingUnslash -- Only counts the submitted array before processing; subsequent ID sanitization happens after the size/Reset guards.
 
 		YoOhw_COS_Reset_Guard::require_submission( $_POST );
 		try {
@@ -1477,11 +1477,11 @@ final class YoOhw_COS_Admin_Menu {
 		}
 
 		foreach ( $preserve_keys as $key ) {
-			if ( ! isset( $_REQUEST[ $key ] ) || is_array( $_REQUEST[ $key ] ) ) {
+			if ( ! isset( $_REQUEST[ $key ] ) || is_array( $_REQUEST[ $key ] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 				continue;
 			}
 
-			$value = sanitize_text_field( wp_unslash( $_REQUEST[ $key ] ) );
+			$value = sanitize_text_field( wp_unslash( $_REQUEST[ $key ] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 
 			if ( '' === $value ) {
 				continue;
@@ -1536,8 +1536,8 @@ final class YoOhw_COS_Admin_Menu {
 		echo '<input type="hidden" name="page" value="yoohw-customer-intelligence-tasks" />';
 
 		foreach ( array( 'task_view', 'priority', 'assigned_user_id', 'customer_id', 'order_id' ) as $key ) {
-			if ( ! empty( $_GET[ $key ] ) ) {
-				echo '<input type="hidden" name="' . esc_attr( $key ) . '" value="' . esc_attr( sanitize_text_field( wp_unslash( $_GET[ $key ] ) ) ) . '" />';
+			if ( ! empty( $_GET[ $key ] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+				echo '<input type="hidden" name="' . esc_attr( $key ) . '" value="' . esc_attr( sanitize_text_field( wp_unslash( $_GET[ $key ] ) ) ) . '" />'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 			}
 		}
 
@@ -1552,7 +1552,7 @@ final class YoOhw_COS_Admin_Menu {
 	}
 
 	private static function render_tasks_summary_cards( array $counts ): void {
-		$current = isset( $_GET['task_view'] ) ? sanitize_key( wp_unslash( $_GET['task_view'] ) ) : 'open';
+		$current = isset( $_GET['task_view'] ) ? sanitize_key( wp_unslash( $_GET['task_view'] ) ) : 'open'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 
 		$cards = array(
 			'open'           => array(
@@ -1623,7 +1623,7 @@ final class YoOhw_COS_Admin_Menu {
 
 		check_admin_referer( 'bulk-yoohw_cos_tasks' );
 
-		YoOhw_COS_Reset_Guard::check_bulk_size( isset( $_POST['task_ids'] ) && is_array( $_POST['task_ids'] ) ? $_POST['task_ids'] : array() );
+		YoOhw_COS_Reset_Guard::check_bulk_size( isset( $_POST['task_ids'] ) && is_array( $_POST['task_ids'] ) ? $_POST['task_ids'] : array() ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized, WordPress.Security.ValidatedSanitizedInput.MissingUnslash -- Only counts the submitted array before processing; subsequent ID sanitization happens after the size/Reset guards.
 
 		YoOhw_COS_Reset_Guard::require_submission( $_POST );
 		try {
@@ -1685,8 +1685,8 @@ final class YoOhw_COS_Admin_Menu {
 	}
 
 	private static function render_tasks_notices(): void {
-		if ( ! empty( $_GET['yoohw_task_error'] ) ) {
-			$error = sanitize_key( wp_unslash( $_GET['yoohw_task_error'] ) );
+		if ( ! empty( $_GET['yoohw_task_error'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			$error = sanitize_key( wp_unslash( $_GET['yoohw_task_error'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 
 			$messages = array(
 				'missing_customer' => __( 'Please select a valid customer.', 'yoohw-customer-intelligence' ),
@@ -1710,20 +1710,20 @@ final class YoOhw_COS_Admin_Menu {
 		);
 
 		foreach ( $success_messages as $key => $message ) {
-			if ( isset( $_GET[ $key ] ) && absint( wp_unslash( $_GET[ $key ] ) ) ) {
+			if ( isset( $_GET[ $key ] ) && absint( wp_unslash( $_GET[ $key ] ) ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 				echo '<div class="notice notice-success is-dismissible"><p>' . esc_html( $message ) . '</p></div>';
 			}
 		}
 
-		if ( ! empty( $_GET['yoohw_tasks_bulk_missing'] ) ) {
+		if ( ! empty( $_GET['yoohw_tasks_bulk_missing'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 			echo '<div class="notice notice-error is-dismissible"><p>';
 			echo esc_html__( 'Please select at least one task before applying a bulk action.', 'yoohw-customer-intelligence' );
 			echo '</p></div>';
 		}
 
-		if ( isset( $_GET['yoohw_tasks_bulk_done'] ) ) {
-			$done   = absint( wp_unslash( $_GET['yoohw_tasks_bulk_done'] ) );
-			$action = isset( $_GET['yoohw_tasks_bulk_action'] ) ? sanitize_key( wp_unslash( $_GET['yoohw_tasks_bulk_action'] ) ) : '';
+		if ( isset( $_GET['yoohw_tasks_bulk_done'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			$done   = absint( wp_unslash( $_GET['yoohw_tasks_bulk_done'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			$action = isset( $_GET['yoohw_tasks_bulk_action'] ) ? sanitize_key( wp_unslash( $_GET['yoohw_tasks_bulk_action'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 
 			echo '<div class="notice notice-success is-dismissible"><p>';
 			printf(
@@ -1742,15 +1742,15 @@ final class YoOhw_COS_Admin_Menu {
 			return;
 		}
 		try {
-			$task = ! empty( $_GET['task_id'] ) ? YoOhw_COS_Tasks::get_task( absint( wp_unslash( $_GET['task_id'] ) ) ) : array();
+			$task = ! empty( $_GET['task_id'] ) ? YoOhw_COS_Tasks::get_task( absint( wp_unslash( $_GET['task_id'] ) ) ) : array(); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 			self::render_task_form( $task );
 		} finally { YoOhw_COS_Reset_Guard::leave(); }
 	}
 
 	private static function render_task_form( array $task = array() ): void {
 		$is_editing           = ! empty( $task['id'] );
-		$requested_customer_id = isset( $_GET['customer_id'] ) ? absint( wp_unslash( $_GET['customer_id'] ) ) : 0;
-		$requested_order_id    = isset( $_GET['order_id'] ) ? absint( wp_unslash( $_GET['order_id'] ) ) : 0;
+		$requested_customer_id = isset( $_GET['customer_id'] ) ? absint( wp_unslash( $_GET['customer_id'] ) ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+		$requested_order_id    = isset( $_GET['order_id'] ) ? absint( wp_unslash( $_GET['order_id'] ) ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 		$selected_id           = absint( $task['customer_id'] ?? $requested_customer_id );
 		$selected_order_id     = absint( $task['order_id'] ?? $requested_order_id );
 		$selected_due          = YoOhw_COS_Tasks::format_due_date_for_input( $task['due_date'] ?? '' );
@@ -1874,7 +1874,7 @@ final class YoOhw_COS_Admin_Menu {
 
 		$table = YoOhw_COS_DB::customers_table();
 
-		$customers = $wpdb->get_results(
+		$customers = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				"SELECT id, display_name, email, phone
 				FROM %i
@@ -1982,9 +1982,9 @@ final class YoOhw_COS_Admin_Menu {
 
 		$editing_tag = array();
 
-		if ( ! empty( $_GET['edit_tag'] ) ) {
+		if ( ! empty( $_GET['edit_tag'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 			$editing_tag = YoOhw_COS_Tags::get_tag(
-				absint( wp_unslash( $_GET['edit_tag'] ) )
+				absint( wp_unslash( $_GET['edit_tag'] ) ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 			);
 		}
 
@@ -1992,8 +1992,8 @@ final class YoOhw_COS_Admin_Menu {
 		echo '<h1 class="wp-heading-inline">' . esc_html__( 'Tags', 'yoohw-customer-intelligence' ) . '</h1>';
 		echo '<p>' . esc_html__( 'Create reusable customer labels for profiles, filters, and bulk actions.', 'yoohw-customer-intelligence' ) . '</p>';
 
-		if ( ! empty( $_GET['yoohw_tag_error'] ) ) {
-			$error = sanitize_key( wp_unslash( $_GET['yoohw_tag_error'] ) );
+		if ( ! empty( $_GET['yoohw_tag_error'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			$error = sanitize_key( wp_unslash( $_GET['yoohw_tag_error'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 
 			$messages = array(
 				'missing_name'   => __( 'Please enter a tag name.', 'yoohw-customer-intelligence' ),
@@ -2005,8 +2005,8 @@ final class YoOhw_COS_Admin_Menu {
 			echo '</p></div>';
 		}
 
-		if ( isset( $_GET['yoohw_tag_created'] ) ) {
-			if ( absint( wp_unslash( $_GET['yoohw_tag_created'] ) ) ) {
+		if ( isset( $_GET['yoohw_tag_created'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			if ( absint( wp_unslash( $_GET['yoohw_tag_created'] ) ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 				echo '<div class="notice notice-success is-dismissible"><p>';
 				echo esc_html__( 'Tag created successfully.', 'yoohw-customer-intelligence' );
 				echo '</p></div>';
@@ -2017,8 +2017,8 @@ final class YoOhw_COS_Admin_Menu {
 			}
 		}
 
-		if ( isset( $_GET['yoohw_tag_updated'] ) ) {
-			if ( absint( wp_unslash( $_GET['yoohw_tag_updated'] ) ) ) {
+		if ( isset( $_GET['yoohw_tag_updated'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			if ( absint( wp_unslash( $_GET['yoohw_tag_updated'] ) ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 				echo '<div class="notice notice-success is-dismissible"><p>';
 				echo esc_html__( 'Tag updated successfully.', 'yoohw-customer-intelligence' );
 				echo '</p></div>';
@@ -2029,8 +2029,8 @@ final class YoOhw_COS_Admin_Menu {
 			}
 		}
 
-		if ( isset( $_GET['yoohw_tag_deleted'] ) ) {
-			if ( absint( wp_unslash( $_GET['yoohw_tag_deleted'] ) ) ) {
+		if ( isset( $_GET['yoohw_tag_deleted'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			if ( absint( wp_unslash( $_GET['yoohw_tag_deleted'] ) ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 				echo '<div class="notice notice-success is-dismissible"><p>';
 				echo esc_html__( 'Tag deleted successfully.', 'yoohw-customer-intelligence' );
 				echo '</p></div>';
@@ -2041,9 +2041,9 @@ final class YoOhw_COS_Admin_Menu {
 			}
 		}
 
-		if ( isset( $_GET['yoohw_tags_bulk_deleted'] ) ) {
-			$deleted = absint( wp_unslash( $_GET['yoohw_tags_bulk_deleted'] ) );
-			$blocked = isset( $_GET['yoohw_tags_bulk_blocked'] ) ? absint( wp_unslash( $_GET['yoohw_tags_bulk_blocked'] ) ) : 0;
+		if ( isset( $_GET['yoohw_tags_bulk_deleted'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			$deleted = absint( wp_unslash( $_GET['yoohw_tags_bulk_deleted'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			$blocked = isset( $_GET['yoohw_tags_bulk_blocked'] ) ? absint( wp_unslash( $_GET['yoohw_tags_bulk_blocked'] ) ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 
 			if ( $deleted > 0 ) {
 				echo '<div class="notice notice-success is-dismissible"><p>';
@@ -2066,14 +2066,14 @@ final class YoOhw_COS_Admin_Menu {
 			}
 		}
 
-		if ( ! empty( $_GET['yoohw_tags_bulk_missing'] ) ) {
+		if ( ! empty( $_GET['yoohw_tags_bulk_missing'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 			echo '<div class="notice notice-error is-dismissible"><p>';
 			echo esc_html__( 'Please select at least one tag before applying a bulk action.', 'yoohw-customer-intelligence' );
 			echo '</p></div>';
 		}
 
-		if ( ! empty( $_GET['yoohw_tag_delete_block'] ) ) {
-			self::render_term_delete_warning( true, absint( wp_unslash( $_GET['yoohw_tag_delete_block'] ) ) );
+		if ( ! empty( $_GET['yoohw_tag_delete_block'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			self::render_term_delete_warning( true, absint( wp_unslash( $_GET['yoohw_tag_delete_block'] ) ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 		}
 
 		echo '<div id="col-container" class="wp-clearfix yoohw-cos-term-layout">';
@@ -2102,7 +2102,7 @@ final class YoOhw_COS_Admin_Menu {
 
 	/** A warning redirect is still the original selection, not a fresh authorization. */
 	private static function render_term_delete_warning( bool $is_tag, int $term_id ): void {
-		YoOhw_COS_Reset_Guard::require_submission( $_GET );
+		YoOhw_COS_Reset_Guard::require_submission( $_GET ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Only builds an escaped confirmation link; require_submission() validates its captured epoch and the action has its own nonce.
 		try {
 			$term = $is_tag ? YoOhw_COS_Tags::get_tag( $term_id ) : YoOhw_COS_Segments::get_segment( $term_id );
 			if ( empty( $term ) ) {
@@ -2118,7 +2118,7 @@ final class YoOhw_COS_Admin_Menu {
 						'action' => $action,
 						$kind . '_id' => $term_id,
 						'force' => 1,
-						YoOhw_COS_Reset_Guard::FORM_FIELD => wp_unslash( $_GET[ YoOhw_COS_Reset_Guard::FORM_FIELD ] ),
+						YoOhw_COS_Reset_Guard::FORM_FIELD => wp_unslash( $_GET[ YoOhw_COS_Reset_Guard::FORM_FIELD ] ), // phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized, WordPress.Security.ValidatedSanitizedInput.InputNotValidated -- Only builds an escaped confirmation link; require_submission() validates its captured epoch and the action has its own nonce. require_submission() already checked existence/string type and exact captured epoch while holding the Reset guard.
 					),
 					admin_url( 'admin-post.php' )
 				),
@@ -2155,7 +2155,7 @@ final class YoOhw_COS_Admin_Menu {
 
 		check_admin_referer( 'bulk-yoohw_cos_tags' );
 
-		YoOhw_COS_Reset_Guard::check_bulk_size( isset( $_POST['tag_ids'] ) && is_array( $_POST['tag_ids'] ) ? $_POST['tag_ids'] : array() );
+		YoOhw_COS_Reset_Guard::check_bulk_size( isset( $_POST['tag_ids'] ) && is_array( $_POST['tag_ids'] ) ? $_POST['tag_ids'] : array() ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized, WordPress.Security.ValidatedSanitizedInput.MissingUnslash -- Only counts the submitted array before processing; subsequent ID sanitization happens after the size/Reset guards.
 
 		YoOhw_COS_Reset_Guard::require_submission( $_POST );
 		try {
@@ -2283,8 +2283,8 @@ final class YoOhw_COS_Admin_Menu {
 		echo '<h1 class="wp-heading-inline">' . esc_html__( 'Segments', 'yoohw-customer-intelligence' ) . '</h1>';
 		echo '<p>' . esc_html__( 'Create customer groups for filters, operations, and reporting.', 'yoohw-customer-intelligence' ) . '</p>';
 
-		if ( ! empty( $_GET['yoohw_segment_error'] ) ) {
-			$error = sanitize_key( wp_unslash( $_GET['yoohw_segment_error'] ) );
+		if ( ! empty( $_GET['yoohw_segment_error'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			$error = sanitize_key( wp_unslash( $_GET['yoohw_segment_error'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 
 			$messages = array(
 				'missing_name'   => __( 'Please enter a segment name.', 'yoohw-customer-intelligence' ),
@@ -2296,8 +2296,8 @@ final class YoOhw_COS_Admin_Menu {
 			echo '</p></div>';
 		}
 
-		if ( isset( $_GET['yoohw_segment_created'] ) ) {
-			if ( absint( wp_unslash( $_GET['yoohw_segment_created'] ) ) ) {
+		if ( isset( $_GET['yoohw_segment_created'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			if ( absint( wp_unslash( $_GET['yoohw_segment_created'] ) ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 				echo '<div class="notice notice-success is-dismissible"><p>';
 				echo esc_html__( 'Segment created successfully.', 'yoohw-customer-intelligence' );
 				echo '</p></div>';
@@ -2308,8 +2308,8 @@ final class YoOhw_COS_Admin_Menu {
 			}
 		}
 
-		if ( isset( $_GET['yoohw_segment_deleted'] ) ) {
-			if ( absint( wp_unslash( $_GET['yoohw_segment_deleted'] ) ) ) {
+		if ( isset( $_GET['yoohw_segment_deleted'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			if ( absint( wp_unslash( $_GET['yoohw_segment_deleted'] ) ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 				echo '<div class="notice notice-success is-dismissible"><p>';
 				echo esc_html__( 'Segment deleted successfully.', 'yoohw-customer-intelligence' );
 				echo '</p></div>';
@@ -2320,9 +2320,9 @@ final class YoOhw_COS_Admin_Menu {
 			}
 		}
 
-		if ( isset( $_GET['yoohw_segments_bulk_deleted'] ) ) {
-			$deleted = absint( wp_unslash( $_GET['yoohw_segments_bulk_deleted'] ) );
-			$blocked = isset( $_GET['yoohw_segments_bulk_blocked'] ) ? absint( wp_unslash( $_GET['yoohw_segments_bulk_blocked'] ) ) : 0;
+		if ( isset( $_GET['yoohw_segments_bulk_deleted'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			$deleted = absint( wp_unslash( $_GET['yoohw_segments_bulk_deleted'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			$blocked = isset( $_GET['yoohw_segments_bulk_blocked'] ) ? absint( wp_unslash( $_GET['yoohw_segments_bulk_blocked'] ) ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 
 			if ( $deleted > 0 ) {
 				echo '<div class="notice notice-success is-dismissible"><p>';
@@ -2345,18 +2345,18 @@ final class YoOhw_COS_Admin_Menu {
 			}
 		}
 
-		if ( ! empty( $_GET['yoohw_segments_bulk_missing'] ) ) {
+		if ( ! empty( $_GET['yoohw_segments_bulk_missing'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 			echo '<div class="notice notice-error is-dismissible"><p>';
 			echo esc_html__( 'Please select at least one segment before applying a bulk action.', 'yoohw-customer-intelligence' );
 			echo '</p></div>';
 		}
 
-		if ( ! empty( $_GET['yoohw_segment_delete_block'] ) ) {
-			self::render_term_delete_warning( false, absint( wp_unslash( $_GET['yoohw_segment_delete_block'] ) ) );
+		if ( ! empty( $_GET['yoohw_segment_delete_block'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			self::render_term_delete_warning( false, absint( wp_unslash( $_GET['yoohw_segment_delete_block'] ) ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 		}
 
-		if ( isset( $_GET['yoohw_segment_updated'] ) ) {
-			if ( absint( wp_unslash( $_GET['yoohw_segment_updated'] ) ) ) {
+		if ( isset( $_GET['yoohw_segment_updated'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			if ( absint( wp_unslash( $_GET['yoohw_segment_updated'] ) ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 				echo '<div class="notice notice-success is-dismissible"><p>';
 				echo esc_html__( 'Segment updated successfully.', 'yoohw-customer-intelligence' );
 				echo '</p></div>';
@@ -2369,9 +2369,9 @@ final class YoOhw_COS_Admin_Menu {
 
 		$editing_segment = array();
 
-		if ( ! empty( $_GET['edit_segment'] ) ) {
+		if ( ! empty( $_GET['edit_segment'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 			$editing_segment = YoOhw_COS_Segments::get_segment(
-				absint( wp_unslash( $_GET['edit_segment'] ) )
+				absint( wp_unslash( $_GET['edit_segment'] ) ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 			);
 		}
 
@@ -2416,7 +2416,7 @@ final class YoOhw_COS_Admin_Menu {
 
 		check_admin_referer( 'bulk-yoohw_cos_segments' );
 
-		YoOhw_COS_Reset_Guard::check_bulk_size( isset( $_POST['segment_ids'] ) && is_array( $_POST['segment_ids'] ) ? $_POST['segment_ids'] : array() );
+		YoOhw_COS_Reset_Guard::check_bulk_size( isset( $_POST['segment_ids'] ) && is_array( $_POST['segment_ids'] ) ? $_POST['segment_ids'] : array() ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized, WordPress.Security.ValidatedSanitizedInput.MissingUnslash -- Only counts the submitted array before processing; subsequent ID sanitization happens after the size/Reset guards.
 
 		YoOhw_COS_Reset_Guard::require_submission( $_POST );
 		try {
@@ -2540,8 +2540,8 @@ final class YoOhw_COS_Admin_Menu {
 		echo '<form method="get">';
 		echo '<input type="hidden" name="page" value="yoohw-customer-intelligence-activity" />';
 
-		if ( ! empty( $_GET['customer_id'] ) ) {
-			echo '<input type="hidden" name="customer_id" value="' . esc_attr( absint( wp_unslash( $_GET['customer_id'] ) ) ) . '" />';
+		if ( ! empty( $_GET['customer_id'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			echo '<input type="hidden" name="customer_id" value="' . esc_attr( absint( wp_unslash( $_GET['customer_id'] ) ) ) . '" />'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 		}
 
 		$list_table->search_box( __( 'Search activity', 'yoohw-customer-intelligence' ), 'yoohw-cos-activity' );
@@ -2567,7 +2567,7 @@ final class YoOhw_COS_Admin_Menu {
 		self::render_diagnostics( YoOhw_COS_Diagnostics::snapshot() );
 		YoOhw_COS_Reset_Guard::render_incidents();
 
-		if ( isset( $_GET['yoohw_cos_processed'] ) ) {
+		if ( isset( $_GET['yoohw_cos_processed'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 			$summary = self::get_sync_status_summary( $sync_state );
 			echo '<div class="notice notice-' . ( 'good' === $summary['type'] ? 'success' : 'warning' ) . ' is-dismissible"><p>';
 			echo esc_html( $summary['detail'] ) . ' ';
@@ -2579,15 +2579,15 @@ final class YoOhw_COS_Admin_Menu {
 			echo '</p></div>';
 		}
 
-		if ( ! empty( $_GET['yoohw_cos_reset'] ) ) {
+		if ( ! empty( $_GET['yoohw_cos_reset'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 			echo '<div class="notice notice-success is-dismissible"><p>';
 			echo esc_html__( 'Customer data has been reset.', 'yoohw-customer-intelligence' );
 			echo '</p></div>';
 		}
 
-		if ( isset( $_GET['yoohw_cos_recalculated'] ) ) {
-			$updated          = absint( wp_unslash( $_GET['yoohw_cos_recalculated'] ) );
-			$recalculate_more = ! empty( $_GET['yoohw_cos_recalculate_more'] );
+		if ( isset( $_GET['yoohw_cos_recalculated'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			$updated          = absint( wp_unslash( $_GET['yoohw_cos_recalculated'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			$recalculate_more = ! empty( $_GET['yoohw_cos_recalculate_more'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 
 			echo '<div class="notice notice-success is-dismissible"><p>';
 			printf(
@@ -2604,9 +2604,9 @@ final class YoOhw_COS_Admin_Menu {
 			}
 		}
 
-		if ( isset( $_GET['yoohw_cos_backfilled'] ) ) {
-			$updated = absint( wp_unslash( $_GET['yoohw_cos_backfilled'] ) );
-			$more    = ! empty( $_GET['yoohw_cos_backfill_more'] );
+		if ( isset( $_GET['yoohw_cos_backfilled'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			$updated = absint( wp_unslash( $_GET['yoohw_cos_backfilled'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			$more    = ! empty( $_GET['yoohw_cos_backfill_more'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 
 			echo '<div class="notice notice-success is-dismissible"><p>';
 			printf(
@@ -2626,12 +2626,12 @@ final class YoOhw_COS_Admin_Menu {
 		$blacklist_core_active    = self::is_blacklist_manager_integration_active();
 		$blacklist_premium_active = self::is_blacklist_manager_premium_integration_active();
 
-		if ( $blacklist_core_active && isset( $_GET['yoohw_cos_blacklist_synced'] ) ) {
-			$created = absint( wp_unslash( $_GET['yoohw_cos_blacklist_synced'] ) );
-			$scanned = isset( $_GET['yoohw_cos_blacklist_scanned'] ) ? absint( wp_unslash( $_GET['yoohw_cos_blacklist_scanned'] ) ) : 0;
-			$skipped = isset( $_GET['yoohw_cos_blacklist_skipped'] ) ? absint( wp_unslash( $_GET['yoohw_cos_blacklist_skipped'] ) ) : 0;
-			$stage   = isset( $_GET['yoohw_cos_blacklist_batch_stage'] ) ? sanitize_key( wp_unslash( $_GET['yoohw_cos_blacklist_batch_stage'] ) ) : 'core';
-			$more    = ! empty( $_GET['yoohw_cos_blacklist_sync_more'] );
+		if ( $blacklist_core_active && isset( $_GET['yoohw_cos_blacklist_synced'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			$created = absint( wp_unslash( $_GET['yoohw_cos_blacklist_synced'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			$scanned = isset( $_GET['yoohw_cos_blacklist_scanned'] ) ? absint( wp_unslash( $_GET['yoohw_cos_blacklist_scanned'] ) ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			$skipped = isset( $_GET['yoohw_cos_blacklist_skipped'] ) ? absint( wp_unslash( $_GET['yoohw_cos_blacklist_skipped'] ) ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			$stage   = isset( $_GET['yoohw_cos_blacklist_batch_stage'] ) ? sanitize_key( wp_unslash( $_GET['yoohw_cos_blacklist_batch_stage'] ) ) : 'core'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			$more    = ! empty( $_GET['yoohw_cos_blacklist_sync_more'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 
 			echo '<div class="notice notice-success is-dismissible"><p>';
 			printf(
@@ -2651,14 +2651,14 @@ final class YoOhw_COS_Admin_Menu {
 			}
 		}
 
-		if ( ! empty( $_GET['yoohw_cos_scoring_settings_saved'] ) ) {
+		if ( ! empty( $_GET['yoohw_cos_scoring_settings_saved'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 			echo '<div class="notice notice-success is-dismissible"><p>';
 			echo esc_html__( 'Customer scoring settings saved.', 'yoohw-customer-intelligence' );
 			echo ' <a href="' . esc_url( admin_url( 'admin.php?page=yoohw-customer-intelligence-settings#yoohw-cos-recalculate-intelligence' ) ) . '">' . esc_html__( 'Recalculate intelligence', 'yoohw-customer-intelligence' ) . '</a>';
 			echo '</p></div>';
 		}
 
-		if ( self::is_loyalty_integration_active() && ! empty( $_GET['yoohw_cos_loyalty_task_automation_saved'] ) ) {
+		if ( self::is_loyalty_integration_active() && ! empty( $_GET['yoohw_cos_loyalty_task_automation_saved'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 			echo '<div class="notice notice-success is-dismissible"><p>';
 			echo esc_html__( 'Loyalty task automation settings saved.', 'yoohw-customer-intelligence' );
 			echo '</p></div>';
@@ -2671,11 +2671,11 @@ final class YoOhw_COS_Admin_Menu {
 		echo '<div class="yoohw-cos-operation__body">';
 		echo '<h3>' . esc_html__( 'Sync center', 'yoohw-customer-intelligence' ) . '</h3>';
 
-		$query_has_more  = ! empty( $_GET['yoohw_cos_has_more'] );
+		$query_has_more  = ! empty( $_GET['yoohw_cos_has_more'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 		$has_more        = ! empty( $sync_state['has_more'] );
 		$next_page       = absint( $sync_state['next_page'] ?? 1 );
 		$next_page       = $has_more ? max( 1, $next_page ) : 1;
-		$sync_auto_submit = $has_more && $query_has_more && ! empty( $_GET['yoohw_cos_auto_sync'] );
+		$sync_auto_submit = $has_more && $query_has_more && ! empty( $_GET['yoohw_cos_auto_sync'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 		$sync_percent    = absint( $sync_state['percent'] ?? 0 );
 
 		if ( 'completed' === $sync_state['status'] && empty( $sync_state['has_more'] ) && ! empty( $sync_state['last_run_at'] ) ) {
@@ -2709,9 +2709,9 @@ final class YoOhw_COS_Admin_Menu {
 		echo '<h3>' . esc_html__( 'Maintenance', 'yoohw-customer-intelligence' ) . '</h3>';
 		echo '<div class="yoohw-cos-operation-list">';
 
-		$recalculate_next = isset( $_GET['yoohw_cos_recalculate_next'] ) ? absint( wp_unslash( $_GET['yoohw_cos_recalculate_next'] ) ) : 1;
-		$recalculate_more = ! empty( $_GET['yoohw_cos_recalculate_more'] );
-		$recalculate_auto_submit = $recalculate_more && ( ! empty( $_GET['yoohw_cos_recalculate_auto'] ) || isset( $_GET['yoohw_cos_recalculated'] ) );
+		$recalculate_next = isset( $_GET['yoohw_cos_recalculate_next'] ) ? absint( wp_unslash( $_GET['yoohw_cos_recalculate_next'] ) ) : 1; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+		$recalculate_more = ! empty( $_GET['yoohw_cos_recalculate_more'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+		$recalculate_auto_submit = $recalculate_more && ( ! empty( $_GET['yoohw_cos_recalculate_auto'] ) || isset( $_GET['yoohw_cos_recalculated'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 
 		echo '<div id="yoohw-cos-recalculate-intelligence" class="yoohw-cos-operation-row" data-yoohw-cos-sync-container>';
 		echo '<div class="yoohw-cos-operation-row__content">';
@@ -2739,10 +2739,10 @@ final class YoOhw_COS_Admin_Menu {
 		echo '</div>';
 
 		if ( $blacklist_core_active ) {
-			$blacklist_next = isset( $_GET['yoohw_cos_blacklist_sync_next'] ) ? absint( wp_unslash( $_GET['yoohw_cos_blacklist_sync_next'] ) ) : 1;
-			$blacklist_more = ! empty( $_GET['yoohw_cos_blacklist_sync_more'] );
-			$blacklist_stage = isset( $_GET['yoohw_cos_blacklist_sync_stage'] ) ? sanitize_key( wp_unslash( $_GET['yoohw_cos_blacklist_sync_stage'] ) ) : 'core';
-			$blacklist_auto_submit = $blacklist_more && ( ! empty( $_GET['yoohw_cos_blacklist_sync_auto'] ) || isset( $_GET['yoohw_cos_blacklist_synced'] ) );
+			$blacklist_next = isset( $_GET['yoohw_cos_blacklist_sync_next'] ) ? absint( wp_unslash( $_GET['yoohw_cos_blacklist_sync_next'] ) ) : 1; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			$blacklist_more = ! empty( $_GET['yoohw_cos_blacklist_sync_more'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			$blacklist_stage = isset( $_GET['yoohw_cos_blacklist_sync_stage'] ) ? sanitize_key( wp_unslash( $_GET['yoohw_cos_blacklist_sync_stage'] ) ) : 'core'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+			$blacklist_auto_submit = $blacklist_more && ( ! empty( $_GET['yoohw_cos_blacklist_sync_auto'] ) || isset( $_GET['yoohw_cos_blacklist_synced'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 			$blacklist_description = $blacklist_premium_active
 				? __( 'Backfill core blacklist signals, then premium risk signals from the active Premium license.', 'yoohw-customer-intelligence' )
 				: __( 'Backfill core Blacklist Manager signals.', 'yoohw-customer-intelligence' );
@@ -2774,9 +2774,9 @@ final class YoOhw_COS_Admin_Menu {
 			echo '</div>';
 		}
 
-		$backfill_next = isset( $_GET['yoohw_cos_backfill_next'] ) ? absint( wp_unslash( $_GET['yoohw_cos_backfill_next'] ) ) : 1;
-		$backfill_more = ! empty( $_GET['yoohw_cos_backfill_more'] );
-		$backfill_auto_submit = $backfill_more && ( ! empty( $_GET['yoohw_cos_backfill_auto'] ) || isset( $_GET['yoohw_cos_backfilled'] ) );
+		$backfill_next = isset( $_GET['yoohw_cos_backfill_next'] ) ? absint( wp_unslash( $_GET['yoohw_cos_backfill_next'] ) ) : 1; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+		$backfill_more = ! empty( $_GET['yoohw_cos_backfill_more'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+		$backfill_auto_submit = $backfill_more && ( ! empty( $_GET['yoohw_cos_backfill_auto'] ) || isset( $_GET['yoohw_cos_backfilled'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 
 		echo '<div class="yoohw-cos-operation-row" data-yoohw-cos-sync-container>';
 		echo '<div class="yoohw-cos-operation-row__content">';
@@ -3174,7 +3174,7 @@ final class YoOhw_COS_Admin_Menu {
 
 		foreach ( $keys as $table_key ) {
 			$table = YoOhw_COS_DB::table( $table_key );
-			$found = $wpdb->get_var(
+			$found = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 				$wpdb->prepare(
 					'SHOW TABLES LIKE %s',
 					$table
@@ -3479,13 +3479,13 @@ final class YoOhw_COS_Admin_Menu {
 	}
 
 	private static function render_overview_notices(): void {
-		if ( ! empty( $_GET['yoohw_task_completed'] ) ) {
+		if ( ! empty( $_GET['yoohw_task_completed'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 			echo '<div class="notice notice-success is-dismissible"><p>';
 			echo esc_html__( 'Task completed.', 'yoohw-customer-intelligence' );
 			echo '</p></div>';
 		}
 
-		if ( ! empty( $_GET['yoohw_task_error'] ) ) {
+		if ( ! empty( $_GET['yoohw_task_error'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 			echo '<div class="notice notice-error is-dismissible"><p>';
 			echo esc_html__( 'The task could not be updated.', 'yoohw-customer-intelligence' );
 			echo '</p></div>';
@@ -3949,7 +3949,7 @@ final class YoOhw_COS_Admin_Menu {
 			return array();
 		}
 
-		$results = $wpdb->get_results(
+		$results = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				"SELECT
 					e.id,
@@ -3985,7 +3985,7 @@ final class YoOhw_COS_Admin_Menu {
 			return false;
 		}
 
-		$found = $wpdb->get_var(
+		$found = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				'SHOW TABLES LIKE %s',
 				$table

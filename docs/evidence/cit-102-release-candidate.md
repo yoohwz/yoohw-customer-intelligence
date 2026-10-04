@@ -4,12 +4,13 @@ Prepared 2026-10-04 (Asia/Ho_Chi_Minh). [CIT-102](https://github.com/yoohwz/yooh
 
 Original admitted protected main: `1e4dd12261f065394dd755cd7b3c367eb7379dd2`. Final implementation/review base: `e88e8fef80bb15e603e031a49ce1f458cf4ad55c`, the protected main after separately admitted [CIT-103 / PR104](https://github.com/yoohwz/yoohw-customer-intelligence/pull/104) was accepted and merged. The branch was fast-forwarded without discarding the bounded CIT-102 changes. CIT-103's serializer sink is inherited base content, not an additional runtime correction inside CIT-102. Governance is unchanged.
 
-This record supersedes the provisional package hashes and 64-error certification blocker. All version-coupled checks below were repeated on the post-CIT-103 payload. Exact final candidate SHA, PR diff/base, native CI run ID and fresh Technical Review URL/SHA are bound by the owning PR's final evidence comment. Those self-referential post-push identities are deliberately not fabricated or embedded through a source-only handoff commit; Acceptance must read that exact-head PR evidence together with this record. This document alone does not grant Acceptance, merge or release authority.
+This record supersedes the provisional packages, the 64-error certification blocker and the earlier 0-error/907-warning candidate. The Human expanded scope to require zero warnings and to retain the readme name while matching the main-file Plugin Name; the durable [scope addendum](https://github.com/yoohwz/yoohw-customer-intelligence/issues/102#issuecomment-5978458994) owns these corrections. Earlier candidate reviews are invalid for this changed candidate. All staged-package checks below were repeated on the final zero-warning payload (R3). Exact final candidate SHA, PR diff/base, native CI run ID and fresh Technical Review URL/SHA are bound by the owning PR's final evidence comment. Those self-referential post-push identities are deliberately not fabricated or embedded through a source-only handoff commit; Acceptance must read that exact-head PR evidence together with this record. This document alone does not grant Acceptance, merge or release authority.
 
 ## Identity and public metadata
 
 | Field | Exact staged value |
 | --- | --- |
+| Main-file Plugin Name / unchanged readme title | `Customer Intelligence for WooCommerce` |
 | Plugin header / `YOOHW_COS_VERSION` / readme Stable tag | `1.4.3` |
 | `YOOHW_COS_DB_VERSION` / installed schema | `0.2.4`, unchanged |
 | Readme Changelog release inventory | exactly `1.4.3` |
@@ -37,8 +38,8 @@ Two fresh canonical `bash scripts/stage-distribution.sh . <destination>` invocat
 | Artifact | Exact value |
 | --- | --- |
 | File count | 65 |
-| Product tree SHA-256 | `1e17d9ade7586f692091e15fda8714ca255a070b3def32d4479fda61687357d8` |
-| `yoohw-customer-intelligence-1.4.3.zip` SHA-256 | `f22bc07b3bad1d10f42aa18e1c2f9f1c961902c64f4e644c2d6ab050f4cf8873` |
+| Product tree SHA-256 | `16951f40a6c3d7a7c40dece4a83ab6b7575da585025f317c63a0b7632472e0ca` |
+| `yoohw-customer-intelligence-1.4.3.zip` SHA-256 | `6c9f3bffcf625a16521eff7a6c6445c357f97ad90c196d12531de3c0fc9cd626` |
 | Real public 1.4.2 ZIP SHA-256 | `6480ace7fa5a40c40094e24a92398964129f4d54a18bf06460ec5dd4cae30124` |
 | Plugin Check 2.1.0 ZIP SHA-256 | `6ff4bd2145f3befcf907df158cc466b1649dafed5686de8369907403c3013fc4` |
 | WP-CLI 2.12.0 PHAR SHA-256 | `ce34ddd838f7351d6759068d09793f26755463b4a4610a5a5c0a97b68220d85c` |
@@ -64,7 +65,7 @@ Tools: PHP 8.4.18, MySQL 8.0.35, WordPress 6.9, WooCommerce 10.8.0, WP-CLI 2.12.
 | Public 1.4.2 handled operational notice upgrade, HPOS=no | PASS; no ghost unresolved operation |
 | Public 1.4.2 unresolved ledger / pending Reset upgrade, HPOS=yes | PASS; obligations retained fail closed |
 | Fresh exact ZIP install, HPOS=yes | PASS, activation/schema/API/native admin/transport |
-| Plugin Check 2.1.0 default checks | PASS, 0 ERROR / 907 WARNING; dispositions below |
+| Plugin Check 2.1.0 default checks | PASS, 0 ERROR / 0 WARNING; audited corrections below |
 | Browser-emitted five asset URLs | PASS, `ver=1.4.3`, HTTP 200 and exact staged bytes |
 | Native filtered / Saved View CSV | PASS, 200 / correct headers / BOM byte zero / strict parse |
 | Native AJAX per-user notice dismissal | PASS, persisted exact revision; readiness unchanged preparing |
@@ -113,107 +114,113 @@ wp plugin check yoohw-customer-intelligence --mode=new --format=csv --ignore-war
 wp plugin check yoohw-customer-intelligence --mode=new --format=csv
 ```
 
-Public 1.4.2: **0 ERROR / 888 WARNING**. Candidate: **0 ERROR / 907 WARNING**. Error-only outputs report `Success: Checks complete. No errors found.`. Full records were parsed by file/type/code/message, excluding repeated per-file CSV headers; command exit zero alone was not treated as proof. No checks/error codes/paths were excluded and no scanner configuration was weakened. CIT-103's one audited plain serializer sink is the accepted inherited correction; no further annotation was added here.
+The final native scan of the exact R3 staged payload reports **0 ERROR / 0 WARNING** in both accepted invocations. Both outputs state `Success: Checks complete. No errors found.`; full CSV record parsing independently counted zero errors and warnings. No checks, paths or error codes were excluded and no scanner configuration was weakened.
 
-| Warning code | Public 1.4.2 | Candidate | Delta |
+The paired prior baseline is comparison evidence only: public 1.4.2 had 0 ERROR / 888 WARNING; the earlier post-CIT-103 candidate had 0 ERROR / 907 WARNING. Neither earlier result certifies the final package. The following counts explain the complete warning disposition:
+
+| Warning code | Public 1.4.2 | Prior candidate | Final R3 |
 | --- | ---: | ---: | ---: |
-| `PluginCheck.Security.DirectDB.UnescapedDBParameter` | 1 | 1 | +0 |
-| `WordPress.DB.DirectDatabaseQuery.DirectQuery` | 244 | 251 | +7 |
-| `WordPress.DB.DirectDatabaseQuery.NoCaching` | 236 | 243 | +7 |
-| `WordPress.DB.DirectDatabaseQuery.SchemaChange` | 1 | 1 | +0 |
-| `WordPress.DB.PreparedSQL.InterpolatedNotPrepared` | 4 | 4 | +0 |
-| `WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber` | 4 | 4 | +0 |
-| `WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare` | 1 | 1 | +0 |
-| `WordPress.DB.SlowDBQuery.slow_db_query_meta_key` | 18 | 18 | +0 |
-| `WordPress.DB.SlowDBQuery.slow_db_query_meta_query` | 2 | 2 | +0 |
-| `WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound` | 11 | 11 | +0 |
-| `WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound` | 50 | 50 | +0 |
-| `WordPress.PHP.DevelopmentFunctions.error_log_error_log` | 2 | 2 | +0 |
-| `WordPress.Security.NonceVerification.Missing` | 17 | 17 | +0 |
-| `WordPress.Security.NonceVerification.Recommended` | 278 | 281 | +3 |
-| `WordPress.Security.ValidatedSanitizedInput.InputNotSanitized` | 11 | 13 | +2 |
-| `WordPress.Security.ValidatedSanitizedInput.InputNotValidated` | 3 | 3 | +0 |
-| `WordPress.Security.ValidatedSanitizedInput.MissingUnslash` | 4 | 4 | +0 |
-| `mismatched_plugin_name` | 1 | 1 | +0 |
+| `PluginCheck.Security.DirectDB.UnescapedDBParameter` | 1 | 1 | 0 |
+| `WordPress.DB.DirectDatabaseQuery.DirectQuery` | 244 | 251 | 0 |
+| `WordPress.DB.DirectDatabaseQuery.NoCaching` | 236 | 243 | 0 |
+| `WordPress.DB.DirectDatabaseQuery.SchemaChange` | 1 | 1 | 0 |
+| `WordPress.DB.PreparedSQL.InterpolatedNotPrepared` | 4 | 4 | 0 |
+| `WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber` | 4 | 4 | 0 |
+| `WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare` | 1 | 1 | 0 |
+| `WordPress.DB.SlowDBQuery.slow_db_query_meta_key` | 18 | 18 | 0 |
+| `WordPress.DB.SlowDBQuery.slow_db_query_meta_query` | 2 | 2 | 0 |
+| `WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound` | 11 | 11 | 0 |
+| `WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound` | 50 | 50 | 0 |
+| `WordPress.PHP.DevelopmentFunctions.error_log_error_log` | 2 | 2 | 0 |
+| `WordPress.Security.NonceVerification.Missing` | 17 | 17 | 0 |
+| `WordPress.Security.NonceVerification.Recommended` | 278 | 281 | 0 |
+| `WordPress.Security.ValidatedSanitizedInput.InputNotSanitized` | 11 | 13 | 0 |
+| `WordPress.Security.ValidatedSanitizedInput.InputNotValidated` | 3 | 3 | 0 |
+| `WordPress.Security.ValidatedSanitizedInput.MissingUnslash` | 4 | 4 | 0 |
+| `mismatched_plugin_name` | 1 | 1 | 0 |
 
-The 19 additional warning records versus the public package are inherited accepted CIT-88 runtime paths: seven DirectQuery plus seven NoCaching records (six migration retry/issue read/write/count operations and one live site-readiness issue aggregate), three read-only `$_GET['page']` NonceVerification.Recommended records, and two notice key/revision InputNotSanitized records. The seven SQL operations use prepared identifier/value placeholders and read live persisted obligations; caching would require additional invalidation and could stale a readiness decision. The page selector is string-checked, unslashed and `sanitize_key`-normalized; it chooses notice display only, not a mutation. Dismissal requires `manage_woocommerce`, a logged-in current user and `check_ajax_referer`; key is an exact known descriptor and revision must match a 64-hex digest plus the current descriptor. Existing regressions cover forged users/nonces, stale/replayed revisions and safety-state independence. These records do not establish a new unguarded mutation or raw SQL input.
+The main-file Plugin Name now matches the unchanged readme title. Template-owned local variables use `yoohw_cos_` prefixes; required WooCommerce parameters and hooks retain their upstream names. These changes remove 51 warning records. The remaining 856 prior records are addressed by narrowly scoped, code-specific PHPCS annotations at approximately 515 source sites, with the reason attached to each operation. They are audited exceptions, not 856 claimed runtime defects fixed. Existing prepared-SQL exceptions were merged at the actual operation so the new annotations do not override their earlier safety explanation. No file-wide disable or blanket ignore was introduced.
 
-The remaining 888 records have the same warning-code counts as public 1.4.2 and are inherited before CIT-102: prepared direct database operations/uncached reads and slow-query diagnostics; custom prepared-SQL assembly diagnostics; nonce/input diagnostics on existing admin/query flows; fixed WordPress/WooCommerce interoperability hook/variable names; owned schema creation; diagnostic `error_log`; and `mismatched_plugin_name` (existing plugin branding versus slug-generated suggestion). The sole DirectDB `$where` warning is unchanged fixed-fragment/placeholder SQL assembly; its message's source line changed from 852 to 848 because CIT-102 removed four asset path lines, not because query behavior changed. It is not an additional warning. Existing nonce/capability/Reset/privacy/CSV rejection and integration controls remain green. No warning was reclassified as an error, suppressed or fixed opportunistically in this release-identity task. This comparison and focused source inspection identify no new material release blocker; independent Technical Review still owns verification of that disposition.
+DirectQuery/NoCaching exceptions cover custom CRM/integration tables without a WordPress object API and live privacy, Reset, migration, readiness and atomic transaction operations. Caching these reads without a separate invalidation design could stale persisted obligations. Prepared identifiers/values and fixed fragment maps remain unchanged. Dynamic placeholder counts come from generated `%d` lists or fixed categories and values are supplied to `prepare()`. Signal descriptor `meta_key` arrays are not WP_Query arguments; the two actual bounded upstream meta-query paths retain their existing lookup/list contracts. Owned-table uninstall SchemaChange and validated, PII-free operational `error_log` alerts retain their intended roles.
+
+Nonce/input annotations identify read-only display/filter selection, sanitized filter POST redirects excluding mutation/export/Saved View actions, or the separate capability/nonce/Reset guard that admits order saves. Notice keys/revisions and Reset epochs retain exact validation instead of normalization that could alter replay checks. Bulk input is counted before bounded ID normalization; scoring schema and integration array accessors own their documented validation. Required WooCommerce interoperability hooks keep their fixed upstream names. The annotations do not add mutation authority or remove authentication, capability, nonce, escaping, preparation or Reset/privacy guards.
+
+PHP token comparison across all 46 changed product PHP files against the earlier candidate found identical executable tokens after reversing the template-local variable prefixes; comments and Plugin Name metadata do not alter operations. The final underlying Plugin Check component scans (plugin-review, direct database, DirectDB security, configured prefix and slow-query standards) also report 0 errors / 0 warnings. A separate, undistributed unsafe PHP canary still triggers eight relevant diagnostic codes, including SQLNotPrepared, DirectQuery, NoCaching, nonce, output escaping and input validation/sanitization/unslash diagnostics. This verifies the rules remain active outside the exact local exceptions. The complete native scanner, full regression suite, staged upgrades and native fresh-install transport checks independently validate the final package; fresh Technical Review owns independent assessment of these exceptions.
 
 ## Safety, limitations and release boundary
 
 Every fixture used a newly owned private real temporary root, new socket-only MySQL with TCP/MySQL X disabled, random DB/user limited to that DB, exact dependency/config paths and ownership-token/grant checks before WordPress. Existing installed Local/production sites and credentials were not used. PHP mail was disabled, WordPress HTTP was blocked before plugin hooks, WP-Cron disabled, and only a token-guarded 127.0.0.1 development server served the synthetic admin browser workflow. Browser used normal WordPress authentication; test ownership admits the environment, never substitutes for authentication.
 
-Both canonical suite topologies, five upgrade roots, the fresh browser root and paired scanner root confirmed unrelated synthetic database sentinels and terminated only their own processes/removed only their own site directories. The native post-browser process verified persisted dismissal and ready convergence before cleanup. Private transport/auth files contain synthetic data only and are not repository artifacts. Runtime certification is bounded to WP 6.9 / WC 10.8.0 / PHP 8.4.18 / MySQL 8.0.35, not all advertised combinations. Native CI supplies its separately provisioned runtime/minimum-syntax checks. No shared Local CIT-100 mutation was needed.
+Both canonical suite topologies, five upgrade roots, the fresh browser root and final scanner root confirmed unrelated synthetic database sentinels and terminated only their own processes/removed only their own site directories. The native post-browser process verified persisted dismissal and ready convergence before cleanup. Private transport/auth files contained synthetic data only, were removed after validation and are not repository artifacts. Runtime certification is bounded to WP 6.9 / WC 10.8.0 / PHP 8.4.18 / MySQL 8.0.35, not all advertised combinations. Native CI supplies its separately provisioned runtime/minimum-syntax checks. No shared Local CIT-100 mutation was needed.
 
 No Prepare/Publish workflow dispatch, tag, GitHub Release, WordPress.org SVN write, deployment or merge occurred inside CIT-102. Acceptance/merge/release are separate gates. After fresh exact-candidate Technical Review, native required CI, ChatGPT Acceptance and separate Human `Merge CIT-102`, re-fetch protected main and use **Prepare Customer Intelligence WordPress.org Release Candidate**, `version=1.4.3`, `candidate_sha=<exact merged current protected-main SHA>`. The Prepare SHA is not this branch SHA assumed in advance.
 
 ## Exact staged inventory
 
-| Path | SHA-256 |
-| --- | --- |
-| `admin/class-yoohw-cos-activity-list.php` | `7c8182ba708d842bb3fcf13e48140d66d182cc7deae57c90204b324836fe2681` |
-| `admin/class-yoohw-cos-admin-menu.php` | `59485aaf4c3e951044205b6692d76c08da07626ba1d32112ab8e1d189d83f9f8` |
-| `admin/class-yoohw-cos-admin-tools.php` | `92b04fc67f1cbc40a424c697bc0adf2551aeaa042a83cacd635c0f7d0bd61aa1` |
-| `admin/class-yoohw-cos-admin-ui.php` | `e3074a55ff288245babe129e8090c5a29599d9603a5d8182fc58915fa8849a81` |
-| `admin/class-yoohw-cos-customer-exporter.php` | `34ebbb15ef60e58a9962830c650c3df486d097706959d30897486cb249805cca` |
-| `admin/class-yoohw-cos-customer-profile.php` | `9701cf7615a51b0baff1590e02c40aa5c15d486814cea1eb3f6800a384e5a6c5` |
-| `admin/class-yoohw-cos-customers-list.php` | `7c22b09a0227d98a624230ebefeeb55447ed450e5fe24bbc2ad26c703412705b` |
-| `admin/class-yoohw-cos-flash-notices.php` | `6285794e0143410f70fa742bbfe04316745037bc38e70f982bb7feee1a1c8890` |
-| `admin/class-yoohw-cos-notice-preferences.php` | `0e3e4ce91b7b16c07fd492178b03261e518e6731ca2955032fa7306eee171a9a` |
-| `admin/class-yoohw-cos-order-admin.php` | `8037ecff1bf5dbd83f0b3977611880953c2dd306d4a628db1f917754663d38d0` |
-| `admin/class-yoohw-cos-segments-list.php` | `bcf30e1d5a2cb1182beaf0b12598fd7ac22eac2c6ec887f2cc586dec07741503` |
-| `admin/class-yoohw-cos-tags-list.php` | `b9f8e68a498fbd6e4e2812085750635f2f71eb076d10e00fd8a6725dea139070` |
-| `admin/class-yoohw-cos-tasks-list.php` | `7592317f8b252dc629d3d9bdfe84a3e080e71a4d5beb372366a26178319ca740` |
-| `assets/css/admin.css` | `491cc6dfeb8a09477bffa68652441fafb1139d41aed54038d6658e53367c9237` |
-| `assets/css/order-admin.css` | `484427cc3bc4d8c62d090397567290f153a087ba179da931c1e2e4309b4b4244` |
-| `assets/js/admin.js` | `917f9bdcfb6283e004c425b610f11a99ee6caa102b941228c096197ba54a7b07` |
-| `assets/js/notice-preferences.js` | `97cdd58ce03a2c22a222c585c067777cd78ad37031ccd279d1943ae8405cec30` |
-| `assets/js/order-admin.js` | `25c0d295e9e7f5b63e1dfcc945008399dbc2f092ef5b869b168073b4feff4f46` |
-| `changelog.txt` | `c8cad74439318c5665385f0ae50b69ce0f927dc343104cc7899ff08312cd8f14` |
-| `includes/class-yoohw-cos-attention.php` | `db76eb0009a64ecf493dbf79326e5be3dd4ac92f0eb408c735b5230aa4cb32a6` |
-| `includes/class-yoohw-cos-blacklist-manager-integration.php` | `f2bea1d508579a6c2da3986c4d418042df7b0b0bf4d36bc6a9f3e3b50f7262f2` |
-| `includes/class-yoohw-cos-blacklist-manager-premium-integration.php` | `e4dce4ebecfae428062365edac005d7fa6b0f95da5e7aa4c856c6e918b787170` |
-| `includes/class-yoohw-cos-commerce-aggregates.php` | `a0b624148d02fb20165cec56159b559663bbfe2bd125c35922512c01fbfaa8d6` |
-| `includes/class-yoohw-cos-commerce-metrics-policy.php` | `1f0bca17ccddf19efaadd16ca2c4cc3fe526ad25144c4e0ad3a7a42e87be7c08` |
-| `includes/class-yoohw-cos-customer-facts.php` | `ee62653038a03b9cfd6e24bf4f42514bbdda033fb05cd4b537585e6e85a0114d` |
-| `includes/class-yoohw-cos-customer-identity.php` | `fbe0c41806c9330975140c4c474ce879db4b496958c4ce97546df3112a5e6bc7` |
-| `includes/class-yoohw-cos-customer-query.php` | `ec7329082f9ce16d5e0e668e55ea50f5d6d141f0f98ea1afcf94107aebd328ce` |
-| `includes/class-yoohw-cos-customers.php` | `c4486dcaf3e3a1d6f872bbe00960af95cd6eec5189694f765345bb7195284744` |
-| `includes/class-yoohw-cos-db.php` | `691f12e41607ff5fab5fba80f358b4ccda864e59015cd23d453877c76bf26103` |
-| `includes/class-yoohw-cos-diagnostics.php` | `ebf3f180ef1bff7b8ac0ce9aa97b55384b1f1e6adc2f850940334476617d8e9f` |
-| `includes/class-yoohw-cos-email-notifications.php` | `ea105a3c45c831c2c713aecc8cfedad1e9db3e9dc2054fe88585ea9c3b593866` |
-| `includes/class-yoohw-cos-events.php` | `ecb8f1db766841b28ade8a38debf060ae78180bd8a993636f41dbfa84d5f45a2` |
-| `includes/class-yoohw-cos-extensions.php` | `bc381b4f44e0ad085af3d9884261eb71bbd79b10fc4946d696d33f2be5e2df2d` |
-| `includes/class-yoohw-cos-install.php` | `c604ffdd843e297239064da762d3ce6ae4848f8db9de95f1af16971eb10138f4` |
-| `includes/class-yoohw-cos-integrations.php` | `5997fb2723cd1fc4ad0ac0c8e36f5cfa5ed90409c42600ae18f983a150557f5d` |
-| `includes/class-yoohw-cos-intelligence.php` | `c1c849a9e2d50993bcf6b787fad61ad604a987e38e8af4b10d3ee66ca3490cfc` |
-| `includes/class-yoohw-cos-loader.php` | `6966cb1a93e4ca2e936bccf052fb153ef44feec8b40a2b8cb4afe7e1e39e0113` |
-| `includes/class-yoohw-cos-loyalty-integration.php` | `dec16c5b7e9e6b48c9e890ba891f1fb559c409039f12bd6a5fefaedd06c4f297` |
-| `includes/class-yoohw-cos-migration-runner.php` | `fa313c2a3909c3a4aec813c4b9a6e701939e005b449d402cc7ad5b4368f25b4c` |
-| `includes/class-yoohw-cos-notes.php` | `843b0979b0ad710d748ec2b3c84c5d1c922cc8780af291b8bcd609f5e9ec405b` |
-| `includes/class-yoohw-cos-notification-ledger.php` | `67bc656d3fd9adef203dc4d2672f493d4e780ee33164d88f345b0f90d4bc2e50` |
-| `includes/class-yoohw-cos-overview.php` | `35f09f3be515acc4f7746e7c5369e8a6f29a30f2db4b86e85bd70c2cb24fcd7c` |
-| `includes/class-yoohw-cos-privacy-erasure.php` | `250e03377bbf37d8030f757a4536a7a2b7c9fe4cbcfe4b3b2cc5f57784b49a78` |
-| `includes/class-yoohw-cos-privacy-exporter.php` | `b6ffe278f177042785f2ba8c77015ee58e1432e2c7c27151d51769309f742849` |
-| `includes/class-yoohw-cos-reset-guard.php` | `4cbafbda65307dc1ed7e5b9a129aea64857c9cad4068fc9bff63608239519e11` |
-| `includes/class-yoohw-cos-rfm.php` | `b048c48ba94b9b7d5ccd3c5536213d15654712e51672c0ac2e9d8c8ed52f2a5e` |
-| `includes/class-yoohw-cos-saved-views.php` | `fbe18c7680842be5d176525915c23d04dc6683993b5584e60ccf4928c2e7176e` |
-| `includes/class-yoohw-cos-segments.php` | `b15e33e473bbe7357c02454fdd7ff90ca63b5be21fd611135f33188c1cc74acb` |
-| `includes/class-yoohw-cos-tags.php` | `16b5c1a62a9179dd08584b65320ca7ffefbbddbd8370186e7566eeff14d9a0d6` |
-| `includes/class-yoohw-cos-tasks.php` | `8d79f65bdca2a49bc236adec69af14e7e6db1ce147b47707f374ba35edf3dad5` |
-| `includes/emails/class-yoohw-cos-email-crm-base.php` | `a7f5e58a990c95a88643e77a4f0e16929edf82d0985248b23b1853be1cae3e9d` |
-| `includes/emails/class-yoohw-cos-email-customer-message.php` | `1b1ea8da885469f8742dffbff6f822d79d3184495222e33058e368d3fbc106dc` |
-| `includes/emails/class-yoohw-cos-email-task-digests.php` | `6792bbabb315f54c3e48de2dff37787cf3fd285e927b01f9e61e8098bf28d621` |
-| `includes/emails/class-yoohw-cos-email-task-events.php` | `a8538e953478e495ad49410899bce13191e231658d7fa799484f57ed52ddf40c` |
-| `languages/yoohw-customer-intelligence.pot` | `fc2f929159bd61c1ecc5297ac27d21c3c00455dd4745c5f84c0b3525671477c8` |
-| `readme.txt` | `640d4a6bc826fbc30fdd3c03285bbb66627884bd03d1480538d59446cd151a4f` |
-| `templates/emails/block/customer-message.php` | `50e1089ecf34ae9456fc1ae1f91d20fe04bd8f354bdbd66375c0f24c851c8041` |
-| `templates/emails/crm-task-digest.php` | `9834ee3c7afee7b24a3a68a4769d3c8b142b7a69a2b77a5b02a7bc97e60604ff` |
-| `templates/emails/crm-task-notification.php` | `b7428bbadf568907bdc840499e20339cd6908a3d816bd2471b1a41d334e417ab` |
-| `templates/emails/customer-message.php` | `36d0dd95c92f774a59bc052dfae829970f57ffad91dacaffd0bfcd98bbdfad5f` |
-| `templates/emails/plain/crm-task-digest.php` | `a0ec73200d0a4a2225d14b7b92e2af424302176fcdcc5998f27589c30420d87b` |
-| `templates/emails/plain/crm-task-notification.php` | `4f9d775aa88ddbccb49ad6aca16f5db0d6e35edf036a539bdf164d739340555a` |
-| `templates/emails/plain/customer-message.php` | `56ccddd3a70ec2ba313c032d35c784c337c7852651f4d381382a914a3ac074be` |
-| `uninstall.php` | `6df2718455469dd9144ede5bb86e5f000978cede337e093b9e79e3736095749e` |
-| `yoohw-customer-intelligence.php` | `a9fdd8e0c9ea442eb63d1809b966ac818ae909ddc375b58e872f06566e591da5` |
+| Path | Bytes | SHA-256 |
+| --- | ---: | --- |
+| `admin/class-yoohw-cos-activity-list.php` | 19461 | `cbd30021c1143a66a9c899abbefad037dbe7a01bcfd2a9b7ecbc03a43c49d455` |
+| `admin/class-yoohw-cos-admin-menu.php` | 200090 | `409d5c969007ca99c37e119066c27735f926d9aa39bcc8bbd718c36b28e040f2` |
+| `admin/class-yoohw-cos-admin-tools.php` | 63422 | `3bddf8e6cf7f445a35aa1c0060a8ac9b1f633a125490894f73dc6324c1d09a38` |
+| `admin/class-yoohw-cos-admin-ui.php` | 4065 | `e3074a55ff288245babe129e8090c5a29599d9603a5d8182fc58915fa8849a81` |
+| `admin/class-yoohw-cos-customer-exporter.php` | 11506 | `e09cfbbee463906e16184d35adc6eb475c10a8f21397cfe210e064cf413c4e07` |
+| `admin/class-yoohw-cos-customer-profile.php` | 76685 | `b228b7b340baa19d997388f1689f89719cae5eacddbe4e4bda6d7809215d06da` |
+| `admin/class-yoohw-cos-customers-list.php` | 46655 | `3d7fef1dca762595d5c2706da997050e83dec22bbc5e90f28dee4425b0de3a8e` |
+| `admin/class-yoohw-cos-flash-notices.php` | 6046 | `5cb1b735a337eecca3db001dd218c096c13eaf3de45a0f959a4f8b6a95a78985` |
+| `admin/class-yoohw-cos-notice-preferences.php` | 7196 | `d417e260dd27f006e88844d61753a1eab5f8933bd769d5f082cd92b460e13a5d` |
+| `admin/class-yoohw-cos-order-admin.php` | 45916 | `a980edefa30d8899042b6cad691ca0c5b39a01cae9e5bf24e312607675733f58` |
+| `admin/class-yoohw-cos-segments-list.php` | 6780 | `9a73c6d73bb0e46a14d28c6eeaa26c6102777436c03703335b18f34f2383e227` |
+| `admin/class-yoohw-cos-tags-list.php` | 6800 | `b2303954c14b8df794a183275639f24b5694ed451442306418dfb1e8a6728cb2` |
+| `admin/class-yoohw-cos-tasks-list.php` | 19173 | `087486ea6e741e3461e4a8e763b1b6ccbe39811078ade631af6bc328a77f30af` |
+| `assets/css/admin.css` | 61038 | `491cc6dfeb8a09477bffa68652441fafb1139d41aed54038d6658e53367c9237` |
+| `assets/css/order-admin.css` | 16921 | `484427cc3bc4d8c62d090397567290f153a087ba179da931c1e2e4309b4b4244` |
+| `assets/js/admin.js` | 27742 | `917f9bdcfb6283e004c425b610f11a99ee6caa102b941228c096197ba54a7b07` |
+| `assets/js/notice-preferences.js` | 542 | `97cdd58ce03a2c22a222c585c067777cd78ad37031ccd279d1943ae8405cec30` |
+| `assets/js/order-admin.js` | 5802 | `25c0d295e9e7f5b63e1dfcc945008399dbc2f092ef5b869b168073b4feff4f46` |
+| `changelog.txt` | 12006 | `c8cad74439318c5665385f0ae50b69ce0f927dc343104cc7899ff08312cd8f14` |
+| `includes/class-yoohw-cos-attention.php` | 2655 | `db76eb0009a64ecf493dbf79326e5be3dd4ac92f0eb408c735b5230aa4cb32a6` |
+| `includes/class-yoohw-cos-blacklist-manager-integration.php` | 28400 | `26ca4d15955295e0058596615ee527fbeeb19dc87c1b5366e728f7ccfd950642` |
+| `includes/class-yoohw-cos-blacklist-manager-premium-integration.php` | 77573 | `90cdc5fdf8038877717b75ab8a35419214ccc199824fb267b884c14f4b4d78c9` |
+| `includes/class-yoohw-cos-commerce-aggregates.php` | 20452 | `1da897f257b921e1f5c0ff47385657c027e3fa4c3c9e9975a05f9e4b1e547616` |
+| `includes/class-yoohw-cos-commerce-metrics-policy.php` | 10651 | `5140f12f39e7a24902b7edb96c5408df1e52a35ff1565154446b8ce2aaae940e` |
+| `includes/class-yoohw-cos-customer-facts.php` | 3411 | `ee62653038a03b9cfd6e24bf4f42514bbdda033fb05cd4b537585e6e85a0114d` |
+| `includes/class-yoohw-cos-customer-identity.php` | 8252 | `52635ea4815e62cbc1af6af84c877abb75f922833478f47624ba0a79a7da3589` |
+| `includes/class-yoohw-cos-customer-query.php` | 19134 | `664e382cee7d50e7b17c8d47ebd014e0943ac90334bc79b96bff0424a27bd463` |
+| `includes/class-yoohw-cos-customers.php` | 62287 | `028f78e2075f6959d3e8071fcf47d035dd1dec4ebd32430ee6ff90d03c4b1c6c` |
+| `includes/class-yoohw-cos-db.php` | 5855 | `71e0247e24ff6199a575cbc822d953e1de5fdfe6bf8f22ac3468c8b363f17be7` |
+| `includes/class-yoohw-cos-diagnostics.php` | 14185 | `3c45c760c0d10e63a31943ff6f69d9190c931b7dbd8d26ed868838aab55b62a9` |
+| `includes/class-yoohw-cos-email-notifications.php` | 36570 | `3868ac447b2b7aabc7e3e55c0f594302816541cc9e38f78fb76c2773232fccdf` |
+| `includes/class-yoohw-cos-events.php` | 13963 | `f057de9e848475fcc02e3ac46c4e3b34fee70789a6874ff9f591b56e86db7c50` |
+| `includes/class-yoohw-cos-extensions.php` | 8351 | `bc381b4f44e0ad085af3d9884261eb71bbd79b10fc4946d696d33f2be5e2df2d` |
+| `includes/class-yoohw-cos-install.php` | 44151 | `6a351e4e39cacf01249a877c9ac2b6ef589b0678c5418aa07b927a07c041f202` |
+| `includes/class-yoohw-cos-integrations.php` | 2793 | `5997fb2723cd1fc4ad0ac0c8e36f5cfa5ed90409c42600ae18f983a150557f5d` |
+| `includes/class-yoohw-cos-intelligence.php` | 24875 | `0f0fe1ae99532142284f376af37ec08999daf6b77aacd12621275e608189defe` |
+| `includes/class-yoohw-cos-loader.php` | 5975 | `6966cb1a93e4ca2e936bccf052fb153ef44feec8b40a2b8cb4afe7e1e39e0113` |
+| `includes/class-yoohw-cos-loyalty-integration.php` | 41087 | `14f918ea660549ba7d80f169ce59d256e691991c8b7dfc2cc2bd721e89c3553c` |
+| `includes/class-yoohw-cos-migration-runner.php` | 32287 | `7d177f0d810c1a4894ac13bfaf6fa4328757ad80434c9e4675621bbeb546742b` |
+| `includes/class-yoohw-cos-notes.php` | 6435 | `a7d914c36acabda2f2e6ab777f5f16bf3f4bf132164436f7920533548c40aa3f` |
+| `includes/class-yoohw-cos-notification-ledger.php` | 4955 | `a95645dcd6cad132aa774887f13da64b6b907a126b12962ec1d31be44bbf2a14` |
+| `includes/class-yoohw-cos-overview.php` | 11423 | `0c27819be7ed3c599caa3bbc9d01180e89c96ea900be9e5e66e8f7d330e95dc6` |
+| `includes/class-yoohw-cos-privacy-erasure.php` | 23736 | `596b8002046fb22b639abdb0abbf23c81f2551a755e8a7ac7123cbbefcb857ae` |
+| `includes/class-yoohw-cos-privacy-exporter.php` | 22441 | `11021eeddfcf63c636aa2047ba72d1924d4fd6e186c775b97ab4f4b8ce5ae601` |
+| `includes/class-yoohw-cos-reset-guard.php` | 24724 | `f67a96a5be91cc34ed5f77836fabcbe7f8bfecd400d6de5199a11b19194ce609` |
+| `includes/class-yoohw-cos-rfm.php` | 1669 | `b048c48ba94b9b7d5ccd3c5536213d15654712e51672c0ac2e9d8c8ed52f2a5e` |
+| `includes/class-yoohw-cos-saved-views.php` | 7366 | `7d15f3a538b2b835881a36314ca17fa05de8dd464094798f080478c5f9a612e2` |
+| `includes/class-yoohw-cos-segments.php` | 10381 | `9dd7f2be56396fbd7d4fd2ff83624cc10f9ae39dea81d82a89c5eadf9859abba` |
+| `includes/class-yoohw-cos-tags.php` | 9984 | `7ee7f3d5fe5c9eb60a16a1e68ee69e0ca0e2198f0dcfef146200f1a7a947a384` |
+| `includes/class-yoohw-cos-tasks.php` | 28615 | `d3f6af63777704e01f973392edccd00f9dab27acbd718fc98e8439c78258f0ad` |
+| `includes/emails/class-yoohw-cos-email-crm-base.php` | 14944 | `a7f5e58a990c95a88643e77a4f0e16929edf82d0985248b23b1853be1cae3e9d` |
+| `includes/emails/class-yoohw-cos-email-customer-message.php` | 3608 | `1b1ea8da885469f8742dffbff6f822d79d3184495222e33058e368d3fbc106dc` |
+| `includes/emails/class-yoohw-cos-email-task-digests.php` | 8455 | `6792bbabb315f54c3e48de2dff37787cf3fd285e927b01f9e61e8098bf28d621` |
+| `includes/emails/class-yoohw-cos-email-task-events.php` | 8151 | `a8538e953478e495ad49410899bce13191e231658d7fa799484f57ed52ddf40c` |
+| `languages/yoohw-customer-intelligence.pot` | 111807 | `fc2f929159bd61c1ecc5297ac27d21c3c00455dd4745c5f84c0b3525671477c8` |
+| `readme.txt` | 9956 | `640d4a6bc826fbc30fdd3c03285bbb66627884bd03d1480538d59446cd151a4f` |
+| `templates/emails/block/customer-message.php` | 1004 | `24bd819edf67c7e2b2f323add689ed66705023aad3ac22d59637916b042527e8` |
+| `templates/emails/crm-task-digest.php` | 6870 | `f79150dc75e0ffb40952a7bf86041af35e763f75165af66406e35f59c75cb6b6` |
+| `templates/emails/crm-task-notification.php` | 8658 | `8bce7e487244fb0a79bc3560aac88a9490e6d49b24d056c3a3ba6d1229c740f6` |
+| `templates/emails/customer-message.php` | 2580 | `9f4e82d37c3ee67938618deab32767fb5310b142744ffefc5fabc1250362cde3` |
+| `templates/emails/plain/crm-task-digest.php` | 4498 | `0b7b814c3adeccb2468591f2a5cafe15a51c5dc2fe8b2c17712fb2840425b284` |
+| `templates/emails/plain/crm-task-notification.php` | 5066 | `850b80bf6523b9d06cb78de2f1a6224016fe26eb149616a1503eb21add5d66b1` |
+| `templates/emails/plain/customer-message.php` | 973 | `a688775688a9acbe1b5886c1da266ab720a248c03a22eb787b32df70b7c4db3c` |
+| `uninstall.php` | 1558 | `a7a1f55275e00f15e2d734d7138da35600485b8d931fc00be4e391caa20ca46b` |
+| `yoohw-customer-intelligence.php` | 1630 | `44af8d998197a272fc34af2b9e06beced371f6a028009243dc4900cadb85961f` |

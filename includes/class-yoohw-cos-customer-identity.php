@@ -230,19 +230,19 @@ final class YoOhw_COS_Customer_Identity {
 		$table = YoOhw_COS_DB::customers_table();
 
 		if ( 'customer_id' === $kind ) {
-			$ids = $wpdb->get_col(
+			$ids = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 				$wpdb->prepare( 'SELECT id FROM %i WHERE id = %d LIMIT 2', $table, absint( $value ) )
 			);
 		} elseif ( 'wp_user_id' === $kind ) {
-			$ids = $wpdb->get_col(
+			$ids = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 				$wpdb->prepare( 'SELECT id FROM %i WHERE wp_user_id = %d ORDER BY id ASC LIMIT 2', $table, absint( $value ) )
 			);
 		} elseif ( 'email' === $kind ) {
-			$ids = $wpdb->get_col(
+			$ids = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 				$wpdb->prepare( 'SELECT id FROM %i WHERE email = %s ORDER BY id ASC LIMIT 2', $table, (string) $value )
 			);
 		} else {
-			$ids = $wpdb->get_col(
+			$ids = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 				$wpdb->prepare( 'SELECT id FROM %i WHERE phone = %s ORDER BY id ASC LIMIT 2', $table, (string) $value )
 			);
 		}

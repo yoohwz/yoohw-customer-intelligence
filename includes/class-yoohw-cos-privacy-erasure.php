@@ -26,22 +26,22 @@ final class YoOhw_COS_Privacy_Erasure {
 		global $wpdb;
 		$table = YoOhw_COS_DB::table( 'privacy_suppression' );
 		$secret = get_option( self::SECRET_OPTION, null );
-		$exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table ) ) );
+		$exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM privacy/export state must reflect current rows; no WordPress object API exists.
 		if ( '' !== $wpdb->last_error || $exists !== $table ) {
 			return null;
 		}
 		if ( null === $secret ) {
-			$row = $wpdb->get_var( $wpdb->prepare( 'SELECT id FROM %i LIMIT 1', $table ) );
+			$row = $wpdb->get_var( $wpdb->prepare( 'SELECT id FROM %i LIMIT 1', $table ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM privacy/export state must reflect current rows; no WordPress object API exists.
 			return '' === $wpdb->last_error && null === $row ? false : null;
 		}
 		if ( ! is_string( $secret ) || ! preg_match( '/^[a-f0-9]{64}$/D', $secret ) ) {
 			return null;
 		}
-		$unknown = $wpdb->get_var( $wpdb->prepare( 'SELECT id FROM %i WHERE hash_version <> 1 LIMIT 1', $table ) );
+		$unknown = $wpdb->get_var( $wpdb->prepare( 'SELECT id FROM %i WHERE hash_version <> 1 LIMIT 1', $table ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM privacy/export state must reflect current rows; no WordPress object API exists.
 		if ( '' !== $wpdb->last_error || null !== $unknown ) { return null; }
 		foreach ( self::identity_values( $identity ) as $kind => $value ) {
 			$digest = hash_hmac( 'sha256', $kind . '|' . $value, hex2bin( $secret ) );
-			$found = $wpdb->get_var( $wpdb->prepare( 'SELECT id FROM %i WHERE identity_kind = %s AND identity_digest = %s AND hash_version = 1 LIMIT 1', $table, $kind, $digest ) );
+			$found = $wpdb->get_var( $wpdb->prepare( 'SELECT id FROM %i WHERE identity_kind = %s AND identity_digest = %s AND hash_version = 1 LIMIT 1', $table, $kind, $digest ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM privacy/export state must reflect current rows; no WordPress object API exists.
 			if ( '' !== $wpdb->last_error ) {
 				return null;
 			}
@@ -88,7 +88,7 @@ final class YoOhw_COS_Privacy_Erasure {
 				$digest = hash_hmac( 'sha256', $kind . '|' . $value, hex2bin( $secret ) );
 				if ( isset( $unique[ $kind . ':' . $digest ] ) ) { continue; }
 				$unique[ $kind . ':' . $digest ] = true;
-				$result = $wpdb->query( $wpdb->prepare( 'INSERT IGNORE INTO %i (identity_kind, identity_digest, hash_version, created_at) VALUES (%s, %s, 1, %s)', $table, $kind, $digest, YoOhw_COS_DB::now() ) );
+				$result = $wpdb->query( $wpdb->prepare( 'INSERT IGNORE INTO %i (identity_kind, identity_digest, hash_version, created_at) VALUES (%s, %s, 1, %s)', $table, $kind, $digest, YoOhw_COS_DB::now() ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM privacy/export state must reflect current rows; no WordPress object API exists.
 				if ( false === $result ) {
 					return false;
 				}
@@ -132,7 +132,7 @@ final class YoOhw_COS_Privacy_Erasure {
 			// deleting any subject record or losing aliases across Reset.
 			$aliases = array();
 			if ( $user_id ) {
-				$aliases = $wpdb->get_results( $wpdb->prepare(
+				$aliases = $wpdb->get_results( $wpdb->prepare( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM privacy/export state must reflect current rows; no WordPress object API exists.
 					'SELECT email FROM %i WHERE wp_user_id = %d ORDER BY id ASC LIMIT %d',
 					$table, $user_id, self::MAX_ALIAS_PROFILES + 1
 				), ARRAY_A );
@@ -162,9 +162,9 @@ final class YoOhw_COS_Privacy_Erasure {
 				return $result;
 			}
 			if ( $user_id ) {
-				$profile = $wpdb->get_row( $wpdb->prepare( 'SELECT id, email FROM %i WHERE (email = %s AND BINARY email = BINARY %s) OR wp_user_id = %d ORDER BY id ASC LIMIT 1', $table, $email, $email, $user_id ), ARRAY_A );
+				$profile = $wpdb->get_row( $wpdb->prepare( 'SELECT id, email FROM %i WHERE (email = %s AND BINARY email = BINARY %s) OR wp_user_id = %d ORDER BY id ASC LIMIT 1', $table, $email, $email, $user_id ), ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM privacy/export state must reflect current rows; no WordPress object API exists.
 			} else {
-				$profile = $wpdb->get_row( $wpdb->prepare( 'SELECT id, email FROM %i WHERE (email = %s AND BINARY email = BINARY %s) ORDER BY id ASC LIMIT 1', $table, $email, $email ), ARRAY_A );
+				$profile = $wpdb->get_row( $wpdb->prepare( 'SELECT id, email FROM %i WHERE (email = %s AND BINARY email = BINARY %s) ORDER BY id ASC LIMIT 1', $table, $email, $email ), ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM privacy/export state must reflect current rows; no WordPress object API exists.
 			}
 			if ( '' !== $wpdb->last_error ) {
 				return self::result( false, false, false, true );
@@ -197,7 +197,7 @@ final class YoOhw_COS_Privacy_Erasure {
 				if ( $user_id && ! self::delete_views( $user_id ) ) {
 					return self::result( false, true, false, true );
 				}
-				$deleted = $wpdb->delete( $table, array( 'id' => $customer_id ), array( '%d' ) );
+				$deleted = $wpdb->delete( $table, array( 'id' => $customer_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM privacy/export state must reflect current rows; no WordPress object API exists.
 				return self::result( 1 === $deleted, true, false, 1 !== $deleted );
 			}
 			if ( $user_id ) {
@@ -243,9 +243,9 @@ final class YoOhw_COS_Privacy_Erasure {
 		$existing = get_option( $option, null );
 		if ( null !== $existing ) { return self::valid_order_link_snapshot( $existing ) ? 'ok' : 'retry'; }
 		if ( $user_id ) {
-			$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT f.order_id, f.customer_id FROM %i AS f INNER JOIN %i AS c ON c.id = f.customer_id WHERE (c.email = %s AND BINARY c.email = BINARY %s) OR c.wp_user_id = %d ORDER BY f.id ASC LIMIT %d', YoOhw_COS_DB::order_facts_table(), YoOhw_COS_DB::customers_table(), $email, $email, $user_id, self::MAX_ORDER_LINKS + 1 ), ARRAY_A );
+			$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT f.order_id, f.customer_id FROM %i AS f INNER JOIN %i AS c ON c.id = f.customer_id WHERE (c.email = %s AND BINARY c.email = BINARY %s) OR c.wp_user_id = %d ORDER BY f.id ASC LIMIT %d', YoOhw_COS_DB::order_facts_table(), YoOhw_COS_DB::customers_table(), $email, $email, $user_id, self::MAX_ORDER_LINKS + 1 ), ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM privacy/export state must reflect current rows; no WordPress object API exists.
 		} else {
-			$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT f.order_id, f.customer_id FROM %i AS f INNER JOIN %i AS c ON c.id = f.customer_id WHERE (c.email = %s AND BINARY c.email = BINARY %s) ORDER BY f.id ASC LIMIT %d', YoOhw_COS_DB::order_facts_table(), YoOhw_COS_DB::customers_table(), $email, $email, self::MAX_ORDER_LINKS + 1 ), ARRAY_A );
+			$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT f.order_id, f.customer_id FROM %i AS f INNER JOIN %i AS c ON c.id = f.customer_id WHERE (c.email = %s AND BINARY c.email = BINARY %s) ORDER BY f.id ASC LIMIT %d', YoOhw_COS_DB::order_facts_table(), YoOhw_COS_DB::customers_table(), $email, $email, self::MAX_ORDER_LINKS + 1 ), ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM privacy/export state must reflect current rows; no WordPress object API exists.
 		}
 		if ( '' !== $wpdb->last_error || ! is_array( $rows ) ) { return 'retry'; }
 		if ( count( $rows ) > self::MAX_ORDER_LINKS ) { return 'limit'; }
@@ -304,9 +304,9 @@ final class YoOhw_COS_Privacy_Erasure {
 		global $wpdb;
 		$table = YoOhw_COS_DB::table( $kind );
 		if ( 'order_facts' === $kind ) {
-			$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT id, order_id FROM %i WHERE customer_id = %d ORDER BY id ASC LIMIT %d', $table, $customer_id, self::PAGE_SIZE ), ARRAY_A );
+			$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT id, order_id FROM %i WHERE customer_id = %d ORDER BY id ASC LIMIT %d', $table, $customer_id, self::PAGE_SIZE ), ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM privacy/export state must reflect current rows; no WordPress object API exists.
 		} else {
-			$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT id FROM %i WHERE customer_id = %d ORDER BY id ASC LIMIT %d', $table, $customer_id, self::PAGE_SIZE ), ARRAY_A );
+			$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT id FROM %i WHERE customer_id = %d ORDER BY id ASC LIMIT %d', $table, $customer_id, self::PAGE_SIZE ), ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM privacy/export state must reflect current rows; no WordPress object API exists.
 		}
 		return '' === $wpdb->last_error && is_array( $rows ) ? $rows : null;
 	}
@@ -320,7 +320,7 @@ final class YoOhw_COS_Privacy_Erasure {
 				if ( ! YoOhw_COS_Customers::unlink_order_for_erasure( (int) $row['order_id'], $customer_id ) ) {
 					return array( 'removed' => $removed > 0, 'retry' => true );
 				}
-				$deleted = $wpdb->delete( YoOhw_COS_DB::order_facts_table(), array( 'id' => (int) $row['id'], 'customer_id' => $customer_id ), array( '%d', '%d' ) );
+				$deleted = $wpdb->delete( YoOhw_COS_DB::order_facts_table(), array( 'id' => (int) $row['id'], 'customer_id' => $customer_id ), array( '%d', '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM privacy/export state must reflect current rows; no WordPress object API exists.
 				if ( 1 !== $deleted ) {
 					return array( 'removed' => $removed > 0, 'retry' => true );
 				}
@@ -331,19 +331,19 @@ final class YoOhw_COS_Privacy_Erasure {
 		$placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
 		$notification_count = 0;
 		if ( 'tasks' === $kind ) {
-			$notification_count = $wpdb->query( $wpdb->prepare( "DELETE FROM %i WHERE task_id IN ({$placeholders})", ...array_merge( array( YoOhw_COS_DB::notification_log_table() ), $ids ) ) );
+			$notification_count = $wpdb->query( $wpdb->prepare( "DELETE FROM %i WHERE task_id IN ({$placeholders})", ...array_merge( array( YoOhw_COS_DB::notification_log_table() ), $ids ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Owned CRM privacy/export state must reflect current rows; no WordPress object API exists. Only a generated list of %d placeholders is interpolated; table and all IDs are supplied separately to prepare().
 			if ( false === $notification_count ) {
 				return array( 'removed' => false, 'retry' => true );
 			}
 		}
-		$deleted = $wpdb->query( $wpdb->prepare( "DELETE FROM %i WHERE customer_id = %d AND id IN ({$placeholders})", ...array_merge( array( YoOhw_COS_DB::table( $kind ), $customer_id ), $ids ) ) );
+		$deleted = $wpdb->query( $wpdb->prepare( "DELETE FROM %i WHERE customer_id = %d AND id IN ({$placeholders})", ...array_merge( array( YoOhw_COS_DB::table( $kind ), $customer_id ), $ids ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- Owned CRM privacy/export state must reflect current rows; no WordPress object API exists. Only a generated list of %d placeholders is interpolated; table and all IDs are supplied separately to prepare().
 		return array( 'removed' => (int) $deleted > 0 || $notification_count > 0, 'retry' => count( $ids ) !== $deleted );
 	}
 
 	/** These integration event sources store wp_user_id as the source customer. */
 	private static function first_unlinked_events( int $user_id ): ?array {
 		global $wpdb;
-		$rows = $wpdb->get_results( $wpdb->prepare(
+		$rows = $wpdb->get_results( $wpdb->prepare( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM privacy/export state must reflect current rows; no WordPress object API exists.
 			"SELECT id FROM %i WHERE customer_id IS NULL AND wp_user_id = %d AND event_source IN ('wc_blacklist_manager', 'wc_blacklist_manager_premium', 'wc_loyalty') ORDER BY id ASC LIMIT %d",
 			YoOhw_COS_DB::events_table(), $user_id, self::PAGE_SIZE
 		), ARRAY_A );
@@ -354,8 +354,8 @@ final class YoOhw_COS_Privacy_Erasure {
 		global $wpdb;
 		$ids = array_map( 'intval', array_column( $rows, 'id' ) );
 		$placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
-		$deleted = $wpdb->query( $wpdb->prepare(
-			"DELETE FROM %i WHERE customer_id IS NULL AND wp_user_id = %d AND event_source IN ('wc_blacklist_manager', 'wc_blacklist_manager_premium', 'wc_loyalty') AND id IN ({$placeholders})",
+		$deleted = $wpdb->query( $wpdb->prepare( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- Owned CRM privacy/export state must reflect current rows; no WordPress object API exists. Only a generated list of %d placeholders is interpolated; table and all IDs are supplied separately to prepare().
+			"DELETE FROM %i WHERE customer_id IS NULL AND wp_user_id = %d AND event_source IN ('wc_blacklist_manager', 'wc_blacklist_manager_premium', 'wc_loyalty') AND id IN ({$placeholders})", // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Owned CRM privacy/export state must reflect current rows; no WordPress object API exists. Only a generated list of %d placeholders is interpolated; table and all IDs are supplied separately to prepare(). Only a generated list of %d placeholders is interpolated; table and all IDs are supplied separately to prepare().
 			...array_merge( array( YoOhw_COS_DB::events_table(), $user_id ), $ids )
 		) );
 		return false === $deleted ? 0 : (int) $deleted;

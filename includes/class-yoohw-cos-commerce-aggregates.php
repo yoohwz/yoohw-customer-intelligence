@@ -32,10 +32,10 @@ final class YoOhw_COS_Commerce_Aggregates {
 		$affected_ids    = array( $customer_id );
 		$transaction_ok  = false;
 
-		$wpdb->query( 'START TRANSACTION' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.TransactionQuery
+		$wpdb->query( 'START TRANSACTION' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Native transactions keep CRM aggregate changes atomic on the live database connection.
 
 		try {
-			$old_fact = $wpdb->get_row(
+			$old_fact = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 				$wpdb->prepare(
 					'SELECT * FROM %i WHERE order_id = %d FOR UPDATE',
 					$facts_table,
@@ -103,7 +103,7 @@ final class YoOhw_COS_Commerce_Aggregates {
 				$new_fact['updated_at']
 			);
 
-			$written = $wpdb->query( $sql ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Prepared immediately above.
+			$written = $wpdb->query( $sql ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Prepared immediately above. Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 
 			if ( false === $written ) {
 				throw new RuntimeException( 'Unable to persist customer order fact.' );
@@ -115,10 +115,10 @@ final class YoOhw_COS_Commerce_Aggregates {
 				self::invalidate_persisted_intelligence( $affected_id );
 			}
 
-			$wpdb->query( 'COMMIT' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.TransactionQuery
+			$wpdb->query( 'COMMIT' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Native transactions keep CRM aggregate changes atomic on the live database connection.
 			$transaction_ok = true;
 		} catch ( Throwable $exception ) {
-			$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.TransactionQuery
+			$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Native transactions keep CRM aggregate changes atomic on the live database connection.
 			do_action( 'yoohw_cos_commerce_aggregate_error', $exception, $order_id, $customer_id );
 		}
 
@@ -160,10 +160,10 @@ final class YoOhw_COS_Commerce_Aggregates {
 
 		$facts_table = YoOhw_COS_DB::order_facts_table();
 		$customer_id = 0;
-		$wpdb->query( 'START TRANSACTION' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.TransactionQuery
+		$wpdb->query( 'START TRANSACTION' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Native transactions keep CRM aggregate changes atomic on the live database connection.
 
 		try {
-			$fact = $wpdb->get_row(
+			$fact = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 				$wpdb->prepare(
 					'SELECT customer_id, counts_as_order FROM %i WHERE order_id = %d FOR UPDATE',
 					$facts_table,
@@ -173,7 +173,7 @@ final class YoOhw_COS_Commerce_Aggregates {
 			);
 
 			if ( ! is_array( $fact ) ) {
-				$wpdb->query( 'COMMIT' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.TransactionQuery
+				$wpdb->query( 'COMMIT' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Native transactions keep CRM aggregate changes atomic on the live database connection.
 				return 0;
 			}
 
@@ -184,7 +184,7 @@ final class YoOhw_COS_Commerce_Aggregates {
 					-1 * absint( $fact['counts_as_order'] ?? 0 )
 			);
 
-			$deleted = $wpdb->delete( $facts_table, array( 'order_id' => $order_id ), array( '%d' ) );
+			$deleted = $wpdb->delete( $facts_table, array( 'order_id' => $order_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 
 			if ( false === $deleted ) {
 				throw new RuntimeException( 'Unable to remove customer order fact.' );
@@ -193,9 +193,9 @@ final class YoOhw_COS_Commerce_Aggregates {
 			self::refresh_money( $customer_id );
 			self::refresh_order_bounds( $customer_id );
 			self::invalidate_persisted_intelligence( $customer_id );
-			$wpdb->query( 'COMMIT' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.TransactionQuery
+			$wpdb->query( 'COMMIT' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Native transactions keep CRM aggregate changes atomic on the live database connection.
 		} catch ( Throwable $exception ) {
-			$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.TransactionQuery
+			$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Native transactions keep CRM aggregate changes atomic on the live database connection.
 			do_action( 'yoohw_cos_commerce_aggregate_delete_error', $exception, $order_id, $customer_id );
 
 			return 0;
@@ -209,7 +209,7 @@ final class YoOhw_COS_Commerce_Aggregates {
 	public static function get_customer_metrics( int $customer_id ): array {
 		global $wpdb;
 
-		$row = $wpdb->get_row(
+		$row = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				'SELECT total_orders, total_spent, average_order_value, money_state, money_currency, commerce_metrics_version FROM %i WHERE id = %d',
 				YoOhw_COS_DB::customers_table(),
@@ -241,10 +241,10 @@ final class YoOhw_COS_Commerce_Aggregates {
 			return false;
 		}
 
-		$wpdb->query( 'START TRANSACTION' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.TransactionQuery
+		$wpdb->query( 'START TRANSACTION' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Native transactions keep CRM aggregate changes atomic on the live database connection.
 
 		try {
-			$customer_exists = $wpdb->get_var(
+			$customer_exists = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 				$wpdb->prepare(
 					'SELECT id FROM %i WHERE id = %d FOR UPDATE',
 					YoOhw_COS_DB::customers_table(),
@@ -258,10 +258,10 @@ final class YoOhw_COS_Commerce_Aggregates {
 
 			$aggregate = self::fact_summary( $customer_id );
 			$total_orders = absint( $aggregate['total_orders'] ?? 0 );
-			$previous_version = absint( $wpdb->get_var( $wpdb->prepare( 'SELECT commerce_metrics_version FROM %i WHERE id = %d', YoOhw_COS_DB::customers_table(), $customer_id ) ) );
+			$previous_version = absint( $wpdb->get_var( $wpdb->prepare( 'SELECT commerce_metrics_version FROM %i WHERE id = %d', YoOhw_COS_DB::customers_table(), $customer_id ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$trusted = $trusted_backfill || $previous_version >= YoOhw_COS_Commerce_Metrics_Policy::VERSION || 0 === $previous_version;
 			$money = self::money_values( $aggregate, $trusted );
-			$updated = $wpdb->update(
+			$updated = $wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 				YoOhw_COS_DB::customers_table(),
 				array(
 					'total_orders'             => $total_orders,
@@ -283,9 +283,9 @@ final class YoOhw_COS_Commerce_Aggregates {
 			}
 
 			self::refresh_order_bounds( $customer_id );
-			$wpdb->query( 'COMMIT' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.TransactionQuery
+			$wpdb->query( 'COMMIT' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Native transactions keep CRM aggregate changes atomic on the live database connection.
 		} catch ( Throwable $exception ) {
-			$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.TransactionQuery
+			$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Native transactions keep CRM aggregate changes atomic on the live database connection.
 			do_action( 'yoohw_cos_commerce_rebuild_error', $exception, $customer_id );
 
 			return false;
@@ -302,7 +302,7 @@ final class YoOhw_COS_Commerce_Aggregates {
 	private static function lock_and_initialize_customer( int $customer_id ): void {
 		global $wpdb;
 
-		$customer = $wpdb->get_row(
+		$customer = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				'SELECT commerce_metrics_version FROM %i WHERE id = %d FOR UPDATE',
 				YoOhw_COS_DB::customers_table(),
@@ -319,7 +319,7 @@ final class YoOhw_COS_Commerce_Aggregates {
 			return;
 		}
 
-		$initialized = $wpdb->update(
+		$initialized = $wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			YoOhw_COS_DB::customers_table(),
 			array(
 				'total_orders'             => 0,
@@ -342,7 +342,7 @@ final class YoOhw_COS_Commerce_Aggregates {
 	private static function apply_delta( int $customer_id, int $order_delta ): void {
 		global $wpdb;
 
-		$row = $wpdb->get_row(
+		$row = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				'SELECT total_orders FROM %i WHERE id = %d FOR UPDATE',
 				YoOhw_COS_DB::customers_table(),
@@ -356,7 +356,7 @@ final class YoOhw_COS_Commerce_Aggregates {
 		}
 
 		$total_orders = max( 0, absint( $row['total_orders'] ?? 0 ) + $order_delta );
-		$updated      = $wpdb->update(
+		$updated      = $wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			YoOhw_COS_DB::customers_table(),
 			array(
 				'total_orders'        => $total_orders,
@@ -374,7 +374,7 @@ final class YoOhw_COS_Commerce_Aggregates {
 
 	private static function fact_summary( int $customer_id ): array {
 		global $wpdb;
-		$row = $wpdb->get_row(
+		$row = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				"SELECT COALESCE(SUM(counts_as_order), 0) AS total_orders,
 					COALESCE(SUM(CASE WHEN counts_as_order = 1 THEN revenue_amount ELSE 0 END), 0) AS total_spent,
@@ -410,9 +410,9 @@ final class YoOhw_COS_Commerce_Aggregates {
 
 	private static function refresh_money( int $customer_id ): void {
 		global $wpdb;
-		$version = absint( $wpdb->get_var( $wpdb->prepare( 'SELECT commerce_metrics_version FROM %i WHERE id = %d', YoOhw_COS_DB::customers_table(), $customer_id ) ) );
+		$version = absint( $wpdb->get_var( $wpdb->prepare( 'SELECT commerce_metrics_version FROM %i WHERE id = %d', YoOhw_COS_DB::customers_table(), $customer_id ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 		$money = self::money_values( self::fact_summary( $customer_id ), $version >= YoOhw_COS_Commerce_Metrics_Policy::VERSION );
-		$updated = $wpdb->update(
+		$updated = $wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			YoOhw_COS_DB::customers_table(),
 			$money,
 			array( 'id' => $customer_id ),
@@ -426,7 +426,7 @@ final class YoOhw_COS_Commerce_Aggregates {
 
 	private static function invalidate_persisted_intelligence( int $customer_id ): void {
 		global $wpdb;
-		$updated = $wpdb->update(
+		$updated = $wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			YoOhw_COS_DB::customers_table(),
 			array( 'intelligence_currency_ready' => 0 ),
 			array( 'id' => $customer_id ),
@@ -442,7 +442,7 @@ final class YoOhw_COS_Commerce_Aggregates {
 		global $wpdb;
 
 		$facts_table = YoOhw_COS_DB::order_facts_table();
-		$first = $wpdb->get_row(
+		$first = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				'SELECT order_id, order_date FROM %i WHERE customer_id = %d AND counts_as_order = 1 ORDER BY order_date ASC, order_id ASC LIMIT 1',
 				$facts_table,
@@ -450,7 +450,7 @@ final class YoOhw_COS_Commerce_Aggregates {
 			),
 			ARRAY_A
 		);
-		$last = $wpdb->get_row(
+		$last = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				'SELECT order_id, order_date FROM %i WHERE customer_id = %d AND counts_as_order = 1 ORDER BY order_date DESC, order_id DESC LIMIT 1',
 				$facts_table,
@@ -459,7 +459,7 @@ final class YoOhw_COS_Commerce_Aggregates {
 			ARRAY_A
 		);
 
-		$updated = $wpdb->update(
+		$updated = $wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			YoOhw_COS_DB::customers_table(),
 			array(
 				'first_order_id'   => ! empty( $first ) ? absint( $first['order_id'] ) : null,

@@ -17,14 +17,14 @@ final class YoOhw_COS_DB {
 		$names = array_values( array_unique( $names ) );
 		sort( $names, SORT_STRING );
 		if ( empty( $names ) ) { return ''; }
-		$connection = (int) $wpdb->get_var( 'SELECT CONNECTION_ID()' );
+		$connection = (int) $wpdb->get_var( 'SELECT CONNECTION_ID()' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM schema inspection/setup has no WordPress object API; query live database state.
 		if ( $connection <= 0 ) { return ''; }
 		$handle = bin2hex( random_bytes( 16 ) );
 		self::$work_locks[ $handle ] = array( 'connection' => $connection, 'names' => array() );
 		try {
 			foreach ( $names as $name ) {
 				// Refuse same-connection reentrancy as well as another connection's ownership.
-				if ( '1' !== (string) $wpdb->get_var( $wpdb->prepare( 'SELECT IS_FREE_LOCK(%s)', $name ) )
+				if ( '1' !== (string) $wpdb->get_var( $wpdb->prepare( 'SELECT IS_FREE_LOCK(%s)', $name ) ) // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM schema inspection/setup has no WordPress object API; query live database state.
 					|| '1' !== (string) $wpdb->get_var( $wpdb->prepare( 'SELECT IF(CONNECTION_ID() = %d, GET_LOCK(%s, 0), 0)', $connection, $name ) ) ) {
 					self::release_work_locks( $handle );
 					return '';
@@ -48,7 +48,7 @@ final class YoOhw_COS_DB {
 			if ( ( self::$work_lock_owners[ $name ] ?? '' ) !== $handle ) { continue; }
 			unset( self::$work_lock_owners[ $name ] );
 			// RELEASE_LOCK itself refuses foreign connections; the saved connection also fences reconnects.
-			$wpdb->get_var( $wpdb->prepare( 'SELECT IF(CONNECTION_ID() = %d, RELEASE_LOCK(%s), 0)', $owned['connection'], $name ) );
+			$wpdb->get_var( $wpdb->prepare( 'SELECT IF(CONNECTION_ID() = %d, RELEASE_LOCK(%s), 0)', $owned['connection'], $name ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Database advisory locking requires the live connection, never a cached value.
 		}
 	}
 
