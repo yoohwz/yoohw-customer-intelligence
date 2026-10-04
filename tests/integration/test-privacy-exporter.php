@@ -79,7 +79,7 @@ final class YCI_Privacy_Exporter_Test extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'Guest Subject', $text );
 		$this->assertStringContainsString( 'Linked Subject', $text );
 		$this->assertStringContainsString( 'Archived date', $text );
-		$this->assertStringContainsString( 'Unavailable (mixed or unknown currency)', $text );
+		$this->assertStringContainsString( 'metrics_stale', $text );
 		$this->assertStringContainsString( 'Subject note', $text );
 		$this->assertStringContainsString( 'Follow subject', $text );
 		$this->assertStringContainsString( 'Subject activity', $text );

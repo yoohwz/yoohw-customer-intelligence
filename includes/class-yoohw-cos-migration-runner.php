@@ -10,6 +10,7 @@ final class YoOhw_COS_Migration_Runner {
 	private const STATE_OPTION = 'yoohw_cos_data_migrations';
 	private const BATCH_SIZE = 100;
 	private const MAX_ITEM_ATTEMPTS = 3;
+	private const CUSTOMER_PROBE_REVALIDATION_SECONDS = DAY_IN_SECONDS;
 
 	public static function init(): void {
 		add_action( self::HOOK, array( __CLASS__, 'run_next_batch' ) );
@@ -66,25 +67,96 @@ final class YoOhw_COS_Migration_Runner {
 			);
 		}
 
-		update_option( self::STATE_OPTION, $state, false );
+		self::save_state( $state );
 		self::maybe_schedule();
 		return true;
 	}
 
 	/** Recover a missing currency migration on a current-schema site with legacy facts or an old issue ledger. */
 	public static function register_missing_currency_backfill(): void {
+		// A no-op request must not acquire the Reset row lock. Probe read-only first.
 		$state = self::get_state();
-		if ( isset( $state['commerce_currency_v3'] ) || ! YoOhw_COS_Install::schema_is_ready() ) { return; }
+		if ( isset( $state['commerce_currency_v3'] ) || ! empty( $state['_read_error'] ) ) { return; }
 		global $wpdb;
+		if ( isset( $state['_currency_customer_probe'] ) && 'completed_with_issues' !== ( $state['commerce_facts_v2']['status'] ?? '' ) && null === self::currency_customer_probe_cursor( $state['_currency_customer_probe'] ) ) { return; }
+		if ( ! isset( $state['_currency_customer_probe'] ) && 'completed_with_issues' !== ( $state['commerce_facts_v2']['status'] ?? '' ) ) {
+			$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT commerce_metrics_version, total_orders FROM %i ORDER BY id LIMIT %d', YoOhw_COS_DB::customers_table(), self::BATCH_SIZE ), ARRAY_A );
+			if ( '' !== $wpdb->last_error ) { return; }
+			$stale = false;
+			foreach ( (array) $rows as $row ) {
+				$v = absint( $row['commerce_metrics_version'] );
+				if ( $v < YoOhw_COS_Commerce_Metrics_Policy::VERSION && ( $v > 0 || absint( $row['total_orders'] ) > 0 ) ) { $stale = true; break; }
+			}
+			$legacy = $wpdb->get_var( $wpdb->prepare( "SELECT 1 FROM %i WHERE policy_version < %d OR (counts_as_order = 1 AND (currency IS NULL OR currency = '')) LIMIT 1", YoOhw_COS_DB::order_facts_table(), YoOhw_COS_Commerce_Metrics_Policy::VERSION ) );
+			if ( '' !== $wpdb->last_error || ( ! $legacy && ! $stale && count( (array) $rows ) < self::BATCH_SIZE ) ) { return; }
+		}
+		if ( ! YoOhw_COS_Reset_Guard::enter( false ) ) { return; }
+		$lock = self::acquire_lock();
+		try {
+			if ( '' !== $lock ) { self::register_missing_currency_backfill_guarded(); }
+		} finally {
+			if ( '' !== $lock ) { self::release_lock( $lock ); }
+			YoOhw_COS_Reset_Guard::leave();
+		}
+	}
+
+	/** Null means a completed negative probe is still current (or its high-water read failed). */
+	private static function currency_customer_probe_cursor( array $probe ): ?int {
+		if ( 'completed' !== ( $probe['status'] ?? '' ) ) { return absint( $probe['cursor'] ?? 0 ); }
+		if ( absint( $probe['policy_version'] ?? 0 ) !== YoOhw_COS_Commerce_Metrics_Policy::VERSION || absint( $probe['revalidate_after'] ?? 0 ) <= time() ) { return 0; }
+		global $wpdb;
+		// Primary-key endpoint lookup, never a full-table stale predicate on ordinary requests.
+		$highest_id = $wpdb->get_var( $wpdb->prepare( 'SELECT id FROM %i ORDER BY id DESC LIMIT 1', YoOhw_COS_DB::customers_table() ) );
+		if ( '' !== $wpdb->last_error || absint( $highest_id ) <= absint( $probe['cursor'] ?? 0 ) ) { return null; }
+		return absint( $probe['cursor'] ?? 0 );
+	}
+
+	private static function register_missing_currency_backfill_guarded(): void {
+		$state = self::get_state();
+		if ( ! empty( $state['_read_error'] ) || isset( $state['commerce_currency_v3'] ) || ! YoOhw_COS_Install::schema_is_ready() ) { return; }
+		global $wpdb;
+		$probe = $state['_currency_customer_probe'] ?? array();
+		$cursor = self::currency_customer_probe_cursor( $probe );
+		if ( null === $cursor && 'completed_with_issues' !== ( $state['commerce_facts_v2']['status'] ?? '' ) ) { return; }
+		$cursor = $cursor ?? 0;
+		// Appended rows must not postpone the periodic check of previously scanned rows.
+		$revalidate_after = 0 === $cursor ? 0 : absint( $probe['revalidate_after'] ?? 0 );
 		$legacy_fact = $wpdb->get_var( $wpdb->prepare(
 			"SELECT 1 FROM %i WHERE policy_version < %d OR (counts_as_order = 1 AND (currency IS NULL OR currency = '')) LIMIT 1",
 			YoOhw_COS_DB::order_facts_table(), YoOhw_COS_Commerce_Metrics_Policy::VERSION
 		) );
-		if ( ! $legacy_fact && 'completed_with_issues' !== ( $state['commerce_facts_v2']['status'] ?? '' ) ) { return; }
+		if ( '' !== $wpdb->last_error ) { return; }
+		// Inspect at most one primary-key page per request, including archived rows.
+		// A WHERE version < ... LIMIT 1 alone could scan the entire unindexed table.
+		$rows = $wpdb->get_results( $wpdb->prepare(
+			'SELECT id, commerce_metrics_version, total_orders FROM %i WHERE id > %d ORDER BY id LIMIT %d',
+			YoOhw_COS_DB::customers_table(), $cursor, self::BATCH_SIZE
+		), ARRAY_A );
+		if ( '' !== $wpdb->last_error ) { return; }
+		$stale_customer = false;
+		foreach ( (array) $rows as $row ) {
+			$cursor = absint( $row['id'] );
+			$version = absint( $row['commerce_metrics_version'] );
+			if ( $version < YoOhw_COS_Commerce_Metrics_Policy::VERSION && ( $version > 0 || absint( $row['total_orders'] ) > 0 ) ) { $stale_customer = true; break; }
+		}
+		if ( ! $legacy_fact && ! $stale_customer && 'completed_with_issues' !== ( $state['commerce_facts_v2']['status'] ?? '' ) ) {
+			$before = $state;
+			$complete = count( (array) $rows ) < self::BATCH_SIZE;
+			$state['_currency_customer_probe'] = array(
+				'cursor' => $cursor,
+				'status' => $complete ? 'completed' : 'pending',
+				'policy_version' => YoOhw_COS_Commerce_Metrics_Policy::VERSION,
+				'revalidate_after' => $complete && 0 === $revalidate_after ? time() + self::CUSTOMER_PROBE_REVALIDATION_SECONDS : $revalidate_after,
+			);
+			if ( $state !== $before ) { self::save_state( $state ); }
+			self::maybe_schedule();
+			return;
+		}
+		unset( $state['_currency_customer_probe'] );
 		$state['commerce_currency_v3'] = self::new_migration_state(
 			array( 'phase' => 'orders', 'next_page' => 1, 'last_customer_id' => 0 )
 		);
-		update_option( self::STATE_OPTION, $state, false );
+		self::save_state( $state );
 		self::maybe_schedule();
 	}
 
@@ -112,6 +184,10 @@ final class YoOhw_COS_Migration_Runner {
 			$state        = self::get_state();
 			$migration_id = self::next_pending_migration( $state );
 
+			if ( '_currency_customer_probe' === $migration_id ) {
+				self::register_missing_currency_backfill_guarded();
+				return;
+			}
 			if ( '' === $migration_id ) {
 				return;
 			}
@@ -120,6 +196,7 @@ final class YoOhw_COS_Migration_Runner {
 			}
 
 			$migration = $state[ $migration_id ];
+			$before_progress = array_intersect_key( $migration, array_flip( array( 'phase', 'next_page', 'last_customer_id', 'successful', 'processed_customers' ) ) );
 			$migration['status'] = 'in_progress';
 			$migration['attempts'] = absint( $migration['attempts'] ?? 0 ) + 1;
 			$migration['last_batch_at'] = YoOhw_COS_DB::now();
@@ -133,14 +210,13 @@ final class YoOhw_COS_Migration_Runner {
 			}
 
 			// Order reconciliation may have resolved an older migration's ledger in this batch.
+			if ( $before_progress !== array_intersect_key( $migration, array_flip( array( 'phase', 'next_page', 'last_customer_id', 'successful', 'processed_customers' ) ) ) ) {
+				$migration['last_progress_at'] = time();
+				unset( $migration['last_error'] );
+			}
 			$state = self::get_state();
 			$state[ $migration_id ] = $migration;
-			update_option( self::STATE_OPTION, $state, false );
-			if ( 'completed' === ( $migration['status'] ?? '' )
-				&& ( 'commerce_currency_v3' === $migration_id
-					|| ( 'commerce_facts_v2' === $migration_id && ! isset( $state['commerce_currency_v3'] ) ) ) ) {
-				YoOhw_COS_Intelligence::invalidate_monetary_decisions();
-			}
+			self::save_state( $state );
 		} catch ( Throwable $exception ) {
 			$state = self::get_state();
 
@@ -148,7 +224,7 @@ final class YoOhw_COS_Migration_Runner {
 				$state[ $migration_id ]['status']       = 'pending';
 				$state[ $migration_id ]['last_error']   = sanitize_text_field( $exception->getMessage() );
 				$state[ $migration_id ]['last_error_at'] = YoOhw_COS_DB::now();
-				update_option( self::STATE_OPTION, $state, false );
+				self::save_state( $state );
 			}
 
 			do_action( 'yoohw_cos_data_migration_error', $exception, $migration_id ?? '' );
@@ -159,22 +235,42 @@ final class YoOhw_COS_Migration_Runner {
 		self::maybe_schedule();
 	}
 
-	public static function get_state(): array {
-		$state = get_option( self::STATE_OPTION, array() );
+	private static function save_state( array $state ): void {
+		wp_cache_delete( self::STATE_OPTION, 'options' );
+		wp_cache_delete( 'notoptions', 'options' );
+		wp_cache_delete( 'alloptions', 'options' );
+		update_option( self::STATE_OPTION, $state, false );
+		if ( self::get_state() !== $state ) { throw new RuntimeException( 'Migration checkpoint was not persisted.' ); }
+	}
 
-		return is_array( $state ) ? $state : array();
+	public static function get_state(): array {
+		global $wpdb;
+		$value = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, self::STATE_OPTION ) );
+		if ( '' !== $wpdb->last_error ) { return array( '_read_error' => true ); }
+		$state = null === $value ? array() : maybe_unserialize( $value );
+		return is_array( $state ) ? $state : array( '_read_error' => true );
 	}
 
 	public static function currency_backfill_is_complete(): bool {
-		if ( version_compare( (string) get_option( 'yoohw_cos_db_version', '' ), '0.2.2', '<' ) ) {
+		// Install verifies the schema at request admission. Do not run its writable
+		// schema checker once per amount/getter; consume the admitted status read-only.
+		$schema = get_option( 'yoohw_cos_schema_status', array() );
+		if ( version_compare( (string) get_option( 'yoohw_cos_db_version', '' ), '0.2.2', '<' ) || 'blocked' === ( $schema['status'] ?? '' ) ) {
 			return false;
 		}
 		$state = self::get_state();
+		if ( ! empty( $state['_read_error'] ) ) { return false; }
 		if ( isset( $state['commerce_currency_v3'] ) ) {
-			return 'completed' === ( $state['commerce_currency_v3']['status'] ?? '' );
+			if ( 'completed' !== ( $state['commerce_currency_v3']['status'] ?? '' ) ) { return false; }
+		} elseif ( isset( $state['commerce_facts_v2'] ) && 'completed' !== ( $state['commerce_facts_v2']['status'] ?? '' ) ) {
+			return false;
 		}
-		return ! isset( $state['commerce_facts_v2'] )
-			|| 'completed' === ( $state['commerce_facts_v2']['status'] ?? '' );
+		global $wpdb;
+		$issue = $wpdb->get_var( $wpdb->prepare(
+			"SELECT 1 FROM %i WHERE migration_id IN ('commerce_facts_v2', 'commerce_currency_v3') AND status IN ('pending', 'unresolved') LIMIT 1",
+			YoOhw_COS_DB::migration_issues_table()
+		) );
+		return '' === $wpdb->last_error && ! $issue;
 	}
 
 	public static function note_currency_reconciled( string $object_type, int $object_id ): void {
@@ -196,8 +292,7 @@ final class YoOhw_COS_Migration_Runner {
 			$changed = true;
 		}
 		if ( ! $changed ) { return; }
-		update_option( self::STATE_OPTION, $state, false );
-		YoOhw_COS_Intelligence::invalidate_monetary_decisions();
+		self::save_state( $state );
 	}
 
 	private static function run_commerce_facts_batch( array $migration, string $migration_id ): array {
@@ -639,7 +734,7 @@ final class YoOhw_COS_Migration_Runner {
 			}
 		}
 
-		return '';
+		return 'pending' === ( $state['_currency_customer_probe']['status'] ?? '' ) ? '_currency_customer_probe' : '';
 	}
 
 	private static function maybe_schedule(): void {

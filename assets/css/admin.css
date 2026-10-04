@@ -3029,3 +3029,11 @@ body.yoohw-cos-email-composer-open {
 		overflow-x: auto;
 	}
 }
+
+/* Availability reasons must remain readable at narrow admin widths. */
+.yoohw-cos-money-reason {
+ display: inline-block;
+ max-width: 100%;
+ white-space: normal;
+ overflow-wrap: anywhere;
+}

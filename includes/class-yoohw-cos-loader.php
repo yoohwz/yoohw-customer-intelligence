@@ -28,10 +28,12 @@ final class YoOhw_COS_Loader {
 		YoOhw_COS_Reset_Guard::init();
 		if ( is_admin() ) {
 			YoOhw_COS_Flash_Notices::init();
+			YoOhw_COS_Notice_Preferences::init();
 		}
 		YoOhw_COS_Privacy_Exporter::init();
 		YoOhw_COS_Privacy_Erasure::init();
 
+		YoOhw_COS_Intelligence::init();
 		YoOhw_COS_Install::maybe_update();
 		YoOhw_COS_Migration_Runner::init();
 
@@ -49,7 +51,6 @@ final class YoOhw_COS_Loader {
 		YoOhw_COS_Notes::init();
 		YoOhw_COS_Tasks::init();
 		YoOhw_COS_Email_Notifications::init();
-		YoOhw_COS_Intelligence::init();
 		YoOhw_COS_Blacklist_Manager_Integration::init();
 		YoOhw_COS_Blacklist_Manager_Premium_Integration::init();
 		YoOhw_COS_Segments::init();
@@ -96,6 +97,7 @@ final class YoOhw_COS_Loader {
 
 		require_once YOOHW_COS_PATH . 'admin/class-yoohw-cos-admin-ui.php';
 		require_once YOOHW_COS_PATH . 'admin/class-yoohw-cos-flash-notices.php';
+		require_once YOOHW_COS_PATH . 'admin/class-yoohw-cos-notice-preferences.php';
 		require_once YOOHW_COS_PATH . 'admin/class-yoohw-cos-customers-list.php';
 		require_once YOOHW_COS_PATH . 'admin/class-yoohw-cos-customer-exporter.php';
 		require_once YOOHW_COS_PATH . 'admin/class-yoohw-cos-customer-profile.php';

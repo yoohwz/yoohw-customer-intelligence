@@ -206,13 +206,21 @@ final class YoOhw_COS_Reset_Guard {
 			$url = admin_url( 'admin.php?page=yoohw-customer-intelligence-settings#yoohw-cos-incidents' );
 			$page = isset( $_GET['page'] ) && is_string( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
 			if ( 'yoohw-customer-intelligence-settings' !== $page ) {
-				echo '<div class="notice notice-warning" role="status"><p>' . esc_html( sprintf(
+				$opening = YoOhw_COS_Notice_Preferences::opening_markup( 'operational_recovery' );
+				if ( '' === $opening ) { return; }
+				echo $opening; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped fixed markup.
+				echo '<p>' . esc_html( sprintf(
 					/* translators: %d: number of unresolved operations. */
 					_n( 'Customer Intelligence has %d unresolved operation.', 'Customer Intelligence has %d unresolved operations.', count( $items ), 'yoohw-customer-intelligence' ),
 					count( $items )
 				) ) . ' <a href="' . esc_url( $url ) . '">' . esc_html__( 'Review recovery options', 'yoohw-customer-intelligence' ) . '</a></p></div>';
 			}
 		} finally { self::leave(); }
+	}
+
+	/** Read-only incident identities for presentation preferences; dismissal never acknowledges. */
+	public static function operational_incidents(): array {
+		return self::notice_state();
 	}
 
 	public static function render_incidents(): void {

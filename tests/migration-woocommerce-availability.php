@@ -7,6 +7,13 @@ $migration_state = array(
 );
 $scheduled = false;
 $released = false;
+$wpdb = new class {
+	public $options = 'owned_options';
+	public $last_error = '';
+	public function prepare( $query, ...$args ) { return $query; }
+	public function get_var( $query ) { return serialize( $GLOBALS['migration_state'] ); }
+};
+function maybe_unserialize( $value ) { return unserialize( $value ); }
 
 function get_option( $key, $default = false ) {
 	return 'yoohw_cos_data_migrations' === $key ? $GLOBALS['migration_state'] : $default;

@@ -92,7 +92,7 @@ final class YoOhw_COS_Privacy_Exporter {
 		$identity = '(c.email = %s AND BINARY c.email = BINARY %s' . ( $user_id > 0 ? ' OR c.wp_user_id = %d' : '' ) . ')';
 		$args = $user_id > 0 ? array( $email, $email, $user_id ) : array( $email, $email );
 		return array(
-			'profile' => array( 'from' => "$c c", 'where' => $identity, 'args' => $args, 'order' => 'c.id', 'select' => 'c.id, c.wp_user_id, c.email, c.phone, c.first_name, c.last_name, c.display_name, c.customer_status, c.lifecycle_stage, c.vip_status, c.risk_score, c.trust_score, c.archived_at, c.archive_reason, c.created_at, c.updated_at, c.first_order_date, c.first_order_id, c.last_order_date, c.last_order_id, c.last_activity_date, c.total_orders, c.total_spent, c.average_order_value, c.money_state, c.money_currency, c.commerce_metrics_version, c.loyalty_score, c.loyalty_level, c.available_points, c.earned_points' ),
+			'profile' => array( 'from' => "$c c", 'where' => $identity, 'args' => $args, 'order' => 'c.id', 'select' => 'c.id, c.wp_user_id, c.email, c.phone, c.first_name, c.last_name, c.display_name, c.customer_status, c.lifecycle_stage, c.vip_status, c.risk_score, c.trust_score, c.archived_at, c.archive_reason, c.created_at, c.updated_at, c.first_order_date, c.first_order_id, c.last_order_date, c.last_order_id, c.last_activity_date, c.total_orders, c.total_spent, c.average_order_value, c.money_state, c.money_currency, c.commerce_metrics_version, c.intelligence_currency_ready, c.intelligence_generation, c.loyalty_score, c.loyalty_level, c.available_points, c.earned_points' ),
 			'notes' => array( 'from' => YoOhw_COS_DB::notes_table() . " r INNER JOIN $c c ON c.id = r.customer_id", 'where' => $identity, 'args' => $args, 'order' => 'r.id', 'select' => 'r.id, r.customer_id, r.note_type, r.visibility, r.note_content, r.created_at, r.updated_at' ),
 			'tasks' => array( 'from' => YoOhw_COS_DB::tasks_table() . " r INNER JOIN $c c ON c.id = r.customer_id", 'where' => $identity, 'args' => $args, 'order' => 'r.id', 'select' => 'r.id, r.customer_id, r.title, r.description, r.status, r.priority, r.due_date, r.completed_at, r.created_at, r.updated_at, r.order_id' ),
 			'events' => array( 'from' => YoOhw_COS_DB::events_table() . " r LEFT JOIN $c c ON c.id = r.customer_id", 'where' => $user_id > 0 ? "($identity OR (r.customer_id IS NULL AND r.wp_user_id = %d AND r.event_source IN ('wc_blacklist_manager', 'wc_blacklist_manager_premium', 'wc_loyalty')))" : $identity, 'args' => $user_id > 0 ? array_merge( $args, array( $user_id ) ) : $args, 'order' => 'r.id', 'select' => 'r.id, r.customer_id, r.event_type, r.event_source, r.severity, r.description, r.created_at, r.object_type, r.object_id' ),
@@ -236,10 +236,17 @@ final class YoOhw_COS_Privacy_Exporter {
 		$customer_id = $row['customer_id'] ?? null;
 		unset( $row['customer_id'] );
 		if ( 'profile' === $category ) {
+			$row = YoOhw_COS_Intelligence::safe_customer_decisions( $row );
 			$fields = array( 'Customer Intelligence customer ID' => $row['id'] ?? null );
 			$fields['WordPress user ID'] = $row['wp_user_id'];
 			$map = array( 'email' => 'Email', 'phone' => 'Phone', 'first_name' => 'First name', 'last_name' => 'Last name', 'display_name' => 'Display name', 'customer_status' => 'Customer status', 'lifecycle_stage' => 'Lifecycle stage', 'vip_status' => 'Value tier', 'risk_score' => 'Risk score', 'trust_score' => 'Trust score', 'archived_at' => 'Archived date', 'archive_reason' => 'Archive reason', 'created_at' => 'Created date', 'updated_at' => 'Updated date', 'first_order_date' => 'First recognized order date', 'first_order_id' => 'First recognized order ID', 'last_order_date' => 'Last recognized order date', 'last_order_id' => 'Last recognized order ID', 'last_activity_date' => 'Last activity date', 'total_orders' => 'Recognized lifetime order count', 'money_state' => 'Monetary state', 'money_currency' => 'Recorded currency', 'loyalty_score' => 'Loyalty score', 'loyalty_level' => 'Loyalty level', 'available_points' => 'Available loyalty points', 'earned_points' => 'Earned loyalty points' );
 			foreach ( $map as $key => $label ) { $fields[ $label ] = $row[ $key ] ?? null; }
+			$availability = YoOhw_COS_Commerce_Metrics_Policy::availability( $row );
+			$fields['Monetary availability reason'] = $availability['reason'];
+			$fields['Currency readiness'] = $availability['site_state'];
+			$fields['Amount available'] = $availability['amount_available'] ? '1' : '0';
+			$fields['Available numeric total spent'] = $availability['amount_available'] ? ( 'none' === $availability['reason'] ? '0' : (string) $row['total_spent'] ) : '';
+			$fields['Available numeric average order value'] = $availability['amount_available'] ? ( 'none' === $availability['reason'] ? '0' : (string) $row['average_order_value'] ) : '';
 			$fields['Total spent'] = self::money( $row, 'total_spent' );
 			$fields['Average order value'] = self::money( $row, 'average_order_value' );
 			$days = YoOhw_COS_RFM::recency_days( $row );
@@ -268,11 +275,11 @@ final class YoOhw_COS_Privacy_Exporter {
 	}
 
 	private static function money( array $row, string $key ): string {
-		if ( 'none' === ( $row['money_state'] ?? '' ) && YoOhw_COS_Migration_Runner::currency_backfill_is_complete() ) {
+		if ( 'none' === YoOhw_COS_Commerce_Metrics_Policy::availability( $row )['reason'] ) {
 			return '0 (no recognized orders)';
 		}
 		if ( ! YoOhw_COS_Commerce_Metrics_Policy::money_is_comparable( $row ) ) {
-			return __( 'Unavailable (mixed or unknown currency)', 'yoohw-customer-intelligence' );
+			return ''; // Unavailable numeric values stay empty; machine reason is exported separately.
 		}
 		return $row[ $key ] . ' ' . $row['money_currency'];
 	}
