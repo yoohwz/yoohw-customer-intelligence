@@ -1,0 +1,23 @@
+{
+  "loyaltyText": [
+    "Loyalty"
+  ],
+  "security": [
+    {
+      "heading": "Security signals",
+      "text": "Security signals"
+    },
+    {
+      "heading": "Address & Acquisition",
+      "text": "Address & Acquisition"
+    }
+  ],
+  "wpUser": [
+    {
+      "links": [
+        "https://yoplay8.local/wp-admin/user-edit.php?user_id=1485"
+      ],
+      "text": "WP User ID\t#1485"
+    }
+  ]
+}

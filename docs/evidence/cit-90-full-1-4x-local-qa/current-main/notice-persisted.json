@@ -1,0 +1,77 @@
+{
+  "readiness": {
+    "state": "ready",
+    "migration": {
+      "status": "completed",
+      "processed": 4010,
+      "attempts": 60,
+      "started_at": "2026-09-26 03:22:54",
+      "phase": "rebuild_retries",
+      "next_page": 41,
+      "last_customer_id": 1723,
+      "last_batch_at": "2026-09-26 03:25:51",
+      "scanned": 4028,
+      "successful": 4010,
+      "processed_customers": 1668,
+      "pending_issues": 0,
+      "unresolved_issues": 0,
+      "completed_at": "2026-09-26 03:25:51"
+    },
+    "scheduled_at": null,
+    "issues": {
+      "pending": 0,
+      "unresolved": 0
+    }
+  },
+  "incidents": {
+    "customer_intelligence:legacy_deferred_unattributed": {
+      "id": "0484784f-c748-4f96-bf06-518c87d2bab4",
+      "source": "customer_intelligence",
+      "event": "legacy_deferred_unattributed",
+      "mode": "manual_replay_required",
+      "first_seen": 1791079412,
+      "last_seen": 1791079412,
+      "count": 2,
+      "expires": 1791083012
+    },
+    "blacklist_core:maintenance_completed": {
+      "id": "12652a07-91e1-46bb-b79a-c0af42d97360",
+      "source": "blacklist_core",
+      "event": "maintenance_completed",
+      "mode": "backfill_available",
+      "first_seen": 1791079412,
+      "last_seen": 1791079412,
+      "count": 2,
+      "expires": 1791083012
+    },
+    "blacklist_premium:js_proof_failed": {
+      "id": "15ebc8fd-54e7-4a5e-9d8f-68533c7a53c2",
+      "source": "blacklist_premium",
+      "event": "js_proof_failed",
+      "mode": "manual_replay_required",
+      "first_seen": 1791079412,
+      "last_seen": 1791079412,
+      "count": 2,
+      "expires": 1791083012
+    },
+    "customer_intelligence:retryable_sync": {
+      "id": "344190ca-3f8d-4dae-800d-832aaea2dc88",
+      "source": "customer_intelligence",
+      "event": "retryable_sync",
+      "mode": "automatic_retry",
+      "first_seen": 1791079412,
+      "last_seen": 1791079412,
+      "count": 2,
+      "expires": 1791083012
+    }
+  },
+  "preferences": {
+    "1484": {
+      "commerce_update": {
+        "revision": "115d5cd588a1445848d3f1c9375737767846271c98fcc532ac36f9e5a5dd41ad",
+        "dismissed_at": 1791079060
+      }
+    },
+    "1485": ""
+  }
+}

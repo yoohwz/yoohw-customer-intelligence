@@ -1,0 +1,23 @@
+{
+  "admitted_main": "f44ff6b22eb799cc934e732a70f1fc852f08db99",
+  "installed_header_version": "1.4.2",
+  "checked_runtime_files": 62,
+  "matching_files": 62,
+  "different_files": [],
+  "missing_files": [],
+  "representative_hashes": {
+    "yoohw-customer-intelligence.php": {
+      "main_sha256": "1341c72e14a7dcbb0227345f518a03d18e90138045d309bf5e7a11be9f9ae26b",
+      "installed_sha256": "1341c72e14a7dcbb0227345f518a03d18e90138045d309bf5e7a11be9f9ae26b"
+    },
+    "includes/class-yoohw-cos-commerce-metrics-policy.php": {
+      "main_sha256": "a3afa2e0855c9c6916260b586c211bc90df861039257913fe7e65de30a272232",
+      "installed_sha256": "a3afa2e0855c9c6916260b586c211bc90df861039257913fe7e65de30a272232"
+    },
+    "includes/class-yoohw-cos-migration-runner.php": {
+      "main_sha256": "fa313c2a3909c3a4aec813c4b9a6e701939e005b449d402cc7ad5b4368f25b4c",
+      "installed_sha256": "fa313c2a3909c3a4aec813c4b9a6e701939e005b449d402cc7ad5b4368f25b4c"
+    }
+  },
+  "source_gate": "MATCH"
+}

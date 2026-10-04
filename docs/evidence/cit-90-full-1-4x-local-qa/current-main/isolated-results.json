@@ -1,0 +1,26 @@
+{
+  "runtime_sha": "f44ff6b22eb799cc934e732a70f1fc852f08db99",
+  "modes": {
+    "yes": {
+      "tests": 267,
+      "assertions": 5530,
+      "result": "PASS",
+      "wp": "6.9",
+      "wc": "10.8.0",
+      "php": "8.4.18"
+    },
+    "no": {
+      "tests": 267,
+      "assertions": 5530,
+      "result": "PASS",
+      "wp": "6.9",
+      "wc": "10.8.0",
+      "php": "8.4.18"
+    }
+  },
+  "guard_controls": 68,
+  "external_mail": "intercepted",
+  "http": "blocked",
+  "cleanup": "owned MySQL and temporary files removed",
+  "sentinel": "unchanged"
+}

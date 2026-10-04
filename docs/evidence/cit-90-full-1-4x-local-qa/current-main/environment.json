@@ -1,0 +1,54 @@
+{
+  "wp": "7.1.2",
+  "wc": "11.1.2",
+  "php": "8.4.18",
+  "cit": "1.4.2",
+  "db": "0.2.4",
+  "hpos": true,
+  "plugins": [
+    {
+      "plugin": "wc-advanced-accounts-premium/wc-advanced-accounts-premium.php",
+      "version": "2.1.3"
+    },
+    {
+      "plugin": "wc-advanced-order-actions/wc-advanced-order-actions.php",
+      "version": "1.7.4"
+    },
+    {
+      "plugin": "wc-advanced-order-manager/wc-advanced-order-manager.php",
+      "version": "1.4.1"
+    },
+    {
+      "plugin": "wc-blacklist-manager-premium/wc-blacklist-manager-premium.php",
+      "version": "2.7.4"
+    },
+    {
+      "plugin": "wc-blacklist-manager/wc-blacklist-manager.php",
+      "version": "2.3.2.1"
+    },
+    {
+      "plugin": "wc-loyalty/wc-loyalty.php",
+      "version": "1.2.2"
+    },
+    {
+      "plugin": "yoohw-audit-snapshot/yoohw-audit-snapshot.php",
+      "version": "0.1.0"
+    },
+    {
+      "plugin": "yoohw-bmp-license-recovery/yoohw-bmp-license-recovery.php",
+      "version": "0.1.0"
+    },
+    {
+      "plugin": "yoohw-customer-intelligence/yoohw-customer-intelligence.php",
+      "version": "1.4.2"
+    },
+    {
+      "plugin": "yoohw-media-optimizer/yoohw-media-optimizer.php",
+      "version": "1.0.1"
+    },
+    {
+      "plugin": "yoohw-tax-invoice-requests/yoohw-tax-invoice-requests.php",
+      "version": "1.0.1"
+    }
+  ]
+}

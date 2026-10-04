@@ -1,0 +1,56 @@
+[
+  {
+    "case": "saved-view",
+    "bytes": 62332,
+    "sha256": "c15bd14f9249dbcf9ac2061fc982ac85413eebbe6347f320eed41e80f0984afd",
+    "prefix": "<!DOCTYPE html>",
+    "bom_offset": 62029,
+    "header": [
+      "Name",
+      "Email",
+      "Phone",
+      "Orders",
+      "Spent",
+      "AOV",
+      "Risk score",
+      "Trust score",
+      "Value tier",
+      "Lifecycle",
+      "Tags",
+      "Segments",
+      "Currency",
+      "Monetary state",
+      "Monetary reason",
+      "Currency readiness",
+      "Amount available"
+    ],
+    "synthetic_csv_rows": 1
+  },
+  {
+    "case": "plain-filter",
+    "bytes": 61325,
+    "sha256": "f626bcc85b701d53de774bd8ee2f22a57152e27fbcb7412ac5108d2b34a82c85",
+    "prefix": "<!DOCTYPE html>",
+    "bom_offset": 60457,
+    "header": [
+      "Name",
+      "Email",
+      "Phone",
+      "Orders",
+      "Spent",
+      "AOV",
+      "Risk score",
+      "Trust score",
+      "Value tier",
+      "Lifecycle",
+      "Tags",
+      "Segments",
+      "Currency",
+      "Monetary state",
+      "Monetary reason",
+      "Currency readiness",
+      "Amount available"
+    ],
+    "synthetic_csv_rows": 5
+  }
+]

@@ -1,0 +1,6 @@
+{
+  "boxShadow": "rgb(56, 88, 233) 0px 0px 0px 1.5px",
+  "outline": "rgba(0, 0, 0, 0) solid 1px",
+  "tag": "BUTTON",
+  "text": "Search"
+}

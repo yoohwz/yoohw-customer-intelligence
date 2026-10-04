@@ -1,0 +1,21 @@
+Overdue CRM tasks
+
+Hi CIT90 QA Admin 1,
+
+These CRM follow-up tasks are overdue and still open.
+
+Overdue queue: 1
+
+Overdue tasks (1)
+-------------
+- CIT90 QA overdue edited
+  Customer: CIT90 QA VND
+  Due: 4 October 2026 03:13
+  Priority: High
+  View: https://yoplay8.local/wp-admin/admin.php?page=yoohw-customer-intelligence-tasks&#038;task_id=11
+
+Open task list: https://yoplay8.local/wp-admin/admin.php?page=yoohw-customer-intelligence-tasks
+
+----------------------------------------
+
+Synthetic CIT90 QA — yoplay8.local

@@ -1,0 +1,19 @@
+New CRM task assigned
+
+Hi CIT90 QA Admin 1,
+
+You have a new CRM follow-up task assigned to you.
+
+New assignment
+Task: CIT90 QA overdue edited
+Task ID: #11
+Customer: CIT90 QA VND
+Due date: 3 October 2026 01:33
+Priority: High
+Status: Open
+
+Open task: https://yoplay8.local/wp-admin/admin.php?page=yoohw-customer-intelligence-tasks&#038;task_id=11
+
+----------------------------------------
+
+Synthetic CIT90 QA — yoplay8.local

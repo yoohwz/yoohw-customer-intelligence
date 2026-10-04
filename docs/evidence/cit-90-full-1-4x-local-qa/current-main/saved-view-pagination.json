@@ -1,0 +1,6 @@
+{
+  "case": "active Saved View page2",
+  "url": "https://yoplay8.local/wp-admin/admin.php?page=yoohw-customer-intelligence&saved_view_id=445f2c62-bc22-4f33-bce1-810da6dffe18&saved_view_context=1&s=CIT90&customer_tag=0&customer_segment=0&customer_status&vip_status&risk_level&customer_cohort&customer_attention&rfm_recency_max_days&rfm_frequency_min&rfm_monetary_min&loyalty_level&loyalty_score&lifecycle_stage&customer_view&orderby=last_activity_date&order=DESC&paged=2",
+  "rows": 1,
+  "text": "\tCIT90 QA VND\nEdit user\n\t\ncit90_qa_none@example.invalid\n+84900000090\n\t\nCIT90 QA Static\n\t\nR: Unavailable\nF: 0 orders\nM: $0,00\n\t\nInactive\nLow · 20\n\tAdministrator\t—\n"
+}

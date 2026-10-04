@@ -1,0 +1,74 @@
+[
+  {
+    "state": "overdue",
+    "plain_title_present": true,
+    "html_title_present": true,
+    "subject_present": true,
+    "admin_link_present": true,
+    "html_inline_shell": true,
+    "plain_html_tag_leak": false
+  },
+  {
+    "state": "reassigned",
+    "plain_title_present": true,
+    "html_title_present": true,
+    "subject_present": true,
+    "admin_link_present": true,
+    "html_inline_shell": true,
+    "plain_html_tag_leak": false
+  },
+  {
+    "state": "assigned",
+    "plain_title_present": true,
+    "html_title_present": true,
+    "subject_present": true,
+    "admin_link_present": true,
+    "html_inline_shell": true,
+    "plain_html_tag_leak": false
+  },
+  {
+    "state": "due-soon",
+    "plain_title_present": true,
+    "html_title_present": true,
+    "subject_present": true,
+    "admin_link_present": true,
+    "html_inline_shell": true,
+    "plain_html_tag_leak": false
+  },
+  {
+    "state": "completed",
+    "plain_title_present": true,
+    "html_title_present": true,
+    "subject_present": true,
+    "admin_link_present": true,
+    "html_inline_shell": true,
+    "plain_html_tag_leak": false
+  },
+  {
+    "state": "daily-summary",
+    "plain_title_present": true,
+    "html_title_present": true,
+    "subject_present": true,
+    "admin_link_present": true,
+    "html_inline_shell": true,
+    "plain_html_tag_leak": false
+  },
+  {
+    "state": "escalation",
+    "plain_title_present": true,
+    "html_title_present": true,
+    "subject_present": true,
+    "admin_link_present": true,
+    "html_inline_shell": true,
+    "plain_html_tag_leak": false
+  },
+  {
+    "state": "reopened",
+    "plain_title_present": true,
+    "html_title_present": true,
+    "subject_present": true,
+    "admin_link_present": true,
+    "html_inline_shell": true,
+    "plain_html_tag_leak": false
+  }
+]

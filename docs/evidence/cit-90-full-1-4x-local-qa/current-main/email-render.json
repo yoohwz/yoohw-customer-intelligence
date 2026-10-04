@@ -1,0 +1,42 @@
+{
+  "assigned": {
+    "rendered": true,
+    "transport": "intercepted false",
+    "class": "YoOhw_COS_Email_Task_Assigned"
+  },
+  "reassigned": {
+    "rendered": true,
+    "transport": "intercepted false",
+    "class": "YoOhw_COS_Email_Task_Reassigned"
+  },
+  "due-soon": {
+    "rendered": true,
+    "transport": "intercepted false",
+    "class": "YoOhw_COS_Email_Task_Due_Soon"
+  },
+  "completed": {
+    "rendered": true,
+    "transport": "intercepted false",
+    "class": "YoOhw_COS_Email_Task_Completed"
+  },
+  "reopened": {
+    "rendered": true,
+    "transport": "intercepted false",
+    "class": "YoOhw_COS_Email_Task_Reopened"
+  },
+  "overdue": {
+    "rendered": true,
+    "transport": "intercepted false",
+    "class": "YoOhw_COS_Email_Task_Overdue"
+  },
+  "escalation": {
+    "rendered": true,
+    "transport": "intercepted false",
+    "class": "YoOhw_COS_Email_Task_Overdue_Escalation"
+  },
+  "daily-summary": {
+    "rendered": true,
+    "transport": "intercepted false",
+    "class": "YoOhw_COS_Email_Daily_Followup_Summary"
+  }
+}

@@ -1,175 +1,112 @@
-# CIT-90 — full 1.4.x local QA preflight
+# CIT-90 — current-main Local acceptance audit
 
-**Disposition: `FULL_1_4X_LOCAL_QA_BLOCKED`.**
+**Disposition: `FULL_1_4X_LOCAL_QA_BLOCKED`.** The resumed browser audit executed on the aligned Local build. Three material product findings are admitted as separate follow-ups: [CIT-92](https://github.com/yoohwz/yoohw-customer-intelligence/issues/92), [CIT-93](https://github.com/yoohwz/yoohw-customer-intelligence/issues/93), and [CIT-94](https://github.com/yoohwz/yoohw-customer-intelligence/issues/94). The evidence also preserves bounded browser-tool and shared-site limitations; no runtime product correction or release action is included.
 
-The required existing-site source gate failed before browser testing. This report is
-an environment-blocked audit, not functional acceptance of the 1.4.x product. It does
-not claim that the unexecuted capabilities pass or contain product defects.
+## Authority and build
 
-Issue: [#90](https://github.com/yoohwz/yoohw-customer-intelligence/issues/90).
-Admitted/current protected main: `f44ff6b22eb799cc934e732a70f1fc852f08db99`.
-Preflight date: 2026-10-04. The audit worktree started exactly at this main SHA; its
-only additions are evidence and a read-only source comparison helper. The runtime
-intended for the audit is this main tree. No exact-main browser scenario was executed.
+- Issue: [CIT-90](https://github.com/yoohwz/yoohw-customer-intelligence/issues/90), Controlled.
+- Tested protected main: `f44ff6b22eb799cc934e732a70f1fc852f08db99`, freshly fetched and unchanged at the end of execution.
+- Target: `https://yoplay8.local`, **one current-main build**. The Human's 2026-10-04 clarification supersedes the historical package/upgrade matrix. No downgrade or old-origin replay was performed; that matrix is **NOT_REQUIRED** for this task.
+- Installed header: 1.4.2; DB schema: 0.2.4. Header identity alone is not the source gate: all **62 distributed runtime/resource files** matched protected main before and after QA. See [initial source identity](current-main/source-identity.json) and [final source identity](current-main/source-identity-final.json).
+- Live HTTP/CLI: WordPress 7.1.2, WooCommerce 11.1.2, PHP 8.4.18, HPOS enabled. [Environment](current-main/environment.json).
+- The earlier source-mismatch stop is retained as [historical preflight](historical-preflight.md) with its original [source comparison](source-identity.json). It is not the resumed verdict.
 
-## Stop condition and reproduction
+The candidate changes evidence and one isolated benchmark helper only. `tests/benchmark.php` now removes its own synthetic tag/segment before reseeding: Reset intentionally preserves definitions, so a second benchmark-only storage run otherwise collided with its first run's fixed label IDs. Product Reset behavior remains unchanged.
 
-Issue #90 requires: "If yoplay8.local is not actually running the intended source,
-**stop** and report rather than copying code into an unrelated site or silently
-switching environments."
+## Safety and evidence layers
 
-Persisted `active_plugins` includes the standard Customer Intelligence entrypoint.
-Its installed source header is **1.4.2-beta.1**, while admitted main declares **1.4.2**.
-Comparison of all 62 tracked runtime/resource files under the main entrypoint,
-`includes`, `admin`, `assets`, `templates` and `languages` found:
+A full private Local SQL snapshot was created before fixtures: 165,685,174 bytes, mode 0600, outside the webroot, SHA-256 `1d293efd017c10ff1922c66f250dbfd99957b94bcabea60546d83eb22d75c618`. It remains a private recovery point and is not included in the PR. Snapshot receipt, scoped restoration and row comparisons are in [cleanup.json](current-main/cleanup.json).
 
-- 45 matching files;
-- 15 different files, including the entrypoint, commerce metrics policy and migration runner;
-- 2 missing files: `admin/class-yoohw-cos-notice-preferences.php` and
-  `assets/js/notice-preferences.js`.
+A fresh in-app browser session used two disposable synthetic administrators. Initially five customers and four completed paid orders represented VND, EUR, mixed, no recognized orders and stale metrics. An owned fact with deliberately missing currency added the unknown case; 15 small no-order profiles expanded the list to 21 for native pagination. Monetary amounts and fixture mutations were synthetic. The unknown/stale states were deliberately injected fixtures, not spontaneous production failures.
 
-This is a material source mismatch, not just an unverified version label. In particular,
-the current-main notice preference implementation is absent from the installed tree.
-[Minimized comparison evidence](source-identity.json) contains file identities and
-SHA-256 hashes, without local paths, customer data, database credentials or dumps.
-The inspected MU-plugin sources contained no Customer Intelligence candidate routing.
-No HTTP/runtime reflection was performed; persisted activation plus the installed
-source comparison establishes the failed preflight, not certification of every
-possible plugin filter or effective runtime class origin.
+A temporary MU guard applied only to QA browser requests/cookie and QA CLI invocations. It intercepted `wp_mail` with a false result and blocked WordPress HTTP requests; no QA message was delivered externally. It did not bypass authentication or install a provider. Private credentials/mail captures and the guard were removed. Existing unrelated site activity was preserved.
 
-Reproduce from this repository using the actual yoplay8 installed plugin directory:
+Evidence uses three distinct layers:
+
+1. **Browser:** actual native wp-admin navigation, forms, keyboard activation, downloads, screenshots and DOM-backed state on yoplay8.
+2. **Persisted Local:** owned WooCommerce/CIT records, personal user metadata, generated privacy ZIP, notice preferences and direct SQL restoration checks.
+3. **Isolated:** repository-owned disposable database/dependencies, HPOS=yes/no security, concurrency, destructive/privacy and scale checks. These support the audit but do not replace browser acceptance.
+
+Screenshots exclude customer-bearing unrelated panels. Existing site counts and plugin names are aggregate/environment context; exported subject records are synthetic. Raw SQL, credentials, private mail envelopes and raw malformed CSV downloads are excluded.
+
+## Defects and readiness
+
+| Severity | Finding / expected versus actual | Evidence | Follow-up / release consequence |
+| --- | --- | --- | --- |
+| P2 | **CSV response corruption.** A Customers export should contain only CSV. Both active Saved View and plain filtered exports began with `<!DOCTYPE html>` and 60+ KiB of wp-admin HTML before the BOM/header. The tail contained correctly selected synthetic records; the complete response was not a valid CSV dataset. | [csv-response.json](current-main/csv-response.json): two independent downloads, offsets, headers, row counts and hashes. Raw admin HTML is excluded. | [CIT-92](https://github.com/yoohwz/yoohw-customer-intelligence/issues/92). Blocks CSV acceptance for a corrective release. |
+| P2 | **Escaped price markup in Profile explanation.** With USD store and a VND paid customer, Lifecycle → Lifetime value visibly printed WooCommerce `<span>...` markup. KPI/RFM prices rendered correctly. | [Profile desktop](current-main/profile-1440.png), [mobile](current-main/profile-390.png). | [CIT-93](https://github.com/yoohwz/yoohw-customer-intelligence/issues/93). Blocks readable explainable monetary context. |
+| P2 | **First-time cohort includes zero-order profiles.** The quick view returned two one-order subjects plus stale/no-order subjects (four rows). Count/list agreed, but a first-purchase label included customers without a recognized purchase. Repeat returned the two-order subject correctly. | [quick-views.json](current-main/quick-views.json); current query uses `total_orders <= 1`. | [CIT-94](https://github.com/yoohwz/yoohw-customer-intelligence/issues/94). Requires a bounded product decision on cohort semantics/copy and then correction. |
+| P3 observation | Four existing third-party setup notices occupy substantial space above actions, especially at 390px. CIT did not duplicate them, and controls remained reachable. The legacy recovery source prints `customer_intelligence` as a technical source label. | Profile/Customers width captures; [recovery copy](current-main/operational-recovery.txt). | Recorded polish/context, not silently changed or classified as an independent P2. |
+
+No P0/P1 was observed in the executed scenarios. That is not a claim that unexecuted paths are certified. BLOCKED reflects the three P2 findings and remaining browser confirmation acceptance gaps, not a failing isolated suite.
+
+## Browser and persistence matrix
+
+`PASS` is scoped to the named scenario. `PARTIAL` identifies a remaining browser boundary; supporting isolated results are listed separately.
+
+| Origin / capability | Browser execution and result | Persistence / support / boundary |
+| --- | --- | --- |
+| 1.4.0 Saved Views | **PASS:** create, open, dirty-state filter edit, update, rename, reload, search/filter restoration, back/forward, active view pagination (20+1), and a second user's empty personal view selector. **PASS fail-closed:** malformed ID and valid-ID view with an unavailable tag returned explicit unavailable-filter copy and no records. **FAIL:** downloaded CSV envelope. **NOT_RUN UI delete:** avoided repeating the native confirmation tool stall. | [Views persisted](current-main/persisted-before-commerce.json), [page2](current-main/saved-view-pagination.json), [malformed](current-main/malformed-view-ui.json), [unavailable](current-main/unavailable-view-ui.json), [saved view screenshot](current-main/saved-view-desktop.png). Personal views did not become segments. Ownership/deletion/normalization tests passed in both isolated modes. |
+| 1.4.0 retention/attention | **PASS:** repeat=1, missing-contact=0, open follow-up=1, overdue=1; high-value risk/follow-up empty states were readable. **FAIL semantics:** first-time=4 includes zero-order subjects. Cohort URLs retained active view context. | Fixture order counts and overdue task backed list/count behavior. Empty high-value cases do not certify every positive retention reason; deterministic positive/inactive cases are covered in isolated freshness/query tests. [Quick views](current-main/quick-views.json). |
+| 1.4.0 Customers Option D | **PASS:** heading/search, grouped Saved Views/quick views/status strip, Filter disclosure with Space/Enter, search/filter submissions, native 20-row pagination/reload/back, bulk assign an existing tag to one owned subject, row/link navigation and labels. No page-level overflow at the four required widths. **FAIL:** CSV purity. | [Pagination](current-main/pagination-ui.json), [bulk UI](current-main/bulk-tag-ui.json), [final fixtures](current-main/persisted-final-fixtures.json), [focus](current-main/keyboard-focus.json). Bulk success was shown once; reload no longer showed it. |
+| 1.4.0 explainable RFM | **PASS:** R/F remained useful for mixed and unknown money. VND/EUR were shown in their recorded units; none displayed current-store zero; stale displayed “Updating monetary data…”. Current-store M thresholds returned only VND at 50000 on VND store, only EUR at 80 on EUR store. **FAIL:** one Profile lifecycle explanation displayed markup. | [Currency UI](current-main/currency-ui.json), [persisted availability](current-main/persisted-profile.json), [privacy fields](current-main/privacy-export.json). Foreign monetary amounts were not FX-converted or used as store thresholds. Source-injected unknown had reason `unknown_source_currency`. |
+| 1.4.0 Profile Option A | **PASS:** header/actions → compact KPI strip → attention/tasks → orders → notes/activity; side identity/labels/intelligence; keyboard security/address disclosure; Call/mailto hrefs inspected without dialling; Email composer opened; Copy email/phone returned synthetic values; create task, edit priority/title, complete and reopen; create/edit note; tag removal and re-add; static segment assignment; owned WP-user relationship; recent-order navigation and order-to-profile link. **PARTIAL:** native confirmation behavior for note deletion/segment removal timed out; later persisted deletion was observed, but dialog acceptance was not accepted. | [Profile persistence](current-main/persisted-profile.json), [final fixtures](current-main/persisted-final-fixtures.json), [relationship](current-main/profile-relationship.json), Profile width captures. [Automation limits](current-main/automation-limits.json). |
+| 1.4.0 commerce lifecycle | **PASS browser + persistence:** same-status total 100000→120000; partial refund 20000→net 100000; full refund/refunded→zero recognized orders and current-store zero; explicit CIT reassignment moved order membership to the owned target; delete removed contribution; recreate restored VND 100000/F1. Billing-email edit alone was not treated as explicit CIT reassignment. | [Commerce UI](current-main/commerce-ui.json). Mutations used WooCommerce CRUD/refunds with `refund_payment=false`, not payment APIs. Non-zero reassignment and currency/fact transitions also passed isolated tests. |
+| 1.4.0 Overview | **PASS bounded continuity:** live Summary/Needs attention aggregates and native destination links were inspected. Aggregate revenue/AOV explicitly said order currency unavailable rather than inventing totals. Customer-bearing priority/activity panels were not captured. | [Aggregate text](current-main/overview-aggregate.txt), [summary screenshot](current-main/overview-summary.png). Aggregation and filter/count contracts passed isolated tests. |
+| 1.4.0 privacy export | **PASS:** native WP request for owned VND email, confirmation-email unchecked, export generated a ZIP containing CIT and the correct synthetic subject. Direct CIT callbacks exported the five monetary fixtures with profile/notes/tasks/activity/tag/segment/availability fields. | [Browser ZIP receipt](current-main/privacy-browser-export.json), [callback payloads](current-main/privacy-export.json). Raw ZIP not published. Live subject fit one page; multi-page bounds, owner Saved Views, exact matching and unsafe-payload exclusions passed both isolated modes. |
+| 1.4.0 privacy erasure | **PASS non-destructive surface:** native confirmed request for an owned no-order subject; UI exposed Erase personal data. **NOT_RUN live erase:** shared-site plugin side effects and source ownership could not be guaranteed through destructive continuation. | Both isolated modes passed resumable drains, suppression/resync, aliases/owner views, order/user preservation, Reset-between-pages and failure paths. See tests/integration/test-privacy-erasure.php. No synthetic suppression receipt was left on Local. |
+| 1.4.0 Diagnostics 2.0 | **PASS:** schema, counts, worker/migration state, currency state, stale metrics, cron timestamps, issue counts and action destinations were read live. Copy explicitly states page-load snapshot and that scheduling does not prove execution. Attention remained authoritative in Settings despite presentation dismissal. | [Attention diagnostics](current-main/diagnostics-attention.txt), [environment](current-main/environment.json). Actual counts reflect existing shared data plus fixtures at that point, not a fake empty store. |
+| 1.4.0 performance/boundedness | **PASS:** ordinary admin requests remained interactive; no obvious blocking N+1 symptom in the small fixture. Native pagination tested 21 subjects, not a massive Local load. | Canonical large benchmark in both owned modes: 25000 profiles, 100000 facts, 50000 tasks, 100000 events; [measurements/EXPLAIN](current-main/benchmark-results.json). Browser timing is subjective, not a load/SLA certification. |
+| 1.4.0 Free extension contracts | **PASS supporting isolated:** additive facts/query/action descriptors and no-provider Free behavior. **NOT_RUN live custom provider:** no safe QA provider installed; none was fabricated or installed. | tests/integration/test-extension-contracts.php passed in both modes. Existing Premium/Loyalty contracts remain conditional; this is not AI system acceptance. |
+| 1.4.1 Reset/recovery guard | **PASS supporting isolated:** routine reads/contended sync do not create lost-operation warnings; pending Reset blocks; stale forms and connection/lock changes fail closed. **NOT_RUN actual Local Reset/pending-boundary simulation:** shared state and unrelated schedulers must be preserved. Reset button/operation surface was inspected only. | Canonical isolated Reset/concurrency/link-integrity fixtures passed; no wholesale Local Reset was run. |
+| 1.4.1 CRM task emails | **PASS presentation:** assigned, reassigned, due soon, completed, reopened, overdue, escalation and daily summary captured from actual email trigger transport after WooCommerce inline styling. HTML/plain shared task/customer/status/context/links; shell/logo/current branding visible; 600/390px had no page overflow. Direct customer composer used WC branding and showed expected send failure with intercepted transport. Email settings shortcut opened the native CRM group. | [Email render](current-main/email-render.json), [UI](current-main/email-ui.json), [parity](current-main/email-parity.json), eight HTML/plain pairs and width captures. Fixture joined customer fields and in-memory enabled HTML rendering; footer was replaced with synthetic copy. Persisted email settings were not changed. Actual SMTP/inbox delivery was NOT_RUN/prohibited. Customer Message block-email compatibility passed isolated controls. |
+| 1.4.2 Operational recovery | **PASS:** five synthetic source-aware records (legacy, Core, Premium, Loyalty, automatic retry) coexisted with occurrence counts and distinct manual/backfill/retry guidance. Recovery links used CIT-owned destinations. Acknowledge removed only the selected synthetic Loyalty revision and stayed gone after reload; it did not execute backfill. Dismiss hid the summary but four records remained visible in Settings. | [Recovery screenshot](current-main/operational-recovery.png), [copy](current-main/operational-recovery.txt), [preferences/incidents](current-main/notice-persisted.json). Live fixtures were controlled incident descriptors, not forced real integration failures. New/stale revision, capacity, TTL and sensitive callback exclusion passed isolated tests. |
+| 1.4.2 flash notices | **PASS representative:** task/bulk action notices appeared on their destination; bulk notice disappeared on reload. | Full redirect/unrelated-screen/conflict deduplication cases passed isolated tests. Not every live flash transport path was independently replayed. |
+| post-1.4.2 CIT-88 availability | **PASS:** comparable, none, mixed, unknown, stale, preparing and attention wording was inspected across representative Customers/Profile/RFM/Overview/export/privacy/Diagnostics contexts. **FAIL envelope/presentation:** CIT-92/CIT-93. | Canonical availability/provider/sort/filter edge matrices passed both isolated modes. Live cross-product of every reason × every screen is PARTIAL, not falsely declared exhaustive. |
+| post-1.4.2 automatic migration UX | **PASS UI states:** preparing said it finishes automatically and linked View progress to Settings/Diagnostics; attention used different copy/link; restored ready state removed commerce notice. **NOT_RUN global Local migration replay:** worker convergence and >100-negative-probe admission tested in owned isolated environment instead. | [Preparing](current-main/currency-preparing.png), [attention](current-main/currency-attention.png), [notice UI](current-main/notice-ui.json). These are deliberately controlled option states, not evidence that a Local full worker ran. |
+| post-1.4.2 per-user dismissal | **PASS:** native dismiss activated by keyboard; admin1 same revision remained hidden after reload; admin2 saw it; preparing→attention became visible to admin1; underlying migration state unchanged; operational dismissal did not acknowledge records. | [Local preference metadata](current-main/notice-persisted.json). Invalid nonce/capability/key/cross-user, materially changed attention, stale replay, bounded storage and Reset non-dismissible cases passed isolated tests. |
+| Conditional integrations / legacy continuity | **PASS bounded:** Core/Premium/Loyalty present and licensed per runtime availability methods; list Loyalty column, Profile registered-user/empty Loyalty context, security disclosure, activity labels, order history/profile/tasks, Sync Center/backfill/recalculation/email settings entry points accessible. No license/account settings altered. **NOT_RUN shared bulk sync/backfill/recalculation execution or positive points/security mutation:** could touch unrelated subjects. | [Plugins](current-main/environment.json), [availability](current-main/integrations.json), [relationship](current-main/profile-relationship.json), [order context](current-main/order-context.txt)/[capture](current-main/order-context.png), [Sync Center](current-main/sync-center.png). Isolated integration tests support contracts; they do not certify every live Premium provider behavior. |
+
+## Responsive, keyboard and UX inspection
+
+Customers and Profile were captured at **1440, 1280, 768 and 390px**. [responsive.json](current-main/responsive.json) records viewport/page/wrap widths and overflowing descendants: all eight page widths matched their viewport; no off-page descendant was found. Fields and actions wrapped, Profile stacked its primary and side content at narrow widths, and the native list kept controls accessible. These fixtures did not require an intentionally oversized horizontal table; that is distinct from a page overflow PASS for every possible long customer value.
+
+Keyboard smoke included Search Tab focus (visible native box-shadow), Enter navigation and form activation, Space/Enter Filter disclosure, email composer, copy buttons, details and native notice dismissal. Labels were meaningful. Interactive row links/checkboxes remained usable. This is bounded smoke, not WCAG certification.
+
+[Automation limits](current-main/automation-limits.json) records two constraints: some pointer locator activations hit neighboring controls during scrolling, so keyboard/observed-link navigation was used for authoritative results; native confirmation activation stalled dispatch and did not expose a usable dialog. No pointer anomaly was invented as a product defect. Confirmation UX and Saved View delete remain unaccepted in this run.
+
+All eight styled email states were visually inspected; HTML/plain content and Local destinations agreed. The 390px versions wrapped within the viewport. Browser screenshots are rendering evidence, not a cross-client email compatibility matrix.
+
+## Isolated validation and reproducibility
+
+Prerequisites and execution used docs/data-safety-contract.md, the pinned existing Composer lock, Local PHP 8.4.18 and MySQL 8.0.35 binaries. Dependency archives downloaded with normal TLS validation through curl after the machine's Python certificate chain rejected its direct urllib download; the runner still verified every pinned SHA-256. TLS verification was not disabled.
+
+Commands from the audit checkout (binary paths supplied from Local):
 
 ```sh
-python3 docs/evidence/cit-90-full-1-4x-local-qa/probe-source.py --plugin-root <yoplay8-installed-CIT-directory>
+composer install --no-plugins --no-scripts --no-interaction
+python3 scripts/test-isolated.py --mysql-bin "$CIT_MYSQL_BIN" --inputs "$CIT_ARCHIVE_CACHE" --mode both
+python3 scripts/test-isolated.py --mysql-bin "$CIT_MYSQL_BIN" --inputs "$CIT_ARCHIVE_CACHE" --mode both --benchmark-only
+python3 tests/release-contract-tests.py
+python3 .github/scripts/required-gate.py --self-test
+git diff --check
 ```
 
-The helper reads files and Git objects only. It never loads WordPress, changes code,
-reads credentials, queries a database or performs migration/Reset/Sync.
+After the benchmark helper correction, the full integration matrix was repeated: **267 tests / 5530 assertions in each storage mode**, no skipped/risky/empty/failing result. Runtime: isolated WP 6.9 / WC 10.8.0 / PHP 8.4.18, deliberately different from live Local WP/WC. Sixty-eight entrypoint rejection controls ran; early mail/HTTP interception and unrelated synthetic sentinel checks passed. Owned servers/temp dependency/database directories were removed. [Isolated receipt](current-main/isolated-results.json). Large results and query plans: [benchmark-results.json](current-main/benchmark-results.json).
 
-## Environment inventory
+These are runtime-source assurance results for protected main plus the helper correction. The final evidence candidate additionally requires its own native exact-head **YCI Required CI** and a fresh independent Controlled review; GitHub PR checks/review own those current-head facts, not this report's remembered status.
 
-The existing Local site was inspected through files, Local service metadata and a
-single SELECT of fixed customer-independent WordPress options. WordPress was not
-bootstrapped and no customer/order/user rows were read.
+## Cleanup and shared-site boundary
 
-| Field | Observed evidence | Limit |
-| --- | --- | --- |
-| Site | `https://yoplay8.local` in home/siteurl | No browser/HTTP acceptance |
-| WordPress | 7.1.2 in `wp-includes/version.php` | Source identity, not runtime reflection |
-| WooCommerce | 11.1.2 stored in `woocommerce_version` | Stored version, not runtime reflection |
-| PHP | Local service configured 8.4.18 | Active HTTP runtime not verified |
-| MySQL | Local service configured 8.0.35 | No server-version probe |
-| HPOS | `woocommerce_custom_orders_table_enabled = yes` | Option, not active datastore assertion |
-| CIT plugin | Installed header 1.4.2-beta.1; main header 1.4.2 | Source gate failed |
-| CIT DB | Stored `yoohw_cos_db_version = 0.2.4`; main constant 0.2.4 | Actual schema/ledger readiness NOT_RUN |
-| Activation | Standard CIT entrypoint in `active_plugins` | No runtime filter certification |
+- Removed all **21 owned profiles, two admins/personal view/preferences metadata, six created orders (one deleted during the lifecycle test), refunds, two privacy requests/export artifact, owned tasks/notes/labels/assignments/events**, and the global synthetic bulk-action receipt.
+- Removed **23 orphaned owned order-note comments** and **two Loyalty signup coupons** generated for the disposable users; no owned-coupon scheduled action remained. A full text-column scan found no `cit90_qa` / `CIT90 QA` residual row.
+- Restored original store currency USD, migration state and touched CIT options. Ordinary read-side intelligence freshness had advanced `updated_at`/`intelligence_generation` on 1500 existing profiles; a private full-current-row CAS restored only those two fields. No order/CRM/customer identity field was overwritten. All original rows in all 12 CIT tables then matched pre-test content, with zero missing original rows.
+- Restored original CIT cron hook definitions while preserving unrelated current events. A later direct SQL check observed normal shared-site schedule advancement and two unrelated Loyalty user-registration profiles/events outside QA ownership. Those rows and current maintenance schedules were preserved. **The whole shared database/cron serialization is not claimed byte-identical to the snapshot.** The original CIT rows still matched, and owned-prefix residuals were empty.
+- Removed the temporary MU guard, private disposable credentials/mail capture/controller, malformed CSV downloads and temporary local email server; expired QA cookie, closed agent tabs, reset viewport. Source still matched all 62 main files.
+- Private recovery snapshot retained; allocation counters were not rewound. No wholesale SQL import was used. [Cleanup receipt](current-main/cleanup.json).
 
-Related activation inventory: WooCommerce, Blacklist Manager Core, Blacklist Manager
-Premium, Loyalty, Yoro AI Core and the Local audit snapshot plugin are active by
-persisted configuration. Licenses, provider availability, conditional integration UI
-and external services were **NOT_RUN**. No plugins, licenses or accounts were changed.
-Other unrelated active plugin identities are omitted from the evidence.
+## Remaining acceptance boundaries
 
-## Recovery strategy and safety
+The historical matrix is **NOT_REQUIRED** under the Human clarification. Actual shared Local Reset/erasure/global replay/large fixture/provider installation/external mail remain intentionally unexecuted; supporting isolated coverage and the safe UI surfaces are identified above. Positive integration mutation, exhaustive reason×screen combinations and native confirmation/delete UX are not claimed as accepted.
 
-No live-site scenario was started after the source mismatch. No recovery snapshot
-was created, because no stateful/destructive operation was admitted past the gate.
-A verified recovery point is still required before future Local stateful/destructive
-scenarios. If exact shared-site restoration cannot be guaranteed, Issue #90 directs
-those backend scenarios to the owned isolated harness and requires truthful limits
-on the corresponding non-destructive browser surface.
-
-No WordPress bootstrap, browser login, test users, customer/order fixtures, routing,
-currency/cron options, emails, HTTP requests, Sync, Reset, privacy requests, migrations
-or license operations were performed on yoplay8 by this audit. Database access was
-SELECT-only and limited to activation, site identity, versions and the HPOS option.
-No production/staging access occurred.
-
-## Complete feature inventory and execution matrix
-
-All rows below are **NOT_RUN — E1 source gate failure**. Each row maps the admitted
-material feature family to the checks to execute after the environment is aligned.
-The stop condition prevents attributing browser/persistence outcomes from the old
-installed code to current main. No prior CIT-86/CIT-88 test or screenshot is reused
-as CIT-90 exact-main acceptance.
-
-| Origin | Feature / required flow | Browser and persisted checks deferred |
-| --- | --- | --- |
-| 1.4.0 | Personal Saved Customer Views | Create/save/reopen/update/rename/delete; active/dirty state; pagination/search/filter restoration; two-user isolation; malformed/unavailable filters; active-view CSV; back/forward/reload; distinction from Dynamic Smart Segments |
-| 1.4.0 | Retention/attention quick views | First-time/repeat/inactive/missing contact/open/overdue/high-value; count/list parity, factual reasons, empty copy, no implied automation |
-| 1.4.0 | Explainable RFM | R/F/M on Customers, Profile, Saved Views, Overview/query; VND/EUR/foreign/mixed/unknown/none/preparing/attention/stale; useful R/F while M unavailable |
-| 1.4.0 | Customers Option D | Heading/search alignment; Saved Views; quick/status strip; filter disclosure; bulk controls; RFM/amounts; pagination/row links; CSV; no duplicated/lost controls |
-| 1.4.0 | Profile Option A | Action-first reading order, compact KPIs/attention/tasks/orders/notes/activity/side column; Back/Call/Email/task actions; tags/static segments/copy/order links/WP relationship; address/acquisition/security disclosure |
-| 1.4.0 | Commerce lifecycle | Paid population, totals/AOV, partial/full refund, same-status changes, reassignment, delete/recreate; persisted facts/aggregates; foreign units, mixed/unknown fail-closed, no FX, current-store thresholds |
-| 1.4.0 | Personal data export | Real WP request/subject matching; bounded pages; profile/notes/tasks/activity/tags/segments/Saved Views; monetary fields and safe payload limits |
-| 1.4.0 | Personal data erasure | Real WP request and resumable removal; retain WooCommerce orders/WP users; suppression receipt, resync rejection and intentional recovery guidance |
-| 1.4.0 | Diagnostics 2.0 | Live schema/profile/fact/sync/migration/currency/stale/cron/issues/none/mixed/unknown and links; truthful eventual freshness |
-| 1.4.0 | Performance / Free extensions | Browser latency/N+1 symptoms; owned large benchmark; fully functional Free without provider; safe existing facts/query/action descriptors only |
-| 1.4.1 | Reset/recovery lifecycle | Read-side/no false incident, retry contention, interrupted Reset fail-closed, manual replay distinction, resolution/new incident/stale revision handling |
-| 1.4.1 | CRM email redesign | Assignment/reassignment/due soon/completed/reopened/overdue/escalation/daily summary; intercepted HTML/plain, WooCommerce shell/sender/settings, next action and Local links; Customer Message block compatibility |
-| 1.4.2 | Source-aware Operational recovery | CIT legacy/Core/Premium/Loyalty where available; automatic retry/backfill/manual replay; source/event/count/guidance/links, coexistence, bounded storage, expiry/revision and no callback payload |
-| 1.4.2 | Acknowledge after recovery | Acknowledge performs no recovery; exact revision; stale cannot remove newer; handled stays gone, new independently visible |
-| 1.4.2 | Flash lifecycle | One-shot CIT-owned routes, unrelated query parameters untouched, correct severity, no repeated order-admin conflict stacking |
-| Post-1.4.2 | Canonical availability / continuity | All seven reasons across Customers/RFM/Profile/Overview/Saved Views/filter/sort/CSV/privacy/order/Diagnostics/provider facts |
-| Post-1.4.2 | Automatic migration UX | Automatic progress/attention distinction; progress destination; no misleading manual Sync instruction; natural resolution |
-| Post-1.4.2 | Per-user native dismissal | Two admins; native close/reload/navigation; preparing-to-attention/new revisions; stale replay/nonce/capability/key/cross-user failures; bounded storage; Diagnostics retained; presentation-only; Reset non-dismissible |
-| Post-1.4.2 | Bounded stale recovery | Clean negative completion without restart/UX churn; stale discovery/admission/convergence; progress/attention matches actual worker |
-| Preserved core | Existing operations | Overview/search/direct email/notes/tasks/tags/static segments/order context/profile link/Sync Center/recalculation/first-order backfill/HPOS/Reset/privacy/activity/email-settings shortcut |
-| Conditional | Loyalty | Real availability/level/points/activity/settings/task automation/recovery links; hidden coherent Free when absent |
-| Conditional | Blacklist Core/Premium | Real availability/status/security/risk/profile/activity/maintenance/recovery links; Premium conditions; hidden coherent Free when absent |
-
-## Browser, responsive, accessibility and UX matrix
-
-| Required evidence | Status / reason |
-| --- | --- |
-| Real wp-admin major screens and flows | NOT_RUN — E1 |
-| 1440 / 1280 / 768 / 390 viewport matrix | NOT_RUN — E1 |
-| Table scrolling versus page-level overflow, wrapping/clipping/overlap/dropdowns/notice stacking | NOT_RUN — E1 |
-| Tab order, visible focus, Enter/Space/details, names/labels, notice dismissal, row/link/control interaction | NOT_RUN — E1 |
-| Information hierarchy/action grouping/duplication/disclosure | NOT_RUN — E1 |
-| Native WordPress/WooCommerce patterns, copy and cross-screen continuity | NOT_RUN — E1 |
-| Empty/loading/success/partial/attention/blocked/validation/unavailable/resolved states | NOT_RUN — E1 |
-| Screenshot/video evidence | NOT_RUN — no screen was tested; none fabricated |
-
-## Backend, email, notice and upgrade matrix
-
-| Evidence layer | Status / reason |
-| --- | --- |
-| Browser-linked synthetic persistence | NOT_RUN — E1; no live fixtures |
-| Local destructive/privacy/suppression/recovery restoration | NOT_RUN — E1; no snapshot/scenarios |
-| Captured eight-state HTML/plain email render matrix and common widths | NOT_RUN — E1; no delivery/capture attempted |
-| Live notice/flash/recovery/acknowledgment/dismissal/security matrix | NOT_RUN — E1 |
-| Integration-conditional live display and provider matrix | NOT_RUN — E1; activation inventory only |
-| Local responsiveness / owned large-data benchmark | NOT_RUN — audit stopped at E1 |
-| Supplemental immutable-origin 1.3.0 / 1.4.0 / 1.4.1 / public 1.4.2 upgrades, HPOS=yes/no | NOT_RUN — audit stopped at E1; prior task evidence is not this audit |
-| Audit-specific owned destructive/concurrency/backend/security scenarios, HPOS=yes/no | NOT_RUN — audit stopped at E1 |
-
-The evidence PR still requires the repository's full native HPOS=yes/no suite,
-guard/sentinel/cleanup checks and `YCI Required CI`, plus fresh independent review.
-Their exact candidate, outcomes and durable links belong to the PR record. Those
-repository checks validate the unchanged runtime/evidence candidate; they do not
-convert any NOT_RUN Local audit item, large benchmark or historical matrix into PASS.
-
-## Findings, restoration and next action
-
-**E1 — environment blocker, not a product defect.** Intended main is absent from the
-active configured installed plugin tree. Expected: exact main source before testing.
-Actual: 15 differing and 2 missing runtime/resource files, beta plugin identity.
-Evidence: `source-identity.json`; source helper reproduction above. E1 blocks this
-local audit and prevents a release-readiness conclusion. No P0/P1/P2 product defect
-was established because product scenarios were not run; no product fix/follow-up Issue
-was fabricated. This report is the bounded Issue #90 blocker record.
-
-Post-preflight source comparison was repeated and matched the first result exactly.
-No Local state was mutated, so no fixture removal or state restoration was necessary.
-This is proof of this audit's read-only boundary, not a recovery-point certification.
-No raw customer/site content, credentials or database dump enters this directory.
-
-To resume, the Human must arrange for yoplay8 to use the exact admitted main under an
-explicitly approved installation/routing boundary, then run `Run CIT-90` again.
-Reverify origin/main, source identity and real runtime versions/HPOS; establish the
-recovery point before scenarios. If protected main changes, resolve the new baseline
-against the Issue before attributing evidence. This audit did not copy/install code,
-switch environments, downgrade the site, fix runtime, bump a version, merge or release.
-
-Final disposition: **`FULL_1_4X_LOCAL_QA_BLOCKED`**.
+The next corrective release cannot use this audit as a READY verdict until the material follow-ups and relevant acceptance gaps are resolved/retested on its separately authorized build. This PR is the audit result, not a mega-fix, merge authorization or release preparation.

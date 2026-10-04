@@ -1,0 +1,408 @@
+{
+  "modes": {
+    "yes": {
+      "rows": {
+        "customers": 25000,
+        "facts": 100000,
+        "tasks": 50000,
+        "events": 100000,
+        "customer_tags": 8333,
+        "customer_segments": 6250
+      },
+      "versions": {
+        "mysql": "8.0.35",
+        "php": "8.4.18",
+        "wordpress": "6.9",
+        "woocommerce": "10.8.0",
+        "hpos": "yes"
+      },
+      "measurements": {
+        "default": {
+          "query_count": [
+            18,
+            18,
+            18,
+            18,
+            18
+          ],
+          "median_ms": 38.221,
+          "dominant_plan": [
+            {
+              "table": "c",
+              "type": "ref",
+              "key": "archived_at",
+              "rows": "12500",
+              "Extra": "Using index condition; Using filesort"
+            }
+          ],
+          "total_items": 25000
+        },
+        "composition": {
+          "query_count": [
+            21,
+            21,
+            21,
+            21,
+            21
+          ],
+          "median_ms": 13.674,
+          "dominant_plan": [
+            {
+              "table": "c",
+              "type": "ref",
+              "key": "customer_status",
+              "rows": "5000",
+              "Extra": "Using where; Using filesort"
+            }
+          ],
+          "total_items": 238
+        },
+        "open_follow_up": {
+          "query_count": [
+            18,
+            18,
+            18,
+            18,
+            18
+          ],
+          "median_ms": 142.241,
+          "dominant_plan": [
+            {
+              "table": "c",
+              "type": "ref",
+              "key": "archived_at",
+              "rows": "12500",
+              "Extra": "Using where; Using index"
+            },
+            {
+              "table": "t",
+              "type": "ref",
+              "key": "customer_id",
+              "rows": "1",
+              "Extra": "Using where; FirstMatch(c)"
+            }
+          ],
+          "total_items": 22500
+        },
+        "overdue_follow_up": {
+          "query_count": [
+            18,
+            18,
+            18,
+            18,
+            18
+          ],
+          "median_ms": 126.432,
+          "dominant_plan": [
+            {
+              "table": "c",
+              "type": "ref",
+              "key": "archived_at",
+              "rows": "12500",
+              "Extra": "Using where; Using index"
+            },
+            {
+              "table": "t",
+              "type": "ref",
+              "key": "customer_id",
+              "rows": "1",
+              "Extra": "Using where; FirstMatch(c)"
+            }
+          ],
+          "total_items": 15001
+        },
+        "high_value_needs_follow_up": {
+          "query_count": [
+            21,
+            21,
+            21,
+            21,
+            21
+          ],
+          "median_ms": 64.832,
+          "dominant_plan": [
+            {
+              "table": "c",
+              "type": "ref",
+              "key": "archived_at",
+              "rows": "12500",
+              "Extra": "Using index condition; Using where; Using filesort"
+            },
+            {
+              "table": "t",
+              "type": "ref",
+              "key": "customer_id",
+              "rows": "1",
+              "Extra": "Using where; Not exists"
+            }
+          ],
+          "total_items": 357
+        },
+        "rfm": {
+          "query_count": [
+            23,
+            23,
+            23,
+            23,
+            23
+          ],
+          "median_ms": 65.163,
+          "dominant_plan": [
+            {
+              "table": "c",
+              "type": "ref",
+              "key": "archived_at",
+              "rows": "12500",
+              "Extra": "Using index condition; Using where; Using filesort"
+            }
+          ],
+          "total_items": 12500
+        },
+        "overview": {
+          "query_count": [
+            9,
+            9,
+            9,
+            9,
+            9
+          ],
+          "median_ms": 153.069,
+          "dominant_plan": [
+            {
+              "table": "wptests_yoohw_cos_customers",
+              "type": "ref",
+              "key": "archived_at",
+              "rows": "12500",
+              "Extra": "Using index condition"
+            }
+          ],
+          "total_items": null
+        },
+        "diagnostics": {
+          "query_count": [
+            54,
+            54,
+            54,
+            54,
+            54
+          ],
+          "median_ms": 71.143,
+          "dominant_plan": [
+            {
+              "table": "wptests_yoohw_cos_customers",
+              "type": "ALL",
+              "key": null,
+              "rows": "25000",
+              "Extra": null
+            }
+          ],
+          "total_items": null
+        }
+      }
+    },
+    "no": {
+      "rows": {
+        "customers": 25000,
+        "facts": 100000,
+        "tasks": 50000,
+        "events": 100000,
+        "customer_tags": 8333,
+        "customer_segments": 6250
+      },
+      "versions": {
+        "mysql": "8.0.35",
+        "php": "8.4.18",
+        "wordpress": "6.9",
+        "woocommerce": "10.8.0",
+        "hpos": "no"
+      },
+      "measurements": {
+        "default": {
+          "query_count": [
+            18,
+            18,
+            18,
+            18,
+            18
+          ],
+          "median_ms": 57.049,
+          "dominant_plan": [
+            {
+              "table": "c",
+              "type": "ref",
+              "key": "archived_at",
+              "rows": "12500",
+              "Extra": "Using index condition; Using filesort"
+            }
+          ],
+          "total_items": 25000
+        },
+        "composition": {
+          "query_count": [
+            21,
+            21,
+            21,
+            21,
+            21
+          ],
+          "median_ms": 15.038,
+          "dominant_plan": [
+            {
+              "table": "c",
+              "type": "ref",
+              "key": "customer_status",
+              "rows": "5000",
+              "Extra": "Using where; Using filesort"
+            }
+          ],
+          "total_items": 238
+        },
+        "open_follow_up": {
+          "query_count": [
+            18,
+            18,
+            18,
+            18,
+            18
+          ],
+          "median_ms": 120.562,
+          "dominant_plan": [
+            {
+              "table": "c",
+              "type": "ref",
+              "key": "archived_at",
+              "rows": "12500",
+              "Extra": "Using index condition; Using filesort"
+            },
+            {
+              "table": "t",
+              "type": "ref",
+              "key": "customer_id",
+              "rows": "1",
+              "Extra": "Using where; FirstMatch(c)"
+            }
+          ],
+          "total_items": 22500
+        },
+        "overdue_follow_up": {
+          "query_count": [
+            18,
+            18,
+            18,
+            18,
+            18
+          ],
+          "median_ms": 122.307,
+          "dominant_plan": [
+            {
+              "table": "c",
+              "type": "ref",
+              "key": "archived_at",
+              "rows": "12500",
+              "Extra": "Using index condition; Using filesort"
+            },
+            {
+              "table": "t",
+              "type": "ref",
+              "key": "customer_id",
+              "rows": "1",
+              "Extra": "Using where; FirstMatch(c)"
+            }
+          ],
+          "total_items": 15001
+        },
+        "high_value_needs_follow_up": {
+          "query_count": [
+            21,
+            21,
+            21,
+            21,
+            21
+          ],
+          "median_ms": 78.528,
+          "dominant_plan": [
+            {
+              "table": "c",
+              "type": "ref",
+              "key": "archived_at",
+              "rows": "12500",
+              "Extra": "Using index condition; Using where; Using filesort"
+            },
+            {
+              "table": "t",
+              "type": "ref",
+              "key": "customer_id",
+              "rows": "1",
+              "Extra": "Using where; Not exists"
+            }
+          ],
+          "total_items": 357
+        },
+        "rfm": {
+          "query_count": [
+            23,
+            23,
+            23,
+            23,
+            23
+          ],
+          "median_ms": 75.45,
+          "dominant_plan": [
+            {
+              "table": "c",
+              "type": "ref",
+              "key": "archived_at",
+              "rows": "12500",
+              "Extra": "Using index condition; Using where; Using filesort"
+            }
+          ],
+          "total_items": 12500
+        },
+        "overview": {
+          "query_count": [
+            9,
+            9,
+            9,
+            9,
+            9
+          ],
+          "median_ms": 110.61,
+          "dominant_plan": [
+            {
+              "table": "wptests_yoohw_cos_customers",
+              "type": "ref",
+              "key": "archived_at",
+              "rows": "12500",
+              "Extra": "Using index condition"
+            }
+          ],
+          "total_items": null
+        },
+        "diagnostics": {
+          "query_count": [
+            54,
+            54,
+            54,
+            54,
+            54
+          ],
+          "median_ms": 62.762,
+          "dominant_plan": [
+            {
+              "table": "wptests_yoohw_cos_customers",
+              "type": "ALL",
+              "key": null,
+              "rows": "25000",
+              "Extra": null
+            }
+          ],
+          "total_items": null
+        }
+      }
+    }
+  },
+  "result": "PASS both",
+  "cleanup": "owned MySQL stopped and temporary filesystem removed",
+  "sentinel": "unchanged",
+  "test_helper_correction": "Benchmark labels survive Reset; remove only the benchmark-owned tag/segment before each mode."
+}
