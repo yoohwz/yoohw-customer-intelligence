@@ -1,7 +1,6 @@
 [
   {
     "label": "assigned",
-    "width": 600,
     "links": [
       {
         "href": "https://yoplay8.local",
@@ -21,12 +20,13 @@
       }
     ],
     "pageWidth": 600,
-    "text": "\t\n\nNew CRM task assigned\n\n\n\nHi CIT90 QA Admin 1,\n\nYou have a new CRM follow-up task assigned to you.\n\nNEW ASSIGNMENT · #11\n\nCIT90 QA overdue edited\nCustomer\tCIT90 QA VND\nDue date\t3 October 2026 01:33\nPriority\tHigh\nStatus\tOpen\nOpen task\n\n\n\nSynthetic CIT90 QA — yoplay8.local\n\n\t",
-    "viewport": 600
+    "text": "\t\n\nNew CRM task assigned\n\n\n\nHi CIT90 QA Admin 1,\n\nYou have a new CRM follow-up task assigned to you.\n\nNEW ASSIGNMENT \u00b7 #11\n\nCIT90 QA overdue edited\nCustomer\tCIT90 QA VND\nDue date\t3 October 2026 01:33\nPriority\tHigh\nStatus\tOpen\nOpen task\n\n\n\nSynthetic CIT90 QA \u2014 yoplay8.local\n\n\t",
+    "viewport": 600,
+    "requested_width": 600,
+    "viewport_matches_request": true
   },
   {
     "label": "assigned",
-    "width": 390,
     "links": [
       {
         "href": "https://yoplay8.local",
@@ -46,12 +46,13 @@
       }
     ],
     "pageWidth": 390,
-    "text": "\t\n\nNew CRM task assigned\n\n\n\nHi CIT90 QA Admin 1,\n\nYou have a new CRM follow-up task assigned to you.\n\nNEW ASSIGNMENT · #11\n\nCIT90 QA overdue edited\nCustomer\tCIT90 QA VND\nDue date\t3 October 2026 01:33\nPriority\tHigh\nStatus\tOpen\nOpen task\n\n\n\nSynthetic CIT90 QA — yoplay8.local\n\n\t",
-    "viewport": 390
+    "text": "\t\n\nNew CRM task assigned\n\n\n\nHi CIT90 QA Admin 1,\n\nYou have a new CRM follow-up task assigned to you.\n\nNEW ASSIGNMENT \u00b7 #11\n\nCIT90 QA overdue edited\nCustomer\tCIT90 QA VND\nDue date\t3 October 2026 01:33\nPriority\tHigh\nStatus\tOpen\nOpen task\n\n\n\nSynthetic CIT90 QA \u2014 yoplay8.local\n\n\t",
+    "viewport": 390,
+    "requested_width": 390,
+    "viewport_matches_request": true
   },
   {
     "label": "reassigned",
-    "width": 600,
     "links": [
       {
         "href": "https://yoplay8.local",
@@ -71,12 +72,13 @@
       }
     ],
     "pageWidth": 600,
-    "text": "\t\n\nCRM task reassigned\n\n\n\nHi CIT90 QA Admin 1,\n\nThis CRM follow-up task has been reassigned to you.\n\nREASSIGNED · #11\n\nCIT90 QA overdue edited\nCustomer\tCIT90 QA VND\nDue date\t3 October 2026 01:33\nPriority\tHigh\nStatus\tOpen\nOpen task\n\n\n\nSynthetic CIT90 QA — yoplay8.local\n\n\t",
-    "viewport": 600
+    "text": "\t\n\nCRM task reassigned\n\n\n\nHi CIT90 QA Admin 1,\n\nThis CRM follow-up task has been reassigned to you.\n\nREASSIGNED \u00b7 #11\n\nCIT90 QA overdue edited\nCustomer\tCIT90 QA VND\nDue date\t3 October 2026 01:33\nPriority\tHigh\nStatus\tOpen\nOpen task\n\n\n\nSynthetic CIT90 QA \u2014 yoplay8.local\n\n\t",
+    "viewport": 600,
+    "requested_width": 600,
+    "viewport_matches_request": true
   },
   {
     "label": "reassigned",
-    "width": 390,
     "links": [
       {
         "href": "https://yoplay8.local",
@@ -96,12 +98,13 @@
       }
     ],
     "pageWidth": 390,
-    "text": "\t\n\nCRM task reassigned\n\n\n\nHi CIT90 QA Admin 1,\n\nThis CRM follow-up task has been reassigned to you.\n\nREASSIGNED · #11\n\nCIT90 QA overdue edited\nCustomer\tCIT90 QA VND\nDue date\t3 October 2026 01:33\nPriority\tHigh\nStatus\tOpen\nOpen task\n\n\n\nSynthetic CIT90 QA — yoplay8.local\n\n\t",
-    "viewport": 390
+    "text": "\t\n\nCRM task reassigned\n\n\n\nHi CIT90 QA Admin 1,\n\nThis CRM follow-up task has been reassigned to you.\n\nREASSIGNED \u00b7 #11\n\nCIT90 QA overdue edited\nCustomer\tCIT90 QA VND\nDue date\t3 October 2026 01:33\nPriority\tHigh\nStatus\tOpen\nOpen task\n\n\n\nSynthetic CIT90 QA \u2014 yoplay8.local\n\n\t",
+    "viewport": 390,
+    "requested_width": 390,
+    "viewport_matches_request": true
   },
   {
     "label": "due-soon",
-    "width": 600,
     "links": [
       {
         "href": "https://yoplay8.local/",
@@ -121,12 +124,14 @@
       }
     ],
     "pageWidth": 1440,
-    "text": "\t\n\nCRM task due soon\n\n\n\nHi CIT90 QA Admin 1,\n\nThis CRM follow-up task is approaching its due date.\n\nDUE SOON · #11\n\nCIT90 QA overdue edited\n\n4 October 2026 03:13\n\nCustomer\tCIT90 QA VND\nDue date\t4 October 2026 03:13\nPriority\tHigh\nStatus\tOpen\nOpen task\n\n\n\nSynthetic CIT90 QA — yoplay8.local\n\n\t",
-    "viewport": 1440
+    "text": "\t\n\nCRM task due soon\n\n\n\nHi CIT90 QA Admin 1,\n\nThis CRM follow-up task is approaching its due date.\n\nDUE SOON \u00b7 #11\n\nCIT90 QA overdue edited\n\n4 October 2026 03:13\n\nCustomer\tCIT90 QA VND\nDue date\t4 October 2026 03:13\nPriority\tHigh\nStatus\tOpen\nOpen task\n\n\n\nSynthetic CIT90 QA \u2014 yoplay8.local\n\n\t",
+    "viewport": 1440,
+    "requested_width": 600,
+    "viewport_matches_request": false,
+    "acceptance": "NOT_RUN at requested width: viewport reset to 1440; duplicate captures are not responsive proof"
   },
   {
     "label": "due-soon",
-    "width": 390,
     "links": [
       {
         "href": "https://yoplay8.local/",
@@ -146,12 +151,14 @@
       }
     ],
     "pageWidth": 1440,
-    "text": "\t\n\nCRM task due soon\n\n\n\nHi CIT90 QA Admin 1,\n\nThis CRM follow-up task is approaching its due date.\n\nDUE SOON · #11\n\nCIT90 QA overdue edited\n\n4 October 2026 03:13\n\nCustomer\tCIT90 QA VND\nDue date\t4 October 2026 03:13\nPriority\tHigh\nStatus\tOpen\nOpen task\n\n\n\nSynthetic CIT90 QA — yoplay8.local\n\n\t",
-    "viewport": 1440
+    "text": "\t\n\nCRM task due soon\n\n\n\nHi CIT90 QA Admin 1,\n\nThis CRM follow-up task is approaching its due date.\n\nDUE SOON \u00b7 #11\n\nCIT90 QA overdue edited\n\n4 October 2026 03:13\n\nCustomer\tCIT90 QA VND\nDue date\t4 October 2026 03:13\nPriority\tHigh\nStatus\tOpen\nOpen task\n\n\n\nSynthetic CIT90 QA \u2014 yoplay8.local\n\n\t",
+    "viewport": 1440,
+    "requested_width": 390,
+    "viewport_matches_request": false,
+    "acceptance": "NOT_RUN at requested width: viewport reset to 1440; duplicate captures are not responsive proof"
   },
   {
     "label": "completed",
-    "width": 600,
     "links": [
       {
         "href": "https://yoplay8.local",
@@ -167,12 +174,13 @@
       }
     ],
     "pageWidth": 600,
-    "text": "\t\n\nCRM task completed\n\n\n\nHi CIT90 QA Admin 1,\n\nThis CRM follow-up task has been marked complete.\n\nCOMPLETED · #11\n\nCIT90 QA overdue edited\nCustomer\tCIT90 QA VND\nDue date\t3 October 2026 01:33\nPriority\tHigh\nStatus\tCompleted\nView task\n\n\n\nSynthetic CIT90 QA — yoplay8.local\n\n\t",
-    "viewport": 600
+    "text": "\t\n\nCRM task completed\n\n\n\nHi CIT90 QA Admin 1,\n\nThis CRM follow-up task has been marked complete.\n\nCOMPLETED \u00b7 #11\n\nCIT90 QA overdue edited\nCustomer\tCIT90 QA VND\nDue date\t3 October 2026 01:33\nPriority\tHigh\nStatus\tCompleted\nView task\n\n\n\nSynthetic CIT90 QA \u2014 yoplay8.local\n\n\t",
+    "viewport": 600,
+    "requested_width": 600,
+    "viewport_matches_request": true
   },
   {
     "label": "completed",
-    "width": 390,
     "links": [
       {
         "href": "https://yoplay8.local",
@@ -188,12 +196,13 @@
       }
     ],
     "pageWidth": 390,
-    "text": "\t\n\nCRM task completed\n\n\n\nHi CIT90 QA Admin 1,\n\nThis CRM follow-up task has been marked complete.\n\nCOMPLETED · #11\n\nCIT90 QA overdue edited\nCustomer\tCIT90 QA VND\nDue date\t3 October 2026 01:33\nPriority\tHigh\nStatus\tCompleted\nView task\n\n\n\nSynthetic CIT90 QA — yoplay8.local\n\n\t",
-    "viewport": 390
+    "text": "\t\n\nCRM task completed\n\n\n\nHi CIT90 QA Admin 1,\n\nThis CRM follow-up task has been marked complete.\n\nCOMPLETED \u00b7 #11\n\nCIT90 QA overdue edited\nCustomer\tCIT90 QA VND\nDue date\t3 October 2026 01:33\nPriority\tHigh\nStatus\tCompleted\nView task\n\n\n\nSynthetic CIT90 QA \u2014 yoplay8.local\n\n\t",
+    "viewport": 390,
+    "requested_width": 390,
+    "viewport_matches_request": true
   },
   {
     "label": "reopened",
-    "width": 600,
     "links": [
       {
         "href": "https://yoplay8.local",
@@ -213,12 +222,13 @@
       }
     ],
     "pageWidth": 600,
-    "text": "\t\n\nCRM task reopened\n\n\n\nHi CIT90 QA Admin 1,\n\nThis CRM follow-up task has been reopened and needs follow-up.\n\nREOPENED · #11\n\nCIT90 QA overdue edited\nCustomer\tCIT90 QA VND\nDue date\t3 October 2026 01:33\nPriority\tHigh\nStatus\tOpen\nOpen task\n\n\n\nSynthetic CIT90 QA — yoplay8.local\n\n\t",
-    "viewport": 600
+    "text": "\t\n\nCRM task reopened\n\n\n\nHi CIT90 QA Admin 1,\n\nThis CRM follow-up task has been reopened and needs follow-up.\n\nREOPENED \u00b7 #11\n\nCIT90 QA overdue edited\nCustomer\tCIT90 QA VND\nDue date\t3 October 2026 01:33\nPriority\tHigh\nStatus\tOpen\nOpen task\n\n\n\nSynthetic CIT90 QA \u2014 yoplay8.local\n\n\t",
+    "viewport": 600,
+    "requested_width": 600,
+    "viewport_matches_request": true
   },
   {
     "label": "reopened",
-    "width": 390,
     "links": [
       {
         "href": "https://yoplay8.local",
@@ -238,12 +248,13 @@
       }
     ],
     "pageWidth": 390,
-    "text": "\t\n\nCRM task reopened\n\n\n\nHi CIT90 QA Admin 1,\n\nThis CRM follow-up task has been reopened and needs follow-up.\n\nREOPENED · #11\n\nCIT90 QA overdue edited\nCustomer\tCIT90 QA VND\nDue date\t3 October 2026 01:33\nPriority\tHigh\nStatus\tOpen\nOpen task\n\n\n\nSynthetic CIT90 QA — yoplay8.local\n\n\t",
-    "viewport": 390
+    "text": "\t\n\nCRM task reopened\n\n\n\nHi CIT90 QA Admin 1,\n\nThis CRM follow-up task has been reopened and needs follow-up.\n\nREOPENED \u00b7 #11\n\nCIT90 QA overdue edited\nCustomer\tCIT90 QA VND\nDue date\t3 October 2026 01:33\nPriority\tHigh\nStatus\tOpen\nOpen task\n\n\n\nSynthetic CIT90 QA \u2014 yoplay8.local\n\n\t",
+    "viewport": 390,
+    "requested_width": 390,
+    "viewport_matches_request": true
   },
   {
     "label": "overdue",
-    "width": 600,
     "links": [
       {
         "href": "https://yoplay8.local",
@@ -263,12 +274,13 @@
       }
     ],
     "pageWidth": 600,
-    "text": "\t\n\nOverdue CRM tasks\n\n\n\nHi CIT90 QA Admin 1,\n\nThese CRM follow-up tasks are overdue and still open.\n\nOVERDUE QUEUE\n\n1\n\nOverdue tasks\n(1)\nCIT90 QA overdue edited\nCustomer · Due · Priority\nCIT90 QA VND · 3 October 2026 01:33 · High\nOpen task list\n\n\n\nSynthetic CIT90 QA — yoplay8.local\n\n\t",
-    "viewport": 600
+    "text": "\t\n\nOverdue CRM tasks\n\n\n\nHi CIT90 QA Admin 1,\n\nThese CRM follow-up tasks are overdue and still open.\n\nOVERDUE QUEUE\n\n1\n\nOverdue tasks\n(1)\nCIT90 QA overdue edited\nCustomer \u00b7 Due \u00b7 Priority\nCIT90 QA VND \u00b7 3 October 2026 01:33 \u00b7 High\nOpen task list\n\n\n\nSynthetic CIT90 QA \u2014 yoplay8.local\n\n\t",
+    "viewport": 600,
+    "requested_width": 600,
+    "viewport_matches_request": true
   },
   {
     "label": "overdue",
-    "width": 390,
     "links": [
       {
         "href": "https://yoplay8.local",
@@ -288,12 +300,13 @@
       }
     ],
     "pageWidth": 390,
-    "text": "\t\n\nOverdue CRM tasks\n\n\n\nHi CIT90 QA Admin 1,\n\nThese CRM follow-up tasks are overdue and still open.\n\nOVERDUE QUEUE\n\n1\n\nOverdue tasks\n(1)\nCIT90 QA overdue edited\nCustomer · Due · Priority\nCIT90 QA VND · 3 October 2026 01:33 · High\nOpen task list\n\n\n\nSynthetic CIT90 QA — yoplay8.local\n\n\t",
-    "viewport": 390
+    "text": "\t\n\nOverdue CRM tasks\n\n\n\nHi CIT90 QA Admin 1,\n\nThese CRM follow-up tasks are overdue and still open.\n\nOVERDUE QUEUE\n\n1\n\nOverdue tasks\n(1)\nCIT90 QA overdue edited\nCustomer \u00b7 Due \u00b7 Priority\nCIT90 QA VND \u00b7 3 October 2026 01:33 \u00b7 High\nOpen task list\n\n\n\nSynthetic CIT90 QA \u2014 yoplay8.local\n\n\t",
+    "viewport": 390,
+    "requested_width": 390,
+    "viewport_matches_request": true
   },
   {
     "label": "escalation",
-    "width": 600,
     "links": [
       {
         "href": "https://yoplay8.local",
@@ -313,12 +326,13 @@
       }
     ],
     "pageWidth": 600,
-    "text": "\t\n\nCRM overdue task escalation\n\n\n\nHi CIT90 QA Admin 1,\n\nEscalation required.\nThese CRM follow-up tasks have passed the overdue escalation threshold.\n\nESCALATED OVERDUE TASKS\n\n1\n\nOverdue tasks\n(1)\nCIT90 QA overdue edited\nCustomer · Due · Priority\nCIT90 QA VND · 3 October 2026 01:33 · High\n\nThis email may also be sent to configured escalation recipients.\n\nReview overdue tasks\n\n\n\nSynthetic CIT90 QA — yoplay8.local\n\n\t",
-    "viewport": 600
+    "text": "\t\n\nCRM overdue task escalation\n\n\n\nHi CIT90 QA Admin 1,\n\nEscalation required.\nThese CRM follow-up tasks have passed the overdue escalation threshold.\n\nESCALATED OVERDUE TASKS\n\n1\n\nOverdue tasks\n(1)\nCIT90 QA overdue edited\nCustomer \u00b7 Due \u00b7 Priority\nCIT90 QA VND \u00b7 3 October 2026 01:33 \u00b7 High\n\nThis email may also be sent to configured escalation recipients.\n\nReview overdue tasks\n\n\n\nSynthetic CIT90 QA \u2014 yoplay8.local\n\n\t",
+    "viewport": 600,
+    "requested_width": 600,
+    "viewport_matches_request": true
   },
   {
     "label": "escalation",
-    "width": 390,
     "links": [
       {
         "href": "https://yoplay8.local",
@@ -338,12 +352,13 @@
       }
     ],
     "pageWidth": 390,
-    "text": "\t\n\nCRM overdue task escalation\n\n\n\nHi CIT90 QA Admin 1,\n\nEscalation required.\nThese CRM follow-up tasks have passed the overdue escalation threshold.\n\nESCALATED OVERDUE TASKS\n\n1\n\nOverdue tasks\n(1)\nCIT90 QA overdue edited\nCustomer · Due · Priority\nCIT90 QA VND · 3 October 2026 01:33 · High\n\nThis email may also be sent to configured escalation recipients.\n\nReview overdue tasks\n\n\n\nSynthetic CIT90 QA — yoplay8.local\n\n\t",
-    "viewport": 390
+    "text": "\t\n\nCRM overdue task escalation\n\n\n\nHi CIT90 QA Admin 1,\n\nEscalation required.\nThese CRM follow-up tasks have passed the overdue escalation threshold.\n\nESCALATED OVERDUE TASKS\n\n1\n\nOverdue tasks\n(1)\nCIT90 QA overdue edited\nCustomer \u00b7 Due \u00b7 Priority\nCIT90 QA VND \u00b7 3 October 2026 01:33 \u00b7 High\n\nThis email may also be sent to configured escalation recipients.\n\nReview overdue tasks\n\n\n\nSynthetic CIT90 QA \u2014 yoplay8.local\n\n\t",
+    "viewport": 390,
+    "requested_width": 390,
+    "viewport_matches_request": true
   },
   {
     "label": "daily-summary",
-    "width": 600,
     "links": [
       {
         "href": "https://yoplay8.local",
@@ -363,12 +378,13 @@
       }
     ],
     "pageWidth": 600,
-    "text": "\t\n\nDaily CRM follow-up summary\n\n\n\nHi CIT90 QA Admin 1,\n\nHere is your CRM follow-up queue for today.\n\nTODAY'S QUEUE\n\n1\n\nOverdue\n(1)\nCIT90 QA overdue edited\nCustomer · Due · Priority\nCIT90 QA VND · 3 October 2026 01:33 · High\nOpen task list\n\n\n\nSynthetic CIT90 QA — yoplay8.local\n\n\t",
-    "viewport": 600
+    "text": "\t\n\nDaily CRM follow-up summary\n\n\n\nHi CIT90 QA Admin 1,\n\nHere is your CRM follow-up queue for today.\n\nTODAY'S QUEUE\n\n1\n\nOverdue\n(1)\nCIT90 QA overdue edited\nCustomer \u00b7 Due \u00b7 Priority\nCIT90 QA VND \u00b7 3 October 2026 01:33 \u00b7 High\nOpen task list\n\n\n\nSynthetic CIT90 QA \u2014 yoplay8.local\n\n\t",
+    "viewport": 600,
+    "requested_width": 600,
+    "viewport_matches_request": true
   },
   {
     "label": "daily-summary",
-    "width": 390,
     "links": [
       {
         "href": "https://yoplay8.local",
@@ -388,7 +404,9 @@
       }
     ],
     "pageWidth": 390,
-    "text": "\t\n\nDaily CRM follow-up summary\n\n\n\nHi CIT90 QA Admin 1,\n\nHere is your CRM follow-up queue for today.\n\nTODAY'S QUEUE\n\n1\n\nOverdue\n(1)\nCIT90 QA overdue edited\nCustomer · Due · Priority\nCIT90 QA VND · 3 October 2026 01:33 · High\nOpen task list\n\n\n\nSynthetic CIT90 QA — yoplay8.local\n\n\t",
-    "viewport": 390
+    "text": "\t\n\nDaily CRM follow-up summary\n\n\n\nHi CIT90 QA Admin 1,\n\nHere is your CRM follow-up queue for today.\n\nTODAY'S QUEUE\n\n1\n\nOverdue\n(1)\nCIT90 QA overdue edited\nCustomer \u00b7 Due \u00b7 Priority\nCIT90 QA VND \u00b7 3 October 2026 01:33 \u00b7 High\nOpen task list\n\n\n\nSynthetic CIT90 QA \u2014 yoplay8.local\n\n\t",
+    "viewport": 390,
+    "requested_width": 390,
+    "viewport_matches_request": true
   }
 ]

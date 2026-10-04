@@ -6,7 +6,11 @@
     "subject_present": true,
     "admin_link_present": true,
     "html_inline_shell": true,
-    "plain_html_tag_leak": false
+    "plain_html_tag_leak": false,
+    "plain_task_url_query_valid": false,
+    "plain_entity_leak": true,
+    "parity_result": "FAIL: literal entity truncates task URL query; CIT-95",
+    "admin_link_present_scope": "Substring check only; not proof of URL query correctness"
   },
   {
     "state": "reassigned",
@@ -15,7 +19,11 @@
     "subject_present": true,
     "admin_link_present": true,
     "html_inline_shell": true,
-    "plain_html_tag_leak": false
+    "plain_html_tag_leak": false,
+    "plain_task_url_query_valid": false,
+    "plain_entity_leak": true,
+    "parity_result": "FAIL: literal entity truncates task URL query; CIT-95",
+    "admin_link_present_scope": "Substring check only; not proof of URL query correctness"
   },
   {
     "state": "assigned",
@@ -24,7 +32,11 @@
     "subject_present": true,
     "admin_link_present": true,
     "html_inline_shell": true,
-    "plain_html_tag_leak": false
+    "plain_html_tag_leak": false,
+    "plain_task_url_query_valid": false,
+    "plain_entity_leak": true,
+    "parity_result": "FAIL: literal entity truncates task URL query; CIT-95",
+    "admin_link_present_scope": "Substring check only; not proof of URL query correctness"
   },
   {
     "state": "due-soon",
@@ -33,7 +45,11 @@
     "subject_present": true,
     "admin_link_present": true,
     "html_inline_shell": true,
-    "plain_html_tag_leak": false
+    "plain_html_tag_leak": false,
+    "plain_task_url_query_valid": false,
+    "plain_entity_leak": true,
+    "parity_result": "FAIL: literal entity truncates task URL query; CIT-95",
+    "admin_link_present_scope": "Substring check only; not proof of URL query correctness"
   },
   {
     "state": "completed",
@@ -42,7 +58,11 @@
     "subject_present": true,
     "admin_link_present": true,
     "html_inline_shell": true,
-    "plain_html_tag_leak": false
+    "plain_html_tag_leak": false,
+    "plain_task_url_query_valid": false,
+    "plain_entity_leak": true,
+    "parity_result": "FAIL: literal entity truncates task URL query; CIT-95",
+    "admin_link_present_scope": "Substring check only; not proof of URL query correctness"
   },
   {
     "state": "daily-summary",
@@ -51,7 +71,11 @@
     "subject_present": true,
     "admin_link_present": true,
     "html_inline_shell": true,
-    "plain_html_tag_leak": false
+    "plain_html_tag_leak": false,
+    "plain_task_url_query_valid": false,
+    "plain_entity_leak": true,
+    "parity_result": "FAIL: literal entity truncates task URL query; CIT-95",
+    "admin_link_present_scope": "Substring check only; not proof of URL query correctness"
   },
   {
     "state": "escalation",
@@ -60,7 +84,11 @@
     "subject_present": true,
     "admin_link_present": true,
     "html_inline_shell": true,
-    "plain_html_tag_leak": false
+    "plain_html_tag_leak": false,
+    "plain_task_url_query_valid": false,
+    "plain_entity_leak": true,
+    "parity_result": "FAIL: literal entity truncates task URL query; CIT-95",
+    "admin_link_present_scope": "Substring check only; not proof of URL query correctness"
   },
   {
     "state": "reopened",
@@ -69,6 +97,10 @@
     "subject_present": true,
     "admin_link_present": true,
     "html_inline_shell": true,
-    "plain_html_tag_leak": false
+    "plain_html_tag_leak": false,
+    "plain_task_url_query_valid": false,
+    "plain_entity_leak": true,
+    "parity_result": "FAIL: literal entity truncates task URL query; CIT-95",
+    "admin_link_present_scope": "Substring check only; not proof of URL query correctness"
   }
 ]

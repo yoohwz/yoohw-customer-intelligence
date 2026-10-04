@@ -1,0 +1,8 @@
+{
+  "capture_model": "Multiple synthetic observations, not one identical rendering snapshot",
+  "browser_dom_and_png": "Width/layout assertions use measured DOM and PNG. Several states retain 3 October 2026 fixture due date.",
+  "saved_html_and_plain": "Later refreshed render pair uses 4 October 2026 after due-soon fixture adjustment; completed status also supplied for its completed render.",
+  "scope": "Same synthetic task/customer, but fixture state changed between observations. Screenshot content is not claimed byte-identical to saved HTML/plain.",
+  "due_soon": "Requested 600/390 observations both recorded viewport 1440 and duplicate pixels. Retained one email-due-soon-1440.png; no narrow acceptance.",
+  "plain_parity": "Parsed raw saved plain task URLs fail query semantics in all eight states; CIT-95."
+}
