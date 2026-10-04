@@ -1,0 +1,64 @@
+{
+  "site": "yoplay8.local",
+  "observed_at_utc": "2026-10-04T03:51:56Z",
+  "runtime": {
+    "wordpress": "7.1.2",
+    "woocommerce": "11.1.2",
+    "php": "8.4.18",
+    "hpos": true
+  },
+  "approved_base": "093c86d2379da3332cc633db3237bae591e2f785",
+  "candidate_runtime_sha256": {
+    "admin/class-yoohw-cos-admin-menu.php": "309497492ef9219c789a4d9a266636db3c0826de2ad69f911f99cebd2509cfd6",
+    "admin/class-yoohw-cos-customer-exporter.php": "34ebbb15ef60e58a9962830c650c3df486d097706959d30897486cb249805cca"
+  },
+  "browser_action": "Native Export CSV button on authenticated, filtered Customers form",
+  "capture": "Temporary Local MU guard used a byte-preserving output-buffer callback to record the native browser POST attachment. It returned all bytes unchanged and performed no output clearing. The managed Browser did not expose a saved download file; this receipt concerns the actual native attachment response, not an OS-saved-file assertion.",
+  "request": {
+    "method": "POST",
+    "search": "CIT92 QA CSV",
+    "rfm_frequency_min": "0",
+    "saved_view_active": false
+  },
+  "response": {
+    "status": 200,
+    "headers": [
+      "Content-Type: text/csv; charset=utf-8",
+      "Content-Disposition: attachment; filename=\"yoohw-customers-2026-10-04-035156.csv\"",
+      "X-YoOhw-COS-Export-Limit: 5000",
+      "X-YoOhw-COS-Export-Matching-Customers: 1"
+    ],
+    "bytes": 301,
+    "sha256": "b021b74506bda50ed34163c8788137add00a236a5c94748989285227f2bcfa80",
+    "prefix_hex": "efbbbf4e616d652c456d6169",
+    "bom_offset": 0,
+    "complete_strict_parse": true,
+    "columns": 17,
+    "data_rows": 1,
+    "selected_synthetic_row_only": true,
+    "admin_html_present": false
+  },
+  "cleanup": {
+    "owned_admin_removed": true,
+    "owned_customer_removed": true,
+    "owned_signup_coupon_removed": true,
+    "temporary_mu_guard_removed": true,
+    "browser_tabs_closed": true,
+    "local_source_restored_sha256": {
+      "admin/class-yoohw-cos-admin-menu.php": "acbf22c70fc35813a5668ab0cc8334dcba09642bbd951acf54a44ecc3a0f687b",
+      "admin/class-yoohw-cos-customer-exporter.php": "199b8541a72eee78f45f0ccd48b53988d66aba4735f989c150a7602f12d98bf0"
+    },
+    "recovery_snapshot": "Retained privately outside the webroot; never imported into the site.",
+    "persisted_data": {
+      "existing_CIT_rows_changed": 0,
+      "existing_CIT_rows_missing": 0,
+      "remaining_new_CIT_rows": 0,
+      "CIT_options_changed": 0,
+      "posts_and_postmeta_rows_changed_or_left_over": 0,
+      "existing_WordPress_users_changed_or_missing": 0,
+      "unrelated_new_user_preserved": true,
+      "unrelated_user_ownership_evidence": "Distinct _loy61_fixture_namespace user metadata; not a CIT-92 fixture.",
+      "shared_activity_preserved": "Blacklist Action Scheduler work, ordinary transient/session refresh and shared cron advancement were preserved. Whole-database byte identity is not claimed."
+    }
+  }
+}

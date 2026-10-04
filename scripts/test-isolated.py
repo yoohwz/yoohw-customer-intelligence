@@ -9,6 +9,7 @@ import secrets
 import shutil
 import signal
 import subprocess
+import sys
 import tarfile
 import tempfile
 import time
@@ -26,6 +27,39 @@ INPUTS = {
 
 def run(args, **kwargs):
     return subprocess.run([str(a) for a in args], check=True, **kwargs)
+
+
+def run_owned(args, **kwargs):
+    """Contain persistent test descendants in this invocation's own process group."""
+    command = [str(a) for a in args]
+    process = subprocess.Popen(command, start_new_session=True, **kwargs)
+    def stop_group(signum):
+        try:
+            os.killpg(process.pid, signum)
+        except ProcessLookupError:
+            pass
+        except PermissionError:
+            # Darwin can report EPERM for a group containing only reparented zombies.
+            # Never hide refusal to signal a living process in the owned group.
+            if sys.platform != 'darwin':
+                raise
+            states = run(['ps', '-axo', 'pgid=,stat='], capture_output=True, text=True).stdout
+            if any(int(row[0]) == process.pid and not row[1].startswith('Z')
+                   for line in states.splitlines() if len(row := line.split()) == 2):
+                raise
+    try:
+        code = process.wait()
+        if code:
+            raise subprocess.CalledProcessError(code, command)
+    finally:
+        # PHPUnit teardown cannot run if the runner is interrupted during wait().
+        stop_group(signal.SIGTERM)
+        try:
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            stop_group(signal.SIGKILL)
+            process.wait(timeout=5)
+        stop_group(signal.SIGKILL)  # Stop any surviving owned grandchild, even after leader exit.
 
 
 def unpack(root, cache):
@@ -138,6 +172,7 @@ def controls(root, env, php, sql, credentials):
 
 
 def main():
+    run([sys.executable, REPO / 'tests/owned-process-tests.py'])
     run(['node', '--version'])
     run(['node', REPO / 'tests/reset-selector-smoke.js'])
     parser = argparse.ArgumentParser(description=__doc__)
@@ -190,7 +225,7 @@ def main():
                 env['WC_HPOS_ENABLED'] = mode
                 if not args.benchmark_only:
                     report = root / ('junit-' + mode + '.xml')
-                    run([args.php, '-d', 'disable_functions=mail', REPO / 'vendor/bin/phpunit', '-c', REPO / 'phpunit.xml.dist', '--fail-on-skipped', '--fail-on-risky', '--log-junit', report], env=env, cwd=REPO)
+                    run_owned([args.php, '-d', 'disable_functions=mail', REPO / 'vendor/bin/phpunit', '-c', REPO / 'phpunit.xml.dist', '--fail-on-skipped', '--fail-on-risky', '--log-junit', report], env=env, cwd=REPO)
                     suite = ET.parse(report).getroot()
                     cases = suite.findall('.//testcase')
                     if not cases or suite.findall('.//skipped') or suite.findall('.//failure') or suite.findall('.//error'):

@@ -43,7 +43,11 @@ admin.php path, uses synthetic WordPress auth/session cookies (no auth bypass), 
 keeps early mail interception, external WordPress HTTP blocking and disabled WP-Cron.
 Offline update probes are disabled, and the synthetic configured store clears WC's
 one-time fresh-install setup redirect; neither changes authentication/export controls.
-The test terminates its server in teardown; the runner removes private server logs.
+The test terminates its server in teardown. The runner starts PHPUnit in its own
+process group and terminates surviving descendants on success, failure or SIGTERM,
+even when PHPUnit teardown cannot execute. Synthetic process controls exercise these
+paths and verify an unrelated listener remains alive; no wildcard termination is used.
+The runner removes private server logs.
 
 ## Evidence and cleanup
 

@@ -100,6 +100,8 @@ final class YCI_CSV_HTTP_Test extends WP_UnitTestCase {
 		$this->assertIsArray( $rows );
 		foreach ( $rows as $row ) { $this->assertCount( 17, $row ); }
 		$this->assertSame( 'Name', $rows[0][0] );
+		$this->assertMatchesRegularExpression( '/^X-YoOhw-COS-Export-Limit: 5000\r?$/mi', $response['headers'] );
+		$this->assertMatchesRegularExpression( '/^X-YoOhw-COS-Export-Matching-Customers: ' . ( count( $rows ) - 1 ) . '\r?$/mi', $response['headers'] );
 		return $rows;
 	}
 
@@ -115,7 +117,9 @@ final class YCI_CSV_HTTP_Test extends WP_UnitTestCase {
 		$this->assertSame( 'ok', YoOhw_COS_Saved_Views::mutate( 'create', '', 'HTTP view', array( 's' => 'CSV HTTP' ) ) );
 		$id = array_key_first( YoOhw_COS_Saved_Views::all() );
 		$view_args = $args + array( 'saved_view_id' => $id, 'saved_view_context' => '1' );
-		$this->assertCount( 2, $this->decode( $this->request( $view_args, $cookie ) ) );
+		$view_rows = $this->decode( $this->request( $view_args, $cookie ) );
+		$this->assertCount( 2, $view_rows );
+		$this->assertSame( 'CSV HTTP selected', $view_rows[1][0] );
 		$open = $view_args; unset( $open['saved_view_context'] );
 		$this->assertSame( 302, $this->request( $open, $cookie )['status'] );
 		$empty = $args; $empty['s'] = 'no matching synthetic subject';
@@ -126,6 +130,19 @@ final class YCI_CSV_HTTP_Test extends WP_UnitTestCase {
 		}
 		$stale = $view_args; $stale['saved_view_id'] = wp_generate_uuid4();
 		$this->assertSame( 500, $this->request( $stale, $cookie )['status'] );
+		$migrations = get_option( 'yoohw_cos_data_migrations' );
+		try {
+			$pending = is_array( $migrations ) ? $migrations : array();
+			$pending['commerce_currency_v3'] = array( 'status' => 'pending', 'last_progress_at' => time(), 'last_error' => '' );
+			update_option( 'yoohw_cos_data_migrations', $pending, false );
+			$rejected = $this->request( $args + array( 'rfm_monetary_min' => '1' ), $cookie );
+			$this->assertSame( 500, $rejected['status'] );
+			$this->assertStringContainsString( YoOhw_COS_Commerce_Metrics_Policy::reason_label( 'preparing_currency_data' ), $rejected['body'] );
+			$this->assertStringNotContainsString( 'Content-Type: text/csv', $rejected['headers'] );
+			$this->assertStringNotContainsString( 'X-YoOhw-COS-Export-', $rejected['headers'] );
+			$this->assertStringNotContainsString( "\xEF\xBB\xBF", $rejected['body'] );
+			$this->assertStringNotContainsString( 'CSV HTTP selected', $rejected['body'] );
+		} finally { update_option( 'yoohw_cos_data_migrations', $migrations, false ); }
 		foreach ( array( '', 'invalid-owner-token' ) as $token ) {
 			$rejected = $this->request( $args, $cookie, $token );
 			$this->assertSame( 403, $rejected['status'] );
