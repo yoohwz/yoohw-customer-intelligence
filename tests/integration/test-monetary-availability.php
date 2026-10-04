@@ -343,4 +343,106 @@ final class YCI_Monetary_Availability_Test extends WP_UnitTestCase {
 		}
 	}
 
+	private function profile_lifetime_copy( int $customer_id ): array {
+		ob_start();
+		try { YoOhw_COS_Customer_Profile::render( $customer_id ); }
+		finally { $html = ob_get_clean(); }
+		$dom = new DOMDocument();
+		$previous = libxml_use_internal_errors( true );
+		try { $dom->loadHTML( '<?xml encoding="UTF-8">' . $html ); }
+		finally { libxml_clear_errors(); libxml_use_internal_errors( $previous ); }
+		$xpath = new DOMXPath( $dom );
+		$nodes = $xpath->query( '//section[h3[normalize-space()="Lifecycle"]]//li[strong[normalize-space()="Lifetime value"]]/div' );
+		$this->assertSame( 1, $nodes->length );
+		$this->assertSame( 0, $xpath->query( './*', $nodes->item( 0 ) )->length );
+		$copy = $nodes->item( 0 )->textContent;
+		foreach ( array( '<span', 'woocommerce-Price-amount', '&lt;', '&gt;', '&nbsp;', '&#' ) as $markup ) {
+			$this->assertStringNotContainsString( $markup, $copy );
+		}
+		return array( $copy, $html, $xpath );
+	}
+
+	public function monetary_copy_cases(): array {
+		return array(
+			'current localized' => array( 'USD', 1234.5, ',', '.', 'right_space', "1.234,50\xC2\xA0$" ),
+			'foreign localized' => array( 'VND', 100000, ',', '.', 'right_space', "100.000,00\xC2\xA0₫ (VND)" ),
+			'current alternate' => array( 'USD', 1234.5, '.', ',', 'left_space', "$\xC2\xA01,234.50" ),
+			'foreign alternate' => array( 'VND', 100000, '.', ',', 'left_space', "₫\xC2\xA0100,000.00 (VND)" ),
+		);
+	}
+
+	/** @dataProvider monetary_copy_cases */
+	public function test_profile_lifetime_value_is_localized_text_and_price_panels_stay_html( string $currency, float $amount, string $decimal, string $group, string $position, string $expected ): void {
+		update_option( 'woocommerce_currency', 'USD' );
+		update_option( 'woocommerce_price_num_decimals', 2 );
+		update_option( 'woocommerce_price_decimal_sep', $decimal );
+		update_option( 'woocommerce_price_thousand_sep', $group );
+		update_option( 'woocommerce_currency_pos', $position );
+		list( $order, $customer ) = $this->order( $currency, $amount );
+		$this->assertSame( 'comparable', YoOhw_COS_Commerce_Metrics_Policy::availability( $customer )['reason'] );
+		$this->assertSame( $expected, YoOhw_COS_Commerce_Metrics_Policy::format_money_text( $customer, 'total_spent' ) );
+		list( $copy, $html, $xpath ) = $this->profile_lifetime_copy( $customer['id'] );
+		$this->assertSame( 'This customer has spent ' . $expected . '.', $copy );
+		$price = YoOhw_COS_Commerce_Metrics_Policy::format_money( $customer, 'total_spent' );
+		$this->assertStringContainsString( 'woocommerce-Price-amount', $price );
+		$this->assertStringContainsString( wp_kses_post( $price ), $html );
+		$this->assertGreaterThanOrEqual( 2, $xpath->query( '//div[contains(@class,"yoohw-cos-profile-kpis")]//span[contains(@class,"woocommerce-Price-amount")]' )->length );
+		$this->assertSame( 1, $xpath->query( '//tr[th[contains(.,"M · Lifetime")]]/td//span[contains(@class,"woocommerce-Price-amount")]' )->length );
+		$this->assertStringContainsString( wp_kses_post( $order->get_formatted_order_total() ), $html );
+	}
+
+	public function unavailable_copy_cases(): array {
+		return array(
+			'mixed' => array( 'mixed', 'mixed' ),
+			'unknown' => array( 'unknown', 'unknown_source_currency' ),
+			'preparing' => array( 'preparing', 'preparing_currency_data' ),
+			'attention' => array( 'attention', 'currency_data_attention' ),
+			'stale' => array( 'stale', 'metrics_stale' ),
+			'none' => array( 'none', 'none' ),
+		);
+	}
+
+	/** @dataProvider unavailable_copy_cases */
+	public function test_profile_unavailable_lifetime_value_remains_reason_specific( string $state, string $reason ): void {
+		update_option( 'woocommerce_currency', 'USD' );
+		list( $order, $customer ) = $this->order( 'VND', 100000 );
+		global $wpdb;
+		if ( 'mixed' === $state ) {
+			$second = wc_create_order(); $this->owned_orders[] = $second;
+			$second->set_billing_email( $order->get_billing_email() ); $second->set_currency( 'USD' ); $second->set_total( 10 ); $second->set_status( 'completed' ); $second->save();
+			$this->assertSame( (int) $customer['id'], YoOhw_COS_Customers::sync_from_order( $second ) );
+		} elseif ( 'unknown' === $state ) {
+			// A persisted untrustworthy source currency, without guessing the store currency.
+			$wpdb->update( YoOhw_COS_DB::customers_table(), array( 'money_state' => 'unknown', 'money_currency' => '' ), array( 'id' => $customer['id'] ) );
+		} elseif ( 'stale' === $state ) {
+			$wpdb->update( YoOhw_COS_DB::customers_table(), array( 'commerce_metrics_version' => 1 ), array( 'id' => $customer['id'] ) );
+		} elseif ( 'none' === $state ) {
+			$order->delete( true );
+		} else {
+			$migration = array( 'status' => 'preparing' === $state ? 'pending' : 'completed_with_issues', 'last_progress_at' => time(), 'last_error' => '' );
+			update_option( 'yoohw_cos_data_migrations', array( 'commerce_currency_v3' => $migration ), false );
+		}
+		$customer = YoOhw_COS_Customers::get_customer( $customer['id'] );
+		$this->assertSame( $reason, YoOhw_COS_Commerce_Metrics_Policy::availability( $customer )['reason'] );
+		list( $copy ) = $this->profile_lifetime_copy( $customer['id'] );
+		$this->assertSame( YoOhw_COS_Commerce_Metrics_Policy::reason_label( $reason ), $copy );
+		$this->assertStringNotContainsString( '100', $copy );
+		$this->assertStringNotContainsString( '(VND)', $copy );
+	}
+
+	public function test_factor_renderers_keep_generated_descriptions_outside_html_trust_boundary(): void {
+		$payload = '<img src=x onerror="alert(1)"><script>alert(2)</script>& unsafe';
+		$customer = array( 'risk_score' => 0, 'trust_score' => 50, 'lifecycle_stage' => 'new' );
+		foreach ( array( 'render_risk_panel', 'render_trust_panel', 'render_lifecycle_panel' ) as $panel ) {
+			$method = new ReflectionMethod( YoOhw_COS_Customer_Profile::class, $panel );
+			$method->setAccessible( true );
+			ob_start();
+			try { $method->invoke( null, $customer, array( array( 'label' => 'Synthetic factor', 'description' => $payload, 'impact' => 0 ) ) ); }
+			finally { $html = ob_get_clean(); }
+			$this->assertStringContainsString( esc_html( $payload ), $html );
+			$this->assertStringNotContainsString( '<img', $html );
+			$this->assertStringNotContainsString( '<script', $html );
+		}
+	}
+
 }

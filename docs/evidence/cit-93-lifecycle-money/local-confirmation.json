@@ -1,0 +1,76 @@
+{
+  "site": "yoplay8.local",
+  "observed_at_utc": "2026-10-04T04:35:50.246804+00:00",
+  "approved_base": "f0472e28d9b62e4dcfb2943cbf8ebdcd07b806f1",
+  "runtime": {
+    "wordpress": "7.1.2",
+    "woocommerce": "11.1.2",
+    "php": "8.4.18",
+    "hpos": true
+  },
+  "source": {
+    "candidate_runtime_sha256": {
+      "includes/class-yoohw-cos-commerce-metrics-policy.php": "1f0bca17ccddf19efaadd16ca2c4cc3fe526ad25144c4e0ad3a7a42e87be7c08",
+      "includes/class-yoohw-cos-intelligence.php": "c1c849a9e2d50993bcf6b787fad61ad604a987e38e8af4b10d3ee66ca3490cfc"
+    },
+    "unchanged_profile_sha256": "9701cf7615a51b0baff1590e02c40aa5c15d486814cea1eb3f6800a384e5a6c5",
+    "scope": "Two changed monetary producer/policy files were temporarily installed. Those original files and the unchanged Profile renderer matched the admitted base; no claim is made that the entire installed plugin matched main (prior Local CSV files had been restored after CIT-92 QA)."
+  },
+  "fixture": {
+    "synthetic_admins": 1,
+    "synthetic_customers": 1,
+    "synthetic_orders": 1,
+    "order_status": "completed",
+    "order_amount": 100000,
+    "store_currency": "USD",
+    "recorded_currency": "VND",
+    "store_currency_changed": false
+  },
+  "browser": {
+    "native_login": true,
+    "profile_opened": true,
+    "lifetime_visible_copy": "This customer has spent ₫100.000,00 (VND).",
+    "literal_price_markup_or_entities_visible": false,
+    "KPI_price_html_spans": 2,
+    "RFM_price_html_spans": 1,
+    "RFM_visible_copy": "M · Lifetime net revenue in recorded currency₫100.000,00 (VND)",
+    "recent_order_display": "₫100.000,00",
+    "screenshot": "lifecycle-local.jpg",
+    "viewport_confirmation": "Desktop panel; no responsive layout changes are in scope."
+  },
+  "cleanup": {
+    "owned_records_remaining": {
+      "user": 0,
+      "user_meta": 0,
+      "order": 0,
+      "order_meta": 0,
+      "order_addresses": 0,
+      "order_stats": 0,
+      "order_comments": 0,
+      "guest_lookup": 0,
+      "customer": 0,
+      "coupon_posts": 0,
+      "owned_analytics_action": 0,
+      "owned_analytics_logs": 0,
+      "CIT_events": 0,
+      "CIT_notes": 0,
+      "CIT_tasks": 0,
+      "CIT_customer_order_facts": 0,
+      "CIT_customer_tags": 0,
+      "CIT_customer_segments": 0,
+      "CIT_notification_recipient": 0,
+      "alternate_owned_customer": 0
+    },
+    "owned_coupon_removed": true,
+    "owned_order_notes_removed": 3,
+    "owned_analytics_actions_removed": 1,
+    "mu_guard_removed": true,
+    "browser_logged_out_and_tabs_closed": true,
+    "local_original_source_restored_sha256": {
+      "includes/class-yoohw-cos-commerce-metrics-policy.php": "a3afa2e0855c9c6916260b586c211bc90df861039257913fe7e65de30a272232",
+      "includes/class-yoohw-cos-intelligence.php": "be3bbb979499b107bca213c0c4ea92013ff1d9ec98e2fd669916b6ce0bc44113"
+    },
+    "shared_state": "The monotonic yoohw_cos_customer_data_updated_at marker was allowed to advance. Concurrent LOY-64 synthetic profiles/orders/facts and unrelated scheduled work were preserved; the compared foreign facts referenced different order IDs with _loy64_fixture_namespace metadata. No whole-database byte-identity claim or rollback is made.",
+    "recovery_snapshots": "Retained privately outside the webroot, never imported."
+  }
+}

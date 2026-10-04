@@ -573,7 +573,7 @@ final class YoOhw_COS_Intelligence {
 				? sprintf(
 					/* translators: %s: formatted customer spend. */
 					__( 'This customer has spent %s.', 'yoohw-customer-intelligence' ),
-					YoOhw_COS_Commerce_Metrics_Policy::format_money( $customer, 'total_spent' )
+					YoOhw_COS_Commerce_Metrics_Policy::format_money_text( $customer, 'total_spent' )
 				)
 				: YoOhw_COS_Commerce_Metrics_Policy::reason_label( YoOhw_COS_Commerce_Metrics_Policy::availability( $customer )['reason'] ),
 		);
