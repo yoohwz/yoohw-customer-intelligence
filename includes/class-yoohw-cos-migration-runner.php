@@ -10,6 +10,7 @@ final class YoOhw_COS_Migration_Runner {
 	private const STATE_OPTION = 'yoohw_cos_data_migrations';
 	private const BATCH_SIZE = 100;
 	private const MAX_ITEM_ATTEMPTS = 3;
+	private const CUSTOMER_PROBE_REVALIDATION_SECONDS = DAY_IN_SECONDS;
 
 	public static function init(): void {
 		add_action( self::HOOK, array( __CLASS__, 'run_next_batch' ) );
@@ -77,6 +78,7 @@ final class YoOhw_COS_Migration_Runner {
 		$state = self::get_state();
 		if ( isset( $state['commerce_currency_v3'] ) || ! empty( $state['_read_error'] ) ) { return; }
 		global $wpdb;
+		if ( isset( $state['_currency_customer_probe'] ) && 'completed_with_issues' !== ( $state['commerce_facts_v2']['status'] ?? '' ) && null === self::currency_customer_probe_cursor( $state['_currency_customer_probe'] ) ) { return; }
 		if ( ! isset( $state['_currency_customer_probe'] ) && 'completed_with_issues' !== ( $state['commerce_facts_v2']['status'] ?? '' ) ) {
 			$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT commerce_metrics_version, total_orders FROM %i ORDER BY id LIMIT %d', YoOhw_COS_DB::customers_table(), self::BATCH_SIZE ), ARRAY_A );
 			if ( '' !== $wpdb->last_error ) { return; }
@@ -98,17 +100,34 @@ final class YoOhw_COS_Migration_Runner {
 		}
 	}
 
+	/** Null means a completed negative probe is still current (or its high-water read failed). */
+	private static function currency_customer_probe_cursor( array $probe ): ?int {
+		if ( 'completed' !== ( $probe['status'] ?? '' ) ) { return absint( $probe['cursor'] ?? 0 ); }
+		if ( absint( $probe['policy_version'] ?? 0 ) !== YoOhw_COS_Commerce_Metrics_Policy::VERSION || absint( $probe['revalidate_after'] ?? 0 ) <= time() ) { return 0; }
+		global $wpdb;
+		// Primary-key endpoint lookup, never a full-table stale predicate on ordinary requests.
+		$highest_id = $wpdb->get_var( $wpdb->prepare( 'SELECT id FROM %i ORDER BY id DESC LIMIT 1', YoOhw_COS_DB::customers_table() ) );
+		if ( '' !== $wpdb->last_error || absint( $highest_id ) <= absint( $probe['cursor'] ?? 0 ) ) { return null; }
+		return absint( $probe['cursor'] ?? 0 );
+	}
+
 	private static function register_missing_currency_backfill_guarded(): void {
 		$state = self::get_state();
 		if ( ! empty( $state['_read_error'] ) || isset( $state['commerce_currency_v3'] ) || ! YoOhw_COS_Install::schema_is_ready() ) { return; }
 		global $wpdb;
+		$probe = $state['_currency_customer_probe'] ?? array();
+		$cursor = self::currency_customer_probe_cursor( $probe );
+		if ( null === $cursor && 'completed_with_issues' !== ( $state['commerce_facts_v2']['status'] ?? '' ) ) { return; }
+		$cursor = $cursor ?? 0;
+		// Appended rows must not postpone the periodic check of previously scanned rows.
+		$revalidate_after = 0 === $cursor ? 0 : absint( $probe['revalidate_after'] ?? 0 );
 		$legacy_fact = $wpdb->get_var( $wpdb->prepare(
 			"SELECT 1 FROM %i WHERE policy_version < %d OR (counts_as_order = 1 AND (currency IS NULL OR currency = '')) LIMIT 1",
 			YoOhw_COS_DB::order_facts_table(), YoOhw_COS_Commerce_Metrics_Policy::VERSION
 		) );
+		if ( '' !== $wpdb->last_error ) { return; }
 		// Inspect at most one primary-key page per request, including archived rows.
 		// A WHERE version < ... LIMIT 1 alone could scan the entire unindexed table.
-		$cursor = absint( $state['_currency_customer_probe']['cursor'] ?? 0 );
 		$rows = $wpdb->get_results( $wpdb->prepare(
 			'SELECT id, commerce_metrics_version, total_orders FROM %i WHERE id > %d ORDER BY id LIMIT %d',
 			YoOhw_COS_DB::customers_table(), $cursor, self::BATCH_SIZE
@@ -122,11 +141,13 @@ final class YoOhw_COS_Migration_Runner {
 		}
 		if ( ! $legacy_fact && ! $stale_customer && 'completed_with_issues' !== ( $state['commerce_facts_v2']['status'] ?? '' ) ) {
 			$before = $state;
-			if ( count( (array) $rows ) < self::BATCH_SIZE ) {
-				unset( $state['_currency_customer_probe'] );
-			} else {
-				$state['_currency_customer_probe'] = array( 'cursor' => $cursor, 'status' => 'pending' );
-			}
+			$complete = count( (array) $rows ) < self::BATCH_SIZE;
+			$state['_currency_customer_probe'] = array(
+				'cursor' => $cursor,
+				'status' => $complete ? 'completed' : 'pending',
+				'policy_version' => YoOhw_COS_Commerce_Metrics_Policy::VERSION,
+				'revalidate_after' => $complete && 0 === $revalidate_after ? time() + self::CUSTOMER_PROBE_REVALIDATION_SECONDS : $revalidate_after,
+			);
 			if ( $state !== $before ) { self::save_state( $state ); }
 			self::maybe_schedule();
 			return;

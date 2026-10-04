@@ -184,6 +184,74 @@ final class YCI_Monetary_Availability_Test extends WP_UnitTestCase {
 		$this->assertSame( 'none', YoOhw_COS_Commerce_Metrics_Policy::availability( YoOhw_COS_Customers::get_customer( $id ) )['reason'] );
 	}
 
+	private function complete_clean_customer_probe(): int {
+		for ( $i = 0; $i < 101; ++$i ) {
+			$id = YoOhw_COS_Customers::create_customer( array( 'display_name' => 'Clean synthetic probe', 'commerce_metrics_version' => 2 ) );
+		}
+		update_option( 'yoohw_cos_data_migrations', array( 'commerce_facts_v2' => array( 'status' => 'completed' ) ), false );
+		YoOhw_COS_Install::maybe_update();
+		$this->assertSame( 'pending', YoOhw_COS_Migration_Runner::get_state()['_currency_customer_probe']['status'] );
+		YoOhw_COS_Migration_Runner::run_next_batch();
+		$state = YoOhw_COS_Migration_Runner::get_state();
+		$this->assertArrayNotHasKey( 'commerce_currency_v3', $state );
+		$this->assertSame( 'completed', $state['_currency_customer_probe']['status'] );
+		$this->assertSame( $id, $state['_currency_customer_probe']['cursor'] );
+		wp_clear_scheduled_hook( YoOhw_COS_Migration_Runner::HOOK );
+		return $id;
+	}
+
+	public function test_negative_probe_does_not_restart_unchanged_population_and_admits_new_stale_rows(): void {
+		$this->complete_clean_customer_probe();
+		$before = YoOhw_COS_Migration_Runner::get_state();
+		$queries = array();
+		$observe = static function ( $sql ) use ( &$queries ) { $queries[] = $sql; return $sql; };
+		add_filter( 'query', $observe );
+		try {
+			for ( $i = 0; $i < 5; ++$i ) { YoOhw_COS_Install::maybe_update(); }
+		} finally { remove_filter( 'query', $observe ); }
+		$this->assertSame( $before, YoOhw_COS_Migration_Runner::get_state() );
+		$this->assertFalse( wp_next_scheduled( YoOhw_COS_Migration_Runner::HOOK ) );
+		foreach ( $queries as $sql ) {
+			$this->assertStringNotContainsString( 'SELECT id, commerce_metrics_version, total_orders', $sql );
+			$this->assertStringNotContainsString( 'WHERE policy_version <', $sql );
+		}
+		$id = YoOhw_COS_Customers::create_customer( array( 'display_name' => 'New stale synthetic probe', 'commerce_metrics_version' => 1 ) );
+		YoOhw_COS_Install::maybe_update();
+		$state = YoOhw_COS_Migration_Runner::get_state();
+		$this->assertSame( 'pending', $state['commerce_currency_v3']['status'] );
+		$this->assertArrayNotHasKey( '_currency_customer_probe', $state );
+		$this->assertNotFalse( wp_next_scheduled( YoOhw_COS_Migration_Runner::HOOK ) );
+		for ( $i = 0; $i < 20 && ! YoOhw_COS_Migration_Runner::currency_backfill_is_complete(); ++$i ) { YoOhw_COS_Migration_Runner::run_next_batch(); }
+		$this->assertTrue( YoOhw_COS_Migration_Runner::currency_backfill_is_complete() );
+		$this->assertSame( 'none', YoOhw_COS_Commerce_Metrics_Policy::availability( YoOhw_COS_Customers::get_customer( $id ) )['reason'] );
+	}
+
+	public function test_negative_probe_revalidates_old_rows_without_append_extending_deadline(): void {
+		global $wpdb;
+		$old_id = $this->complete_clean_customer_probe();
+		$deadline = YoOhw_COS_Migration_Runner::get_state()['_currency_customer_probe']['revalidate_after'];
+		$new_id = YoOhw_COS_Customers::create_customer( array( 'display_name' => 'New clean synthetic probe', 'commerce_metrics_version' => 2 ) );
+		YoOhw_COS_Install::maybe_update();
+		$state = YoOhw_COS_Migration_Runner::get_state();
+		$this->assertSame( 'completed', $state['_currency_customer_probe']['status'] );
+		$this->assertSame( $new_id, $state['_currency_customer_probe']['cursor'] );
+		$this->assertSame( $deadline, $state['_currency_customer_probe']['revalidate_after'] );
+		// External/in-place writes are discovered at the documented bounded revalidation.
+		$wpdb->update( YoOhw_COS_DB::customers_table(), array( 'commerce_metrics_version' => 1 ), array( 'id' => $old_id ) );
+		YoOhw_COS_Install::maybe_update();
+		$this->assertSame( $state, YoOhw_COS_Migration_Runner::get_state() );
+		$state['_currency_customer_probe']['revalidate_after'] = time() - 1;
+		update_option( 'yoohw_cos_data_migrations', $state, false );
+		YoOhw_COS_Install::maybe_update();
+		$state = YoOhw_COS_Migration_Runner::get_state();
+		$this->assertSame( 'pending', $state['_currency_customer_probe']['status'] );
+		$this->assertLessThan( $old_id, $state['_currency_customer_probe']['cursor'] );
+		YoOhw_COS_Migration_Runner::run_next_batch();
+		$this->assertSame( 'pending', YoOhw_COS_Migration_Runner::get_state()['commerce_currency_v3']['status'] );
+		for ( $i = 0; $i < 20 && ! YoOhw_COS_Migration_Runner::currency_backfill_is_complete(); ++$i ) { YoOhw_COS_Migration_Runner::run_next_batch(); }
+		$this->assertTrue( YoOhw_COS_Migration_Runner::currency_backfill_is_complete() );
+	}
+
 	public function test_readiness_fence_survives_failed_companion_generation_write(): void {
 		list( $order, $customer ) = $this->order( get_woocommerce_currency(), 100000 );
 		$old = YoOhw_COS_Intelligence::get_scoring_generation();

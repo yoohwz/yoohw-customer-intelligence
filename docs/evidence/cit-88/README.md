@@ -24,7 +24,15 @@ is only a presentation snapshot; write/worker admission continues to read curren
 ## Recovery and freshness
 
 The missing-v3 recovery probe reads primary-key pages of at most 100 customers,
-including archived rows. A cursor persists only when another page is needed. It
+including archived rows. A completed negative checkpoint persists in the existing
+migration option. Within its 24-hour validity, ordinary requests perform only an indexed
+primary-key endpoint lookup; unchanged populations do not rescan or schedule work. New
+IDs resume from the saved high-water cursor. Appended clean rows do not postpone the
+24-hour deadline: the next request after expiry revalidates old rows in bounded pages,
+so in-place stale writes (including external SQL) are not hidden permanently. A policy
+version change also starts revalidation; Reset deletes this existing state. The initial
+small/fresh clean probe retains its no-op behavior. Legacy facts and v2 issue status are
+rechecked on active/revalidation passes. It
 uses the existing migration scheduler/worker and Reset/migration ownership boundaries.
 No-op requests avoid taking the Reset row lock. Current facts plus a version-1
 customer now admit v3, rebuild through authoritative orders and converge idempotently.
@@ -69,7 +77,10 @@ inline safety instruction while operations reject. Its recovery authority is unc
 
 Other new regressions cover the exact customer-only stale admission, SQL/getter
 classification agreement, failed companion generation write, foreign amount dimensions
-recovery beyond the first primary-key page and the fifteen-minute scheduling/progress evidence rule. Existing full lifecycle/concurrency,
+recovery beyond the first primary-key page, durable negative completion with repeated
+ordinary requests, appended stale rows, and expiry-based revalidation of in-place stale
+rows without clean appends extending the deadline, plus the fifteen-minute
+scheduling/progress evidence rule. Existing full lifecycle/concurrency,
 CSV safety, privacy, query, schema, Reset/epoch and extension contracts run unchanged
 except assertions for the explicitly changed output contract and clearer worker failures.
 
