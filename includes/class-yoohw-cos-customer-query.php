@@ -280,7 +280,7 @@ final class YoOhw_COS_Customer_Query {
 		if ( 'repeat' === $args['customer_cohort'] ) {
 			$where .= ' AND total_orders >= 2';
 		} elseif ( 'first_time' === $args['customer_cohort'] ) {
-			$where .= ' AND total_orders <= 1';
+			$where .= ' AND total_orders = 1';
 		}
 
 		if ( '' !== $args['rfm_recency_max_days'] ) {

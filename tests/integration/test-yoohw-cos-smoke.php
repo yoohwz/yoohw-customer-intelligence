@@ -1746,6 +1746,76 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 		}
 	}
 
+	public function test_purchase_cohorts_share_exact_order_semantics_across_filters_and_counts(): void {
+		$this->clean_test_plugin_data();
+		$ids = array();
+		foreach ( array( 0, 1, 1, 1, 2, 4 ) as $index => $orders ) {
+			$ids[] = YoOhw_COS_Customers::create_customer( array(
+				'email' => 'cohort-' . $index . '@example.test',
+				'display_name' => 'Cohort subject ' . $index,
+				'total_orders' => $orders,
+				'customer_status' => 'new',
+				'commerce_metrics_version' => YoOhw_COS_Commerce_Metrics_Policy::VERSION,
+				'intelligence_currency_ready' => 1,
+				'intelligence_generation' => YoOhw_COS_Intelligence::get_scoring_generation(),
+				'money_state' => $orders ? 'comparable' : 'none',
+				'money_currency' => $orders ? get_woocommerce_currency() : '',
+			) );
+		}
+		$assert_ids = function ( array $expected, array $args ): void {
+			$result = YoOhw_COS_Customer_Query::query( $args );
+			$actual = array_map( 'absint', array_column( $result['items'], 'id' ) );
+			sort( $actual ); sort( $expected );
+			$this->assertSame( $expected, $actual );
+			$this->assertSame( count( $expected ), $result['total_items'] );
+		};
+		$first = array( 'customer_cohort' => 'first_time' );
+		$assert_ids( array( $ids[1], $ids[2], $ids[3] ), $first );
+		$assert_ids( array( $ids[4], $ids[5] ), array( 'customer_cohort' => 'repeat' ) );
+		$assert_ids( $ids, array() );
+		$assert_ids( $ids, array( 'customer_status' => 'new' ) );
+		$assert_ids( array( $ids[0] ), array( 's' => 'Cohort subject 0' ) );
+		$assert_ids( array(), $first + array( 's' => 'Cohort subject 0' ) );
+		$assert_ids( array( $ids[1] ), $first + array( 's' => 'Cohort subject 1' ) );
+		$tag = YoOhw_COS_Tags::create_tag( 'Purchase cohort tag' );
+		$segment = YoOhw_COS_Segments::create_segment( 'Purchase cohort segment' );
+		foreach ( $ids as $id ) {
+			$this->assertGreaterThan( 0, $id );
+			$this->assertTrue( YoOhw_COS_Tags::assign_tag( $id, $tag ) );
+			$this->assertTrue( YoOhw_COS_Segments::assign_customer( $id, $segment ) );
+			$this->assertGreaterThan( 0, YoOhw_COS_Tasks::create_task( array(
+				'customer_id' => $id, 'title' => 'Cohort overdue task',
+				'due_date' => wp_date( 'Y-m-d H:i:s', time() - DAY_IN_SECONDS ),
+			) ) );
+		}
+		foreach ( array( array( 'customer_tag' => $tag ), array( 'customer_segment' => $segment ), array( 'customer_tag' => $tag, 'customer_segment' => $segment ), array( 'customer_attention' => 'missing_contact' ), array( 'customer_attention' => 'open_follow_up' ), array( 'customer_attention' => 'overdue_follow_up' ) ) as $filter ) {
+			$assert_ids( array( $ids[1], $ids[2], $ids[3] ), $first + $filter );
+		}
+		$pages = array();
+		for ( $page = 1; $page <= 4; $page++ ) {
+			$result = YoOhw_COS_Customer_Query::query( $first + array( 'per_page' => 1, 'paged' => $page, 'orderby' => 'total_orders', 'order' => 'ASC' ) );
+			$this->assertSame( 3, $result['total_items'] );
+			$this->assertCount( $page <= 3 ? 1 : 0, $result['items'] );
+			$pages = array_merge( $pages, array_map( 'absint', array_column( $result['items'], 'id' ) ) );
+		}
+		sort( $pages );
+		$this->assertSame( array( $ids[1], $ids[2], $ids[3] ), $pages );
+		foreach ( array( 'unsupported', array( 'first_time' ), null, 7 ) as $invalid ) {
+			$args = array( 'customer_cohort' => $invalid );
+			$this->assertSame( '', YoOhw_COS_Customer_Query::sanitize_args( $args )['customer_cohort'] );
+			$assert_ids( $ids, $args );
+		}
+		$summary = YoOhw_COS_Overview::get_summary();
+		$this->assertSame( 2, $summary['repeat_customers'] );
+		$this->assertSame( 40.0, $summary['repeat_rate'] ); // Zero-order profiles are not in the purchasing denominator.
+		foreach ( array( 0, 1, 5 ) as $index ) { $this->assertTrue( YoOhw_COS_Customers::archive_customer( $ids[$index] ) ); }
+		$assert_ids( array( $ids[2], $ids[3] ), $first );
+		$assert_ids( array( $ids[1] ), $first + array( 'customer_view' => 'archived' ) );
+		$assert_ids( array( $ids[4] ), array( 'customer_cohort' => 'repeat' ) );
+		$assert_ids( array( $ids[5] ), array( 'customer_cohort' => 'repeat', 'customer_view' => 'archived' ) );
+		$assert_ids( array( $ids[0], $ids[1], $ids[5] ), array( 'customer_view' => 'archived' ) );
+	}
+
 	public function test_overview_summary_and_action_filters_use_existing_customer_data(): void {
 		$repeat_id = YoOhw_COS_Customers::create_customer(
 			array(
