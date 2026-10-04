@@ -291,7 +291,7 @@ final class YoOhw_COS_Blacklist_Manager_Premium_Integration {
 				return false;
 			}
 
-			$event_data = $wpdb->get_row(
+			$event_data = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 				$wpdb->prepare( 'SELECT * FROM %i WHERE id = %d LIMIT 1', $table, $event_id ),
 				ARRAY_A
 			);
@@ -349,7 +349,7 @@ final class YoOhw_COS_Blacklist_Manager_Premium_Integration {
 		}
 
 		$table      = YoOhw_COS_DB::events_table();
-		$candidates = $wpdb->get_results(
+		$candidates = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				"SELECT *
 				FROM %i
@@ -404,7 +404,7 @@ final class YoOhw_COS_Blacklist_Manager_Premium_Integration {
 
 		$table = YoOhw_COS_DB::events_table();
 		$limit = min( 1000, max( 1, absint( $limit ) ) );
-		$rows  = $wpdb->get_results(
+		$rows  = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				"SELECT *
 				FROM %i
@@ -817,7 +817,7 @@ final class YoOhw_COS_Blacklist_Manager_Premium_Integration {
 			'order'      => 'ASC',
 			'return'     => 'ids',
 			'status'     => function_exists( 'wc_get_order_statuses' ) ? array_keys( wc_get_order_statuses() ) : 'any',
-			'meta_query' => array(
+			'meta_query' => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Bounded upstream integration lookup uses the existing metadata contract; pagination/limits restrict scanned records.
 				array(
 					'key'     => '_risk_score',
 					'value'   => 0,
@@ -865,7 +865,7 @@ final class YoOhw_COS_Blacklist_Manager_Premium_Integration {
 
 		$offset = ( max( 1, $page ) - 1 ) * $limit;
 
-		$rows = $wpdb->get_results(
+		$rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				"SELECT id, `timestamp`, type, source, action, details, view
 				FROM %i
@@ -904,7 +904,7 @@ final class YoOhw_COS_Blacklist_Manager_Premium_Integration {
 			return 0;
 		}
 
-		return (int) $wpdb->get_var(
+		return (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				"SELECT COUNT(*)
 				FROM %i
@@ -1015,7 +1015,7 @@ final class YoOhw_COS_Blacklist_Manager_Premium_Integration {
 
 		$offset = ( max( 1, $page ) - 1 ) * $limit;
 
-		$rows = $wpdb->get_results(
+		$rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				"SELECT id, created_at, order_id, source, gateway, gateway_profile, failure_code, failure_family, decline_code,
 					cart_hash, payment_reference_hash, ip_hash, ip_prefix_hash, email_hash, phone_hash, device_hash,
@@ -1052,7 +1052,7 @@ final class YoOhw_COS_Blacklist_Manager_Premium_Integration {
 			return 0;
 		}
 
-		return (int) $wpdb->get_var(
+		return (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				'SELECT COUNT(*) FROM %i',
 				$table
@@ -1270,87 +1270,87 @@ final class YoOhw_COS_Blacklist_Manager_Premium_Integration {
 	private static function risk_rule_map(): array {
 		return array(
 			'wc_blacklist_first_time_order_job' => array(
-				'meta_key' => '_risk_score_first_time_order',
+				'meta_key' => '_risk_score_first_time_order', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- Signal descriptor retains the upstream meta_key field; this array is not WP_Query configuration.
 				'label'    => __( 'First-time order risk', 'yoohw-customer-intelligence' ),
 				'category' => 'risk',
 			),
 			'wc_blacklist_order_phone_email_vs_address_job' => array(
-				'meta_key' => '_risk_score_phone_email_address',
+				'meta_key' => '_risk_score_phone_email_address', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- Signal descriptor retains the upstream meta_key field; this array is not WP_Query configuration.
 				'label'    => __( 'Phone/email versus address', 'yoohw-customer-intelligence' ),
 				'category' => 'risk',
 			),
 			'wc_blacklist_order_phone_email_vs_ip_job' => array(
-				'meta_key' => '_risk_score_phone_email_ip',
+				'meta_key' => '_risk_score_phone_email_ip', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- Signal descriptor retains the upstream meta_key field; this array is not WP_Query configuration.
 				'label'    => __( 'Phone/email versus IP', 'yoohw-customer-intelligence' ),
 				'category' => 'risk',
 			),
 			'wc_blacklist_order_billing_shipping_job' => array(
-				'meta_key' => '_risk_score_billing_shipping',
+				'meta_key' => '_risk_score_billing_shipping', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- Signal descriptor retains the upstream meta_key field; this array is not WP_Query configuration.
 				'label'    => __( 'Billing versus shipping', 'yoohw-customer-intelligence' ),
 				'category' => 'risk',
 			),
 			'wc_blacklist_order_value_job' => array(
-				'meta_key' => '_risk_score_order_value',
+				'meta_key' => '_risk_score_order_value', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- Signal descriptor retains the upstream meta_key field; this array is not WP_Query configuration.
 				'label'    => __( 'Order value anomaly', 'yoohw-customer-intelligence' ),
 				'category' => 'risk',
 			),
 			'wc_blacklist_order_attempts_job' => array(
-				'meta_key' => '_risk_score_order_attempts',
+				'meta_key' => '_risk_score_order_attempts', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- Signal descriptor retains the upstream meta_key field; this array is not WP_Query configuration.
 				'label'    => __( 'Order attempts velocity', 'yoohw-customer-intelligence' ),
 				'category' => 'risk',
 			),
 			'wc_blacklist_ip_country_job' => array(
-				'meta_key' => '_risk_score_ip_country',
+				'meta_key' => '_risk_score_ip_country', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- Signal descriptor retains the upstream meta_key field; this array is not WP_Query configuration.
 				'label'    => __( 'IP country mismatch', 'yoohw-customer-intelligence' ),
 				'category' => 'risk',
 			),
 			'wc_blacklist_ip_coordinates_job' => array(
-				'meta_key' => '_risk_score_ip_address',
+				'meta_key' => '_risk_score_ip_address', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- Signal descriptor retains the upstream meta_key field; this array is not WP_Query configuration.
 				'label'    => __( 'IP coordinates mismatch', 'yoohw-customer-intelligence' ),
 				'category' => 'risk',
 			),
 			'wc_blacklist_ip_hosting_job' => array(
-				'meta_key' => '_risk_score_hosting_ip',
+				'meta_key' => '_risk_score_hosting_ip', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- Signal descriptor retains the upstream meta_key field; this array is not WP_Query configuration.
 				'label'    => __( 'Hosting IP risk', 'yoohw-customer-intelligence' ),
 				'category' => 'risk',
 			),
 			'wc_blacklist_order_ip_proxy_vpn_job' => array(
-				'meta_key' => '_risk_score_using_proxy_vpn',
+				'meta_key' => '_risk_score_using_proxy_vpn', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- Signal descriptor retains the upstream meta_key field; this array is not WP_Query configuration.
 				'label'    => __( 'Proxy/VPN risk', 'yoohw-customer-intelligence' ),
 				'category' => 'risk',
 			),
 			'wc_blacklist_device_vs_email_phone_job' => array(
-				'meta_key' => '_risk_score_device_email_phone',
+				'meta_key' => '_risk_score_device_email_phone', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- Signal descriptor retains the upstream meta_key field; this array is not WP_Query configuration.
 				'label'    => __( 'Device versus email/phone', 'yoohw-customer-intelligence' ),
 				'category' => 'device',
 			),
 			'wc_blacklist_order_device_vs_address_job' => array(
-				'meta_key' => '_risk_score_device_address',
+				'meta_key' => '_risk_score_device_address', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- Signal descriptor retains the upstream meta_key field; this array is not WP_Query configuration.
 				'label'    => __( 'Device versus address', 'yoohw-customer-intelligence' ),
 				'category' => 'device',
 			),
 			'wc_blacklist_device_identity_spread_job' => array(
-				'meta_key' => '_risk_score_device_identity_spread',
+				'meta_key' => '_risk_score_device_identity_spread', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- Signal descriptor retains the upstream meta_key field; this array is not WP_Query configuration.
 				'label'    => __( 'Device identity spread', 'yoohw-customer-intelligence' ),
 				'category' => 'device',
 			),
 			'wc_blacklist_gateway_avs_job' => array(
-				'meta_key' => '_risk_score_rule_avs_check',
+				'meta_key' => '_risk_score_rule_avs_check', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- Signal descriptor retains the upstream meta_key field; this array is not WP_Query configuration.
 				'label'    => __( 'Gateway AVS check', 'yoohw-customer-intelligence' ),
 				'category' => 'gateway',
 			),
 			'wc_blacklist_gateway_card_billing_job' => array(
-				'meta_key' => '_risk_score_card_billing_country',
+				'meta_key' => '_risk_score_card_billing_country', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- Signal descriptor retains the upstream meta_key field; this array is not WP_Query configuration.
 				'label'    => __( 'Card billing country', 'yoohw-customer-intelligence' ),
 				'category' => 'gateway',
 			),
 			'wc_blacklist_gateway_high_risk_country_job' => array(
-				'meta_key' => '_risk_score_high_risk_country',
+				'meta_key' => '_risk_score_high_risk_country', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- Signal descriptor retains the upstream meta_key field; this array is not WP_Query configuration.
 				'label'    => __( 'Gateway high-risk country', 'yoohw-customer-intelligence' ),
 				'category' => 'payment',
 			),
 			'wc_blacklist_order_paypal_payer_vs_customer_job' => array(
-				'meta_key' => '_risk_score_paypal_payer_vs_customer',
+				'meta_key' => '_risk_score_paypal_payer_vs_customer', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- Signal descriptor retains the upstream meta_key field; this array is not WP_Query configuration.
 				'label'    => __( 'PayPal payer versus customer', 'yoohw-customer-intelligence' ),
 				'category' => 'payment',
 			),
@@ -1361,7 +1361,7 @@ final class YoOhw_COS_Blacklist_Manager_Premium_Integration {
 		return array(
 			'key'      => sanitize_key( $job_hook ),
 			'label'    => sanitize_text_field( (string) ( $rule['label'] ?? self::format_rule_label( $job_hook ) ) ),
-			'meta_key' => sanitize_key( (string) ( $rule['meta_key'] ?? '' ) ),
+			'meta_key' => sanitize_key( (string) ( $rule['meta_key'] ?? '' ) ), // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- Signal descriptor retains the upstream meta_key field; this array is not WP_Query configuration.
 			'category' => sanitize_key( (string) ( $rule['category'] ?? 'risk' ) ),
 			'score'    => max( 0, $score ),
 		);
@@ -1569,12 +1569,12 @@ final class YoOhw_COS_Blacklist_Manager_Premium_Integration {
 	private static function request_value( array $paths ): string {
 		$sources = array();
 
-		if ( ! empty( $_POST ) ) {
-			$sources[] = wp_unslash( $_POST );
+		if ( ! empty( $_POST ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Read-only identity evidence from the upstream integration request; values are sanitized by array_path_value().
+			$sources[] = wp_unslash( $_POST ); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Read-only identity evidence from the upstream integration request; values are sanitized by array_path_value().
 		}
 
-		if ( ! empty( $_REQUEST ) ) {
-			$sources[] = wp_unslash( $_REQUEST );
+		if ( ! empty( $_REQUEST ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only identity evidence from the upstream integration request; values are sanitized by array_path_value().
+			$sources[] = wp_unslash( $_REQUEST ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only identity evidence from the upstream integration request; values are sanitized by array_path_value().
 		}
 
 		foreach ( $sources as $source ) {
@@ -2116,7 +2116,7 @@ final class YoOhw_COS_Blacklist_Manager_Premium_Integration {
 			return false;
 		}
 
-		$found = $wpdb->get_var(
+		$found = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				'SHOW TABLES LIKE %s',
 				$table

@@ -60,14 +60,14 @@ final class YoOhw_COS_Customer_Query {
 			: $args['offset'];
 
 		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Core SQL fragments are fixed; extension fields/operators and sort direction are whitelisted, and values are prepared.
-		$total_items = (int) $wpdb->get_var(
+		$total_items = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				"SELECT COUNT(*) FROM %i c {$where}",
 				...array_merge( array( $table ), $params )
 			)
 		);
 
-		$items = $wpdb->get_results(
+		$items = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				"SELECT *
 				FROM %i c

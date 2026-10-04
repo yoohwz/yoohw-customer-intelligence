@@ -107,7 +107,7 @@ final class YoOhw_COS_Tasks {
 		$status     = self::normalize_status( (string) ( $data['status'] ?? self::STATUS_OPEN ) );
 		$now        = YoOhw_COS_DB::now();
 
-		$inserted = $wpdb->insert(
+		$inserted = $wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			YoOhw_COS_DB::tasks_table(),
 			array(
 				'customer_id'       => $customer_id,
@@ -228,7 +228,7 @@ final class YoOhw_COS_Tasks {
 			? self::normalize_assignee_id( $data['assigned_user_id'] )
 			: self::normalize_optional_id( $task['assigned_user_id'] ?? 0 );
 
-		$updated = $wpdb->update(
+		$updated = $wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			YoOhw_COS_DB::tasks_table(),
 			array(
 				'customer_id'       => $customer_id,
@@ -308,7 +308,7 @@ final class YoOhw_COS_Tasks {
 			'updated_at'   => $now,
 		);
 
-		$updated = $wpdb->update(
+		$updated = $wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			YoOhw_COS_DB::tasks_table(),
 			$data,
 			array( 'id' => absint( $task_id ) ),
@@ -350,7 +350,7 @@ final class YoOhw_COS_Tasks {
 			return false;
 		}
 
-		$deleted = $wpdb->delete(
+		$deleted = $wpdb->delete( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			YoOhw_COS_DB::tasks_table(),
 			array( 'id' => absint( $task_id ) ),
 			array( '%d' )
@@ -362,7 +362,7 @@ final class YoOhw_COS_Tasks {
 	public static function get_task( int $task_id ): array {
 		global $wpdb;
 
-		$task = $wpdb->get_row(
+		$task = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				'SELECT * FROM %i WHERE id = %d LIMIT 1',
 				YoOhw_COS_DB::tasks_table(),
@@ -383,7 +383,7 @@ final class YoOhw_COS_Tasks {
 			return array();
 		}
 
-		$task = $wpdb->get_row(
+		$task = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				'SELECT * FROM %i WHERE source_key = %s LIMIT 1',
 				YoOhw_COS_DB::tasks_table(),
@@ -473,8 +473,8 @@ final class YoOhw_COS_Tasks {
 			);
 		}
 
-		$tasks = $wpdb->get_results(
-			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- SQL is prepared in every status branch above.
+		$tasks = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state. SQL is prepared in every status branch above.
 			$prepared_sql,
 			ARRAY_A
 		);
@@ -559,8 +559,8 @@ final class YoOhw_COS_Tasks {
 			);
 		}
 
-		$tasks = $wpdb->get_results(
-			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- SQL is prepared in every status branch above.
+		$tasks = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state. SQL is prepared in every status branch above.
 			$prepared_sql,
 			ARRAY_A
 		);
@@ -649,8 +649,8 @@ final class YoOhw_COS_Tasks {
 			);
 		}
 
-		$tasks = $wpdb->get_results(
-			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- SQL is prepared in every status branch above.
+		$tasks = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state. SQL is prepared in every status branch above.
 			$prepared_sql,
 			ARRAY_A
 		);
@@ -690,8 +690,8 @@ final class YoOhw_COS_Tasks {
 			);
 		}
 
-		return (int) $wpdb->get_var(
-			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- SQL is prepared in every status branch above.
+		return (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state. SQL is prepared in every status branch above.
 			$prepared_sql
 		);
 	}
@@ -728,8 +728,8 @@ final class YoOhw_COS_Tasks {
 			);
 		}
 
-		return (int) $wpdb->get_var(
-			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- SQL is prepared in every status branch above.
+		return (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state. SQL is prepared in every status branch above.
 			$prepared_sql
 		);
 	}
@@ -742,7 +742,7 @@ final class YoOhw_COS_Tasks {
 			return 0;
 		}
 
-		return (int) $wpdb->get_var(
+		return (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				'SELECT COUNT(*) FROM %i WHERE customer_id = %d AND status <> %s AND due_date IS NOT NULL AND due_date < %s',
 				YoOhw_COS_DB::tasks_table(),
@@ -760,7 +760,7 @@ final class YoOhw_COS_Tasks {
 		$now      = YoOhw_COS_DB::now();
 		$due_soon = date_i18n( 'Y-m-d H:i:s', current_time( 'timestamp' ) + ( 7 * DAY_IN_SECONDS ) );
 
-		$row = $wpdb->get_row(
+		$row = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				"SELECT
 					COUNT(*) AS total_count,

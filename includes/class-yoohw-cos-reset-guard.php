@@ -25,7 +25,7 @@ final class YoOhw_COS_Reset_Guard {
 	/** Read through SQL: persistent object caches must not hide a reset. */
 	public static function state(): array {
 		global $wpdb;
-		$value = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, self::OPTION ) . ( self::$connection > 0 ? ' FOR UPDATE' : '' ) );
+		$value = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, self::OPTION ) . ( self::$connection > 0 ? ' FOR UPDATE' : '' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM coordination/readiness state requires a live database result, not cached obligations.
 		if ( null === $value && '' === $wpdb->last_error ) {
 			return array( 'epoch' => '', 'status' => 'ready' );
 		}
@@ -51,7 +51,7 @@ final class YoOhw_COS_Reset_Guard {
 
 	private static function owns_lock(): bool {
 		global $wpdb;
-		return self::$connection > 0 && (string) self::$connection === (string) $wpdb->get_var(
+		return self::$connection > 0 && (string) self::$connection === (string) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM coordination/readiness state requires a live database result, not cached obligations.
 			$wpdb->prepare( 'SELECT IF(IS_USED_LOCK(%s) = CONNECTION_ID(), CONNECTION_ID(), 0)', self::lock_name() )
 		);
 	}
@@ -72,10 +72,10 @@ final class YoOhw_COS_Reset_Guard {
 			self::$depth++;
 			return true;
 		}
-		if ( '1' !== (string) $wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK(%s, 2)', self::lock_name() ) ) ) {
+		if ( '1' !== (string) $wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK(%s, 2)', self::lock_name() ) ) ) { // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Database advisory locking requires the live connection, never a cached value.
 			return self::deferred( $incident );
 		}
-		self::$connection = (int) $wpdb->get_var( 'SELECT CONNECTION_ID()' );
+		self::$connection = (int) $wpdb->get_var( 'SELECT CONNECTION_ID()' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM coordination/readiness state requires a live database result, not cached obligations.
 		if ( ! self::ready() || self::$request_epoch !== self::epoch() ) {
 			self::unlock();
 			return self::deferred( $incident );
@@ -171,10 +171,10 @@ final class YoOhw_COS_Reset_Guard {
 					if ( ! self::write_notice( $items ) ) {
 						throw new RuntimeException( 'YCI could not persist a deferred operation; retry its source callback.' );
 					}
-					error_log( 'YCI operational incident capacity reached; existing obligations retained.' );
+					error_log( 'YCI operational incident capacity reached; existing obligations retained.' ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Operational alert for retained/deferred obligations, not debug output; logs only fixed copy or validated source/event keys.
 				}
 			} finally { self::unlock_notice(); }
-			error_log( 'YCI reset boundary deferred an integration callback: ' . $incident['source'] . ':' . $incident['event'] );
+			error_log( 'YCI reset boundary deferred an integration callback: ' . $incident['source'] . ':' . $incident['event'] ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Operational alert for retained/deferred obligations, not debug output; logs only fixed copy or validated source/event keys.
 		}
 		return false;
 	}
@@ -204,7 +204,7 @@ final class YoOhw_COS_Reset_Guard {
 			} finally { self::unlock_notice(); }
 			if ( array() === $items ) { return; }
 			$url = admin_url( 'admin.php?page=yoohw-customer-intelligence-settings#yoohw-cos-incidents' );
-			$page = isset( $_GET['page'] ) && is_string( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
+			$page = isset( $_GET['page'] ) && is_string( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 			if ( 'yoohw-customer-intelligence-settings' !== $page ) {
 				$opening = YoOhw_COS_Notice_Preferences::opening_markup( 'operational_recovery' );
 				if ( '' === $opening ) { return; }
@@ -276,8 +276,8 @@ final class YoOhw_COS_Reset_Guard {
 			if ( ! self::lock_notice() ) { wp_die( esc_html( self::rejection_message() ), '', array( 'response' => 409 ) ); }
 			try {
 				$items = self::notice_state( true );
-				$key = isset( $_POST['incident_key'] ) && is_string( $_POST['incident_key'] ) ? wp_unslash( $_POST['incident_key'] ) : '';
-				$id = isset( $_POST['notice_id'] ) && is_string( $_POST['notice_id'] ) ? wp_unslash( $_POST['notice_id'] ) : '';
+				$key = isset( $_POST['incident_key'] ) && is_string( $_POST['incident_key'] ) ? wp_unslash( $_POST['incident_key'] ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Unslashed strings must exactly match an existing incident key and revision ID; normalization must not adopt a different incident.
+				$id = isset( $_POST['notice_id'] ) && is_string( $_POST['notice_id'] ) ? wp_unslash( $_POST['notice_id'] ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Unslashed strings must exactly match an existing incident key and revision ID; normalization must not adopt a different incident.
 				if ( isset( $items[ $key ] ) && $id === $items[ $key ]['id'] ) {
 					unset( $items[ $key ] );
 					self::write_notice( $items );
@@ -298,7 +298,7 @@ final class YoOhw_COS_Reset_Guard {
 	private static function unlock(): void {
 		global $wpdb;
 		if ( self::owns_lock() ) {
-			$wpdb->get_var( $wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', self::lock_name() ) );
+			$wpdb->get_var( $wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', self::lock_name() ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Database advisory locking requires the live connection, never a cached value.
 		}
 		self::$connection = 0;
 	}
@@ -306,18 +306,18 @@ final class YoOhw_COS_Reset_Guard {
 	/** Serialize notice writes separately: a deferred caller cannot acquire the Reset lock. */
 	private static function lock_notice(): bool {
 		global $wpdb;
-		return '1' === (string) $wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK(%s, 10)', self::lock_name() . self::NOTICE_LOCK_SUFFIX ) );
+		return '1' === (string) $wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK(%s, 10)', self::lock_name() . self::NOTICE_LOCK_SUFFIX ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Database advisory locking requires the live connection, never a cached value.
 	}
 
 	private static function unlock_notice(): void {
 		global $wpdb;
-		$wpdb->get_var( $wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', self::lock_name() . self::NOTICE_LOCK_SUFFIX ) );
+		$wpdb->get_var( $wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', self::lock_name() . self::NOTICE_LOCK_SUFFIX ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Database advisory locking requires the live connection, never a cached value.
 	}
 
 	/** Direct SQL avoids a stale request-local options cache hiding a newer callback's signal. */
 	private static function notice_state( bool $current = false ): array {
 		global $wpdb;
-		$value = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, self::NOTICE_OPTION ) . ( $current ? ' FOR UPDATE' : '' ) );
+		$value = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, self::NOTICE_OPTION ) . ( $current ? ' FOR UPDATE' : '' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM coordination/readiness state requires a live database result, not cached obligations.
 		if ( '' !== $wpdb->last_error ) {
 			throw new RuntimeException( 'YCI could not read deferred operations; retry the request.' );
 		}
@@ -343,22 +343,22 @@ final class YoOhw_COS_Reset_Guard {
 
 	private static function notice_exists(): bool {
 		global $wpdb;
-		return null !== $wpdb->get_var( $wpdb->prepare( 'SELECT option_id FROM %i WHERE option_name IN (%s, %s)', $wpdb->options, self::NOTICE_OPTION, self::LEGACY_NOTICE_OPTION ) );
+		return null !== $wpdb->get_var( $wpdb->prepare( 'SELECT option_id FROM %i WHERE option_name IN (%s, %s)', $wpdb->options, self::NOTICE_OPTION, self::LEGACY_NOTICE_OPTION ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM coordination/readiness state requires a live database result, not cached obligations.
 	}
 
 	private static function write_notice( array $items ): bool {
 		global $wpdb;
-		return false !== $wpdb->replace( $wpdb->options, array( 'option_name' => self::NOTICE_OPTION, 'option_value' => maybe_serialize( array( 'version' => 1, 'items' => $items ) ), 'autoload' => 'no' ), array( '%s', '%s', '%s' ) );
+		return false !== $wpdb->replace( $wpdb->options, array( 'option_name' => self::NOTICE_OPTION, 'option_value' => maybe_serialize( array( 'version' => 1, 'items' => $items ) ), 'autoload' => 'no' ), array( '%s', '%s', '%s' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM coordination/readiness state requires a live database result, not cached obligations.
 	}
 
 	private static function delete_notice(): void {
 		global $wpdb;
-		$wpdb->delete( $wpdb->options, array( 'option_name' => self::NOTICE_OPTION ), array( '%s' ) );
+		$wpdb->delete( $wpdb->options, array( 'option_name' => self::NOTICE_OPTION ), array( '%s' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM coordination/readiness state requires a live database result, not cached obligations.
 	}
 
 	private static function migrate_legacy_notice( array $items ): array {
 		global $wpdb;
-		$value = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, self::LEGACY_NOTICE_OPTION ) );
+		$value = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, self::LEGACY_NOTICE_OPTION ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM coordination/readiness state requires a live database result, not cached obligations.
 		$legacy = maybe_unserialize( $value );
 		$has_transient = false !== get_transient( self::DEFERRED_NOTICE );
 		$active_legacy = is_array( $legacy ) && isset( $legacy['id'], $legacy['expires'] )
@@ -383,7 +383,7 @@ final class YoOhw_COS_Reset_Guard {
 			if ( ! self::write_notice( $items ) ) { return self::notice_state( true ); }
 		}
 		if ( $has_transient ) { delete_transient( self::DEFERRED_NOTICE ); }
-		$wpdb->delete( $wpdb->options, array( 'option_name' => self::LEGACY_NOTICE_OPTION ), array( '%s' ) );
+		$wpdb->delete( $wpdb->options, array( 'option_name' => self::LEGACY_NOTICE_OPTION ), array( '%s' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM coordination/readiness state requires a live database result, not cached obligations.
 		return $items;
 	}
 
@@ -397,10 +397,10 @@ final class YoOhw_COS_Reset_Guard {
 	/** Pending is durable before the first nontransactional TRUNCATE. */
 	public static function reset( callable $clear, ?string $expected_epoch = null ): bool {
 		global $wpdb;
-		if ( self::$resetting || self::$depth > 0 || '1' !== (string) $wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK(%s, 0)', self::lock_name() ) ) ) {
+		if ( self::$resetting || self::$depth > 0 || '1' !== (string) $wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK(%s, 0)', self::lock_name() ) ) ) { // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Database advisory locking requires the live connection, never a cached value.
 			throw new RuntimeException( 'Customer data is busy. Retry Reset after the current operation finishes.' );
 		}
-		self::$connection = (int) $wpdb->get_var( 'SELECT CONNECTION_ID()' );
+		self::$connection = (int) $wpdb->get_var( 'SELECT CONNECTION_ID()' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM coordination/readiness state requires a live database result, not cached obligations.
 		self::$resetting = true;
 		try {
 			$state = self::state();

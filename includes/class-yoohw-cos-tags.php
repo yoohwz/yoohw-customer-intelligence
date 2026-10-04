@@ -24,7 +24,7 @@ final class YoOhw_COS_Tags {
 			return absint( $existing['id'] );
 		}
 
-		$inserted = $wpdb->insert(
+		$inserted = $wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			YoOhw_COS_DB::tags_table(),
 			array(
 				'name'        => $name,
@@ -43,7 +43,7 @@ final class YoOhw_COS_Tags {
 	public static function get_tag_by_slug( string $slug ): array {
 		global $wpdb;
 
-		$tag = $wpdb->get_row(
+		$tag = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				'SELECT * FROM %i WHERE slug = %s LIMIT 1',
 				YoOhw_COS_DB::tags_table(),
@@ -79,7 +79,7 @@ final class YoOhw_COS_Tags {
 			return true;
 		}
 
-		$inserted = $wpdb->insert(
+		$inserted = $wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			YoOhw_COS_DB::customer_tags_table(),
 			array(
 				'customer_id' => absint( $customer_id ),
@@ -123,7 +123,7 @@ final class YoOhw_COS_Tags {
 		$tags_table          = YoOhw_COS_DB::tags_table();
 		$customer_tags_table = YoOhw_COS_DB::customer_tags_table();
 
-		$tags = $wpdb->get_results(
+		$tags = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				"SELECT t.*
 				FROM %i t
@@ -143,7 +143,7 @@ final class YoOhw_COS_Tags {
 	public static function get_tag( int $tag_id ): array {
 		global $wpdb;
 
-		$tag = $wpdb->get_row(
+		$tag = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				'SELECT * FROM %i WHERE id = %d LIMIT 1',
 				YoOhw_COS_DB::tags_table(),
@@ -162,7 +162,7 @@ final class YoOhw_COS_Tags {
 	public static function customer_has_tag( int $customer_id, int $tag_id ): bool {
 		global $wpdb;
 
-		$id = $wpdb->get_var(
+		$id = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				"SELECT id FROM %i
 				WHERE customer_id = %d AND tag_id = %d
@@ -196,7 +196,7 @@ final class YoOhw_COS_Tags {
 
 		$tag = self::get_tag( $tag_id );
 
-		$deleted = $wpdb->delete(
+		$deleted = $wpdb->delete( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			YoOhw_COS_DB::customer_tags_table(),
 			array(
 				'customer_id' => absint( $customer_id ),
@@ -233,7 +233,7 @@ final class YoOhw_COS_Tags {
 	public static function get_all_tags(): array {
 		global $wpdb;
 
-		$tags = $wpdb->get_results(
+		$tags = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				'SELECT * FROM %i ORDER BY name ASC',
 				YoOhw_COS_DB::tags_table()
@@ -247,7 +247,7 @@ final class YoOhw_COS_Tags {
 	public static function get_tag_customer_count( int $tag_id ): int {
 		global $wpdb;
 
-		return (int) $wpdb->get_var(
+		return (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				'SELECT COUNT(*) FROM %i WHERE tag_id = %d',
 				YoOhw_COS_DB::customer_tags_table(),
@@ -265,7 +265,7 @@ final class YoOhw_COS_Tags {
 			return false;
 		}
 
-		$updated = $wpdb->update(
+		$updated = $wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			YoOhw_COS_DB::tags_table(),
 			array(
 				'name'        => $name,
@@ -307,14 +307,14 @@ final class YoOhw_COS_Tags {
 		}
 
 		if ( $force ) {
-			$wpdb->delete(
+			$wpdb->delete( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 				YoOhw_COS_DB::customer_tags_table(),
 				array( 'tag_id' => absint( $tag_id ) ),
 				array( '%d' )
 			);
 		}
 
-		$deleted = $wpdb->delete(
+		$deleted = $wpdb->delete( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			YoOhw_COS_DB::tags_table(),
 			array( 'id' => absint( $tag_id ) ),
 			array( '%d' )

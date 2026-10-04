@@ -5,6 +5,7 @@ from __future__ import annotations
 import ast
 import importlib.util
 import os
+import re
 from pathlib import Path
 import subprocess
 import tempfile
@@ -196,6 +197,38 @@ def load_release_lib():
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def assert_latest_readme_changelog(readme: str, version: str) -> None:
+    sections = re.split(r"^== Changelog ==\s*$", readme, flags=re.MULTILINE)
+    assert len(sections) == 2, "readme must have one Changelog section"
+    section = re.split(r"^== [^\n]+ ==\s*$", sections[1], maxsplit=1, flags=re.MULTILINE)[0]
+    headings = re.findall(r"^= ([^\n=]+) =$", section, flags=re.MULTILINE)
+    assert headings == [version], "readme Changelog must contain only the current release"
+
+
+def public_metadata_contract() -> None:
+    rel = load_release_lib()
+    version = rel.version_from_tree(ROOT)
+    readme = text("readme.txt")
+    assert_latest_readme_changelog(readme, version)
+    headings = re.findall(r"^= ([^\n=]+) =$", text("changelog.txt"), flags=re.MULTILINE)
+    assert headings and re.fullmatch(re.escape(version) + r"(?: \(.*\))?", headings[0]), "full history must begin with current release"
+    assert len(headings) > 1, "dedicated changelog must retain historical releases"
+    # Historical references outside Changelog remain legitimate.
+    assert_latest_readme_changelog("== Description ==\nPrevious version 0.0.1.\n== Changelog ==\n= " + version + " =\n* Current notes.\n== Upgrade Notice ==\n= 0.0.1 =\nHistorical context.\n", version)
+    for malformed in (
+        "== Changelog ==\n= " + version + " =\n= 0.0.1 =\n",
+        "== Changelog ==\n= 0.0.1 =\n",
+        "== Changelog ==\nNo release entry.\n",
+        "== Changelog ==\n= " + version + " =\n== Changelog ==\n= " + version + " =\n",
+    ):
+        try:
+            assert_latest_readme_changelog(malformed, version)
+        except AssertionError:
+            pass
+        else:
+            raise AssertionError("invalid latest-only readme fixture accepted")
 
 
 def deterministic_package_contract() -> None:
@@ -489,6 +522,7 @@ def main() -> None:
     workflow_contract()
     implementation_contract()
     documentation_contract()
+    public_metadata_contract()
     deterministic_package_contract()
     credential_environment_contract()
     release_asset_bytes_contract()

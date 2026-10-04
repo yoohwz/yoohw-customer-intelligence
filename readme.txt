@@ -7,7 +7,7 @@ Requires PHP: 7.4
 Requires Plugins: woocommerce
 WC requires at least: 8.2
 WC tested up to: 11.0
-Stable tag: 1.4.2
+Stable tag: 1.4.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -123,30 +123,13 @@ Archive removes a CRM profile from the main customer list. It does not delete Wo
 
 == Changelog ==
 
-= 1.4.2 =
+= 1.4.3 =
 
-Oct 1, 2026.
+Oct 4, 2026.
 
-* Replaced the generic deferred-operation warning with source-aware Operational recovery records and clearer guidance in Customer Intelligence Settings, including supported Blacklist and Loyalty recovery links. Blocking Reset states continue to prevent unsafe operations.
-* Clarified the “Acknowledge after recovery” action: it acknowledges an incident after its recovery has been completed. Handled legacy notices stay dismissed, while new or concurrent unresolved incidents remain visible and distinct.
-* Made redirect-result notices appear once on Customer Intelligence screens without consuming similarly named query parameters on unrelated admin screens. Improved notice severity consistency and prevented repeated order-admin Reset conflict messages from stacking.
-
-= 1.4.1 =
-
-Sep 29, 2026.
-
-* Corrected Reset Guard warnings so routine read and retryable sync contention no longer appears to be a lost customer-data operation. Interrupted Reset recovery and integration events that need manual replay now have clearer, separate notices; recovered notices can be dismissed without hiding a newer deferred operation.
-* Refreshed existing CRM task emails with clearer status, context, and next actions for assignments, reassignment, due-soon, completion, reopening, overdue, escalation, and daily summaries. Messages retain WooCommerce email branding and settings, with matching HTML and plain-text content and Customer Message block-email compatibility.
-
-= 1.4.0 =
-
-Sep 27, 2026.
-
-* Added Saved Customer Views, retention and attention quick views, and explainable RFM facts and filters to help teams find and revisit operational customer groups.
-* Reorganized Customers as an operations workspace and Customer Profile around immediate actions while keeping notes, tasks, email, tags, static segments, exports, and optional integrations available.
-* Aligned recognized-order, refund, and reassignment metrics across customer views. Per-order currency tracking keeps mixed or unknown currencies unavailable for combined monetary figures; no currency conversion is applied. Bounded backfill restores valid single-currency figures after convergence.
-* Added WordPress Personal Data Export and Erase support for Customer Intelligence data, with resumable erasure and retained one-way suppression receipts. WooCommerce orders and WordPress users remain under their own systems' control.
-* Expanded Diagnostics for data freshness, migrations, and currency state; improved large-data performance and added Free extension contracts for future integrations.
-* Hardened migrations, admin screens, HPOS and legacy order-storage coverage, Plugin Check compatibility, and deterministic distribution packaging.
-
-See `changelog.txt` for the complete release history.
+* Improved monetary availability messages to distinguish currency-data preparation, items needing attention, multiple currencies, and missing order currencies. Stale customer monetary data can recover safely in the background; recorded currencies are retained without exchange-rate conversion.
+* Clarified automatic commerce-data update progress and Settings guidance. Admin notices can be dismissed per user for the current state; Settings and Diagnostics continue to show the authoritative state.
+* Fixed Customers CSV downloads containing admin HTML before the CSV. Filtered and Saved View exports remain clean, parseable CSV.
+* Fixed Lifecycle Lifetime value displaying escaped price markup. Recorded foreign-currency amounts remain readable, while KPI, RFM, and order prices retain their formatting.
+* Corrected First-time customers to include exactly one recognized order. Repeat customers have two or more; zero-order profiles remain available outside purchase cohorts.
+* Fixed HTML entities and broken task links in plain-text CRM emails. Task IDs remain query parameters, and the HTML email presentation is unchanged.

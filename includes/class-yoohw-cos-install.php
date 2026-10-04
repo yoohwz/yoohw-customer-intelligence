@@ -82,7 +82,7 @@ final class YoOhw_COS_Install {
 					$failures[] = $key . '.table';
 					continue;
 				}
-				$columns = $wpdb->get_results( $wpdb->prepare( 'SHOW COLUMNS FROM %i', $table ), OBJECT_K );
+				$columns = $wpdb->get_results( $wpdb->prepare( 'SHOW COLUMNS FROM %i', $table ), OBJECT_K ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM schema inspection/setup has no WordPress object API; query live database state.
 				foreach ( $contract['columns'] as $name => $definition ) {
 					$column = $columns[ $name ] ?? null;
 					$type = $column ? preg_replace( '/\b(tinyint|smallint|int|bigint)\(\d+\)/', '$1', strtolower( $column->Type ) ) : '';
@@ -92,7 +92,7 @@ final class YoOhw_COS_Install {
 						$failures[] = $key . '.column.' . $name;
 					}
 				}
-				$rows = $wpdb->get_results( $wpdb->prepare( 'SHOW INDEX FROM %i', $table ), ARRAY_A );
+				$rows = $wpdb->get_results( $wpdb->prepare( 'SHOW INDEX FROM %i', $table ), ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM schema inspection/setup has no WordPress object API; query live database state.
 				$indexes = array();
 				foreach ( (array) $rows as $row ) {
 					$indexes[ $row['Key_name'] ][ (int) $row['Seq_in_index'] ] = $row;
@@ -121,7 +121,7 @@ final class YoOhw_COS_Install {
 	private static function execute_ensure_ddl( string $sql ): void {
 		global $wpdb;
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Every caller passes a %i-prepared, fixed-schema DDL statement; DDL cannot be passed through a second prepare call.
-		if ( false === $wpdb->query( $sql ) ) { self::$ensure_failed = true; }
+		if ( false === $wpdb->query( $sql ) ) { self::$ensure_failed = true; } // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Every caller passes a %i-prepared, fixed-schema DDL statement; DDL cannot be passed through a second prepare call. Owned CRM schema inspection/setup has no WordPress object API; query live database state.
 	}
 
 	/** Current 0.2.1 schema only; column tuples are type, nullable, default. */
@@ -732,7 +732,7 @@ final class YoOhw_COS_Install {
 
 		$table = $wpdb->prefix . 'yoohw_cos_customers';
 
-		$first_order_id_exists = $wpdb->get_var(
+		$first_order_id_exists = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM schema inspection/setup has no WordPress object API; query live database state.
 			$wpdb->prepare(
 				'SHOW COLUMNS FROM %i LIKE %s',
 				$table,
@@ -751,7 +751,7 @@ final class YoOhw_COS_Install {
 
 		self::maybe_add_index( $table, 'first_order_id', 'first_order_id' );
 
-		$first_order_date_exists = $wpdb->get_var(
+		$first_order_date_exists = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM schema inspection/setup has no WordPress object API; query live database state.
 			$wpdb->prepare(
 				'SHOW COLUMNS FROM %i LIKE %s',
 				$table,
@@ -776,7 +776,7 @@ final class YoOhw_COS_Install {
 
 		$table = $wpdb->prefix . 'yoohw_cos_customers';
 
-		$exists = $wpdb->get_var(
+		$exists = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM schema inspection/setup has no WordPress object API; query live database state.
 			$wpdb->prepare(
 				'SHOW COLUMNS FROM %i LIKE %s',
 				$table,
@@ -805,7 +805,7 @@ final class YoOhw_COS_Install {
 
 		$table = $wpdb->prefix . 'yoohw_cos_customers';
 
-		$archived_at_exists = $wpdb->get_var(
+		$archived_at_exists = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM schema inspection/setup has no WordPress object API; query live database state.
 			$wpdb->prepare(
 				'SHOW COLUMNS FROM %i LIKE %s',
 				$table,
@@ -822,7 +822,7 @@ final class YoOhw_COS_Install {
 			);
 		}
 
-		$archived_by_exists = $wpdb->get_var(
+		$archived_by_exists = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM schema inspection/setup has no WordPress object API; query live database state.
 			$wpdb->prepare(
 				'SHOW COLUMNS FROM %i LIKE %s',
 				$table,
@@ -839,7 +839,7 @@ final class YoOhw_COS_Install {
 			);
 		}
 
-		$archive_reason_exists = $wpdb->get_var(
+		$archive_reason_exists = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM schema inspection/setup has no WordPress object API; query live database state.
 			$wpdb->prepare(
 				'SHOW COLUMNS FROM %i LIKE %s',
 				$table,
@@ -864,7 +864,7 @@ final class YoOhw_COS_Install {
 
 		$table = $wpdb->prefix . 'yoohw_cos_customers';
 
-		$loyalty_level_exists = $wpdb->get_var(
+		$loyalty_level_exists = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM schema inspection/setup has no WordPress object API; query live database state.
 			$wpdb->prepare(
 				'SHOW COLUMNS FROM %i LIKE %s',
 				$table,
@@ -881,7 +881,7 @@ final class YoOhw_COS_Install {
 			);
 		}
 
-		$available_points_exists = $wpdb->get_var(
+		$available_points_exists = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM schema inspection/setup has no WordPress object API; query live database state.
 			$wpdb->prepare(
 				'SHOW COLUMNS FROM %i LIKE %s',
 				$table,
@@ -898,7 +898,7 @@ final class YoOhw_COS_Install {
 			);
 		}
 
-		$earned_points_exists = $wpdb->get_var(
+		$earned_points_exists = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM schema inspection/setup has no WordPress object API; query live database state.
 			$wpdb->prepare(
 				'SHOW COLUMNS FROM %i LIKE %s',
 				$table,
@@ -932,7 +932,7 @@ final class YoOhw_COS_Install {
 		self::add_archive_columns();
 		self::add_loyalty_columns();
 
-		$metrics_version_exists = $wpdb->get_var(
+		$metrics_version_exists = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM schema inspection/setup has no WordPress object API; query live database state.
 			$wpdb->prepare(
 				'SHOW COLUMNS FROM %i LIKE %s',
 				$table,
@@ -949,7 +949,7 @@ final class YoOhw_COS_Install {
 			);
 		}
 
-		$intelligence_ready_exists = $wpdb->get_var(
+		$intelligence_ready_exists = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM schema inspection/setup has no WordPress object API; query live database state.
 			$wpdb->prepare( 'SHOW COLUMNS FROM %i LIKE %s', $table, 'intelligence_currency_ready' )
 		);
 		if ( empty( $intelligence_ready_exists ) ) {
@@ -957,7 +957,7 @@ final class YoOhw_COS_Install {
 				$wpdb->prepare( 'ALTER TABLE %i ADD intelligence_currency_ready TINYINT NOT NULL DEFAULT 0 AFTER commerce_metrics_version', $table )
 			);
 		}
-		$intelligence_generation_exists = $wpdb->get_var(
+		$intelligence_generation_exists = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM schema inspection/setup has no WordPress object API; query live database state.
 			$wpdb->prepare( 'SHOW COLUMNS FROM %i LIKE %s', $table, 'intelligence_generation' )
 		);
 		if ( empty( $intelligence_generation_exists ) ) {
@@ -982,7 +982,7 @@ final class YoOhw_COS_Install {
 			return;
 		}
 
-		$source_key_exists = $wpdb->get_var(
+		$source_key_exists = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM schema inspection/setup has no WordPress object API; query live database state.
 			$wpdb->prepare(
 				'SHOW COLUMNS FROM %i LIKE %s',
 				$table,
@@ -1011,7 +1011,7 @@ final class YoOhw_COS_Install {
 			return;
 		}
 
-		$event_key_exists = $wpdb->get_var(
+		$event_key_exists = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM schema inspection/setup has no WordPress object API; query live database state.
 			$wpdb->prepare( 'SHOW COLUMNS FROM %i LIKE %s', $table, 'event_key' )
 		);
 
@@ -1021,7 +1021,7 @@ final class YoOhw_COS_Install {
 			);
 		}
 
-		$index_exists = $wpdb->get_var(
+		$index_exists = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM schema inspection/setup has no WordPress object API; query live database state.
 			$wpdb->prepare( 'SHOW INDEX FROM %i WHERE Key_name = %s', $table, 'event_key' )
 		);
 
@@ -1035,7 +1035,7 @@ final class YoOhw_COS_Install {
 	private static function table_exists( string $table ): bool {
 		global $wpdb;
 
-		$exists = $wpdb->get_var(
+		$exists = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM schema inspection/setup has no WordPress object API; query live database state.
 			$wpdb->prepare(
 				'SHOW TABLES LIKE %s',
 				$wpdb->esc_like( $table )
@@ -1066,7 +1066,7 @@ final class YoOhw_COS_Install {
 			return;
 		}
 
-		$exists = $wpdb->get_var(
+		$exists = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM schema inspection/setup has no WordPress object API; query live database state.
 			$wpdb->prepare(
 				'SHOW INDEX FROM %i WHERE Key_name = %s',
 				$table,
@@ -1097,7 +1097,7 @@ final class YoOhw_COS_Install {
 			return;
 		}
 
-		$exists = $wpdb->get_var(
+		$exists = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM schema inspection/setup has no WordPress object API; query live database state.
 			$wpdb->prepare(
 				'SHOW INDEX FROM %i WHERE Key_name = %s',
 				$table,

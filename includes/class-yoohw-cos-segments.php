@@ -29,7 +29,7 @@ final class YoOhw_COS_Segments {
 			return absint( $existing['id'] );
 		}
 
-		$inserted = $wpdb->insert(
+		$inserted = $wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			YoOhw_COS_DB::segments_table(),
 			array(
 				'name'         => $name,
@@ -49,7 +49,7 @@ final class YoOhw_COS_Segments {
 	public static function get_segment_by_slug( string $slug ): array {
 		global $wpdb;
 
-		$segment = $wpdb->get_row(
+		$segment = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				'SELECT * FROM %i WHERE slug = %s LIMIT 1',
 				YoOhw_COS_DB::segments_table(),
@@ -64,7 +64,7 @@ final class YoOhw_COS_Segments {
 	public static function get_all_segments(): array {
 		global $wpdb;
 
-		$segments = $wpdb->get_results(
+		$segments = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				'SELECT * FROM %i ORDER BY name ASC',
 				YoOhw_COS_DB::segments_table()
@@ -97,7 +97,7 @@ final class YoOhw_COS_Segments {
 			return true;
 		}
 
-		$inserted = $wpdb->insert(
+		$inserted = $wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			YoOhw_COS_DB::customer_segments_table(),
 			array(
 				'customer_id' => absint( $customer_id ),
@@ -151,7 +151,7 @@ final class YoOhw_COS_Segments {
 
 		$segment = self::get_segment( $segment_id );
 
-		$deleted = $wpdb->delete(
+		$deleted = $wpdb->delete( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			YoOhw_COS_DB::customer_segments_table(),
 			array(
 				'customer_id' => absint( $customer_id ),
@@ -184,7 +184,7 @@ final class YoOhw_COS_Segments {
 	public static function get_segment( int $segment_id ): array {
 		global $wpdb;
 
-		$segment = $wpdb->get_row(
+		$segment = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				'SELECT * FROM %i WHERE id = %d LIMIT 1',
 				YoOhw_COS_DB::segments_table(),
@@ -203,7 +203,7 @@ final class YoOhw_COS_Segments {
 	public static function customer_in_segment( int $customer_id, int $segment_id ): bool {
 		global $wpdb;
 
-		$id = $wpdb->get_var(
+		$id = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				"SELECT id FROM %i
 				WHERE customer_id = %d AND segment_id = %d
@@ -223,7 +223,7 @@ final class YoOhw_COS_Segments {
 		$segments_table          = YoOhw_COS_DB::segments_table();
 		$customer_segments_table = YoOhw_COS_DB::customer_segments_table();
 
-		$segments = $wpdb->get_results(
+		$segments = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				"SELECT s.*
 				FROM %i s
@@ -243,7 +243,7 @@ final class YoOhw_COS_Segments {
 	public static function get_segment_customer_count( int $segment_id ): int {
 		global $wpdb;
 
-		return (int) $wpdb->get_var(
+		return (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				"SELECT COUNT(*)
 				FROM %i
@@ -281,14 +281,14 @@ final class YoOhw_COS_Segments {
 		}
 
 		if ( $force ) {
-			$wpdb->delete(
+			$wpdb->delete( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 				YoOhw_COS_DB::customer_segments_table(),
 				array( 'segment_id' => absint( $segment_id ) ),
 				array( '%d' )
 			);
 		}
 
-		$deleted = $wpdb->delete(
+		$deleted = $wpdb->delete( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			YoOhw_COS_DB::segments_table(),
 			array( 'id' => absint( $segment_id ) ),
 			array( '%d' )
@@ -312,7 +312,7 @@ final class YoOhw_COS_Segments {
 			return false;
 		}
 
-		$updated = $wpdb->update(
+		$updated = $wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			YoOhw_COS_DB::segments_table(),
 			array(
 				'name'        => $name,

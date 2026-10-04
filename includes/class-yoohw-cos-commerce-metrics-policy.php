@@ -62,7 +62,7 @@ final class YoOhw_COS_Commerce_Metrics_Policy {
 		$status = $migration['status'] ?? '';
 		$site = $ready ? 'ready' : 'attention';
 		global $wpdb;
-		$issues = $wpdb->get_row( $wpdb->prepare( "SELECT SUM(status = 'pending') pending, SUM(status = 'unresolved') unresolved FROM %i WHERE migration_id IN ('commerce_facts_v2', 'commerce_currency_v3') AND status IN ('pending', 'unresolved')", YoOhw_COS_DB::migration_issues_table() ), ARRAY_A );
+		$issues = $wpdb->get_row( $wpdb->prepare( "SELECT SUM(status = 'pending') pending, SUM(status = 'unresolved') unresolved FROM %i WHERE migration_id IN ('commerce_facts_v2', 'commerce_currency_v3') AND status IN ('pending', 'unresolved')", YoOhw_COS_DB::migration_issues_table() ), ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM coordination/readiness state requires a live database result, not cached obligations.
 		$issues_readable = '' === $wpdb->last_error;
 		$schema = get_option( 'yoohw_cos_schema_status', array() );
 		$progress = absint( $migration['last_progress_at'] ?? 0 );

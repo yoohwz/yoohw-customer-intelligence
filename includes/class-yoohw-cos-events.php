@@ -74,7 +74,7 @@ final class YoOhw_COS_Events {
 
 		$previous_error_suppression = '' !== $event_key ? $wpdb->suppress_errors() : null;
 
-		$inserted = $wpdb->insert(
+		$inserted = $wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$table,
 			array(
 				'customer_id'   => $args['customer_id'] ? absint( $args['customer_id'] ) : null,
@@ -110,7 +110,7 @@ final class YoOhw_COS_Events {
 
 		if ( ! $inserted ) {
 			if ( '' !== $event_key ) {
-				$existing_id = $wpdb->get_var(
+				$existing_id = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 					$wpdb->prepare( 'SELECT id FROM %i WHERE event_key = %s LIMIT 1', $table, $event_key )
 				);
 
@@ -180,7 +180,7 @@ final class YoOhw_COS_Events {
 		$previous_error_suppression = $wpdb->suppress_errors();
 
 		if ( $customer_id > 0 ) {
-			$wpdb->query(
+			$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 				$wpdb->prepare(
 					"UPDATE %i target
 					JOIN (
@@ -207,7 +207,7 @@ final class YoOhw_COS_Events {
 				)
 			);
 		} else {
-			$wpdb->query(
+			$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 				$wpdb->prepare(
 					"UPDATE %i target
 					JOIN (
@@ -237,7 +237,7 @@ final class YoOhw_COS_Events {
 		$wpdb->suppress_errors( (bool) $previous_error_suppression );
 
 		return absint(
-			$wpdb->get_var(
+			$wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 				$wpdb->prepare( 'SELECT id FROM %i WHERE event_key = %s LIMIT 1', $table, $event_key )
 			)
 		);
@@ -260,7 +260,7 @@ final class YoOhw_COS_Events {
 		$offset       = absint( $args['offset'] );
 
 		if ( '' !== $event_source ) {
-			$results = $wpdb->get_results(
+			$results = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 				$wpdb->prepare(
 					"SELECT *
 					FROM %i
@@ -277,7 +277,7 @@ final class YoOhw_COS_Events {
 				ARRAY_A
 			);
 		} else {
-			$results = $wpdb->get_results(
+			$results = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 				$wpdb->prepare(
 					"SELECT *
 					FROM %i
@@ -310,7 +310,7 @@ final class YoOhw_COS_Events {
 
 		$table = YoOhw_COS_DB::events_table();
 
-		return (int) $wpdb->get_var(
+		return (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				"SELECT COUNT(*)
 				FROM %i
@@ -343,7 +343,7 @@ final class YoOhw_COS_Events {
 		}
 
 		if ( $wp_user_id > 0 ) {
-			$updated = $wpdb->query(
+			$updated = $wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 				$wpdb->prepare(
 					"UPDATE %i
 					SET customer_id = %d, wp_user_id = %d
@@ -356,7 +356,7 @@ final class YoOhw_COS_Events {
 				)
 			);
 		} else {
-			$updated = $wpdb->query(
+			$updated = $wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 				$wpdb->prepare(
 					"UPDATE %i
 					SET customer_id = %d
@@ -383,7 +383,7 @@ final class YoOhw_COS_Events {
 		$table = YoOhw_COS_DB::events_table();
 
 		if ( $customer_id > 0 ) {
-			$event_id = $wpdb->get_var(
+			$event_id = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 				$wpdb->prepare(
 					"SELECT id
 					FROM %i
@@ -400,7 +400,7 @@ final class YoOhw_COS_Events {
 				)
 			);
 		} else {
-			$event_id = $wpdb->get_var(
+			$event_id = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 				$wpdb->prepare(
 					"SELECT id
 					FROM %i
@@ -424,7 +424,7 @@ final class YoOhw_COS_Events {
 
 		$table = YoOhw_COS_DB::events_table();
 
-		return (int) $wpdb->get_var(
+		return (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				'SELECT COUNT(*) FROM %i',
 				$table
@@ -447,7 +447,7 @@ final class YoOhw_COS_Events {
 
 		$table = YoOhw_COS_DB::events_table();
 
-		$rows = $wpdb->get_results(
+		$rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				"SELECT %i as label, COUNT(*) as total
 				FROM %i

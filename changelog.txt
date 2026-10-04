@@ -1,5 +1,14 @@
 === Customer Intelligence for WooCommerce Changelog ===
 
+= 1.4.3 (Oct 4, 2026) =
+
+* Improved monetary availability messages to distinguish currency-data preparation, items needing attention, multiple currencies, and missing order currencies. Stale customer monetary data can recover safely in the background; recorded currencies are retained without exchange-rate conversion.
+* Clarified automatic commerce-data update progress and Settings guidance. Admin notices can be dismissed per user for the current state; Settings and Diagnostics continue to show the authoritative state.
+* Fixed Customers CSV downloads containing admin HTML before the CSV. Filtered and Saved View exports remain clean, parseable CSV.
+* Fixed Lifecycle Lifetime value displaying escaped price markup. Recorded foreign-currency amounts remain readable, while KPI, RFM, and order prices retain their formatting.
+* Corrected First-time customers to include exactly one recognized order. Repeat customers have two or more; zero-order profiles remain available outside purchase cohorts.
+* Fixed HTML entities and broken task links in plain-text CRM emails. Task IDs remain query parameters, and the HTML email presentation is unchanged.
+
 = 1.4.2 (Oct 1, 2026) =
 
 * Replaced the generic deferred-operation warning with source-aware Operational recovery records and clearer guidance in Customer Intelligence Settings, including supported Blacklist and Loyalty recovery links. Blocking Reset states continue to prevent unsafe operations.

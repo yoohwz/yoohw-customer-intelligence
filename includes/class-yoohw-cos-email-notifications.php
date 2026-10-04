@@ -131,7 +131,7 @@ final class YoOhw_COS_Email_Notifications {
 		$email_templates = self::filter_visible_email_templates( $email_templates );
 		$current_group   = self::get_current_email_group( $email_templates );
 		$columns         = apply_filters(
-			'woocommerce_email_setting_columns',
+			'woocommerce_email_setting_columns', // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- WooCommerce owns this existing email hook; preserving its name is required for email integrations.
 			array(
 				'status'     => '',
 				'name'       => __( 'Email', 'yoohw-customer-intelligence' ),
@@ -439,7 +439,7 @@ final class YoOhw_COS_Email_Notifications {
 			return array();
 		}
 
-		$row = $wpdb->get_row(
+		$row = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				"SELECT
 					t.*,
@@ -520,7 +520,7 @@ final class YoOhw_COS_Email_Notifications {
 		global $wpdb;
 
 		return absint(
-			$wpdb->get_var(
+			$wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 				$wpdb->prepare(
 					"SELECT assigned_user_id FROM %i
 					WHERE status <> %s AND assigned_user_id > %d AND due_date IS NOT NULL AND due_date < %s
@@ -537,7 +537,7 @@ final class YoOhw_COS_Email_Notifications {
 	private static function get_open_overdue_tasks_for_user( int $user_id, string $cutoff, int $after_task_id = 0 ): array {
 		global $wpdb;
 
-		$tasks = $wpdb->get_results(
+		$tasks = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				"SELECT
 					t.*,
@@ -615,7 +615,7 @@ final class YoOhw_COS_Email_Notifications {
 		global $wpdb;
 
 		return absint(
-			$wpdb->get_var(
+			$wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 				$wpdb->prepare(
 					"SELECT assigned_user_id FROM %i
 					WHERE status <> %s AND assigned_user_id > %d
@@ -637,7 +637,7 @@ final class YoOhw_COS_Email_Notifications {
 	private static function get_daily_summary_tasks_for_user( int $user_id, string $current_time, string $today_start, string $today_end, int $after_task_id = 0 ): array {
 		global $wpdb;
 
-		$tasks = $wpdb->get_results(
+		$tasks = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				"SELECT
 					t.*,
@@ -683,7 +683,7 @@ final class YoOhw_COS_Email_Notifications {
 	private static function get_open_tasks_by_date_window( string $start, string $end, int $after_task_id = 0 ): array {
 		global $wpdb;
 
-		$tasks = $wpdb->get_results(
+		$tasks = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				"SELECT
 					t.*,
@@ -862,7 +862,7 @@ final class YoOhw_COS_Email_Notifications {
 	}
 
 	private static function get_current_email_group( array $email_templates ): string {
-		$group  = isset( $_GET['email_group'] ) ? sanitize_key( wp_unslash( $_GET['email_group'] ) ) : 'general';
+		$group  = isset( $_GET['email_group'] ) ? sanitize_key( wp_unslash( $_GET['email_group'] ) ) : 'general'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 		$groups = self::get_email_group_labels( $email_templates );
 
 		return isset( $groups[ $group ] ) ? $group : 'general';
@@ -1007,7 +1007,7 @@ final class YoOhw_COS_Email_Notifications {
 
 	private static function render_email_column( string $key, string $email_key, $email ): void {
 		if ( ! in_array( $key, array( 'name', 'recipient', 'status', 'email_type', 'actions' ), true ) ) {
-			do_action( 'woocommerce_email_setting_column_' . $key, $email );
+			do_action( 'woocommerce_email_setting_column_' . $key, $email ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- WooCommerce owns this existing email hook; preserving its name is required for email integrations.
 			return;
 		}
 

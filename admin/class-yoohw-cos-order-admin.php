@@ -26,17 +26,13 @@ final class YoOhw_COS_Order_Admin {
 			return;
 		}
 
-		$js_path  = YOOHW_COS_PATH . 'assets/js/order-admin.js';
-		$css_path = YOOHW_COS_PATH . 'assets/css/order-admin.css';
-		$js_ver   = file_exists( $js_path ) ? (string) filemtime( $js_path ) : YOOHW_COS_VERSION;
-		$css_ver  = file_exists( $css_path ) ? (string) filemtime( $css_path ) : YOOHW_COS_VERSION;
 
 		wp_enqueue_script( 'wc-enhanced-select' );
 		wp_enqueue_script(
 			'yoohw-cos-order-admin',
 			YOOHW_COS_URL . 'assets/js/order-admin.js',
 			array( 'jquery', 'wc-enhanced-select', 'jquery-tiptip' ),
-			$js_ver,
+			YOOHW_COS_VERSION,
 			true
 		);
 		wp_localize_script(
@@ -58,7 +54,7 @@ final class YoOhw_COS_Order_Admin {
 			'yoohw-cos-order-admin',
 			YOOHW_COS_URL . 'assets/css/order-admin.css',
 			array(),
-			$css_ver
+			YOOHW_COS_VERSION
 		);
 	}
 
@@ -145,7 +141,7 @@ final class YoOhw_COS_Order_Admin {
 	public static function filter_legacy_order_list_query_vars( array $query_vars ): array {
 		$post_type = isset( $query_vars['post_type'] )
 			? sanitize_key( (string) $query_vars['post_type'] )
-			: ( isset( $_GET['post_type'] ) ? sanitize_key( wp_unslash( $_GET['post_type'] ) ) : '' );
+			: ( isset( $_GET['post_type'] ) ? sanitize_key( wp_unslash( $_GET['post_type'] ) ) : '' ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 
 		if ( 'shop_order' !== $post_type ) {
 			return $query_vars;
@@ -183,7 +179,7 @@ final class YoOhw_COS_Order_Admin {
 			? $query_args['meta_query']
 			: array();
 
-		$query_args['meta_query'] = empty( $existing_meta_query )
+		$query_args['meta_query'] = empty( $existing_meta_query ) // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- WooCommerce order-list filtering uses the existing customer-link metadata contract.
 			? array( $profile_clause )
 			: array(
 				'relation' => 'AND',
@@ -283,7 +279,7 @@ final class YoOhw_COS_Order_Admin {
 
 	public static function save_customer_profile_link( int $order_id, $order = null ): void {
 		if ( ! YoOhw_COS_Reset_Guard::enter() ) {
-			if ( isset( $_POST['yoohw_cos_customer_id'] ) && class_exists( 'WC_Admin_Meta_Boxes' ) ) {
+			if ( isset( $_POST['yoohw_cos_customer_id'] ) && class_exists( 'WC_Admin_Meta_Boxes' ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Presence check only reports Reset rejection; guarded save verifies capability, nonce and captured epoch.
 				WC_Admin_Meta_Boxes::add_error( YoOhw_COS_Reset_Guard::rejection_message() );
 			}
 			return;
@@ -304,17 +300,17 @@ final class YoOhw_COS_Order_Admin {
 			return;
 		}
 
-		if ( ! isset( $_POST['yoohw_cos_customer_id'] ) ) {
+		if ( ! isset( $_POST['yoohw_cos_customer_id'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Order-save capability and WooCommerce/update-order nonce are verified by verify_order_save_request(); Reset epoch is checked separately.
 			return;
 		}
 
-		if ( ! YoOhw_COS_Reset_Guard::matches_submission( $_POST, 'yoohw_cos_link_epoch' ) ) {
+		if ( ! YoOhw_COS_Reset_Guard::matches_submission( $_POST, 'yoohw_cos_link_epoch' ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Order-save capability and WooCommerce/update-order nonce are verified by verify_order_save_request(); Reset epoch is checked separately.
 			if ( class_exists( 'WC_Admin_Meta_Boxes' ) ) {
 				WC_Admin_Meta_Boxes::add_error( __( 'Customer data was reset. Reload the order before choosing its customer profile.', 'yoohw-customer-intelligence' ) );
 			}
 			return;
 		}
-		$customer_id = absint( wp_unslash( $_POST['yoohw_cos_customer_id'] ) );
+		$customer_id = absint( wp_unslash( $_POST['yoohw_cos_customer_id'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Order-save capability and WooCommerce/update-order nonce are verified by verify_order_save_request(); Reset epoch is checked separately.
 		$wc_order    = $order instanceof WC_Order ? $order : wc_get_order( $order_id );
 
 		if ( ! $wc_order instanceof WC_Order ) {
@@ -638,9 +634,9 @@ final class YoOhw_COS_Order_Admin {
 	private static function is_order_edit_screen( string $hook ): bool {
 		$screen    = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
 		$screen_id = $screen ? (string) $screen->id : '';
-		$page      = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
-		$action    = isset( $_GET['action'] ) ? sanitize_key( wp_unslash( $_GET['action'] ) ) : '';
-		$post_type = isset( $_GET['post_type'] ) ? sanitize_key( wp_unslash( $_GET['post_type'] ) ) : '';
+		$page      = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+		$action    = isset( $_GET['action'] ) ? sanitize_key( wp_unslash( $_GET['action'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+		$post_type = isset( $_GET['post_type'] ) ? sanitize_key( wp_unslash( $_GET['post_type'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 
 		return 'shop_order' === $screen_id
 			|| ( 'post.php' === $hook && 'shop_order' === $post_type )
@@ -650,9 +646,9 @@ final class YoOhw_COS_Order_Admin {
 	private static function is_order_list_screen( string $hook ): bool {
 		$screen    = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
 		$screen_id = $screen ? (string) $screen->id : '';
-		$page      = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
-		$action    = isset( $_GET['action'] ) ? sanitize_key( wp_unslash( $_GET['action'] ) ) : '';
-		$post_type = isset( $_GET['post_type'] ) ? sanitize_key( wp_unslash( $_GET['post_type'] ) ) : '';
+		$page      = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+		$action    = isset( $_GET['action'] ) ? sanitize_key( wp_unslash( $_GET['action'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
+		$post_type = isset( $_GET['post_type'] ) ? sanitize_key( wp_unslash( $_GET['post_type'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 
 		return 'edit-shop_order' === $screen_id
 			|| ( 'edit.php' === $hook && 'shop_order' === $post_type )
@@ -864,9 +860,9 @@ final class YoOhw_COS_Order_Admin {
 
 		$params[] = $limit;
 
-		$rows = $wpdb->get_results(
-			$wpdb->prepare(
-				"SELECT id, wp_user_id, email, phone, first_name, last_name, display_name, archived_at FROM %i {$where} ORDER BY updated_at DESC LIMIT %d",
+		$rows = $wpdb->get_results( // phpcs:ignore PluginCheck.Security.DirectDB.UnescapedDBParameter, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state. WHERE contains only fixed fragments/generated placeholders; the table and every user value are supplied to prepare().
+			$wpdb->prepare( // phpcs:ignore PluginCheck.Security.DirectDB.UnescapedDBParameter, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state. WHERE contains only fixed fragments/generated placeholders; the table and every user value are supplied to prepare(). WHERE contains fixed SQL and generated placeholders only; all search values and identifiers are passed to prepare().
+				"SELECT id, wp_user_id, email, phone, first_name, last_name, display_name, archived_at FROM %i {$where} ORDER BY updated_at DESC LIMIT %d", // phpcs:ignore PluginCheck.Security.DirectDB.UnescapedDBParameter, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state. WHERE contains only fixed fragments/generated placeholders; the table and every user value are supplied to prepare(). WHERE contains fixed SQL and generated placeholders only; all search values and identifiers are passed to prepare(). WHERE contains fixed SQL and generated placeholders only; all search values and identifiers are passed to prepare().
 				...$params
 			),
 			ARRAY_A

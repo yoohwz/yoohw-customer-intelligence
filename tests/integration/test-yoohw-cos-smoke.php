@@ -28,6 +28,126 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 		delete_option( 'yoohw_cos_scoring_settings' );
 	}
 
+	public function test_settings_auto_continuation_requires_incoming_nonce_and_reset_epoch(): void {
+		$old_get = $_GET;
+		$old_user = get_current_user_id();
+		$old_cookies = $_COOKIE;
+		$admin = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		update_option( YoOhw_COS_Reset_Guard::OPTION, array( 'epoch' => wp_generate_uuid4(), 'status' => 'ready' ) );
+		wp_set_current_user( $admin );
+		$method = new ReflectionMethod( YoOhw_COS_Admin_Menu::class, 'has_valid_continuation_nonce' );
+		$method->setAccessible( true );
+		$operations = array( 'sync_customers', 'recalculate_intelligence', 'backfill_first_orders', 'sync_blacklist_signals' );
+		try {
+			$_GET = array(
+				'yoohw_cos_recalculate_more' => '1', 'yoohw_cos_recalculate_auto' => '1',
+				'yoohw_cos_backfill_more' => '1', 'yoohw_cos_backfill_auto' => '1',
+				'yoohw_cos_has_more' => '1', 'yoohw_cos_auto_sync' => '1',
+				'yoohw_cos_blacklist_sync_more' => '1', 'yoohw_cos_blacklist_sync_auto' => '1',
+			);
+			ob_start();
+			YoOhw_COS_Admin_Menu::render_settings_page();
+			$html = ob_get_clean();
+			$this->assertStringNotContainsString( 'data-yoohw-cos-auto-submit="1"', $html, 'Forged GET flags must never mint authority to auto-submit a fresh POST nonce.' );
+			foreach ( $operations as $operation ) {
+				$action = YoOhw_COS_Admin_Tools::continuation_nonce_action( $operation );
+				$nonce = wp_create_nonce( $action );
+				foreach ( array( null, array( $nonce ), 'forged' ) as $invalid ) {
+					$_GET['yoohw_cos_continue_nonce'] = $invalid;
+					$this->assertFalse( $method->invoke( null, $operation ) );
+				}
+				$tick = wp_nonce_tick( $action ) - 2;
+				$_GET['yoohw_cos_continue_nonce'] = substr( wp_hash( $tick . '|' . $action . '|' . $admin . '|' . wp_get_session_token(), 'nonce' ), -12, 10 );
+				$this->assertFalse( $method->invoke( null, $operation ), 'Expired authentic nonce must fail.' );
+				$_GET['yoohw_cos_continue_nonce'] = $nonce;
+				$this->assertTrue( $method->invoke( null, $operation ) );
+				$sessions = WP_Session_Tokens::get_instance( $admin );
+				$session = $sessions->create( time() + HOUR_IN_SECONDS );
+				$_COOKIE[ LOGGED_IN_COOKIE ] = wp_generate_auth_cookie( $admin, time() + HOUR_IN_SECONDS, 'logged_in', $session );
+				$_GET['yoohw_cos_continue_nonce'] = wp_create_nonce( $action );
+				$this->assertTrue( $method->invoke( null, $operation ) );
+				$other_session = $sessions->create( time() + HOUR_IN_SECONDS );
+				$_COOKIE[ LOGGED_IN_COOKIE ] = wp_generate_auth_cookie( $admin, time() + HOUR_IN_SECONDS, 'logged_in', $other_session );
+				$this->assertFalse( $method->invoke( null, $operation ), 'Continuation cannot cross sessions of the same user.' );
+				$_COOKIE = $old_cookies;
+				$_GET['yoohw_cos_continue_nonce'] = $nonce;
+				$this->assertFalse( $method->invoke( null, $operation . '_other' ), 'Continuation cannot cross operations.' );
+				wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+				$this->assertFalse( $method->invoke( null, $operation ), 'Continuation cannot cross users.' );
+				wp_set_current_user( $admin );
+				$state = get_option( YoOhw_COS_Reset_Guard::OPTION );
+				update_option( YoOhw_COS_Reset_Guard::OPTION, array( 'epoch' => wp_generate_uuid4(), 'status' => 'ready' ) );
+				$this->assertFalse( $method->invoke( null, $operation ), 'An old continuation cannot cross Reset.' );
+				update_option( YoOhw_COS_Reset_Guard::OPTION, $state );
+			}
+			foreach ( array( 'recalculate_intelligence' => 'yoohw-cos-recalculate-form', 'backfill_first_orders' => 'yoohw-cos-backfill-form' ) as $operation => $form_class ) {
+				$_GET['yoohw_cos_continue_nonce'] = wp_create_nonce( YoOhw_COS_Admin_Tools::continuation_nonce_action( $operation ) );
+				ob_start();
+				YoOhw_COS_Admin_Menu::render_settings_page();
+				$html = ob_get_clean();
+				$this->assertSame( 1, substr_count( $html, 'data-yoohw-cos-auto-submit="1"' ) );
+				$this->assertMatchesRegularExpression( '/<form class="' . preg_quote( $form_class, '/' ) . '[^>]*data-yoohw-cos-auto-submit="1"/', $html );
+			}
+		} finally {
+			$_GET = $old_get;
+			$_COOKIE = $old_cookies;
+			wp_set_current_user( $old_user );
+		}
+	}
+
+	public function test_release_asset_urls_use_plugin_identity_and_preserve_scope(): void {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		$old_get = $_GET;
+		$old_scripts = $GLOBALS['wp_scripts'] ?? null;
+		$old_styles = $GLOBALS['wp_styles'] ?? null;
+		try {
+			$GLOBALS['wp_scripts'] = new WP_Scripts();
+			$GLOBALS['wp_styles'] = new WP_Styles();
+			wp_register_script( 'wc-enhanced-select', plugins_url( 'woocommerce/assets/js/admin/wc-enhanced-select.min.js' ), array( 'jquery' ), WC_VERSION, true );
+			wp_register_script( 'jquery-tiptip', plugins_url( 'woocommerce/assets/js/jquery-tiptip/jquery.tipTip.min.js' ), array( 'jquery' ), WC_VERSION, true );
+			$_GET = array( 'page' => 'yoohw-customer-intelligence' );
+			YoOhw_COS_Admin_Menu::enqueue_admin_assets( 'toplevel_page_yoohw-customer-intelligence' );
+			YoOhw_COS_Notice_Preferences::enqueue();
+			$this->assertSame( YOOHW_COS_VERSION, wp_styles()->registered['yoohw-cos-admin']->ver );
+			$this->assertSame( YOOHW_COS_VERSION, wp_scripts()->registered['yoohw-cos-admin']->ver );
+			$this->assertSame( YOOHW_COS_VERSION, wp_scripts()->registered['yoohw-cos-notice-preferences']->ver );
+			$this->assertSame( WC_VERSION, wp_styles()->registered['select2']->ver );
+			$this->assertSame( WC_VERSION, wp_scripts()->registered['wc-enhanced-select']->ver );
+			$_GET = array( 'page' => 'wc-orders', 'action' => 'edit' );
+			YoOhw_COS_Order_Admin::enqueue_assets( 'woocommerce_page_wc-orders' );
+			$this->assertSame( YOOHW_COS_VERSION, wp_scripts()->registered['yoohw-cos-order-admin']->ver );
+			$this->assertSame( YOOHW_COS_VERSION, wp_styles()->registered['yoohw-cos-order-admin']->ver );
+			ob_start();
+			wp_styles()->do_items( array( 'yoohw-cos-admin', 'yoohw-cos-order-admin' ) );
+			wp_scripts()->do_items( array( 'yoohw-cos-admin', 'yoohw-cos-order-admin', 'yoohw-cos-notice-preferences' ) );
+			$html = ob_get_clean();
+			preg_match_all( '~(?:src|href)=[\'"]([^\'"]+/assets/(?:css|js)/(?:admin|order-admin|notice-preferences)\.(?:css|js)\?[^\'"]+)~', $html, $matches );
+			$this->assertCount( 5, $matches[1], 'Every product asset must emit an actual versioned URL.' );
+			foreach ( $matches[1] as $url ) {
+				parse_str( (string) parse_url( html_entity_decode( $url, ENT_QUOTES ), PHP_URL_QUERY ), $query );
+				$this->assertSame( YOOHW_COS_VERSION, $query['ver'] ?? '' );
+			}
+			$this->assertSame( array( 'jquery', 'jquery-ui-autocomplete', 'wc-enhanced-select' ), wp_scripts()->registered['yoohw-cos-admin']->deps );
+			$this->assertSame( array( 'jquery', 'wc-enhanced-select', 'jquery-tiptip' ), wp_scripts()->registered['yoohw-cos-order-admin']->deps );
+			$this->assertSame( array( 'jquery' ), wp_scripts()->registered['yoohw-cos-notice-preferences']->deps );
+			wp_dequeue_style( 'yoohw-cos-admin' );
+			wp_dequeue_script( 'yoohw-cos-admin' );
+			wp_dequeue_style( 'yoohw-cos-order-admin' );
+			wp_dequeue_script( 'yoohw-cos-order-admin' );
+			$_GET = array();
+			YoOhw_COS_Admin_Menu::enqueue_admin_assets( 'plugins.php' );
+			YoOhw_COS_Order_Admin::enqueue_assets( 'plugins.php' );
+			$this->assertFalse( wp_style_is( 'yoohw-cos-admin', 'enqueued' ) );
+			$this->assertFalse( wp_script_is( 'yoohw-cos-admin', 'enqueued' ) );
+			$this->assertFalse( wp_style_is( 'yoohw-cos-order-admin', 'enqueued' ) );
+			$this->assertFalse( wp_script_is( 'yoohw-cos-order-admin', 'enqueued' ) );
+		} finally {
+			$_GET = $old_get;
+			$GLOBALS['wp_scripts'] = $old_scripts;
+			$GLOBALS['wp_styles'] = $old_styles;
+		}
+	}
+
 	public function test_customers_workspace_keeps_forms_and_controls_in_order(): void {
 		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
 		$previous_get = $_GET;

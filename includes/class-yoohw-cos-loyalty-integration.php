@@ -396,7 +396,7 @@ final class YoOhw_COS_Loyalty_Integration {
 			return $result;
 		}
 
-		$rows = $wpdb->get_results(
+		$rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
 				"SELECT id, user_id, action, order_id, amount, description, date
 				FROM %i
@@ -520,7 +520,7 @@ final class YoOhw_COS_Loyalty_Integration {
 		}
 
 		$previous_suppression = $wpdb->suppress_errors( true );
-		$wpdb->get_var( $wpdb->prepare( 'SELECT 1 FROM %i LIMIT 1', $table ) );
+		$wpdb->get_var( $wpdb->prepare( 'SELECT 1 FROM %i LIMIT 1', $table ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 		$exists = '' === (string) $wpdb->last_error;
 		$wpdb->suppress_errors( $previous_suppression );
 
