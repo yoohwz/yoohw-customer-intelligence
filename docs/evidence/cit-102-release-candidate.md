@@ -92,7 +92,7 @@ Filtered and Saved View export requests used native `wp-admin/admin.php`, a sepa
 
 ## Asset audit and native admin smoke
 
-All five distributed CIT enqueues now use `YOOHW_COS_VERSION`; physical filenames, handles, dependencies, localization, hooks and page scoping are unchanged. Four filemtime-derived arguments and the notice script's old DB-version argument were replaced. No CIT enqueue remains filemtime-based.
+All five distributed CIT enqueues now use `YOOHW_COS_VERSION`; physical filenames, handles, dependencies, localization, hooks and page scoping are unchanged. All five filemtime-derived version arguments were replaced. No CIT enqueue remains filemtime-based.
 
 | Screen | Native emitted product URLs (origin omitted) |
 | --- | --- |
