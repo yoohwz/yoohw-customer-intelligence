@@ -1,0 +1,36 @@
+Summary
+Customers
+1,428
+Active profiles
+Orders
+3,124
+Lifetime orders
+Revenue
+Order currency unavailable
+Lifetime revenue
+Average order value
+Order currency unavailable
+Across synced orders
+Repeat customer rate
+60.5%
+155 repeat customers
+High-value customers
+58
+Across all value tiers
+Needs attention
+Open an item to work the matching queue.
+3
+Overdue tasks
+Requires immediate follow-up
+0
+Due in 7 days
+Upcoming customer follow-ups
+56
+High-value retention risk
+At-risk or inactive high-value customers
+6
+High-risk customers
+Risk and trust review needed
+1,130
+Missing contact details
+Email or phone is unavailable

@@ -1,0 +1,1239 @@
+{
+  "vnd": [
+    {
+      "data": [
+        {
+          "group_id": "yoohw-cos-profile",
+          "group_label": "Customer Intelligence profile",
+          "item_id": "yoohw-cos-profile-1744",
+          "data": [
+            {
+              "name": "Customer Intelligence customer ID",
+              "value": "1744"
+            },
+            {
+              "name": "Email",
+              "value": "cit90_qa_vnd@example.invalid"
+            },
+            {
+              "name": "Phone",
+              "value": "+84900000090"
+            },
+            {
+              "name": "First name",
+              "value": "CIT90 QA"
+            },
+            {
+              "name": "Last name",
+              "value": "VND"
+            },
+            {
+              "name": "Display name",
+              "value": "CIT90 QA VND"
+            },
+            {
+              "name": "Customer status",
+              "value": "new"
+            },
+            {
+              "name": "Lifecycle stage",
+              "value": "new"
+            },
+            {
+              "name": "Value tier",
+              "value": "none"
+            },
+            {
+              "name": "Risk score",
+              "value": "10.00"
+            },
+            {
+              "name": "Trust score",
+              "value": "50.00"
+            },
+            {
+              "name": "Created date",
+              "value": "2026-10-04 01:33:28"
+            },
+            {
+              "name": "Updated date",
+              "value": "2026-10-04 01:33:29"
+            },
+            {
+              "name": "First recognized order date",
+              "value": "2026-10-04 01:33:28"
+            },
+            {
+              "name": "First recognized order ID",
+              "value": "101154"
+            },
+            {
+              "name": "Last recognized order date",
+              "value": "2026-10-04 01:33:28"
+            },
+            {
+              "name": "Last recognized order ID",
+              "value": "101154"
+            },
+            {
+              "name": "Last activity date",
+              "value": "2026-10-04 01:33:28"
+            },
+            {
+              "name": "Recognized lifetime order count",
+              "value": "1"
+            },
+            {
+              "name": "Monetary state",
+              "value": "comparable"
+            },
+            {
+              "name": "Recorded currency",
+              "value": "VND"
+            },
+            {
+              "name": "Loyalty score",
+              "value": "0.00"
+            },
+            {
+              "name": "Available loyalty points",
+              "value": "0"
+            },
+            {
+              "name": "Earned loyalty points",
+              "value": "0"
+            },
+            {
+              "name": "Monetary availability reason",
+              "value": "comparable"
+            },
+            {
+              "name": "Currency readiness",
+              "value": "ready"
+            },
+            {
+              "name": "Amount available",
+              "value": "1"
+            },
+            {
+              "name": "Available numeric total spent",
+              "value": "100000.000000"
+            },
+            {
+              "name": "Available numeric average order value",
+              "value": "100000.000000"
+            },
+            {
+              "name": "Total spent",
+              "value": "100000.000000 VND"
+            },
+            {
+              "name": "Average order value",
+              "value": "100000.000000 VND"
+            },
+            {
+              "name": "RFM recency",
+              "value": "0 days"
+            },
+            {
+              "name": "RFM frequency",
+              "value": "1 recognized orders"
+            },
+            {
+              "name": "RFM monetary",
+              "value": "100000.000000 VND"
+            }
+          ]
+        },
+        {
+          "group_id": "yoohw-cos-notes",
+          "group_label": "Customer note",
+          "item_id": "yoohw-cos-notes-2",
+          "data": [
+            {
+              "name": "Customer Intelligence customer ID",
+              "value": "1744"
+            },
+            {
+              "name": "Note type",
+              "value": "internal"
+            },
+            {
+              "name": "Visibility",
+              "value": "private"
+            },
+            {
+              "name": "Note content",
+              "value": "CIT90 QA seeded note"
+            },
+            {
+              "name": "Created date",
+              "value": "2026-10-04 01:33:29"
+            },
+            {
+              "name": "Updated date",
+              "value": "2026-10-04 01:33:29"
+            }
+          ]
+        },
+        {
+          "group_id": "yoohw-cos-notes",
+          "group_label": "Customer note",
+          "item_id": "yoohw-cos-notes-3",
+          "data": [
+            {
+              "name": "Customer Intelligence customer ID",
+              "value": "1744"
+            },
+            {
+              "name": "Note type",
+              "value": "internal"
+            },
+            {
+              "name": "Visibility",
+              "value": "private"
+            },
+            {
+              "name": "Note content",
+              "value": "CIT90 QA browser note"
+            },
+            {
+              "name": "Created date",
+              "value": "2026-10-04 01:46:26"
+            },
+            {
+              "name": "Updated date",
+              "value": "2026-10-04 01:46:26"
+            }
+          ]
+        },
+        {
+          "group_id": "yoohw-cos-tasks",
+          "group_label": "Customer task",
+          "item_id": "yoohw-cos-tasks-11",
+          "data": [
+            {
+              "name": "Customer Intelligence customer ID",
+              "value": "1744"
+            },
+            {
+              "name": "Title",
+              "value": "CIT90 QA overdue edited"
+            },
+            {
+              "name": "Status",
+              "value": "open"
+            },
+            {
+              "name": "Priority",
+              "value": "high"
+            },
+            {
+              "name": "Due date",
+              "value": "2026-10-03 01:33:00"
+            },
+            {
+              "name": "Created date",
+              "value": "2026-10-04 01:33:29"
+            },
+            {
+              "name": "Updated date",
+              "value": "2026-10-04 01:48:50"
+            }
+          ]
+        },
+        {
+          "group_id": "yoohw-cos-tasks",
+          "group_label": "Customer task",
+          "item_id": "yoohw-cos-tasks-12",
+          "data": [
+            {
+              "name": "Customer Intelligence customer ID",
+              "value": "1744"
+            },
+            {
+              "name": "Title",
+              "value": "CIT90 QA browser follow-up"
+            },
+            {
+              "name": "Status",
+              "value": "open"
+            },
+            {
+              "name": "Priority",
+              "value": "normal"
+            },
+            {
+              "name": "Created date",
+              "value": "2026-10-04 01:46:50"
+            },
+            {
+              "name": "Updated date",
+              "value": "2026-10-04 01:46:50"
+            }
+          ]
+        },
+        {
+          "group_id": "yoohw-cos-events",
+          "group_label": "Customer activity",
+          "item_id": "yoohw-cos-events-38583",
+          "data": [
+            {
+              "name": "Customer Intelligence customer ID",
+              "value": "1744"
+            },
+            {
+              "name": "Event type",
+              "value": "order_synced"
+            },
+            {
+              "name": "Source",
+              "value": "woocommerce"
+            },
+            {
+              "name": "Severity",
+              "value": "info"
+            },
+            {
+              "name": "Description",
+              "value": "Order #101154 synced to customer profile."
+            },
+            {
+              "name": "Created date",
+              "value": "2026-10-04 01:33:28"
+            },
+            {
+              "name": "Object type",
+              "value": "order"
+            },
+            {
+              "name": "Object reference",
+              "value": "101154"
+            }
+          ]
+        },
+        {
+          "group_id": "yoohw-cos-events",
+          "group_label": "Customer activity",
+          "item_id": "yoohw-cos-events-38587",
+          "data": [
+            {
+              "name": "Customer Intelligence customer ID",
+              "value": "1744"
+            },
+            {
+              "name": "Event type",
+              "value": "tag_assigned"
+            },
+            {
+              "name": "Source",
+              "value": "customer_os"
+            },
+            {
+              "name": "Severity",
+              "value": "info"
+            },
+            {
+              "name": "Description",
+              "value": "Tag assigned: CIT90 QA Tag"
+            },
+            {
+              "name": "Created date",
+              "value": "2026-10-04 01:33:29"
+            },
+            {
+              "name": "Object type",
+              "value": "tag"
+            },
+            {
+              "name": "Object reference",
+              "value": "7"
+            }
+          ]
+        },
+        {
+          "group_id": "yoohw-cos-events",
+          "group_label": "Customer activity",
+          "item_id": "yoohw-cos-events-38588",
+          "data": [
+            {
+              "name": "Customer Intelligence customer ID",
+              "value": "1744"
+            },
+            {
+              "name": "Event type",
+              "value": "segment_assigned"
+            },
+            {
+              "name": "Source",
+              "value": "customer_os"
+            },
+            {
+              "name": "Severity",
+              "value": "info"
+            },
+            {
+              "name": "Description",
+              "value": "Segment assigned: CIT90 QA Static"
+            },
+            {
+              "name": "Created date",
+              "value": "2026-10-04 01:33:29"
+            },
+            {
+              "name": "Object type",
+              "value": "segment"
+            },
+            {
+              "name": "Object reference",
+              "value": "11"
+            }
+          ]
+        },
+        {
+          "group_id": "yoohw-cos-events",
+          "group_label": "Customer activity",
+          "item_id": "yoohw-cos-events-38589",
+          "data": [
+            {
+              "name": "Customer Intelligence customer ID",
+              "value": "1744"
+            },
+            {
+              "name": "Event type",
+              "value": "note_added"
+            },
+            {
+              "name": "Source",
+              "value": "customer_os"
+            },
+            {
+              "name": "Severity",
+              "value": "info"
+            },
+            {
+              "name": "Description",
+              "value": "Internal note added."
+            },
+            {
+              "name": "Created date",
+              "value": "2026-10-04 01:33:29"
+            },
+            {
+              "name": "Object type",
+              "value": "note"
+            },
+            {
+              "name": "Object reference",
+              "value": "2"
+            }
+          ]
+        },
+        {
+          "group_id": "yoohw-cos-events",
+          "group_label": "Customer activity",
+          "item_id": "yoohw-cos-events-38590",
+          "data": [
+            {
+              "name": "Customer Intelligence customer ID",
+              "value": "1744"
+            },
+            {
+              "name": "Event type",
+              "value": "task_created"
+            },
+            {
+              "name": "Source",
+              "value": "customer_os"
+            },
+            {
+              "name": "Severity",
+              "value": "info"
+            },
+            {
+              "name": "Description",
+              "value": "Task created: CIT90 QA overdue follow-up"
+            },
+            {
+              "name": "Created date",
+              "value": "2026-10-04 01:33:29"
+            },
+            {
+              "name": "Object type",
+              "value": "task"
+            },
+            {
+              "name": "Object reference",
+              "value": "11"
+            }
+          ]
+        },
+        {
+          "group_id": "yoohw-cos-events",
+          "group_label": "Customer activity",
+          "item_id": "yoohw-cos-events-38591",
+          "data": [
+            {
+              "name": "Customer Intelligence customer ID",
+              "value": "1744"
+            },
+            {
+              "name": "Event type",
+              "value": "note_added"
+            },
+            {
+              "name": "Source",
+              "value": "customer_os"
+            },
+            {
+              "name": "Severity",
+              "value": "info"
+            },
+            {
+              "name": "Description",
+              "value": "Internal note added."
+            },
+            {
+              "name": "Created date",
+              "value": "2026-10-04 01:46:26"
+            },
+            {
+              "name": "Object type",
+              "value": "note"
+            },
+            {
+              "name": "Object reference",
+              "value": "3"
+            }
+          ]
+        },
+        {
+          "group_id": "yoohw-cos-events",
+          "group_label": "Customer activity",
+          "item_id": "yoohw-cos-events-38592",
+          "data": [
+            {
+              "name": "Customer Intelligence customer ID",
+              "value": "1744"
+            },
+            {
+              "name": "Event type",
+              "value": "task_created"
+            },
+            {
+              "name": "Source",
+              "value": "customer_os"
+            },
+            {
+              "name": "Severity",
+              "value": "info"
+            },
+            {
+              "name": "Description",
+              "value": "Task created: CIT90 QA browser follow-up"
+            },
+            {
+              "name": "Created date",
+              "value": "2026-10-04 01:46:50"
+            },
+            {
+              "name": "Object type",
+              "value": "task"
+            },
+            {
+              "name": "Object reference",
+              "value": "12"
+            }
+          ]
+        },
+        {
+          "group_id": "yoohw-cos-events",
+          "group_label": "Customer activity",
+          "item_id": "yoohw-cos-events-38593",
+          "data": [
+            {
+              "name": "Customer Intelligence customer ID",
+              "value": "1744"
+            },
+            {
+              "name": "Event type",
+              "value": "task_completed"
+            },
+            {
+              "name": "Source",
+              "value": "customer_os"
+            },
+            {
+              "name": "Severity",
+              "value": "success"
+            },
+            {
+              "name": "Description",
+              "value": "Task completed: CIT90 QA overdue edited"
+            },
+            {
+              "name": "Created date",
+              "value": "2026-10-04 01:47:39"
+            },
+            {
+              "name": "Object type",
+              "value": "task"
+            },
+            {
+              "name": "Object reference",
+              "value": "11"
+            }
+          ]
+        },
+        {
+          "group_id": "yoohw-cos-tags",
+          "group_label": "Customer tag",
+          "item_id": "yoohw-cos-tags-2",
+          "data": [
+            {
+              "name": "Customer Intelligence customer ID",
+              "value": "1744"
+            },
+            {
+              "name": "Tag name",
+              "value": "CIT90 QA Tag"
+            },
+            {
+              "name": "Membership date",
+              "value": "2026-10-04 01:33:29"
+            }
+          ]
+        },
+        {
+          "group_id": "yoohw-cos-segments",
+          "group_label": "Customer static segment",
+          "item_id": "yoohw-cos-segments-2",
+          "data": [
+            {
+              "name": "Customer Intelligence customer ID",
+              "value": "1744"
+            },
+            {
+              "name": "Static segment name",
+              "value": "CIT90 QA Static"
+            },
+            {
+              "name": "Membership date",
+              "value": "2026-10-04 01:33:29"
+            }
+          ]
+        }
+      ],
+      "done": true
+    }
+  ],
+  "eur": [
+    {
+      "data": [
+        {
+          "group_id": "yoohw-cos-profile",
+          "group_label": "Customer Intelligence profile",
+          "item_id": "yoohw-cos-profile-1745",
+          "data": [
+            {
+              "name": "Customer Intelligence customer ID",
+              "value": "1745"
+            },
+            {
+              "name": "Email",
+              "value": "cit90_qa_eur@example.invalid"
+            },
+            {
+              "name": "Phone",
+              "value": "+84900000090"
+            },
+            {
+              "name": "First name",
+              "value": "CIT90 QA"
+            },
+            {
+              "name": "Last name",
+              "value": "EUR"
+            },
+            {
+              "name": "Display name",
+              "value": "CIT90 QA EUR"
+            },
+            {
+              "name": "Customer status",
+              "value": "new"
+            },
+            {
+              "name": "Lifecycle stage",
+              "value": "new"
+            },
+            {
+              "name": "Value tier",
+              "value": "none"
+            },
+            {
+              "name": "Risk score",
+              "value": "10.00"
+            },
+            {
+              "name": "Trust score",
+              "value": "50.00"
+            },
+            {
+              "name": "Created date",
+              "value": "2026-10-04 01:33:29"
+            },
+            {
+              "name": "Updated date",
+              "value": "2026-10-04 01:33:29"
+            },
+            {
+              "name": "First recognized order date",
+              "value": "2026-10-04 01:33:29"
+            },
+            {
+              "name": "First recognized order ID",
+              "value": "101155"
+            },
+            {
+              "name": "Last recognized order date",
+              "value": "2026-10-04 01:33:29"
+            },
+            {
+              "name": "Last recognized order ID",
+              "value": "101155"
+            },
+            {
+              "name": "Last activity date",
+              "value": "2026-10-04 01:33:29"
+            },
+            {
+              "name": "Recognized lifetime order count",
+              "value": "1"
+            },
+            {
+              "name": "Monetary state",
+              "value": "comparable"
+            },
+            {
+              "name": "Recorded currency",
+              "value": "EUR"
+            },
+            {
+              "name": "Loyalty score",
+              "value": "0.00"
+            },
+            {
+              "name": "Available loyalty points",
+              "value": "0"
+            },
+            {
+              "name": "Earned loyalty points",
+              "value": "0"
+            },
+            {
+              "name": "Monetary availability reason",
+              "value": "comparable"
+            },
+            {
+              "name": "Currency readiness",
+              "value": "ready"
+            },
+            {
+              "name": "Amount available",
+              "value": "1"
+            },
+            {
+              "name": "Available numeric total spent",
+              "value": "100.000000"
+            },
+            {
+              "name": "Available numeric average order value",
+              "value": "100.000000"
+            },
+            {
+              "name": "Total spent",
+              "value": "100.000000 EUR"
+            },
+            {
+              "name": "Average order value",
+              "value": "100.000000 EUR"
+            },
+            {
+              "name": "RFM recency",
+              "value": "0 days"
+            },
+            {
+              "name": "RFM frequency",
+              "value": "1 recognized orders"
+            },
+            {
+              "name": "RFM monetary",
+              "value": "100.000000 EUR"
+            }
+          ]
+        },
+        {
+          "group_id": "yoohw-cos-events",
+          "group_label": "Customer activity",
+          "item_id": "yoohw-cos-events-38584",
+          "data": [
+            {
+              "name": "Customer Intelligence customer ID",
+              "value": "1745"
+            },
+            {
+              "name": "Event type",
+              "value": "order_synced"
+            },
+            {
+              "name": "Source",
+              "value": "woocommerce"
+            },
+            {
+              "name": "Severity",
+              "value": "info"
+            },
+            {
+              "name": "Description",
+              "value": "Order #101155 synced to customer profile."
+            },
+            {
+              "name": "Created date",
+              "value": "2026-10-04 01:33:29"
+            },
+            {
+              "name": "Object type",
+              "value": "order"
+            },
+            {
+              "name": "Object reference",
+              "value": "101155"
+            }
+          ]
+        }
+      ],
+      "done": true
+    }
+  ],
+  "mixed": [
+    {
+      "data": [
+        {
+          "group_id": "yoohw-cos-profile",
+          "group_label": "Customer Intelligence profile",
+          "item_id": "yoohw-cos-profile-1746",
+          "data": [
+            {
+              "name": "Customer Intelligence customer ID",
+              "value": "1746"
+            },
+            {
+              "name": "Email",
+              "value": "cit90_qa_mixed@example.invalid"
+            },
+            {
+              "name": "Phone",
+              "value": "+84900000090"
+            },
+            {
+              "name": "First name",
+              "value": "CIT90 QA"
+            },
+            {
+              "name": "Last name",
+              "value": "Mixed"
+            },
+            {
+              "name": "Display name",
+              "value": "CIT90 QA Mixed"
+            },
+            {
+              "name": "Customer status",
+              "value": "active"
+            },
+            {
+              "name": "Lifecycle stage",
+              "value": "repeat"
+            },
+            {
+              "name": "Value tier",
+              "value": "none"
+            },
+            {
+              "name": "Risk score",
+              "value": "0.00"
+            },
+            {
+              "name": "Trust score",
+              "value": "60.00"
+            },
+            {
+              "name": "Created date",
+              "value": "2026-10-04 01:33:29"
+            },
+            {
+              "name": "Updated date",
+              "value": "2026-10-04 01:33:29"
+            },
+            {
+              "name": "First recognized order date",
+              "value": "2026-10-04 01:33:29"
+            },
+            {
+              "name": "First recognized order ID",
+              "value": "101156"
+            },
+            {
+              "name": "Last recognized order date",
+              "value": "2026-10-04 01:33:29"
+            },
+            {
+              "name": "Last recognized order ID",
+              "value": "101157"
+            },
+            {
+              "name": "Last activity date",
+              "value": "2026-10-04 01:33:29"
+            },
+            {
+              "name": "Recognized lifetime order count",
+              "value": "2"
+            },
+            {
+              "name": "Monetary state",
+              "value": "mixed"
+            },
+            {
+              "name": "Loyalty score",
+              "value": "0.00"
+            },
+            {
+              "name": "Available loyalty points",
+              "value": "0"
+            },
+            {
+              "name": "Earned loyalty points",
+              "value": "0"
+            },
+            {
+              "name": "Monetary availability reason",
+              "value": "mixed"
+            },
+            {
+              "name": "Currency readiness",
+              "value": "ready"
+            },
+            {
+              "name": "Amount available",
+              "value": "0"
+            },
+            {
+              "name": "RFM recency",
+              "value": "0 days"
+            },
+            {
+              "name": "RFM frequency",
+              "value": "2 recognized orders"
+            }
+          ]
+        },
+        {
+          "group_id": "yoohw-cos-events",
+          "group_label": "Customer activity",
+          "item_id": "yoohw-cos-events-38585",
+          "data": [
+            {
+              "name": "Customer Intelligence customer ID",
+              "value": "1746"
+            },
+            {
+              "name": "Event type",
+              "value": "order_synced"
+            },
+            {
+              "name": "Source",
+              "value": "woocommerce"
+            },
+            {
+              "name": "Severity",
+              "value": "info"
+            },
+            {
+              "name": "Description",
+              "value": "Order #101156 synced to customer profile."
+            },
+            {
+              "name": "Created date",
+              "value": "2026-10-04 01:33:29"
+            },
+            {
+              "name": "Object type",
+              "value": "order"
+            },
+            {
+              "name": "Object reference",
+              "value": "101156"
+            }
+          ]
+        },
+        {
+          "group_id": "yoohw-cos-events",
+          "group_label": "Customer activity",
+          "item_id": "yoohw-cos-events-38586",
+          "data": [
+            {
+              "name": "Customer Intelligence customer ID",
+              "value": "1746"
+            },
+            {
+              "name": "Event type",
+              "value": "order_synced"
+            },
+            {
+              "name": "Source",
+              "value": "woocommerce"
+            },
+            {
+              "name": "Severity",
+              "value": "info"
+            },
+            {
+              "name": "Description",
+              "value": "Order #101157 synced to customer profile."
+            },
+            {
+              "name": "Created date",
+              "value": "2026-10-04 01:33:29"
+            },
+            {
+              "name": "Object type",
+              "value": "order"
+            },
+            {
+              "name": "Object reference",
+              "value": "101157"
+            }
+          ]
+        }
+      ],
+      "done": true
+    }
+  ],
+  "none": [
+    {
+      "data": [
+        {
+          "group_id": "yoohw-cos-profile",
+          "group_label": "Customer Intelligence profile",
+          "item_id": "yoohw-cos-profile-1747",
+          "data": [
+            {
+              "name": "Customer Intelligence customer ID",
+              "value": "1747"
+            },
+            {
+              "name": "Email",
+              "value": "cit90_qa_none@example.invalid"
+            },
+            {
+              "name": "Phone",
+              "value": "+84900000090"
+            },
+            {
+              "name": "Display name",
+              "value": "CIT90 QA None"
+            },
+            {
+              "name": "Customer status",
+              "value": "inactive"
+            },
+            {
+              "name": "Lifecycle stage",
+              "value": "dormant"
+            },
+            {
+              "name": "Value tier",
+              "value": "none"
+            },
+            {
+              "name": "Risk score",
+              "value": "20"
+            },
+            {
+              "name": "Trust score",
+              "value": "50"
+            },
+            {
+              "name": "Created date",
+              "value": "2026-10-04 01:33:29"
+            },
+            {
+              "name": "Updated date",
+              "value": "2026-10-04 01:33:29"
+            },
+            {
+              "name": "Recognized lifetime order count",
+              "value": "0"
+            },
+            {
+              "name": "Monetary state",
+              "value": "none"
+            },
+            {
+              "name": "Loyalty score",
+              "value": "0.00"
+            },
+            {
+              "name": "Available loyalty points",
+              "value": "0"
+            },
+            {
+              "name": "Earned loyalty points",
+              "value": "0"
+            },
+            {
+              "name": "Monetary availability reason",
+              "value": "none"
+            },
+            {
+              "name": "Currency readiness",
+              "value": "ready"
+            },
+            {
+              "name": "Amount available",
+              "value": "1"
+            },
+            {
+              "name": "Available numeric total spent",
+              "value": "0"
+            },
+            {
+              "name": "Available numeric average order value",
+              "value": "0"
+            },
+            {
+              "name": "Total spent",
+              "value": "0 (no recognized orders)"
+            },
+            {
+              "name": "Average order value",
+              "value": "0 (no recognized orders)"
+            },
+            {
+              "name": "RFM recency",
+              "value": "Unavailable"
+            },
+            {
+              "name": "RFM frequency",
+              "value": "0 recognized orders"
+            },
+            {
+              "name": "RFM monetary",
+              "value": "0 (no recognized orders)"
+            }
+          ]
+        }
+      ],
+      "done": true
+    }
+  ],
+  "stale": [
+    {
+      "data": [
+        {
+          "group_id": "yoohw-cos-profile",
+          "group_label": "Customer Intelligence profile",
+          "item_id": "yoohw-cos-profile-1748",
+          "data": [
+            {
+              "name": "Customer Intelligence customer ID",
+              "value": "1748"
+            },
+            {
+              "name": "Email",
+              "value": "cit90_qa_stale@example.invalid"
+            },
+            {
+              "name": "Phone",
+              "value": "+84900000090"
+            },
+            {
+              "name": "Display name",
+              "value": "CIT90 QA Stale"
+            },
+            {
+              "name": "Customer status",
+              "value": "inactive"
+            },
+            {
+              "name": "Lifecycle stage",
+              "value": "dormant"
+            },
+            {
+              "name": "Value tier",
+              "value": "none"
+            },
+            {
+              "name": "Risk score",
+              "value": "20"
+            },
+            {
+              "name": "Trust score",
+              "value": "50"
+            },
+            {
+              "name": "Created date",
+              "value": "2026-10-04 01:33:29"
+            },
+            {
+              "name": "Updated date",
+              "value": "2026-10-04 01:33:29"
+            },
+            {
+              "name": "Recognized lifetime order count",
+              "value": "0"
+            },
+            {
+              "name": "Monetary state",
+              "value": "unknown"
+            },
+            {
+              "name": "Loyalty score",
+              "value": "0.00"
+            },
+            {
+              "name": "Available loyalty points",
+              "value": "0"
+            },
+            {
+              "name": "Earned loyalty points",
+              "value": "0"
+            },
+            {
+              "name": "Monetary availability reason",
+              "value": "metrics_stale"
+            },
+            {
+              "name": "Currency readiness",
+              "value": "ready"
+            },
+            {
+              "name": "Amount available",
+              "value": "0"
+            },
+            {
+              "name": "RFM recency",
+              "value": "Unavailable"
+            },
+            {
+              "name": "RFM frequency",
+              "value": "0 recognized orders"
+            }
+          ]
+        }
+      ],
+      "done": true
+    }
+  ]
+}

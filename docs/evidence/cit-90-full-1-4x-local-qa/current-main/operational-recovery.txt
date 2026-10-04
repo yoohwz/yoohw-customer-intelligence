@@ -1,0 +1,31 @@
+Operational recovery
+
+customer_intelligence / legacy deferred unattributed — A deferred callback was recorded by an earlier version without its source. Review integration activity and recover any missed operation before acknowledging this record.
+
+Occurrences: 2
+
+Acknowledge after recovery
+
+Blacklist Manager Core / maintenance completed — A source backfill is available. Run the relevant sync or backfill, then acknowledge this record. Open recovery operation
+
+Occurrences: 2
+
+Acknowledge after recovery
+
+Blacklist Manager Premium / js proof failed — This callback has no CIT replay source. Replay or recover it at the source before acknowledging this record.
+
+Occurrences: 2
+
+Acknowledge after recovery
+
+Loyalty / intelligence recalculated — A source backfill is available. Run the relevant sync or backfill, then acknowledge this record. Open recovery operation
+
+Occurrences: 2
+
+Acknowledge after recovery
+
+customer_intelligence / retryable sync — Retry the CIT operation, then acknowledge this record. Open recalculation
+
+Occurrences: 2
+
+Acknowledge after recovery

@@ -1,0 +1,13 @@
+{
+  "id": 101164,
+  "status": "request-confirmed",
+  "file_present": true,
+  "bytes": 3536,
+  "sha256": "fc40057a837b39d5633d67e62ddb3f82d8ad26aeb8bee7215d785c70bf0cd3ab",
+  "entries": [
+    "export.json",
+    "index.html"
+  ],
+  "cit_present": true,
+  "synthetic_subject_present": true
+}

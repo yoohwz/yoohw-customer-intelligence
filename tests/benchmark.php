@@ -33,6 +33,13 @@ $tags = YoOhw_COS_DB::tags_table();
 $customer_tags = YoOhw_COS_DB::customer_tags_table();
 $segments = YoOhw_COS_DB::segments_table();
 $customer_segments = YoOhw_COS_DB::customer_segments_table();
+// Reset preserves label definitions. Remove only this benchmark's owned labels
+// before the second storage-mode run reuses the guarded synthetic database.
+foreach ( array( array( $tags, 'synthetic-tag' ), array( $segments, 'synthetic-segment' ) ) as $label ) {
+	if ( false === $wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE id = 1 AND slug = %s', $label[0], $label[1] ) ) ) {
+		throw new RuntimeException( 'Synthetic benchmark label cleanup failed.' );
+	}
+}
 $queries = array(
 	$wpdb->prepare( "INSERT INTO %i (id,email,display_name,total_orders,total_spent,average_order_value,money_state,money_currency,commerce_metrics_version,intelligence_currency_ready,intelligence_generation,risk_score,customer_status,vip_status,lifecycle_stage,last_order_date,last_activity_date,created_at,updated_at)
 		SELECT n, CONCAT('fixture', n, '@example.test'), CONCAT('Synthetic ', n), IF(MOD(n,2)=0,6,2), IF(MOD(n,2)=0,300.000000,100.000000), 50.000000, 'comparable', 'USD', 2, 1, %s,

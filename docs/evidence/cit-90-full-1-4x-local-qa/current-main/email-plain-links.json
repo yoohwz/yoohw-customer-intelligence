@@ -1,0 +1,147 @@
+[
+  {
+    "state": "assigned",
+    "literal_entities": [
+      "&#038;"
+    ],
+    "task_urls": [
+      {
+        "raw": "https://yoplay8.local/wp-admin/admin.php?page=yoohw-customer-intelligence-tasks&#038;task_id=11",
+        "query": {
+          "page": [
+            "yoohw-customer-intelligence-tasks"
+          ]
+        },
+        "fragment": "038;task_id=11",
+        "task_id_in_query": false
+      }
+    ]
+  },
+  {
+    "state": "completed",
+    "literal_entities": [
+      "&#038;"
+    ],
+    "task_urls": [
+      {
+        "raw": "https://yoplay8.local/wp-admin/admin.php?page=yoohw-customer-intelligence-tasks&#038;task_id=11",
+        "query": {
+          "page": [
+            "yoohw-customer-intelligence-tasks"
+          ]
+        },
+        "fragment": "038;task_id=11",
+        "task_id_in_query": false
+      }
+    ]
+  },
+  {
+    "state": "daily-summary",
+    "literal_entities": [
+      "&#038;",
+      "&#039;"
+    ],
+    "task_urls": [
+      {
+        "raw": "https://yoplay8.local/wp-admin/admin.php?page=yoohw-customer-intelligence-tasks&#038;task_id=11",
+        "query": {
+          "page": [
+            "yoohw-customer-intelligence-tasks"
+          ]
+        },
+        "fragment": "038;task_id=11",
+        "task_id_in_query": false
+      }
+    ]
+  },
+  {
+    "state": "due-soon",
+    "literal_entities": [
+      "&#038;"
+    ],
+    "task_urls": [
+      {
+        "raw": "https://yoplay8.local/wp-admin/admin.php?page=yoohw-customer-intelligence-tasks&#038;task_id=11",
+        "query": {
+          "page": [
+            "yoohw-customer-intelligence-tasks"
+          ]
+        },
+        "fragment": "038;task_id=11",
+        "task_id_in_query": false
+      }
+    ]
+  },
+  {
+    "state": "escalation",
+    "literal_entities": [
+      "&#038;"
+    ],
+    "task_urls": [
+      {
+        "raw": "https://yoplay8.local/wp-admin/admin.php?page=yoohw-customer-intelligence-tasks&#038;task_id=11",
+        "query": {
+          "page": [
+            "yoohw-customer-intelligence-tasks"
+          ]
+        },
+        "fragment": "038;task_id=11",
+        "task_id_in_query": false
+      }
+    ]
+  },
+  {
+    "state": "overdue",
+    "literal_entities": [
+      "&#038;"
+    ],
+    "task_urls": [
+      {
+        "raw": "https://yoplay8.local/wp-admin/admin.php?page=yoohw-customer-intelligence-tasks&#038;task_id=11",
+        "query": {
+          "page": [
+            "yoohw-customer-intelligence-tasks"
+          ]
+        },
+        "fragment": "038;task_id=11",
+        "task_id_in_query": false
+      }
+    ]
+  },
+  {
+    "state": "reassigned",
+    "literal_entities": [
+      "&#038;"
+    ],
+    "task_urls": [
+      {
+        "raw": "https://yoplay8.local/wp-admin/admin.php?page=yoohw-customer-intelligence-tasks&#038;task_id=11",
+        "query": {
+          "page": [
+            "yoohw-customer-intelligence-tasks"
+          ]
+        },
+        "fragment": "038;task_id=11",
+        "task_id_in_query": false
+      }
+    ]
+  },
+  {
+    "state": "reopened",
+    "literal_entities": [
+      "&#038;"
+    ],
+    "task_urls": [
+      {
+        "raw": "https://yoplay8.local/wp-admin/admin.php?page=yoohw-customer-intelligence-tasks&#038;task_id=11",
+        "query": {
+          "page": [
+            "yoohw-customer-intelligence-tasks"
+          ]
+        },
+        "fragment": "038;task_id=11",
+        "task_id_in_query": false
+      }
+    ]
+  }
+]

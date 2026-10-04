@@ -1,0 +1,4 @@
+{
+  "pointer_click": "Several offscreen locator clicks landed on adjacent controls while keyboard activation navigated correctly. Quick views were verified with keyboard and observed href navigation, not classified as product click defects.",
+  "confirm_dialog": "Confirmation activation on owned note Delete and static-segment Remove timed out in Input.dispatchKeyEvent. getJsDialog returned undefined and tab dispatch stalled. Fresh tabs in the same browser recovered access. Later persisted reads showed the owned note and original segment assignment had been removed. Treat confirmation UX as INCONCLUSIVE; do not claim a native-dialog acceptance PASS. Saved View delete UI was deferred to avoid repeating the tool limitation; isolated deletion tests passed."
+}

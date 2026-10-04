@@ -1,0 +1,42 @@
+{
+  "admitted_main": "f44ff6b22eb799cc934e732a70f1fc852f08db99",
+  "installed_header_version": "1.4.2-beta.1",
+  "checked_runtime_files": 62,
+  "matching_files": 45,
+  "different_files": [
+    "admin/class-yoohw-cos-admin-menu.php",
+    "admin/class-yoohw-cos-customer-exporter.php",
+    "admin/class-yoohw-cos-customers-list.php",
+    "assets/css/admin.css",
+    "includes/class-yoohw-cos-commerce-metrics-policy.php",
+    "includes/class-yoohw-cos-customer-facts.php",
+    "includes/class-yoohw-cos-customer-query.php",
+    "includes/class-yoohw-cos-diagnostics.php",
+    "includes/class-yoohw-cos-intelligence.php",
+    "includes/class-yoohw-cos-loader.php",
+    "includes/class-yoohw-cos-migration-runner.php",
+    "includes/class-yoohw-cos-overview.php",
+    "includes/class-yoohw-cos-privacy-exporter.php",
+    "includes/class-yoohw-cos-reset-guard.php",
+    "yoohw-customer-intelligence.php"
+  ],
+  "missing_files": [
+    "admin/class-yoohw-cos-notice-preferences.php",
+    "assets/js/notice-preferences.js"
+  ],
+  "representative_hashes": {
+    "yoohw-customer-intelligence.php": {
+      "main_sha256": "1341c72e14a7dcbb0227345f518a03d18e90138045d309bf5e7a11be9f9ae26b",
+      "installed_sha256": "4af639421196ac9e8f30227933fcbe07e2ed198b30658eda60c7bd7bf4df7ca3"
+    },
+    "includes/class-yoohw-cos-commerce-metrics-policy.php": {
+      "main_sha256": "a3afa2e0855c9c6916260b586c211bc90df861039257913fe7e65de30a272232",
+      "installed_sha256": "c0bef12b55b9f35bc112b1a80fc0f3a63c57d9359f16b0b75f526a2b93261332"
+    },
+    "includes/class-yoohw-cos-migration-runner.php": {
+      "main_sha256": "fa313c2a3909c3a4aec813c4b9a6e701939e005b449d402cc7ad5b4368f25b4c",
+      "installed_sha256": "24c958a341d7ab16162b952dce0da1882a52e0def20179a044047bbcca232ea5"
+    }
+  },
+  "source_gate": "MISMATCH"
+}

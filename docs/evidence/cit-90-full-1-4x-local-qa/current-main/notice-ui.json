@@ -1,0 +1,15 @@
+[
+  {
+    "case": "admin1 reload after dismissal",
+    "visible": false
+  },
+  {
+    "case": "admin2 same revision",
+    "visible": true
+  },
+  {
+    "case": "preparing to attention admin1",
+    "visible": 1,
+    "text": "Customer Intelligence data update needs attention. Review in Settings"
+  }
+]

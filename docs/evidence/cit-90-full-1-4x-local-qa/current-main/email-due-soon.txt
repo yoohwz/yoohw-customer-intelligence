@@ -1,0 +1,19 @@
+CRM task due soon
+
+Hi CIT90 QA Admin 1,
+
+This CRM follow-up task is approaching its due date.
+
+Due soon
+Task: CIT90 QA overdue edited
+Task ID: #11
+Customer: CIT90 QA VND
+Due date: 4 October 2026 03:13
+Priority: High
+Status: Open
+
+Open task: https://yoplay8.local/wp-admin/admin.php?page=yoohw-customer-intelligence-tasks&#038;task_id=11
+
+----------------------------------------
+
+Synthetic CIT90 QA — yoplay8.local

@@ -1,0 +1,18 @@
+[
+  {
+    "case": "page2",
+    "url": "https://yoplay8.local/wp-admin/admin.php?page=yoohw-customer-intelligence&s=CIT90&paged=2",
+    "rows": 1,
+    "text": "\tCIT90 QA VND\t\ncit90_qa_none@example.invalid\n+84900000090\n\t—\t\nR: Unavailable\nF: 0 orders\nM: $0,00\n\t\nInactive\nLow · 20\n\t—\t—\n"
+  },
+  {
+    "case": "reload page2",
+    "url": "https://yoplay8.local/wp-admin/admin.php?page=yoohw-customer-intelligence&s=CIT90&paged=2",
+    "rows": 1
+  },
+  {
+    "case": "back",
+    "url": "https://yoplay8.local/wp-admin/admin.php?page=yoohw-customer-intelligence&s=CIT90",
+    "rows": 20
+  }
+]

@@ -1,0 +1,176 @@
+{
+  "store_currency": "USD",
+  "customers": {
+    "VND": {
+      "id": "1744",
+      "total_orders": "1",
+      "total_spent": "100000.000000",
+      "average_order_value": "100000.000000",
+      "commerce_metrics_version": "2",
+      "money_state": "comparable",
+      "money_currency": "VND",
+      "availability": {
+        "customer_state": "comparable",
+        "site_state": "ready",
+        "reason": "comparable",
+        "currency": "VND",
+        "amount_available": true,
+        "matches_store_currency": false,
+        "intelligence_fresh": true
+      },
+      "notes": 2,
+      "tags": [
+        {
+          "id": "7",
+          "name": "CIT90 QA Tag",
+          "slug": "cit90-qa-tag",
+          "color": "#2271b1",
+          "description": "Synthetic audit",
+          "created_at": "2026-10-04 01:33:29",
+          "updated_at": "2026-10-04 01:33:29"
+        }
+      ],
+      "segments": [
+        {
+          "id": "11",
+          "name": "CIT90 QA Static",
+          "slug": "cit90-qa-static",
+          "segment_type": "static",
+          "description": "Synthetic audit",
+          "rules_json": "[]",
+          "created_at": "2026-10-04 01:33:29",
+          "updated_at": "2026-10-04 01:33:29"
+        }
+      ]
+    },
+    "EUR": {
+      "id": "1745",
+      "total_orders": "1",
+      "total_spent": "100.000000",
+      "average_order_value": "100.000000",
+      "commerce_metrics_version": "2",
+      "money_state": "comparable",
+      "money_currency": "EUR",
+      "availability": {
+        "customer_state": "comparable",
+        "site_state": "ready",
+        "reason": "comparable",
+        "currency": "EUR",
+        "amount_available": true,
+        "matches_store_currency": false,
+        "intelligence_fresh": true
+      },
+      "notes": 0,
+      "tags": [],
+      "segments": []
+    },
+    "Mixed": {
+      "id": "1746",
+      "total_orders": "2",
+      "total_spent": "0.000000",
+      "average_order_value": "0.000000",
+      "commerce_metrics_version": "2",
+      "money_state": "mixed",
+      "money_currency": null,
+      "availability": {
+        "customer_state": "mixed",
+        "site_state": "ready",
+        "reason": "mixed",
+        "currency": null,
+        "amount_available": false,
+        "matches_store_currency": false,
+        "intelligence_fresh": true
+      },
+      "notes": 0,
+      "tags": [],
+      "segments": []
+    },
+    "None": {
+      "id": "1747",
+      "total_orders": "0",
+      "total_spent": "0.000000",
+      "average_order_value": "0.000000",
+      "commerce_metrics_version": "2",
+      "money_state": "none",
+      "money_currency": null,
+      "availability": {
+        "customer_state": "none",
+        "site_state": "ready",
+        "reason": "none",
+        "currency": null,
+        "amount_available": true,
+        "matches_store_currency": false,
+        "intelligence_fresh": false
+      },
+      "notes": 0,
+      "tags": [],
+      "segments": []
+    },
+    "Stale": {
+      "id": "1748",
+      "total_orders": "0",
+      "total_spent": "0.000000",
+      "average_order_value": "0.000000",
+      "commerce_metrics_version": "1",
+      "money_state": "unknown",
+      "money_currency": null,
+      "availability": {
+        "customer_state": "unknown",
+        "site_state": "ready",
+        "reason": "metrics_stale",
+        "currency": null,
+        "amount_available": false,
+        "matches_store_currency": false,
+        "intelligence_fresh": false
+      },
+      "notes": 0,
+      "tags": [],
+      "segments": []
+    }
+  },
+  "tasks": [
+    {
+      "id": "11",
+      "customer_id": "1744",
+      "assigned_user_id": "1484",
+      "title": "CIT90 QA overdue edited",
+      "status": "open",
+      "priority": "high"
+    },
+    {
+      "id": "12",
+      "customer_id": "1744",
+      "assigned_user_id": "1484",
+      "title": "CIT90 QA browser follow-up",
+      "status": "open",
+      "priority": "normal"
+    }
+  ],
+  "views": {
+    "1484": {
+      "445f2c62-bc22-4f33-bce1-810da6dffe18": {
+        "name": "CIT90 QA repeat",
+        "definition": {
+          "s": "CIT90",
+          "customer_tag": 0,
+          "customer_segment": 0,
+          "customer_status": "",
+          "vip_status": "",
+          "risk_level": "",
+          "customer_cohort": "",
+          "customer_attention": "",
+          "rfm_recency_max_days": "",
+          "rfm_frequency_min": "2",
+          "rfm_monetary_min": "",
+          "loyalty_level": "",
+          "loyalty_score": "",
+          "lifecycle_stage": "",
+          "customer_view": "",
+          "orderby": "last_activity_date",
+          "order": "DESC"
+        }
+      }
+    },
+    "1485": []
+  }
+}

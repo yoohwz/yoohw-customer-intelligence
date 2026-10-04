@@ -1,0 +1,20 @@
+[
+  {
+    "store": "VND",
+    "rows": "\tCIT90 QA Mixed\t\ncit90_qa_mixed@example.invalid\n+84900000090\n\t—\t\nR: 0 days\nF: 2 orders\nM: Multiple currencies\n\t\nActive\nNo risk · 0\n\t—\t4 October 2026 01:33\n\tCIT90 QA EUR\t\ncit90_qa_eur@example.invalid\n+84900000090\n\t—\t\nR: 0 days\nF: 1 order\nM: €100,00 (EUR)\n\t\nNew\nNo risk · 10\n\t—\t4 October 2026 01:33\n\tCIT90 QA VND\t\ncit90_qa_vnd@example.invalid\n+84900000090\n\t\nCIT90 QA Tag\nCIT90 QA Static\n\t\nR: 0 days\nF: 1 order\nM: ₫100.000,00\n\t\nNew\nLow · 30\nTop customer\n\t—\t4 October 2026 01:33\n\tCIT90 QA Stale\t\ncit90_qa_stale@example.invalid\n+84900000090\n\t—\t\nR: Unavailable\nF: 0 orders\nM: Updating monetary data…\n\t\nInactive\nLow · 20\n\t—\t—\n\tCIT90 QA None\t\ncit90_qa_none@example.invalid\n+84900000090\n\t—\t\nR: Unavailable\nF: 0 orders\nM: ₫0,00\n\t\nInactive\nLow · 20\n\t—\t—\n"
+  },
+  {
+    "store": "VND",
+    "threshold": "50000",
+    "rows": "\tCIT90 QA VND\t\ncit90_qa_vnd@example.invalid\n+84900000090\n\t\nCIT90 QA Tag\nCIT90 QA Static\n\t\nR: 0 days\nF: 1 order\nM: ₫100.000,00\n\t\nNew\nLow · 30\nTop customer\n\t—\t4 October 2026 01:33\n"
+  },
+  {
+    "store": "EUR",
+    "rows": "\tCIT90 QA Unknown\t\ncit90_qa_unknown@example.invalid\n\t—\t\nR: 0 days\nF: 1 order\nM: Order currency unavailable\n\t\nNew\nLow · 20\n\t—\t4 October 2026 01:52\n\tCIT90 QA Mixed\t\ncit90_qa_mixed@example.invalid\n+84900000090\n\t—\t\nR: 0 days\nF: 2 orders\nM: Multiple currencies\n\t\nActive\nNo risk · 0\n\t—\t4 October 2026 01:33\n\tCIT90 QA EUR\t\ncit90_qa_eur@example.invalid\n+84900000090\n\t—\t\nR: 0 days\nF: 1 order\nM: €100,00\n\t\nNew\nNo risk · 10\n\t—\t4 October 2026 01:33\n\tCIT90 QA VND\t\ncit90_qa_vnd@example.invalid\n+84900000090\n\t\nCIT90 QA Tag\nCIT90 QA Static\n\t\nR: 0 days\nF: 1 order\nM: ₫100.000,00 (VND)\n\t\nNew\nNo risk · 10\n\t—\t4 October 2026 01:33\n\tCIT90 QA Stale\t\ncit90_qa_stale@example.invalid\n+84900000090\n\t—\t\nR: Unavailable\nF: 0 orders\nM: Updating monetary data…\n\t\nInactive\nLow · 20\n\t—\t—\n\tCIT90 QA None\t\ncit90_qa_none@example.invalid\n+84900000090\n\t—\t\nR: Unavailable\nF: 0 orders\nM: €0,00\n\t\nInactive\nLow · 20\n\t—\t—\n"
+  },
+  {
+    "store": "EUR",
+    "threshold": "80",
+    "rows": "\tCIT90 QA EUR\t\ncit90_qa_eur@example.invalid\n+84900000090\n\t—\t\nR: 0 days\nF: 1 order\nM: €100,00\n\t\nNew\nNo risk · 10\n\t—\t4 October 2026 01:33\n"
+  }
+]

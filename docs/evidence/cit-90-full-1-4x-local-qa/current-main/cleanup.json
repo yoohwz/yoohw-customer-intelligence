@@ -1,0 +1,259 @@
+{
+  "snapshot": {
+    "strategy": "Full private Local SQL recovery point outside the webroot; mode 0600",
+    "bytes": 165685174,
+    "sha256": "1d293efd017c10ff1922c66f250dbfd99957b94bcabea60546d83eb22d75c618",
+    "retained_privately": true
+  },
+  "fixtures": {
+    "orders_removed": 5,
+    "refunds_removed": 0,
+    "profiles_removed": 21,
+    "users_removed": 2,
+    "privacy_requests_removed": 2
+  },
+  "derived_restore": {
+    "restored_rows": 1500,
+    "fields": {
+      "updated_at": 1500,
+      "intelligence_generation": 1500
+    },
+    "guard": "Full-current-row comparison before each derived-only update"
+  },
+  "options": {
+    "restored_options": [
+      "yoohw_cos_customer_data_updated_at",
+      "yoohw_cos_intelligence_freshness",
+      "yoohw_cos_intelligence_generation",
+      "yoohw_cos_operational_incidents"
+    ],
+    "cron": "Original CIT hooks restored; current unrelated hooks preserved",
+    "owned_bulk_receipt_removed": true
+  },
+  "cit_rows": {
+    "yoohw_cos_customers": {
+      "original_rows": 1680,
+      "current_rows": 1682,
+      "original_missing": 0,
+      "original_changed": 0,
+      "new_rows": 2
+    },
+    "yoohw_cos_customer_order_facts": {
+      "original_rows": 4020,
+      "current_rows": 4020,
+      "original_missing": 0,
+      "original_changed": 0,
+      "new_rows": 0
+    },
+    "yoohw_cos_events": {
+      "original_rows": 38480,
+      "current_rows": 38482,
+      "original_missing": 0,
+      "original_changed": 0,
+      "new_rows": 2
+    },
+    "yoohw_cos_notes": {
+      "original_rows": 0,
+      "current_rows": 0,
+      "original_missing": 0,
+      "original_changed": 0,
+      "new_rows": 0
+    },
+    "yoohw_cos_tasks": {
+      "original_rows": 6,
+      "current_rows": 6,
+      "original_missing": 0,
+      "original_changed": 0,
+      "new_rows": 0
+    },
+    "yoohw_cos_tags": {
+      "original_rows": 1,
+      "current_rows": 1,
+      "original_missing": 0,
+      "original_changed": 0,
+      "new_rows": 0
+    },
+    "yoohw_cos_customer_tags": {
+      "original_rows": 0,
+      "current_rows": 0,
+      "original_missing": 0,
+      "original_changed": 0,
+      "new_rows": 0
+    },
+    "yoohw_cos_segments": {
+      "original_rows": 1,
+      "current_rows": 1,
+      "original_missing": 0,
+      "original_changed": 0,
+      "new_rows": 0
+    },
+    "yoohw_cos_customer_segments": {
+      "original_rows": 0,
+      "current_rows": 0,
+      "original_missing": 0,
+      "original_changed": 0,
+      "new_rows": 0
+    },
+    "yoohw_cos_notification_log": {
+      "original_rows": 44,
+      "current_rows": 44,
+      "original_missing": 0,
+      "original_changed": 0,
+      "new_rows": 0
+    },
+    "yoohw_cos_migration_issues": {
+      "original_rows": 18,
+      "current_rows": 18,
+      "original_missing": 0,
+      "original_changed": 0,
+      "new_rows": 0
+    },
+    "yoohw_cos_privacy_suppression": {
+      "original_rows": 0,
+      "current_rows": 0,
+      "original_missing": 0,
+      "original_changed": 0,
+      "new_rows": 0
+    }
+  },
+  "additional_cleanup": {
+    "owned_order_notes": 23,
+    "loyalty_registration_coupons": 2,
+    "synthetic_prefix_remaining": []
+  },
+  "limitations": [
+    "Auto-increment allocation counters are not rewound. No wholesale database rollback was used."
+  ],
+  "cron_bytes_match_original": false,
+  "temporary_mu_guard_removed": true,
+  "source_matches_main": true,
+  "temporary_browser_tabs_closed": true,
+  "viewport_reset": true,
+  "qa_cookie_expired": true,
+  "private_fixture_credentials_removed": true,
+  "cron_live_followup": {
+    "bytes_match": false,
+    "semantic_match": false,
+    "changed_hooks": {
+      "action_scheduler_run_queue": {
+        "before": 1,
+        "after": 1
+      },
+      "elementor/tracker/send_event": {
+        "before": 1,
+        "after": 1
+      },
+      "jetpack_clean_nonces": {
+        "before": 1,
+        "after": 1
+      },
+      "wc_admin_process_orders_milestone": {
+        "before": 1,
+        "after": 1
+      },
+      "wc_admin_unsnooze_admin_notes": {
+        "before": 1,
+        "after": 1
+      },
+      "wc_blacklist_blocked_notification_poll_v1": {
+        "before": 1,
+        "after": 1
+      },
+      "wc_blacklist_manager_device_identity_cleanup": {
+        "before": 1,
+        "after": 1
+      },
+      "wc_blacklist_manager_otp_state_cleanup_v1": {
+        "before": 1,
+        "after": 1
+      },
+      "wc_blacklist_manager_payment_abuse_cleanup_events": {
+        "before": 1,
+        "after": 1
+      },
+      "wc_blacklist_notification_digest_poll_v1": {
+        "before": 1,
+        "after": 1
+      },
+      "wc_blacklist_notification_operational_poll_v1": {
+        "before": 1,
+        "after": 1
+      },
+      "wc_blacklist_notification_samples_poll_v1": {
+        "before": 1,
+        "after": 1
+      },
+      "wc_blacklist_notification_usage_poll_v1": {
+        "before": 1,
+        "after": 1
+      },
+      "wp_privacy_delete_old_export_files": {
+        "before": 1,
+        "after": 1
+      },
+      "wp_privacy_personal_data_cleanup_requests": {
+        "before": 1,
+        "after": 1
+      },
+      "yo_booking_process_reminders": {
+        "before": 1,
+        "after": 1
+      },
+      "yoaa_membership_source_continue": {
+        "before": 1,
+        "after": 1
+      },
+      "yoaa_membership_source_reconcile": {
+        "before": 1,
+        "after": 1
+      },
+      "yoaa_wc_membership_expire_event": {
+        "before": 1,
+        "after": 1
+      },
+      "yogb_bm_process_outbox_due": {
+        "before": 1,
+        "after": 1
+      },
+      "yogb_canary_auto_rollback": {
+        "before": 1,
+        "after": 1
+      },
+      "yogb_contribution_review_hourly": {
+        "before": 1,
+        "after": 1
+      },
+      "yogb_expire_reports_event": {
+        "before": 1,
+        "after": 1
+      },
+      "yogb_reporter_accuracy_daily": {
+        "before": 1,
+        "after": 1
+      },
+      "yogb_reporter_domain_hygiene_daily": {
+        "before": 1,
+        "after": 1
+      },
+      "yoohw_cos_crm_email_due_soon": {
+        "before": 1,
+        "after": 1
+      },
+      "yotm_cleanup_jobs": {
+        "before": 1,
+        "after": 1
+      }
+    },
+    "interpretation": "CIT hook definitions were restored from the pre-test option. A later direct SQL audit found normal shared-site cron advancement (including due-soon scheduling) and unrelated user-registration activity. Those current non-fixture schedules and new rows were preserved."
+  },
+  "final_prefix_residuals": [],
+  "concurrent_state_preserved": {
+    "new_profiles": 2,
+    "new_activity_events": 2,
+    "owned_email_match": false,
+    "user_ids_outside_QA_ownership": true,
+    "source": "Unrelated Loyalty user-registration activity observed after fixture cleanup; preserved."
+  },
+  "final_original_CIT_row_content_match": true,
+  "final_owned_prefix_residuals": []
+}

@@ -1,0 +1,21 @@
+Daily CRM follow-up summary
+
+Hi CIT90 QA Admin 1,
+
+Here is your CRM follow-up queue for today.
+
+Today&#039;s queue: 1
+
+Due today (1)
+---------
+- CIT90 QA overdue edited
+  Customer: CIT90 QA VND
+  Due: 4 October 2026 03:13
+  Priority: High
+  View: https://yoplay8.local/wp-admin/admin.php?page=yoohw-customer-intelligence-tasks&#038;task_id=11
+
+Open task list: https://yoplay8.local/wp-admin/admin.php?page=yoohw-customer-intelligence-tasks
+
+----------------------------------------
+
+Synthetic CIT90 QA — yoplay8.local

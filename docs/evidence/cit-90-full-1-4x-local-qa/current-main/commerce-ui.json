@@ -1,0 +1,31 @@
+[
+  {
+    "stage": "same-status",
+    "spent": 120000,
+    "orders": 1
+  },
+  {
+    "stage": "partial-refund",
+    "summary": "Total spent\n₫100.000,00 (VND)\nOrders\n1\nAverage order value\n₫100.000,00 (VND)\nLast order\n#101154\n4 October 2026 01:33\nOpen tasks\n2\n1 overdue"
+  },
+  {
+    "stage": "full-refund",
+    "summary": "Total spent\n€0,00\nOrders\n0\nAverage order value\n€0,00\nLast order\n—\nOpen tasks\n2\n1 overdue"
+  },
+  {
+    "stage": "reassign",
+    "summary": "Total spent\n₫0,00 (VND)\nOrders\n1\nAverage order value\n₫0,00 (VND)\nLast order\n#101154\n4 October 2026 01:33\nOpen tasks\n2\n1 overdue"
+  },
+  {
+    "stage": "explicit-cit-reassignment",
+    "summary": "Total spent\n€0,00\nOrders\n0\nAverage order value\n€0,00\nLast order\n—\nOpen tasks\n2\n1 overdue"
+  },
+  {
+    "stage": "delete",
+    "summary": "Total spent\n€0,00\nOrders\n0\nAverage order value\n€0,00\nLast order\n—\nOpen tasks\n2\n1 overdue"
+  },
+  {
+    "stage": "recreate",
+    "summary": "Total spent\nPreparing currency data…\nOrders\n1\nAverage order value\nPreparing currency data…\nLast order\n#101162\n4 October 2026 01:57\nOpen tasks\n2\n1 overdue"
+  }
+]

@@ -1,0 +1,38 @@
+Diagnostics
+
+Read-only state at page load. A scheduled WP-Cron event does not prove that work ran.
+
+Health	Attention
+Schema	ready (0.2.4 → 0.2.4)
+Schema requirements	—
+Profiles / active / archived	1686 / 1413 / 273
+Order facts / open tasks / overdue tasks	4025 / 4 / 3
+Order sync	completed_with_issues — 4036 scanned, 4018 processed, 18 retryable, 0 unresolved
+Order sync legacy outcomes	No legacy outcome gap
+Order sync last updated at	2026-10-01 02:48:02
+Order sync completed at	2026-10-01 02:48:02
+Currency	Attention — USD
+Currency last successful progress	2026-10-04 01:58:18 UTC
+Currency progress grace	15 minutes; recent successful progress or a scheduled worker, with no unresolved issue or unrecovered error
+Currency last error	—
+Active profiles: comparable / mixed / unknown / none	251 / 4 / 5 / 1153
+Active profiles with outdated commerce metrics	4
+WooCommerce blocks migration	No evidence
+Intelligence generation	34548015
+Active profiles: current / stale / currency unavailable	0 / 1412 / 1
+Intelligence freshness worker	in_progress — cursor 250, generation not verified
+Activity recalculation worker	completed — 386 scanned, 386 updated, page 2
+Customer data updated at	2026-10-04 01:57:01
+Reset boundary	ready
+Privacy suppression	Evaluable, 0 receipts
+DISABLE_WP_CRON	Off
+Migration: identity_normalization_v2	completed / retries — 1658 processed, page 0, 0 pending, 0 unresolved
+Migration: commerce_facts_v2	completed / rebuild_retries — 4002 processed, page 41, 0 pending, 0 unresolved
+Migration: commerce_currency_v3	completed_with_issues / rebuild_retries — 4010 processed, page 41, 0 pending, 0 unresolved
+WP-Cron: migration	2026-10-04 01:57:27 UTC (overdue)
+WP-Cron: intelligence_daily	2026-10-04 12:24:38 UTC
+WP-Cron: activity_recalculation	Not scheduled
+WP-Cron: crm_due_soon	2026-10-04 02:16:12 UTC
+WP-Cron: crm_daily	2026-10-04 08:00:00 UTC
+WP-Cron: intelligence_catchup	2026-10-04 01:56:50 UTC (overdue)
+WP-Cron: intelligence_daily_wakeup	Not scheduled
