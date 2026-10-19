@@ -12,7 +12,7 @@ final class YoOhw_COS_Flash_Notices {
 			'tag_added', 'tag_removed', 'segment_added', 'segment_removed',
 			'saved_view_notice', 'yoohw_customers_bulk', 'yoohw_customers_bulk_err',
 			'yoohw_task_created', 'yoohw_task_updated', 'yoohw_task_completed',
-			'yoohw_task_reopened', 'yoohw_task_deleted', 'yoohw_task_error',
+			'yoohw_task_reopened', 'yoohw_task_deleted', 'yoohw_task_error', 'yoohw_task_undo',
 			'yoohw_tasks_bulk_done', 'yoohw_tasks_bulk_missing',
 			'yoohw_tag_created', 'yoohw_tag_updated', 'yoohw_tag_deleted',
 			'yoohw_tag_error', 'yoohw_tags_bulk_deleted', 'yoohw_tags_bulk_missing',
@@ -45,7 +45,7 @@ final class YoOhw_COS_Flash_Notices {
 			&& isset( $params['id'] ) && is_scalar( $params['id'] ) && function_exists( 'wc_get_order' ) ) {
 			$is_order = wc_get_order( absint( $params['id'] ) ) instanceof WC_Order;
 		}
-		return $is_order ? array( 'yoohw_task_created', 'yoohw_task_completed', 'yoohw_task_reopened', 'yoohw_task_error' ) : array();
+		return $is_order ? array( 'yoohw_task_created', 'yoohw_task_completed', 'yoohw_task_reopened', 'yoohw_task_error', 'yoohw_task_undo' ) : array();
 	}
 
 	private static function request_flags(): array {

@@ -12,7 +12,7 @@ final class YoOhw_COS_Overview {
 		$generation = YoOhw_COS_Intelligence::get_scoring_generation();
 
 		if ( ! self::table_exists( $table ) ) {
-			return self::empty_summary();
+			return self::empty_summary( true );
 		}
 
 		$row = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
@@ -39,7 +39,7 @@ final class YoOhw_COS_Overview {
 		);
 
 		if ( ! is_array( $row ) ) {
-			return self::empty_summary();
+			return self::empty_summary( true );
 		}
 
 		$total_customers      = absint( $row['total_customers'] ?? 0 );
@@ -233,7 +233,7 @@ final class YoOhw_COS_Overview {
 		return is_array( $customers ) ? array_map( static fn( array $customer ): array => YoOhw_COS_Intelligence::safe_customer_decisions( $customer, $generation ), $customers ) : array();
 	}
 
-	public static function get_priority_tasks( int $limit = 5 ): array {
+	public static function get_priority_tasks( int $limit = 5, string $view = 'priority' ): array {
 		global $wpdb;
 
 		$tasks_table     = YoOhw_COS_DB::tasks_table();
@@ -242,6 +242,18 @@ final class YoOhw_COS_Overview {
 
 		if ( ! self::table_exists( $tasks_table ) || ! self::table_exists( $customers_table ) ) {
 			return array();
+		}
+
+		$now = YoOhw_COS_DB::now();
+		$view_where = '';
+		if ( 'overdue' === $view ) {
+			$view_where = $wpdb->prepare( ' AND t.due_date IS NOT NULL AND t.due_date < %s', $now );
+		} elseif ( 'due_soon' === $view ) {
+			$view_where = $wpdb->prepare(
+				' AND t.due_date IS NOT NULL AND t.due_date >= %s AND t.due_date <= %s',
+				$now,
+				date_i18n( 'Y-m-d H:i:s', current_time( 'timestamp' ) + ( 7 * DAY_IN_SECONDS ) )
+			);
 		}
 
 		$tasks = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
@@ -254,7 +266,7 @@ final class YoOhw_COS_Overview {
 				FROM %i t
 				LEFT JOIN %i c ON c.id = t.customer_id
 				LEFT JOIN %i u ON u.ID = t.assigned_user_id
-				WHERE t.status <> %s
+				WHERE t.status <> %s {$view_where}
 				ORDER BY
 					CASE
 						WHEN t.due_date IS NOT NULL AND t.due_date < %s THEN 0
@@ -280,7 +292,7 @@ final class YoOhw_COS_Overview {
 				$customers_table,
 				$wpdb->users,
 				YoOhw_COS_Tasks::STATUS_COMPLETED,
-				YoOhw_COS_DB::now(),
+				$now,
 				get_current_user_id(),
 				$limit
 			),
@@ -290,14 +302,15 @@ final class YoOhw_COS_Overview {
 		return is_array( $tasks ) ? $tasks : array();
 	}
 
-	private static function empty_summary(): array {
+	private static function empty_summary( bool $read_error = false ): array {
 		return array(
+			'read_error'           => $read_error,
 			'total_customers'      => 0,
 			'total_orders'         => 0,
 			'total_spent'          => 0.0,
 			'money_state'          => 'none',
 			'money_currency'       => null,
-			'commerce_metrics_version' => absint( $row['stale_customers'] ?? 0 ) > 0 ? 1 : YoOhw_COS_Commerce_Metrics_Policy::VERSION,
+			'commerce_metrics_version' => YoOhw_COS_Commerce_Metrics_Policy::VERSION,
 			'average_order_value'  => 0.0,
 			'purchasing_customers' => 0,
 			'repeat_customers'     => 0,
