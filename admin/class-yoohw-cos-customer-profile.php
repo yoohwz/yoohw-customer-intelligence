@@ -4,9 +4,6 @@ defined( 'ABSPATH' ) || exit;
 final class YoOhw_COS_Customer_Profile {
 
 	public static function render( int $customer_id ): void {
-		if ( ! current_user_can( 'manage_woocommerce' ) ) {
-			wp_die( esc_html__( 'You do not have permission to access this page.', 'yoohw-customer-intelligence' ) );
-		}
 		if ( 'ready' !== YoOhw_COS_Install::inspect_schema()['status'] ) {
 			echo '<div class="wrap yoohw-cos-admin yoohw-cos-profile"><h1>' . esc_html__( 'Customer data is unavailable.', 'yoohw-customer-intelligence' ) . '</h1>';
 			echo '<p><a href="' . esc_url( admin_url( 'admin.php?page=yoohw-customer-intelligence-settings#yoohw-cos-diagnostics' ) ) . '">' . esc_html__( 'View diagnostics', 'yoohw-customer-intelligence' ) . '</a></p></div>';
