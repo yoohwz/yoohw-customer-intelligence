@@ -2505,7 +2505,6 @@ body.yoohw-cos-email-composer-open {
 /* Overview: keep responsive decisions tied to the available admin content width. */
 .yoohw-cos-overview-page {
 	container-type: inline-size;
-	max-width: 1240px;
 	color: var(--yoohw-cos-text);
 }
 
