@@ -2636,7 +2636,7 @@ body.yoohw-cos-email-composer-open {
 
 .yoohw-cos-overview-layout {
 	display: grid;
-	grid-template-columns: minmax(0, 1fr) 260px;
+	grid-template-columns: minmax(0, 1fr) 340px;
 	align-items: start;
 	gap: 16px;
 }
@@ -2921,7 +2921,7 @@ a.yoohw-cos-attention-card:hover {
 
 @container (max-width: 900px) {
 	.yoohw-cos-overview-layout {
-		grid-template-columns: minmax(0, 1fr) 230px;
+		grid-template-columns: minmax(0, 1fr) 280px;
 	}
 
 	.yoohw-cos-overview-lower {
