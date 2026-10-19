@@ -755,6 +755,58 @@
 	}
 
 	ready(function() {
+		var profileTaskCreate = document.getElementById('yoohw-cos-profile-task-create');
+		var profileTaskTitle = document.getElementById('yoohw_cos_profile_task_title');
+		var profileTaskToggle = document.querySelector('[data-yoohw-cos-profile-task-toggle]');
+
+		if (profileTaskCreate && profileTaskTitle) {
+			function syncProfileTaskToggle() {
+				if (profileTaskToggle) {
+					profileTaskToggle.setAttribute('aria-expanded', String(profileTaskCreate.open));
+					profileTaskToggle.textContent = profileTaskToggle.getAttribute(profileTaskCreate.open ? 'data-close-label' : 'data-open-label');
+				}
+			}
+
+			function openProfileTaskFromHash() {
+				if ('#yoohw_cos_profile_task_title' === window.location.hash || '#yoohw-cos-profile-task-create' === window.location.hash) {
+					profileTaskCreate.open = true;
+					syncProfileTaskToggle();
+					profileTaskTitle.focus();
+				}
+			}
+
+			document.querySelectorAll('[data-yoohw-cos-profile-task-open], a[href="#yoohw_cos_profile_task_title"]').forEach(function(link) {
+				link.addEventListener('click', function(event) {
+					event.preventDefault();
+					profileTaskCreate.open = true;
+					syncProfileTaskToggle();
+					profileTaskTitle.focus();
+				});
+			});
+			if (profileTaskToggle) {
+				profileTaskToggle.addEventListener('click', function() {
+					profileTaskCreate.open = !profileTaskCreate.open;
+					syncProfileTaskToggle();
+					if (profileTaskCreate.open) {
+						profileTaskTitle.focus();
+					}
+				});
+			}
+			document.querySelectorAll('[data-yoohw-cos-profile-task-cancel]').forEach(function(button) {
+				button.addEventListener('click', function() {
+					profileTaskCreate.open = false;
+					syncProfileTaskToggle();
+					if (profileTaskToggle) {
+						profileTaskToggle.focus();
+					}
+				});
+			});
+			profileTaskCreate.addEventListener('toggle', syncProfileTaskToggle);
+			window.addEventListener('hashchange', openProfileTaskFromHash);
+			syncProfileTaskToggle();
+			openProfileTaskFromHash();
+		}
+
 		var filtersToggle = document.querySelector('[data-yoohw-cos-filters-toggle]');
 		var filtersBody = document.getElementById('yoohw-cos-filters-body');
 

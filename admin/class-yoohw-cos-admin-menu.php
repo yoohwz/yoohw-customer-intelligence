@@ -646,105 +646,129 @@ final class YoOhw_COS_Admin_Menu {
 			wp_die( esc_html__( 'You do not have permission to access this page.', 'yoohw-customer-intelligence' ) );
 		}
 
-		$summary            = YoOhw_COS_Overview::get_summary();
-		$risk_counts        = YoOhw_COS_Customers::get_risk_counts();
-		$lifecycle_counts   = YoOhw_COS_Customers::get_lifecycle_counts();
-		$recent_activity    = self::get_recent_activity();
-		$attention_counts   = YoOhw_COS_Overview::get_attention_counts();
-		$priority_customers = YoOhw_COS_Overview::get_priority_customers();
-		$priority_tasks     = YoOhw_COS_Reset_Guard::snapshot_rows( array( 'YoOhw_COS_Overview', 'get_priority_tasks' ) );
-		$sync_state         = self::get_sync_state();
-		$revenue            = YoOhw_COS_Commerce_Metrics_Policy::format_money( $summary, 'total_spent' );
-		$average_order      = YoOhw_COS_Commerce_Metrics_Policy::format_money( $summary, 'average_order_value' );
-		$customers_url      = self::get_overview_customers_url();
+		$diagnostics = YoOhw_COS_Diagnostics::snapshot();
+		$available   = 'ready' === $diagnostics['schema']['status'] && 'ready' === $diagnostics['reset']['status'] && $diagnostics['privacy']['evaluable'];
+		$summary     = $available ? YoOhw_COS_Overview::get_summary() : array();
+		$available   = $available && empty( $summary['read_error'] );
+		$has_customers = $available && ! empty( $summary['total_customers'] );
+		$intelligence_ready = $available && 'ready' === $diagnostics['currency']['state'] && empty( $diagnostics['data']['stale_generation'] ) && empty( $diagnostics['data']['currency_unready'] );
+		$task_view   = self::get_overview_task_view();
+		$priority_tasks = $available ? YoOhw_COS_Reset_Guard::snapshot_rows(
+			static function() use ( $task_view ): array {
+				return YoOhw_COS_Overview::get_priority_tasks( 5, $task_view );
+			}
+		) : array();
+		$recent_activity = $available ? self::get_recent_activity( 3 ) : array();
+		$customers_url   = self::get_overview_customers_url();
+		$sync_url        = admin_url( 'admin.php?page=yoohw-customer-intelligence-settings#yoohw-cos-sync-center' );
+		$syncing         = 'in_progress' === $diagnostics['sync']['status'];
 
 		echo '<div class="wrap yoohw-cos-admin yoohw-cos-overview-page">';
-		echo '<div class="yoohw-cos-overview-header">';
-		echo '<div>';
-		echo '<h1>' . esc_html__( 'Overview', 'yoohw-customer-intelligence' ) . '</h1>';
-		echo '<p>' . esc_html__( 'Customer performance, attention signals, and the next actions for your team.', 'yoohw-customer-intelligence' ) . '</p>';
-		echo '</div>';
+		// WordPress moves third-party admin notices after the first h1. Keep that anchor outside the header layout.
+		echo '<h1 class="screen-reader-text">' . esc_html__( 'Customer overview', 'yoohw-customer-intelligence' ) . '</h1><div class="yoohw-cos-overview-notice-anchor"></div>';
+		echo '<div class="yoohw-cos-overview-header"><div>';
+		echo '<h2 class="yoohw-cos-overview-title">' . esc_html__( 'Overview', 'yoohw-customer-intelligence' ) . '</h2>';
+		echo '<p>' . esc_html__( 'Your customers, priorities, and next steps.', 'yoohw-customer-intelligence' ) . '</p></div>';
 		echo '<div class="yoohw-cos-overview-header__actions">';
-		echo '<span class="yoohw-cos-data-scope"><span class="dashicons dashicons-chart-area" aria-hidden="true"></span>' . esc_html__( 'Lifetime data', 'yoohw-customer-intelligence' ) . '</span>';
-		echo '<a class="button" href="' . esc_url( admin_url( 'admin.php?page=yoohw-customer-intelligence-settings#yoohw-cos-sync-center' ) ) . '">' . esc_html__( 'Open sync center', 'yoohw-customer-intelligence' ) . '</a>';
-		echo '</div>';
-		echo '</div>';
+		echo '<span class="yoohw-cos-data-scope">' . esc_html__( 'Lifetime data', 'yoohw-customer-intelligence' ) . '</span>';
+		echo '<a class="button" href="' . esc_url( $sync_url ) . '">' . esc_html__( 'Sync center', 'yoohw-customer-intelligence' ) . '</a></div></div>';
 
-		self::render_overview_data_status( YoOhw_COS_Diagnostics::snapshot() );
-		self::render_overview_notices();
+		self::render_overview_data_status( $diagnostics, $available, $has_customers );
 
-		if ( empty( $sync_state['last_run_at'] ) && empty( $summary['total_customers'] ) ) {
-			echo '<div class="notice notice-warning inline yoohw-cos-overview-sync-notice"><p>';
-			echo esc_html__( 'No synced customer data found yet. Sync existing orders to populate the dashboard.', 'yoohw-customer-intelligence' );
-			echo ' <a href="' . esc_url( admin_url( 'admin.php?page=yoohw-customer-intelligence-settings#yoohw-cos-sync-center' ) ) . '">' . esc_html__( 'Open sync center', 'yoohw-customer-intelligence' ) . '</a>';
-			echo '</p></div>';
+		$money = $has_customers ? YoOhw_COS_Commerce_Metrics_Policy::availability( $summary ) : array( 'amount_available' => false, 'reason' => 'none' );
+		$money_note = $has_customers && ! $money['amount_available'] ? YoOhw_COS_Commerce_Metrics_Policy::reason_label( $money['reason'] ) : '';
+		$revenue_note = $available ? ( $has_customers ? __( 'Synced customer revenue', 'yoohw-customer-intelligence' ) : __( 'No customer commerce data', 'yoohw-customer-intelligence' ) ) : __( 'Customer data unavailable', 'yoohw-customer-intelligence' );
+		$average_note = __( 'Customer data unavailable', 'yoohw-customer-intelligence' );
+		$repeat_note  = __( 'Customer data unavailable', 'yoohw-customer-intelligence' );
+		if ( $available ) {
+			$average_note = empty( $summary['total_orders'] ) ? __( 'No recognized orders', 'yoohw-customer-intelligence' ) : sprintf(
+				/* translators: %s: recognized order count. */
+				__( 'Across %s lifetime orders', 'yoohw-customer-intelligence' ), number_format_i18n( absint( $summary['total_orders'] ) )
+			);
+			$repeat_note = empty( $summary['purchasing_customers'] ) ? __( 'No purchasing customers yet.', 'yoohw-customer-intelligence' ) : sprintf(
+				/* translators: 1: repeat customer count, 2: purchasing customer count. */
+				__( '%1$s of %2$s purchasing customers', 'yoohw-customer-intelligence' ),
+				number_format_i18n( absint( $summary['repeat_customers'] ?? 0 ) ), number_format_i18n( absint( $summary['purchasing_customers'] ) )
+			);
 		}
-
-		echo '<div class="postbox yoohw-cos-overview-summary">';
-		echo '<div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Summary', 'yoohw-customer-intelligence' ) . '</h2></div>';
-		echo '<div class="inside">';
-		echo '<div class="yoohw-cos-stat-grid yoohw-cos-stat-grid--six yoohw-cos-overview-stats">';
+		echo '<div class="yoohw-cos-overview-stats">';
 		self::render_stat_card(
 			__( 'Customers', 'yoohw-customer-intelligence' ),
-			number_format_i18n( absint( $summary['total_customers'] ?? 0 ) ),
-			$customers_url,
+			$available ? number_format_i18n( absint( $summary['total_customers'] ?? 0 ) ) : '—',
+			$available ? $customers_url : '',
 			__( 'Active profiles', 'yoohw-customer-intelligence' )
 		);
 		self::render_stat_card(
-			__( 'Orders', 'yoohw-customer-intelligence' ),
-			number_format_i18n( absint( $summary['total_orders'] ?? 0 ) ),
-			self::get_overview_customers_url( array( 'orderby' => 'total_orders', 'order' => 'DESC' ) ),
-			__( 'Lifetime orders', 'yoohw-customer-intelligence' )
-		);
-		self::render_stat_card(
 			__( 'Revenue', 'yoohw-customer-intelligence' ),
-			$revenue,
-			self::get_overview_customers_url( array( 'orderby' => 'total_spent', 'order' => 'DESC' ) ),
-			__( 'Lifetime revenue', 'yoohw-customer-intelligence' )
+			$has_customers && $money['amount_available'] ? YoOhw_COS_Commerce_Metrics_Policy::format_money( $summary, 'total_spent' ) : '—',
+			$has_customers && $money['amount_available'] ? self::get_overview_customers_url( array( 'orderby' => 'total_spent', 'order' => 'DESC' ) ) : '',
+			'' !== $money_note ? $money_note : $revenue_note
 		);
 		self::render_stat_card(
 			__( 'Average order value', 'yoohw-customer-intelligence' ),
-			$average_order,
-			self::get_overview_customers_url( array( 'orderby' => 'average_order_value', 'order' => 'DESC' ) ),
-			__( 'Across synced orders', 'yoohw-customer-intelligence' )
+			$has_customers && $money['amount_available'] && ! empty( $summary['total_orders'] ) ? YoOhw_COS_Commerce_Metrics_Policy::format_money( $summary, 'average_order_value' ) : '—',
+			$has_customers && $money['amount_available'] && ! empty( $summary['total_orders'] ) ? self::get_overview_customers_url( array( 'orderby' => 'average_order_value', 'order' => 'DESC' ) ) : '',
+			'' !== $money_note ? $money_note : $average_note
 		);
 		self::render_stat_card(
-			__( 'Repeat customer rate', 'yoohw-customer-intelligence' ),
-			number_format_i18n( (float) ( $summary['repeat_rate'] ?? 0 ), 1 ) . '%',
-			self::get_overview_customers_url( array( 'customer_cohort' => 'repeat' ) ),
-			sprintf(
-				/* translators: %s: repeat customer count. */
-				__( '%s repeat customers', 'yoohw-customer-intelligence' ),
-				number_format_i18n( absint( $summary['repeat_customers'] ?? 0 ) )
-			)
+			__( 'Repeat purchase rate', 'yoohw-customer-intelligence' ),
+			$has_customers && ! empty( $summary['purchasing_customers'] ) ? number_format_i18n( (float) $summary['repeat_rate'], 1 ) . '%' : '—',
+			$has_customers && ! empty( $summary['purchasing_customers'] ) ? self::get_overview_customers_url( array( 'customer_cohort' => 'repeat' ) ) : '',
+			$repeat_note
 		);
-		self::render_stat_card(
-			__( 'High-value customers', 'yoohw-customer-intelligence' ),
-			number_format_i18n( absint( $summary['high_value_customers'] ?? 0 ) ),
-			self::get_overview_customers_url( array( 'vip_status' => 'high_value' ) ),
-			__( 'Across all value tiers', 'yoohw-customer-intelligence' )
-		);
-		echo '</div>';
-		echo '</div>';
-		echo '</div>';
+		echo '</div><div class="yoohw-cos-overview-secondary-stats">';
+		echo '<span>' . esc_html__( 'Lifetime orders', 'yoohw-customer-intelligence' ) . ' <strong>' . esc_html( $available ? number_format_i18n( absint( $summary['total_orders'] ?? 0 ) ) : '—' ) . '</strong></span>';
+		echo '<span>' . esc_html__( 'High-value customers', 'yoohw-customer-intelligence' ) . ' <strong>' . esc_html( $intelligence_ready ? number_format_i18n( absint( $summary['high_value_customers'] ?? 0 ) ) : '—' ) . '</strong>';
+		if ( $available && ! $intelligence_ready ) {
+			echo ' · ' . esc_html__( 'Classification data is updating or needs review.', 'yoohw-customer-intelligence' );
+		}
+		echo '</span></div>';
 
-		self::render_attention_panel( $attention_counts );
+		if ( ! $available ) {
+			self::render_overview_notices( false );
+			echo '<div class="postbox yoohw-cos-overview-empty">';
+			YoOhw_COS_Admin_UI::render_empty_state(
+				__( 'Customer data is unavailable.', 'yoohw-customer-intelligence' ),
+				__( 'Review diagnostics before using customer totals or updating tasks.', 'yoohw-customer-intelligence' ),
+				array( array( 'url' => admin_url( 'admin.php?page=yoohw-customer-intelligence-settings#yoohw-cos-diagnostics' ), 'label' => __( 'View diagnostics', 'yoohw-customer-intelligence' ) ) )
+			);
+			echo '</div></div>';
+			return;
+		}
 
-		echo '<div class="yoohw-cos-overview-layout">';
-		echo '<div class="yoohw-cos-overview-main">';
-		self::render_customer_health_panel(
-			$lifecycle_counts,
-			$risk_counts
-		);
-		self::render_priority_customers_panel( $priority_customers );
-		echo '</div>';
-		echo '<div class="yoohw-cos-overview-side">';
-		self::render_priority_tasks_panel( $priority_tasks );
+		if ( ! $has_customers && empty( $diagnostics['data']['open_tasks'] ) && empty( $recent_activity ) ) {
+			self::render_overview_notices();
+			echo '<div class="postbox yoohw-cos-overview-empty">';
+			YoOhw_COS_Admin_UI::render_empty_state(
+				$syncing ? __( 'Customer sync is in progress.', 'yoohw-customer-intelligence' ) : __( 'No active customer profiles yet.', 'yoohw-customer-intelligence' ),
+				$syncing ? __( 'Customer profiles will appear as orders are processed. Reload this page to view progress.', 'yoohw-customer-intelligence' ) : __( 'Sync existing orders or add a customer to populate your overview.', 'yoohw-customer-intelligence' ),
+				array( array( 'url' => $sync_url, 'label' => __( 'Open sync center', 'yoohw-customer-intelligence' ), 'class' => 'button button-primary' ) )
+			);
+			echo '</div></div>';
+			return;
+		}
+
+		echo '<div class="yoohw-cos-overview-layout"><div class="yoohw-cos-overview-main">';
+		self::render_priority_tasks_panel( $priority_tasks, $task_view );
+		if ( $intelligence_ready ) {
+			self::render_priority_customers_panel( YoOhw_COS_Overview::get_priority_customers() );
+		} else {
+			echo '<div class="postbox yoohw-cos-overview-empty">';
+			YoOhw_COS_Admin_UI::render_empty_state( __( 'Customer priorities are updating.', 'yoohw-customer-intelligence' ), __( 'Classification data is incomplete. Review diagnostics for progress or required actions.', 'yoohw-customer-intelligence' ) );
+			echo '</div>';
+		}
+		echo '</div><div class="yoohw-cos-overview-side">';
+		self::render_attention_panel( YoOhw_COS_Overview::get_attention_counts(), $intelligence_ready );
+		echo '</div></div><div class="yoohw-cos-overview-lower">';
+		if ( $intelligence_ready ) {
+			self::render_customer_health_panel( YoOhw_COS_Customers::get_lifecycle_counts(), YoOhw_COS_Customers::get_risk_counts() );
+		} else {
+			echo '<div class="postbox yoohw-cos-overview-empty">';
+			YoOhw_COS_Admin_UI::render_empty_state( __( 'Customer distribution is updating.', 'yoohw-customer-intelligence' ), __( 'Lifecycle and risk totals will appear when classification data is ready.', 'yoohw-customer-intelligence' ) );
+			echo '</div>';
+		}
 		self::render_recent_activity_panel( $recent_activity );
-		echo '</div>';
-		echo '</div>';
-
-		echo '</div>';
+		echo '</div></div>';
 	}
 
 	public static function render_customers_page(): void {
@@ -3431,20 +3455,29 @@ final class YoOhw_COS_Admin_Menu {
 		return '<span class="yoohw-cos-status-pill yoohw-cos-status-pill--' . esc_attr( $type ) . '">' . esc_html( $label ) . '</span>';
 	}
 
-	private static function render_overview_data_status( array $diagnostics ): void {
-		$status = $diagnostics['status'];
-		$type = 'ready' === $status ? 'success' : ( 'working' === $status ? 'info' : 'warning' );
-		echo '<div class="yoohw-cos-overview-data-status yoohw-cos-overview-data-status--' . esc_attr( $type ) . '">';
-		echo '<span class="dashicons dashicons-chart-area" aria-hidden="true"></span>';
-		echo '<span><strong>' . esc_html( ucfirst( $status ) ) . '.</strong> ';
-		/* translators: 1: number of active customer profiles, 2: number of recognized order facts. */
-		echo esc_html( sprintf( __( '%1$d active profiles, %2$d order facts. Background work can take time to converge.', 'yoohw-customer-intelligence' ), $diagnostics['data']['active_profiles'], $diagnostics['data']['order_facts'] ) ) . '</span>';
-		if ( $diagnostics['actionable'] ) {
-			/* translators: %s: comma-separated diagnostic action names. */
-			echo '<span>' . esc_html( sprintf( __( 'Check: %s.', 'yoohw-customer-intelligence' ), implode( ', ', $diagnostics['actionable'] ) ) ) . '</span>';
+	private static function render_overview_data_status( array $diagnostics, bool $available, bool $has_customers ): void {
+		$status  = $diagnostics['status'];
+		$type    = 'ready' === $status ? 'success' : ( 'working' === $status ? 'info' : 'warning' );
+		$label   = __( 'Data ready', 'yoohw-customer-intelligence' );
+		$message = __( 'Customer data at page load.', 'yoohw-customer-intelligence' );
+		if ( ! $available ) {
+			$type = 'warning';
+			$label = __( 'Data unavailable', 'yoohw-customer-intelligence' );
+			$message = __( 'Review diagnostics for the required action.', 'yoohw-customer-intelligence' );
+		} elseif ( 'attention' === $status || 'blocked' === $status ) {
+			$label = __( 'Data needs attention', 'yoohw-customer-intelligence' );
+			$message = __( 'Some data may be incomplete. Review diagnostics for the required action.', 'yoohw-customer-intelligence' );
+		} elseif ( 'working' === $status || 'in_progress' === $diagnostics['sync']['status'] ) {
+			$type = 'info';
+			$label = 'in_progress' === $diagnostics['sync']['status'] ? __( 'Sync in progress', 'yoohw-customer-intelligence' ) : __( 'Data is updating', 'yoohw-customer-intelligence' );
+			$message = __( 'Figures may be incomplete. Reload this page to view progress.', 'yoohw-customer-intelligence' );
+		} elseif ( ! $has_customers ) {
+			$type = 'info';
+			$label = __( 'No active customer profiles', 'yoohw-customer-intelligence' );
 		}
-		echo '<a href="' . esc_url( admin_url( 'admin.php?page=yoohw-customer-intelligence-settings#yoohw-cos-diagnostics' ) ) . '">' . esc_html__( 'View diagnostics', 'yoohw-customer-intelligence' ) . '</a>';
-		echo '</div>';
+		echo '<div class="yoohw-cos-overview-data-status yoohw-cos-overview-data-status--' . esc_attr( $type ) . '" role="status">';
+		echo '<strong>' . esc_html( $label ) . '</strong><span>' . esc_html( $message ) . '</span>';
+		echo '<a href="' . esc_url( admin_url( 'admin.php?page=yoohw-customer-intelligence-settings#yoohw-cos-diagnostics' ) ) . '">' . esc_html__( 'Diagnostics', 'yoohw-customer-intelligence' ) . '</a></div>';
 	}
 
 	private static function render_diagnostics( array $diagnostics ): void {
@@ -3489,15 +3522,38 @@ final class YoOhw_COS_Admin_Menu {
 		echo '</tbody></table></div></div>';
 	}
 
-	private static function render_overview_notices(): void {
+	private static function render_overview_notices( bool $can_undo = true ): void {
 		if ( ! empty( $_GET['yoohw_task_completed'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
-			echo '<div class="notice notice-success is-dismissible"><p>';
+			echo '<div class="notice notice-success inline is-dismissible"><p>';
 			echo esc_html__( 'Task completed.', 'yoohw-customer-intelligence' );
+			$undo = isset( $_GET['yoohw_task_undo'] ) ? sanitize_text_field( wp_unslash( $_GET['yoohw_task_undo'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Display receipt only; Undo uses the existing nonce- and epoch-checked status handler.
+			if ( $can_undo && preg_match( '/^([1-9][0-9]*):([a-f0-9-]{36}|)$/D', $undo, $match ) ) {
+				$task_id = absint( $match[1] );
+				$tasks = YoOhw_COS_Reset_Guard::snapshot_rows(
+					static function() use ( $task_id ): array {
+						$task = YoOhw_COS_Tasks::get_task( $task_id );
+						return $task ? array( $task ) : array();
+					}
+				);
+				$task = $tasks[0] ?? array();
+				if ( $task && $match[2] === $task[ YoOhw_COS_Reset_Guard::FORM_FIELD ] && YoOhw_COS_Tasks::STATUS_COMPLETED === $task['status'] && get_current_user_id() === absint( $task['completed_by'] ) ) {
+					$url = wp_nonce_url( add_query_arg( array(
+						'action' => 'yoohw_cos_reopen_task', 'task_id' => $task_id,
+						YoOhw_COS_Reset_Guard::FORM_FIELD => $match[2],
+						'_redirect' => rawurlencode( add_query_arg( 'overview_task_view', self::get_overview_task_view(), admin_url( 'admin.php?page=' . self::MENU_SLUG ) ) . '#yoohw-cos-overview-tasks' ),
+					), admin_url( 'admin-post.php' ) ), 'yoohw_cos_reopen_task' );
+					echo ' <a href="' . esc_url( $url ) . '">' . esc_html__( 'Undo', 'yoohw-customer-intelligence' ) . '</a>';
+				}
+			}
 			echo '</p></div>';
 		}
 
+		if ( ! empty( $_GET['yoohw_task_reopened'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only receipt consumed by Flash_Notices.
+			echo '<div class="notice notice-success inline is-dismissible"><p>' . esc_html__( 'Task reopened.', 'yoohw-customer-intelligence' ) . '</p></div>';
+		}
+
 		if ( ! empty( $_GET['yoohw_task_error'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
-			echo '<div class="notice notice-error is-dismissible"><p>';
+			echo '<div class="notice notice-error inline is-dismissible"><p>';
 			echo esc_html__( 'The task could not be updated.', 'yoohw-customer-intelligence' );
 			echo '</p></div>';
 		}
@@ -3529,7 +3585,7 @@ final class YoOhw_COS_Admin_Menu {
 		echo '' !== $url ? '</a>' : '</div>';
 	}
 
-	private static function render_attention_panel( array $counts ): void {
+	private static function render_attention_panel( array $counts, bool $intelligence_ready = true ): void {
 		$items = array(
 			array(
 				'label' => __( 'Overdue tasks', 'yoohw-customer-intelligence' ),
@@ -3568,31 +3624,38 @@ final class YoOhw_COS_Admin_Menu {
 			),
 		);
 
-		echo '<div class="postbox yoohw-cos-overview-attention">';
-		echo '<div class="postbox-header">';
-		echo '<h2 class="hndle">' . esc_html__( 'Needs attention', 'yoohw-customer-intelligence' ) . '</h2>';
-		echo '<span class="yoohw-cos-overview-panel-note">' . esc_html__( 'Open an item to work the matching queue.', 'yoohw-customer-intelligence' ) . '</span>';
-		echo '</div>';
-		echo '<div class="inside">';
-		echo '<div class="yoohw-cos-attention-grid">';
-
-		foreach ( $items as $item ) {
-			$has_items = absint( $item['value'] ) > 0;
-			$type      = $has_items ? sanitize_html_class( (string) $item['type'] ) : 'clear';
-
-			echo '<a class="yoohw-cos-attention-card yoohw-cos-attention-card--' . esc_attr( $type ) . '" href="' . esc_url( (string) $item['url'] ) . '">';
-			echo '<span class="yoohw-cos-attention-card__value">' . esc_html( number_format_i18n( absint( $item['value'] ) ) ) . '</span>';
-			echo '<span class="yoohw-cos-attention-card__content">';
-			echo '<strong>' . esc_html( (string) $item['label'] ) . '</strong>';
-			echo '<span>' . esc_html( (string) $item['meta'] ) . '</span>';
-			echo '</span>';
-			echo '<span class="dashicons dashicons-arrow-right-alt2" aria-hidden="true"></span>';
-			echo '</a>';
+		$clear = array();
+		echo '<section class="postbox yoohw-cos-overview-panel yoohw-cos-overview-attention">';
+		echo '<div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Needs attention', 'yoohw-customer-intelligence' ) . '</h2></div><div class="inside">';
+		foreach ( $items as $index => $item ) {
+			$unknown = ! $intelligence_ready && in_array( $index, array( 2, 3 ), true );
+			if ( ! $unknown && 0 === $item['value'] ) {
+				$clear[] = $item;
+				continue;
+			}
+			if ( $unknown ) {
+				echo '<div class="yoohw-cos-attention-card yoohw-cos-attention-card--unavailable">';
+			} else {
+				echo '<a class="yoohw-cos-attention-card yoohw-cos-attention-card--' . esc_attr( $item['type'] ) . '" href="' . esc_url( $item['url'] ) . '">';
+			}
+			echo '<span class="yoohw-cos-attention-card__content"><strong>' . esc_html( $item['label'] ) . '</strong><span>' . esc_html( $unknown ? __( 'Classification data unavailable', 'yoohw-customer-intelligence' ) : $item['meta'] ) . '</span></span>';
+			echo '<span class="yoohw-cos-attention-card__value">' . esc_html( $unknown ? '—' : number_format_i18n( $item['value'] ) ) . '</span>';
+			echo $unknown ? '</div>' : '</a>';
 		}
-
-		echo '</div>';
-		echo '</div>';
-		echo '</div>';
+		if ( count( $clear ) === count( $items ) ) {
+			echo '<p class="yoohw-cos-overview-all-clear">' . esc_html__( 'No items need attention right now.', 'yoohw-customer-intelligence' ) . '</p>';
+		}
+		if ( $clear ) {
+			echo '<details class="yoohw-cos-overview-clear-checks"><summary>' . esc_html( sprintf(
+				/* translators: %s: number of checks without matching items. */
+				_n( '%s check has no items', '%s checks have no items', count( $clear ), 'yoohw-customer-intelligence' ), number_format_i18n( count( $clear ) )
+			) ) . '</summary><ul>';
+			foreach ( $clear as $item ) {
+				echo '<li><a href="' . esc_url( $item['url'] ) . '">' . esc_html( $item['label'] ) . '</a> <span>0</span></li>';
+			}
+			echo '</ul></details>';
+		}
+		echo '</div></section>';
 	}
 
 	private static function render_customer_health_panel( array $lifecycle_counts, array $risk_counts ): void {
@@ -3642,6 +3705,7 @@ final class YoOhw_COS_Admin_Menu {
 		echo '</div>';
 
 		echo '</div>';
+		echo '<p class="yoohw-cos-overview-distribution-note">' . esc_html__( 'Lifecycle percentages use classified profiles; risk percentages use assessed profiles. Repeat purchase rate uses purchasing customers.', 'yoohw-customer-intelligence' ) . '</p>';
 		echo '</div>';
 		echo '</div>';
 	}
@@ -3794,31 +3858,42 @@ final class YoOhw_COS_Admin_Menu {
 		return array_slice( $reasons, 0, 3 );
 	}
 
-	private static function render_priority_tasks_panel( array $tasks ): void {
-		echo '<div class="postbox yoohw-cos-overview-panel yoohw-cos-overview-panel--tasks">';
-		echo '<div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Tasks to handle', 'yoohw-customer-intelligence' ) . '</h2></div>';
-		echo '<div class="inside">';
+	private static function get_overview_task_view(): string {
+		$view = isset( $_GET['overview_task_view'] ) && is_string( $_GET['overview_task_view'] ) ? sanitize_key( wp_unslash( $_GET['overview_task_view'] ) ) : 'priority'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only overview filter.
+		return in_array( $view, array( 'priority', 'overdue', 'due_soon' ), true ) ? $view : 'priority';
+	}
 
+	private static function render_priority_tasks_panel( array $tasks, string $view = 'priority' ): void {
+		echo '<section id="yoohw-cos-overview-tasks" class="postbox yoohw-cos-overview-panel yoohw-cos-overview-panel--tasks">';
+		echo '<div class="postbox-header"><div><h2 class="hndle">' . esc_html__( 'Tasks to handle', 'yoohw-customer-intelligence' ) . '</h2>';
+		echo '<p class="yoohw-cos-overview-panel-description">' . esc_html__( 'Overdue first, then assignee, priority, and due date.', 'yoohw-customer-intelligence' ) . '</p></div>';
+		echo '<a href="' . esc_url( self::get_overview_tasks_url() ) . '">' . esc_html__( 'All tasks →', 'yoohw-customer-intelligence' ) . '</a></div>';
+		self::render_overview_notices();
+		echo '<nav class="yoohw-cos-overview-task-filters" aria-label="' . esc_attr__( 'Filter task preview', 'yoohw-customer-intelligence' ) . '">';
+		foreach ( array( 'priority' => __( 'Priority', 'yoohw-customer-intelligence' ), 'overdue' => __( 'Overdue', 'yoohw-customer-intelligence' ), 'due_soon' => __( 'Due in 7 days', 'yoohw-customer-intelligence' ) ) as $key => $label ) {
+			$url = add_query_arg( array( 'page' => self::MENU_SLUG, 'overview_task_view' => $key ), admin_url( 'admin.php' ) ) . '#yoohw-cos-overview-tasks';
+			echo '<a href="' . esc_url( $url ) . '"' . ( $view === $key ? ' aria-current="page"' : '' ) . '>' . esc_html( $label ) . '</a>';
+		}
+		echo '</nav><div class="inside">';
 		if ( empty( $tasks ) ) {
 			YoOhw_COS_Admin_UI::render_empty_state(
-				__( 'No open tasks.', 'yoohw-customer-intelligence' ),
-				__( 'New customer follow-ups will appear here.', 'yoohw-customer-intelligence' ),
-				array(),
-				'compact'
+				'priority' === $view ? __( 'No open tasks.', 'yoohw-customer-intelligence' ) : __( 'No tasks match this view.', 'yoohw-customer-intelligence' ),
+				__( 'View all tasks for the full queue.', 'yoohw-customer-intelligence' ), array(), 'compact'
 			);
 		} else {
 			echo '<div class="yoohw-cos-overview-task-list">';
-
 			foreach ( $tasks as $task ) {
 				self::render_overview_task_item( $task );
 			}
-
 			echo '</div>';
 		}
-
-		echo '<p class="yoohw-cos-panel-actions"><a href="' . esc_url( self::get_overview_tasks_url() ) . '">' . esc_html__( 'View all tasks', 'yoohw-customer-intelligence' ) . '</a></p>';
-		echo '</div>';
-		echo '</div>';
+		echo '</div><div class="yoohw-cos-overview-task-footer"><span>' . esc_html( sprintf(
+			/* translators: %s: number of tasks in the preview. */
+			_n( '%s task shown', '%s tasks shown', count( $tasks ), 'yoohw-customer-intelligence' ), number_format_i18n( count( $tasks ) )
+		) ) . '</span><span>' . esc_html( sprintf(
+			/* translators: %s: store timezone. */
+			__( 'Store timezone: %s', 'yoohw-customer-intelligence' ), wp_timezone_string()
+		) ) . '</span></div></section>';
 	}
 
 	private static function render_overview_task_item( array $task ): void {
@@ -3829,7 +3904,8 @@ final class YoOhw_COS_Admin_Menu {
 		$customer    = '' !== $customer ? $customer : sanitize_email( (string) ( $task['customer_email'] ?? '' ) );
 		$priority    = YoOhw_COS_Tasks::normalize_priority( (string) ( $task['priority'] ?? 'normal' ) );
 		$due_date    = sanitize_text_field( (string) ( $task['due_date'] ?? '' ) );
-		$is_overdue  = '' !== $due_date && YoOhw_COS_DB::date_timestamp( $due_date ) < current_time( 'timestamp' );
+		$due_timestamp = YoOhw_COS_DB::date_timestamp( $due_date );
+		$is_overdue  = $due_timestamp > 0 && $due_timestamp < current_time( 'timestamp' );
 		$task_url    = add_query_arg(
 			array(
 				'page'    => 'yoohw-customer-intelligence-tasks',
@@ -3844,7 +3920,7 @@ final class YoOhw_COS_Admin_Menu {
 					'action'    => 'yoohw_cos_complete_task',
 					YoOhw_COS_Reset_Guard::FORM_FIELD => $task[ YoOhw_COS_Reset_Guard::FORM_FIELD ] ?? 'invalid',
 					'task_id'   => $task_id,
-					'_redirect' => rawurlencode( admin_url( 'admin.php?page=yoohw-customer-intelligence-overview' ) ),
+					'_redirect' => rawurlencode( add_query_arg( 'overview_task_view', self::get_overview_task_view(), admin_url( 'admin.php?page=yoohw-customer-intelligence-overview' ) ) . '#yoohw-cos-overview-tasks' ),
 				),
 				admin_url( 'admin-post.php' )
 			),
@@ -3863,7 +3939,17 @@ final class YoOhw_COS_Admin_Menu {
 		}
 
 		echo '<span class="yoohw-cos-badge yoohw-cos-badge--task-priority-' . esc_attr( sanitize_html_class( $priority ) ) . '">' . esc_html( YoOhw_COS_Tasks::get_priorities()[ $priority ] ?? __( 'Normal', 'yoohw-customer-intelligence' ) ) . '</span>';
-		echo '<span class="' . esc_attr( $is_overdue ? 'yoohw-cos-overview-task__overdue' : '' ) . '">' . wp_kses_post( YoOhw_COS_DB::format_admin_date( $due_date, __( 'No due date', 'yoohw-customer-intelligence' ) ) ) . '</span>';
+		if ( $due_timestamp > 0 ) {
+			$date_format = date_i18n( 'Y', $due_timestamp ) === current_time( 'Y' ) ? 'M j' : 'M j, Y';
+			$date_label  = date_i18n( $date_format . ', ' . get_option( 'time_format' ), $due_timestamp );
+			if ( $is_overdue ) {
+				/* translators: %s: task due date in the store timezone. */
+				$date_label = sprintf( __( 'Overdue · %s', 'yoohw-customer-intelligence' ), $date_label );
+			}
+			echo '<time datetime="' . esc_attr( str_replace( ' ', 'T', $due_date ) ) . '" class="' . esc_attr( $is_overdue ? 'yoohw-cos-overview-task__overdue' : '' ) . '">' . esc_html( $date_label ) . '</time>';
+		} else {
+			echo '<span>' . esc_html__( 'No due date', 'yoohw-customer-intelligence' ) . '</span>';
+		}
 		echo '</div>';
 		echo '</div>';
 		echo '<a class="button button-small" href="' . esc_url( $complete_url ) . '">' . esc_html__( 'Complete', 'yoohw-customer-intelligence' ) . '</a>';

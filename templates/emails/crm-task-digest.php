@@ -43,7 +43,7 @@ do_action( 'woocommerce_email_header', $email_heading, $email ); // phpcs:ignore
 <?php foreach ( $yoohw_cos_visible_sections as $yoohw_cos_section ) : ?>
 	<h2 class="<?php echo $yoohw_cos_email_improvements_enabled ? 'email-order-detail-heading' : ''; ?>" style="font-size: 18px; line-height: 25px; margin: 24px 0 10px;">
 		<?php echo esc_html( $yoohw_cos_section['title'] ); ?>
-		<span style="color: <?php echo esc_attr( $yoohw_cos_secondary_text_color ); ?>; font-size: 14px; font-weight: 400;"><?php echo esc_html( '(' . number_format_i18n( count( $yoohw_cos_section['tasks'] ) ) . ')' ); ?></span>
+		<span style="color: <?php echo esc_attr( $yoohw_cos_secondary_text_color ); ?>; display: inline; font-size: 14px; font-weight: 400;"><?php echo esc_html( '(' . number_format_i18n( count( $yoohw_cos_section['tasks'] ) ) . ')' ); ?></span>
 	</h2>
 	<?php foreach ( $yoohw_cos_section['tasks'] as $yoohw_cos_task ) : ?>
 		<?php $yoohw_cos_summary = $email->get_template_task_summary( $yoohw_cos_task ); ?>

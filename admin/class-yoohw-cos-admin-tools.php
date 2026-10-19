@@ -1394,6 +1394,7 @@ final class YoOhw_COS_Admin_Tools {
 						'yoohw_task_completed' => 'complete' === $task_action && $updated ? 1 : null,
 						'yoohw_task_reopened'  => 'reopen' === $task_action && $updated ? 1 : null,
 						'yoohw_task_error'     => $updated ? null : 'invalid_task',
+						'yoohw_task_undo'      => 'complete' === $task_action && $updated ? $task_id . ':' . YoOhw_COS_Reset_Guard::epoch() : null,
 					)
 				)
 			);
