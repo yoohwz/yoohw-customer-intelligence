@@ -214,6 +214,11 @@ final class YoOhw_COS_Customer_Profile {
 			echo '</details>';
 		} else {
 			YoOhw_COS_Admin_UI::render_empty_state( __( 'Classification data is updating.', 'yoohw-customer-intelligence' ), __( 'Scores and customer tiers will appear when ready.', 'yoohw-customer-intelligence' ), array(), 'compact' );
+			echo '<details class="yoohw-cos-profile-factors"><summary>' . esc_html__( 'View purchase history', 'yoohw-customer-intelligence' ) . '</summary>';
+			self::render_intelligence_summary( $customer );
+			// The first lifecycle factor describes the classification; retain only purchase facts while it updates.
+			self::render_lifecycle_panel( $customer, array_slice( $lifecycle_factors, 1 ) );
+			echo '</details>';
 		}
 		echo '</div></div>';
 
@@ -254,8 +259,10 @@ final class YoOhw_COS_Customer_Profile {
 	private static function render_intelligence_summary( array $customer ): void {
 		$rfm = YoOhw_COS_RFM::summary( $customer );
 		echo '<table class="widefat striped">';
-		self::render_detail_row( __( 'Status', 'yoohw-customer-intelligence' ), self::render_status_badge( $customer['customer_status'] ?? '' ), true );
-		self::render_detail_row( __( 'Value tier', 'yoohw-customer-intelligence' ), YoOhw_COS_Intelligence::get_value_tier_label( (string) ( $customer['vip_status'] ?? 'none' ) ) );
+		if ( YoOhw_COS_Intelligence::persisted_decisions_are_safe( $customer ) ) {
+			self::render_detail_row( __( 'Status', 'yoohw-customer-intelligence' ), self::render_status_badge( $customer['customer_status'] ?? '' ), true );
+			self::render_detail_row( __( 'Value tier', 'yoohw-customer-intelligence' ), YoOhw_COS_Intelligence::get_value_tier_label( (string) ( $customer['vip_status'] ?? 'none' ) ) );
+		}
 		self::render_detail_row( __( 'Last activity', 'yoohw-customer-intelligence' ), self::format_date( $customer['last_activity_date'] ?? '' ) );
 		self::render_detail_row( __( 'R · Days since last recognized order', 'yoohw-customer-intelligence' ), $rfm['r'] );
 		self::render_detail_row( __( 'F · Lifetime recognized orders', 'yoohw-customer-intelligence' ), $rfm['f'] );
@@ -1924,9 +1931,11 @@ final class YoOhw_COS_Customer_Profile {
 		echo '<section class="yoohw-cos-profile-intelligence-group">';
 		echo '<h3>' . esc_html__( 'Lifecycle', 'yoohw-customer-intelligence' ) . '</h3>';
 
-		echo '<p>';
-		echo wp_kses_post( self::render_lifecycle_badge( $customer['lifecycle_stage'] ?? 'new' ) );
-		echo '</p>';
+		if ( YoOhw_COS_Intelligence::persisted_decisions_are_safe( $customer ) ) {
+			echo '<p>';
+			echo wp_kses_post( self::render_lifecycle_badge( $customer['lifecycle_stage'] ?? 'new' ) );
+			echo '</p>';
+		}
 
 		echo '<ul class="yoohw-cos-factor-list">';
 
