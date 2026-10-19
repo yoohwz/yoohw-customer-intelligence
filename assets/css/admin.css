@@ -2992,7 +2992,6 @@ a.yoohw-cos-attention-card:hover {
 /* Customer details use the same spacing and surfaces as Overview. */
 .yoohw-cos-profile {
 	container-type: inline-size;
-	max-width: 1240px;
 }
 
 .yoohw-cos-profile-notice-anchor {
@@ -3114,7 +3113,7 @@ a.yoohw-cos-attention-card:hover {
 
 .yoohw-cos-profile .yoohw-cos-profile-layout {
 	display: grid;
-	grid-template-columns: minmax(0, 1fr) 280px;
+	grid-template-columns: minmax(0, 1fr) 340px;
 	gap: 16px;
 	align-items: start;
 }
@@ -3446,7 +3445,7 @@ a.yoohw-cos-attention-card:hover {
 
 @container (max-width: 900px) {
 	.yoohw-cos-profile .yoohw-cos-profile-layout {
-		grid-template-columns: minmax(0, 1fr) 250px;
+		grid-template-columns: minmax(0, 1fr) 280px;
 	}
 
 	.yoohw-cos-profile-notes-activity {
