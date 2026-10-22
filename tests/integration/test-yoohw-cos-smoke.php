@@ -28,6 +28,55 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 		delete_option( 'yoohw_cos_scoring_settings' );
 	}
 
+	public function test_overview_task_views_keep_fixed_filters_order_and_limits(): void {
+		global $wpdb;
+		$admin = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $admin );
+		$customer = YoOhw_COS_Customers::create_customer( array( 'email' => 'task-view@example.test' ) );
+		$now = YoOhw_COS_DB::now();
+		$timestamp = current_time( 'timestamp' );
+		$dates = array( 'overdue' => -DAY_IN_SECONDS, 'lower' => 0, 'soon' => DAY_IN_SECONDS, 'upper' => 7 * DAY_IN_SECONDS, 'outside' => 7 * DAY_IN_SECONDS + 1, 'later' => 8 * DAY_IN_SECONDS );
+		$ids = array();
+		foreach ( array( 'overdue', 'lower', 'soon', 'upper', 'outside', 'later', 'null', 'completed' ) as $name ) {
+			$due = isset( $dates[ $name ] ) ? gmdate( 'Y-m-d H:i:s', $timestamp + $dates[ $name ] ) : null;
+			$ids[ $name ] = YoOhw_COS_Tasks::create_task( array( 'customer_id' => $customer, 'title' => $name, 'assigned_user_id' => $admin, 'due_date' => $due ) );
+			$this->assertGreaterThan( 0, $ids[ $name ] );
+		}
+		$this->assertTrue( YoOhw_COS_Tasks::complete_task( $ids['completed'], $admin ) );
+		// Add enough independent rows to exercise the upper cap; dates remain after the near-term boundary.
+		for ( $i = 0; $i < 5; ++$i ) {
+			$this->assertGreaterThan( 0, YoOhw_COS_Tasks::create_task( array( 'customer_id' => $customer, 'title' => 'later-' . $i, 'assigned_user_id' => $admin, 'due_date' => gmdate( 'Y-m-d H:i:s', $timestamp + ( 9 + $i ) * DAY_IN_SECONDS ) ) ) );
+		}
+		$rows = static fn( int $limit, string $view ): array => array_map( 'intval', array_column( YoOhw_COS_Overview::get_priority_tasks( $limit, $view ), 'id' ) );
+		// Pin both exact inclusive date boundaries to the clock used by the query. Retry only if setup crossed a second.
+		for ( $attempt = 0; $attempt < 3; ++$attempt ) {
+			$now = YoOhw_COS_DB::now();
+			$timestamp = current_time( 'timestamp' );
+			$wpdb->update( YoOhw_COS_DB::tasks_table(), array( 'due_date' => $now ), array( 'id' => $ids['lower'] ) );
+			$wpdb->update( YoOhw_COS_DB::tasks_table(), array( 'due_date' => gmdate( 'Y-m-d H:i:s', $timestamp + 7 * DAY_IN_SECONDS ) ), array( 'id' => $ids['upper'] ) );
+			$soon = $rows( 10, 'due_soon' );
+			$overdue = $rows( 10, 'overdue' );
+			if ( $now === YoOhw_COS_DB::now() ) { break; }
+		}
+		$this->assertSame( $now, YoOhw_COS_DB::now(), 'Boundary queries must complete within their captured second.' );
+		$this->assertSame( array( $ids['lower'], $ids['soon'], $ids['upper'] ), $soon );
+		$this->assertSame( array( $ids['overdue'] ), $overdue );
+		$priority = $rows( 10, 'priority' );
+		$this->assertCount( 10, $priority );
+		$this->assertSame( array( $ids['overdue'], $ids['lower'], $ids['soon'], $ids['upper'], $ids['outside'], $ids['later'] ), array_slice( $priority, 0, 6 ) );
+		$this->assertNotContains( $ids['completed'], $priority );
+		$this->assertSame( $priority, $rows( 10, 'unknown' ) );
+		$this->assertSame( $priority, $rows( 10, "overdue' OR 1=1 --" ), 'Hostile view text is only an unknown selector, never SQL.' );
+		$this->assertSame( $priority, $rows( 100, 'priority' ) );
+		$this->assertSame( array_slice( $priority, 0, 1 ), $rows( 0, 'priority' ) );
+		$this->assertSame( array_slice( $priority, 0, 1 ), $rows( 1, 'priority' ) );
+		// Null dates remain eligible only in the unfiltered view, and come after every dated task.
+		foreach ( $priority as $task_id ) { $wpdb->delete( YoOhw_COS_DB::tasks_table(), array( 'id' => $task_id ) ); }
+		$tail = $rows( 10, 'priority' );
+		$this->assertSame( $ids['null'], end( $tail ) );
+		wp_set_current_user( 0 );
+	}
+
 	public function test_settings_auto_continuation_requires_incoming_nonce_and_reset_epoch(): void {
 		$old_get = $_GET;
 		$old_user = get_current_user_id();

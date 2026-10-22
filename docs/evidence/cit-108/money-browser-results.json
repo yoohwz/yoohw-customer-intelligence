@@ -1,0 +1,380 @@
+[
+  {
+    "state": "single",
+    "screen": "overview",
+    "width": 375,
+    "scroll": 375,
+    "reason": "comparable"
+  },
+  {
+    "state": "single",
+    "screen": "overview",
+    "width": 1024,
+    "scroll": 1024,
+    "reason": "comparable"
+  },
+  {
+    "state": "single",
+    "screen": "overview",
+    "width": 1440,
+    "scroll": 1440,
+    "reason": "comparable"
+  },
+  {
+    "state": "single",
+    "screen": "profile",
+    "width": 375,
+    "scroll": 375,
+    "reason": "comparable",
+    "kpi": [
+      "\u20ab125,000.00",
+      "1",
+      "\u20ab125,000.00",
+      "#11",
+      "2"
+    ]
+  },
+  {
+    "state": "single",
+    "screen": "profile",
+    "width": 1024,
+    "scroll": 1024,
+    "reason": "comparable",
+    "kpi": [
+      "\u20ab125,000.00",
+      "1",
+      "\u20ab125,000.00",
+      "#11",
+      "2"
+    ]
+  },
+  {
+    "state": "single",
+    "screen": "profile",
+    "width": 1440,
+    "scroll": 1440,
+    "reason": "comparable",
+    "kpi": [
+      "\u20ab125,000.00",
+      "1",
+      "\u20ab125,000.00",
+      "#11",
+      "2"
+    ]
+  },
+  {
+    "state": "foreign",
+    "screen": "overview",
+    "width": 375,
+    "scroll": 375,
+    "reason": "comparable"
+  },
+  {
+    "state": "foreign",
+    "screen": "overview",
+    "width": 1024,
+    "scroll": 1024,
+    "reason": "comparable"
+  },
+  {
+    "state": "foreign",
+    "screen": "overview",
+    "width": 1440,
+    "scroll": 1440,
+    "reason": "comparable"
+  },
+  {
+    "state": "foreign",
+    "screen": "profile",
+    "width": 375,
+    "scroll": 375,
+    "reason": "comparable",
+    "kpi": [
+      "\u20ac125,000.00 (EUR)",
+      "1",
+      "\u20ac125,000.00 (EUR)",
+      "#12",
+      "0"
+    ]
+  },
+  {
+    "state": "foreign",
+    "screen": "profile",
+    "width": 1024,
+    "scroll": 1024,
+    "reason": "comparable",
+    "kpi": [
+      "\u20ac125,000.00 (EUR)",
+      "1",
+      "\u20ac125,000.00 (EUR)",
+      "#12",
+      "0"
+    ]
+  },
+  {
+    "state": "foreign",
+    "screen": "profile",
+    "width": 1440,
+    "scroll": 1440,
+    "reason": "comparable",
+    "kpi": [
+      "\u20ac125,000.00 (EUR)",
+      "1",
+      "\u20ac125,000.00 (EUR)",
+      "#12",
+      "0"
+    ]
+  },
+  {
+    "state": "mixed",
+    "screen": "overview",
+    "width": 375,
+    "scroll": 375,
+    "reason": "Multiple currencies"
+  },
+  {
+    "state": "mixed",
+    "screen": "overview",
+    "width": 1024,
+    "scroll": 1024,
+    "reason": "Multiple currencies"
+  },
+  {
+    "state": "mixed",
+    "screen": "overview",
+    "width": 1440,
+    "scroll": 1440,
+    "reason": "Multiple currencies"
+  },
+  {
+    "state": "mixed",
+    "screen": "profile",
+    "width": 375,
+    "scroll": 375,
+    "reason": "Multiple currencies",
+    "kpi": [
+      "\u2014",
+      "2",
+      "\u2014",
+      "#14",
+      "0"
+    ]
+  },
+  {
+    "state": "mixed",
+    "screen": "profile",
+    "width": 1024,
+    "scroll": 1024,
+    "reason": "Multiple currencies",
+    "kpi": [
+      "\u2014",
+      "2",
+      "\u2014",
+      "#14",
+      "0"
+    ]
+  },
+  {
+    "state": "mixed",
+    "screen": "profile",
+    "width": 1440,
+    "scroll": 1440,
+    "reason": "Multiple currencies",
+    "kpi": [
+      "\u2014",
+      "2",
+      "\u2014",
+      "#14",
+      "0"
+    ]
+  },
+  {
+    "state": "unknown",
+    "screen": "overview",
+    "width": 375,
+    "scroll": 375,
+    "reason": "Order currency unavailable"
+  },
+  {
+    "state": "unknown",
+    "screen": "overview",
+    "width": 1024,
+    "scroll": 1024,
+    "reason": "Order currency unavailable"
+  },
+  {
+    "state": "unknown",
+    "screen": "overview",
+    "width": 1440,
+    "scroll": 1440,
+    "reason": "Order currency unavailable"
+  },
+  {
+    "state": "unknown",
+    "screen": "profile",
+    "width": 375,
+    "scroll": 375,
+    "reason": "Order currency unavailable",
+    "kpi": [
+      "\u2014",
+      "1",
+      "\u2014",
+      "\u2014",
+      "0"
+    ]
+  },
+  {
+    "state": "unknown",
+    "screen": "profile",
+    "width": 1024,
+    "scroll": 1024,
+    "reason": "Order currency unavailable",
+    "kpi": [
+      "\u2014",
+      "1",
+      "\u2014",
+      "\u2014",
+      "0"
+    ]
+  },
+  {
+    "state": "unknown",
+    "screen": "profile",
+    "width": 1440,
+    "scroll": 1440,
+    "reason": "Order currency unavailable",
+    "kpi": [
+      "\u2014",
+      "1",
+      "\u2014",
+      "\u2014",
+      "0"
+    ]
+  },
+  {
+    "state": "preparing",
+    "screen": "overview",
+    "width": 375,
+    "scroll": 375,
+    "reason": "Preparing currency data"
+  },
+  {
+    "state": "preparing",
+    "screen": "overview",
+    "width": 1024,
+    "scroll": 1024,
+    "reason": "Preparing currency data"
+  },
+  {
+    "state": "preparing",
+    "screen": "overview",
+    "width": 1440,
+    "scroll": 1440,
+    "reason": "Preparing currency data"
+  },
+  {
+    "state": "preparing",
+    "screen": "profile",
+    "width": 375,
+    "scroll": 375,
+    "reason": "Preparing currency data",
+    "kpi": [
+      "\u2014",
+      "1",
+      "\u2014",
+      "#11",
+      "2"
+    ]
+  },
+  {
+    "state": "preparing",
+    "screen": "profile",
+    "width": 1024,
+    "scroll": 1024,
+    "reason": "Preparing currency data",
+    "kpi": [
+      "\u2014",
+      "1",
+      "\u2014",
+      "#11",
+      "2"
+    ]
+  },
+  {
+    "state": "preparing",
+    "screen": "profile",
+    "width": 1440,
+    "scroll": 1440,
+    "reason": "Preparing currency data",
+    "kpi": [
+      "\u2014",
+      "1",
+      "\u2014",
+      "#11",
+      "2"
+    ]
+  },
+  {
+    "state": "attention",
+    "screen": "overview",
+    "width": 375,
+    "scroll": 375,
+    "reason": "Currency data needs attention"
+  },
+  {
+    "state": "attention",
+    "screen": "overview",
+    "width": 1024,
+    "scroll": 1024,
+    "reason": "Currency data needs attention"
+  },
+  {
+    "state": "attention",
+    "screen": "overview",
+    "width": 1440,
+    "scroll": 1440,
+    "reason": "Currency data needs attention"
+  },
+  {
+    "state": "attention",
+    "screen": "profile",
+    "width": 375,
+    "scroll": 375,
+    "reason": "Currency data needs attention",
+    "kpi": [
+      "\u2014",
+      "1",
+      "\u2014",
+      "#11",
+      "2"
+    ]
+  },
+  {
+    "state": "attention",
+    "screen": "profile",
+    "width": 1024,
+    "scroll": 1024,
+    "reason": "Currency data needs attention",
+    "kpi": [
+      "\u2014",
+      "1",
+      "\u2014",
+      "#11",
+      "2"
+    ]
+  },
+  {
+    "state": "attention",
+    "screen": "profile",
+    "width": 1440,
+    "scroll": 1440,
+    "reason": "Currency data needs attention",
+    "kpi": [
+      "\u2014",
+      "1",
+      "\u2014",
+      "#11",
+      "2"
+    ]
+  }
+]

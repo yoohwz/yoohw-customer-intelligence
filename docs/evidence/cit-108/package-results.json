@@ -1,0 +1,290 @@
+[
+  {
+    "phase": "seed",
+    "scenario": "ready",
+    "hpos": "yes",
+    "version": "1.4.3",
+    "db_version": "0.2.4",
+    "schema_tables": 12,
+    "money_reasons": {
+      "single": "comparable",
+      "foreign": "comparable",
+      "mixed": "mixed",
+      "empty": "none",
+      "unknown": "unknown_source_currency"
+    },
+    "readiness": "ready"
+  },
+  {
+    "phase": "upgrade",
+    "scenario": "ready",
+    "hpos": "yes",
+    "version": "1.4.4",
+    "db_version": "0.2.4",
+    "schema_tables": 12,
+    "money_reasons": {
+      "single": "comparable",
+      "foreign": "comparable",
+      "mixed": "mixed",
+      "empty": "none",
+      "unknown": "unknown_source_currency"
+    },
+    "readiness": "ready"
+  },
+  {
+    "phase": "seed",
+    "scenario": "preparing",
+    "hpos": "yes",
+    "version": "1.4.3",
+    "db_version": "0.2.4",
+    "schema_tables": 12,
+    "money_reasons": {
+      "single": "currency_data_attention",
+      "foreign": "currency_data_attention",
+      "mixed": "currency_data_attention",
+      "empty": "currency_data_attention",
+      "unknown": "currency_data_attention"
+    },
+    "readiness": "attention"
+  },
+  {
+    "phase": "upgrade",
+    "scenario": "preparing",
+    "hpos": "yes",
+    "version": "1.4.4",
+    "db_version": "0.2.4",
+    "schema_tables": 12,
+    "money_reasons": {
+      "single": "preparing_currency_data",
+      "foreign": "preparing_currency_data",
+      "mixed": "preparing_currency_data",
+      "empty": "preparing_currency_data",
+      "unknown": "preparing_currency_data"
+    },
+    "readiness": "preparing"
+  },
+  {
+    "phase": "seed",
+    "scenario": "attention",
+    "hpos": "yes",
+    "version": "1.4.3",
+    "db_version": "0.2.4",
+    "schema_tables": 12,
+    "money_reasons": {
+      "single": "currency_data_attention",
+      "foreign": "currency_data_attention",
+      "mixed": "currency_data_attention",
+      "empty": "currency_data_attention",
+      "unknown": "currency_data_attention"
+    },
+    "readiness": "attention"
+  },
+  {
+    "phase": "upgrade",
+    "scenario": "attention",
+    "hpos": "yes",
+    "version": "1.4.4",
+    "db_version": "0.2.4",
+    "schema_tables": 12,
+    "money_reasons": {
+      "single": "currency_data_attention",
+      "foreign": "currency_data_attention",
+      "mixed": "currency_data_attention",
+      "empty": "currency_data_attention",
+      "unknown": "currency_data_attention"
+    },
+    "readiness": "attention"
+  },
+  {
+    "phase": "seed",
+    "scenario": "pending-reset",
+    "hpos": "yes",
+    "version": "1.4.3",
+    "db_version": "0.2.4",
+    "schema_tables": 12,
+    "money_reasons": {
+      "single": "comparable",
+      "foreign": "comparable",
+      "mixed": "mixed",
+      "empty": "none",
+      "unknown": "unknown_source_currency"
+    },
+    "readiness": "ready"
+  },
+  {
+    "phase": "upgrade",
+    "scenario": "pending-reset",
+    "hpos": "yes",
+    "version": "1.4.4",
+    "db_version": "0.2.4",
+    "schema_tables": 12,
+    "money_reasons": {
+      "single": "comparable",
+      "foreign": "comparable",
+      "mixed": "mixed",
+      "empty": "none",
+      "unknown": "unknown_source_currency"
+    },
+    "readiness": "ready"
+  },
+  {
+    "phase": "fresh",
+    "scenario": "fresh",
+    "hpos": "yes",
+    "version": "1.4.4",
+    "db_version": "0.2.4",
+    "schema_tables": 12,
+    "money_reasons": {
+      "single": "comparable",
+      "foreign": "comparable",
+      "mixed": "mixed",
+      "empty": "none",
+      "unknown": "unknown_source_currency"
+    },
+    "readiness": "ready"
+  },
+  {
+    "phase": "seed",
+    "scenario": "ready",
+    "hpos": "no",
+    "version": "1.4.3",
+    "db_version": "0.2.4",
+    "schema_tables": 12,
+    "money_reasons": {
+      "single": "comparable",
+      "foreign": "comparable",
+      "mixed": "mixed",
+      "empty": "none",
+      "unknown": "unknown_source_currency"
+    },
+    "readiness": "ready"
+  },
+  {
+    "phase": "upgrade",
+    "scenario": "ready",
+    "hpos": "no",
+    "version": "1.4.4",
+    "db_version": "0.2.4",
+    "schema_tables": 12,
+    "money_reasons": {
+      "single": "comparable",
+      "foreign": "comparable",
+      "mixed": "mixed",
+      "empty": "none",
+      "unknown": "unknown_source_currency"
+    },
+    "readiness": "ready"
+  },
+  {
+    "phase": "seed",
+    "scenario": "preparing",
+    "hpos": "no",
+    "version": "1.4.3",
+    "db_version": "0.2.4",
+    "schema_tables": 12,
+    "money_reasons": {
+      "single": "currency_data_attention",
+      "foreign": "currency_data_attention",
+      "mixed": "currency_data_attention",
+      "empty": "currency_data_attention",
+      "unknown": "currency_data_attention"
+    },
+    "readiness": "attention"
+  },
+  {
+    "phase": "upgrade",
+    "scenario": "preparing",
+    "hpos": "no",
+    "version": "1.4.4",
+    "db_version": "0.2.4",
+    "schema_tables": 12,
+    "money_reasons": {
+      "single": "preparing_currency_data",
+      "foreign": "preparing_currency_data",
+      "mixed": "preparing_currency_data",
+      "empty": "preparing_currency_data",
+      "unknown": "preparing_currency_data"
+    },
+    "readiness": "preparing"
+  },
+  {
+    "phase": "seed",
+    "scenario": "attention",
+    "hpos": "no",
+    "version": "1.4.3",
+    "db_version": "0.2.4",
+    "schema_tables": 12,
+    "money_reasons": {
+      "single": "currency_data_attention",
+      "foreign": "currency_data_attention",
+      "mixed": "currency_data_attention",
+      "empty": "currency_data_attention",
+      "unknown": "currency_data_attention"
+    },
+    "readiness": "attention"
+  },
+  {
+    "phase": "upgrade",
+    "scenario": "attention",
+    "hpos": "no",
+    "version": "1.4.4",
+    "db_version": "0.2.4",
+    "schema_tables": 12,
+    "money_reasons": {
+      "single": "currency_data_attention",
+      "foreign": "currency_data_attention",
+      "mixed": "currency_data_attention",
+      "empty": "currency_data_attention",
+      "unknown": "currency_data_attention"
+    },
+    "readiness": "attention"
+  },
+  {
+    "phase": "seed",
+    "scenario": "pending-reset",
+    "hpos": "no",
+    "version": "1.4.3",
+    "db_version": "0.2.4",
+    "schema_tables": 12,
+    "money_reasons": {
+      "single": "comparable",
+      "foreign": "comparable",
+      "mixed": "mixed",
+      "empty": "none",
+      "unknown": "unknown_source_currency"
+    },
+    "readiness": "ready"
+  },
+  {
+    "phase": "upgrade",
+    "scenario": "pending-reset",
+    "hpos": "no",
+    "version": "1.4.4",
+    "db_version": "0.2.4",
+    "schema_tables": 12,
+    "money_reasons": {
+      "single": "comparable",
+      "foreign": "comparable",
+      "mixed": "mixed",
+      "empty": "none",
+      "unknown": "unknown_source_currency"
+    },
+    "readiness": "ready"
+  },
+  {
+    "phase": "fresh",
+    "scenario": "fresh",
+    "hpos": "no",
+    "version": "1.4.4",
+    "db_version": "0.2.4",
+    "schema_tables": 12,
+    "money_reasons": {
+      "single": "comparable",
+      "foreign": "comparable",
+      "mixed": "mixed",
+      "empty": "none",
+      "unknown": "unknown_source_currency"
+    },
+    "readiness": "ready"
+  }
+]

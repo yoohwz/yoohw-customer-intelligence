@@ -206,8 +206,8 @@
   },
   {
     "path": "includes/class-yoohw-cos-overview.php",
-    "bytes": 11907,
-    "sha256": "9de729ef106d224a0c3cf3f6608bf69824c4885003b2d1a67da1dc2d62406afc"
+    "bytes": 12154,
+    "sha256": "2009114b39b1038cb8f0179746fc1cc6f7129926bc0cbe2ed353af18f36a6eaa"
   },
   {
     "path": "includes/class-yoohw-cos-privacy-erasure.php",
