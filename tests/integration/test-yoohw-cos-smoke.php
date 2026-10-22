@@ -54,11 +54,13 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 			$timestamp = current_time( 'timestamp' );
 			$wpdb->update( YoOhw_COS_DB::tasks_table(), array( 'due_date' => $now ), array( 'id' => $ids['lower'] ) );
 			$wpdb->update( YoOhw_COS_DB::tasks_table(), array( 'due_date' => gmdate( 'Y-m-d H:i:s', $timestamp + 7 * DAY_IN_SECONDS ) ), array( 'id' => $ids['upper'] ) );
+			$wpdb->update( YoOhw_COS_DB::tasks_table(), array( 'due_date' => gmdate( 'Y-m-d H:i:s', $timestamp + 7 * DAY_IN_SECONDS + 1 ) ), array( 'id' => $ids['outside'] ) );
 			$soon = $rows( 10, 'due_soon' );
 			$overdue = $rows( 10, 'overdue' );
-			if ( $now === YoOhw_COS_DB::now() ) { break; }
+			$finished = YoOhw_COS_DB::now();
+			if ( $now === $finished ) { break; }
 		}
-		$this->assertSame( $now, YoOhw_COS_DB::now(), 'Boundary queries must complete within their captured second.' );
+		$this->assertSame( $now, $finished, 'Boundary queries must complete within their captured second.' );
 		$this->assertSame( array( $ids['lower'], $ids['soon'], $ids['upper'] ), $soon );
 		$this->assertSame( array( $ids['overdue'] ), $overdue );
 		$priority = $rows( 10, 'priority' );
