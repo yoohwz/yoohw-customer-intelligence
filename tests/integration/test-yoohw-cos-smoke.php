@@ -34,7 +34,8 @@ final class YoOhw_COS_Integration_Smoke_Test extends WP_UnitTestCase {
 		wp_set_current_user( $admin );
 		$customer = YoOhw_COS_Customers::create_customer( array( 'email' => 'task-view@example.test' ) );
 		$now = YoOhw_COS_DB::now();
-		$timestamp = current_time( 'timestamp' );
+		// Model setup crossing a second without sleeping; every exact boundary must be repinned below.
+		$timestamp = current_time( 'timestamp' ) - 1;
 		$dates = array( 'overdue' => -DAY_IN_SECONDS, 'lower' => 0, 'soon' => DAY_IN_SECONDS, 'upper' => 7 * DAY_IN_SECONDS, 'outside' => 7 * DAY_IN_SECONDS + 1, 'later' => 8 * DAY_IN_SECONDS );
 		$ids = array();
 		foreach ( array( 'overdue', 'lower', 'soon', 'upper', 'outside', 'later', 'null', 'completed' ) as $name ) {
