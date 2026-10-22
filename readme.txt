@@ -7,7 +7,7 @@ Requires PHP: 7.4
 Requires Plugins: woocommerce
 WC requires at least: 8.2
 WC tested up to: 11.0
-Stable tag: 1.4.3
+Stable tag: 1.4.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -123,13 +123,11 @@ Archive removes a CRM profile from the main customer list. It does not delete Wo
 
 == Changelog ==
 
-= 1.4.3 =
+= 1.4.4 =
 
-Oct 4, 2026.
+Oct 22, 2026.
 
-* Improved monetary availability messages to distinguish currency-data preparation, items needing attention, multiple currencies, and missing order currencies. Stale customer monetary data can recover safely in the background; recorded currencies are retained without exchange-rate conversion.
-* Clarified automatic commerce-data update progress and Settings guidance. Admin notices can be dismissed per user for the current state; Settings and Diagnostics continue to show the authoritative state.
-* Fixed Customers CSV downloads containing admin HTML before the CSV. Filtered and Saved View exports remain clean, parseable CSV.
-* Fixed Lifecycle Lifetime value displaying escaped price markup. Recorded foreign-currency amounts remain readable, while KPI, RFM, and order prices retain their formatting.
-* Corrected First-time customers to include exactly one recognized order. Repeat customers have two or more; zero-order profiles remain available outside purchase cohorts.
-* Fixed HTML entities and broken task links in plain-text CRM emails. Task IDs remain query parameters, and the HTML email presentation is unchanged.
+* Improved the Overview dashboard and Customer Details layouts with clearer KPI, follow-up task, and attention sections, better use of available space and responsive mobile behavior.
+* Made task details and purchase-history panels easier to scan while preserving accurate empty, updating, unavailable and currency-specific data explanations.
+* Made it easier to undo a completed task using the existing reopen action.
+* Improved CRM task and digest email heading spacing and kept counts beside their headings.

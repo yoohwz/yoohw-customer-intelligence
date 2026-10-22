@@ -1,0 +1,19 @@
+{
+  "upgrade_pairs": 8,
+  "hpos": [
+    "yes",
+    "no"
+  ],
+  "scenarios": [
+    "ready",
+    "preparing",
+    "attention",
+    "pending-reset"
+  ],
+  "compared": "Exact sorted owned-table rows, raw persisted options/meta and native wc_get_orders get_data JSON strings per order",
+  "public_source_version": "1.4.3",
+  "candidate_version": "1.4.4",
+  "all_equal": true,
+  "unrelated_sentinel": "unchanged",
+  "cleanup": "owned roots removed"
+}

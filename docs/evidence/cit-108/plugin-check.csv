@@ -1,0 +1,4 @@
+FILE: includes/class-yoohw-cos-overview.php
+line,column,type,code,message,docs
+259,19,WARNING,PluginCheck.Security.DirectDB.UnescapedDBParameter,"Unescaped parameter $view_where used in $wpdb-&gt;get_results()\n$view_where assigned unsafely at line 248.",
+269,1,WARNING,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,"Use placeholders and $wpdb-&gt;prepare(); found interpolated variable {$view_where} at \t\t\t\tWHERE t.status &lt;&gt; %s {$view_where}\n",

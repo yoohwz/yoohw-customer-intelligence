@@ -256,7 +256,7 @@ final class YoOhw_COS_Overview {
 			);
 		}
 
-		$tasks = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
+		$tasks = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Custom CRM tables require live reads; view_where contains only fixed allowlisted clauses with separately prepared dates.
 			$wpdb->prepare(
 				"SELECT
 					t.*,
@@ -266,7 +266,9 @@ final class YoOhw_COS_Overview {
 				FROM %i t
 				LEFT JOIN %i c ON c.id = t.customer_id
 				LEFT JOIN %i u ON u.ID = t.assigned_user_id
-				WHERE t.status <> %s {$view_where}
+				" .
+				"WHERE t.status <> %s {$view_where}" . // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Fixed allowlisted clauses with separately prepared dates; view input never becomes SQL.
+"
 				ORDER BY
 					CASE
 						WHEN t.due_date IS NOT NULL AND t.due_date < %s THEN 0

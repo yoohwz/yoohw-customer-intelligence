@@ -1,0 +1,10 @@
+{
+  "scanner": "Plugin Check 2.1.0",
+  "command": "wp plugin check yoohw-customer-intelligence --mode=new --format=csv",
+  "default_checks": true,
+  "exit_code": 0,
+  "errors": 0,
+  "warnings": 0,
+  "scanner_message": "Success: Checks complete. No errors found.",
+  "package_sha256": "9ad3b65a5187cac42a3c7194f4b76e5db9ae453961efad41308544e324d4b9d6"
+}

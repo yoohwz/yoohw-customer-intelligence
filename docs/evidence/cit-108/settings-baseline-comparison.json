@@ -1,0 +1,44 @@
+[
+  {
+    "version": "1.4.3",
+    "results": [
+      {
+        "width": 320,
+        "scroll": 536
+      },
+      {
+        "width": 375,
+        "scroll": 536
+      },
+      {
+        "width": 768,
+        "scroll": 768
+      },
+      {
+        "width": 1440,
+        "scroll": 1440
+      }
+    ]
+  },
+  {
+    "version": "1.4.4",
+    "results": [
+      {
+        "width": 320,
+        "scroll": 536
+      },
+      {
+        "width": 375,
+        "scroll": 536
+      },
+      {
+        "width": 768,
+        "scroll": 768
+      },
+      {
+        "width": 1440,
+        "scroll": 1440
+      }
+    ]
+  }
+]
