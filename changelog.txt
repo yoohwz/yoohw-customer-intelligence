@@ -1,5 +1,12 @@
 === Customer Intelligence for WooCommerce Changelog ===
 
+= 1.4.4 (Oct 22, 2026) =
+
+* Improved the Overview dashboard and Customer Details layouts with clearer KPI, follow-up task, and attention sections, better use of available space and responsive mobile behavior.
+* Made task details and purchase-history panels easier to scan while preserving accurate empty, updating, unavailable and currency-specific data explanations.
+* Made it easier to undo a completed task using the existing reopen action.
+* Improved CRM task and digest email heading spacing and kept counts beside their headings.
+
 = 1.4.3 (Oct 4, 2026) =
 
 * Improved monetary availability messages to distinguish currency-data preparation, items needing attention, multiple currencies, and missing order currencies. Stale customer monetary data can recover safely in the background; recorded currencies are retained without exchange-rate conversion.

@@ -1,0 +1,327 @@
+[
+  {
+    "path": "admin/class-yoohw-cos-activity-list.php",
+    "bytes": 19461,
+    "sha256": "cbd30021c1143a66a9c899abbefad037dbe7a01bcfd2a9b7ecbc03a43c49d455"
+  },
+  {
+    "path": "admin/class-yoohw-cos-admin-menu.php",
+    "bytes": 210463,
+    "sha256": "4fab391d45fd52b8ebd70f436ed465cf4baf67e732e31ab14c8e486fbc558ce2"
+  },
+  {
+    "path": "admin/class-yoohw-cos-admin-tools.php",
+    "bytes": 64266,
+    "sha256": "81c8516d8796c3fab75390337a8c20b13165fa51cfb74afb7de993affde09324"
+  },
+  {
+    "path": "admin/class-yoohw-cos-admin-ui.php",
+    "bytes": 4065,
+    "sha256": "e3074a55ff288245babe129e8090c5a29599d9603a5d8182fc58915fa8849a81"
+  },
+  {
+    "path": "admin/class-yoohw-cos-customer-exporter.php",
+    "bytes": 11506,
+    "sha256": "e09cfbbee463906e16184d35adc6eb475c10a8f21397cfe210e064cf413c4e07"
+  },
+  {
+    "path": "admin/class-yoohw-cos-customer-profile.php",
+    "bytes": 84281,
+    "sha256": "4e76a48370aeeaaa938e59723270b91e8e945c4f6999dd8062045ad376d141d0"
+  },
+  {
+    "path": "admin/class-yoohw-cos-customers-list.php",
+    "bytes": 46655,
+    "sha256": "3d7fef1dca762595d5c2706da997050e83dec22bbc5e90f28dee4425b0de3a8e"
+  },
+  {
+    "path": "admin/class-yoohw-cos-flash-notices.php",
+    "bytes": 6084,
+    "sha256": "02b15728f96bb36ba9351586d28d6c94e7875a03f38e2de394ade67af5d343b5"
+  },
+  {
+    "path": "admin/class-yoohw-cos-notice-preferences.php",
+    "bytes": 7196,
+    "sha256": "d417e260dd27f006e88844d61753a1eab5f8933bd769d5f082cd92b460e13a5d"
+  },
+  {
+    "path": "admin/class-yoohw-cos-order-admin.php",
+    "bytes": 45916,
+    "sha256": "a980edefa30d8899042b6cad691ca0c5b39a01cae9e5bf24e312607675733f58"
+  },
+  {
+    "path": "admin/class-yoohw-cos-segments-list.php",
+    "bytes": 6780,
+    "sha256": "9a73c6d73bb0e46a14d28c6eeaa26c6102777436c03703335b18f34f2383e227"
+  },
+  {
+    "path": "admin/class-yoohw-cos-tags-list.php",
+    "bytes": 6800,
+    "sha256": "b2303954c14b8df794a183275639f24b5694ed451442306418dfb1e8a6728cb2"
+  },
+  {
+    "path": "admin/class-yoohw-cos-tasks-list.php",
+    "bytes": 19173,
+    "sha256": "087486ea6e741e3461e4a8e763b1b6ccbe39811078ade631af6bc328a77f30af"
+  },
+  {
+    "path": "assets/css/admin.css",
+    "bytes": 69038,
+    "sha256": "a62ae83e376805c81fef066512f1172fee002c3ef554323cb3cfee2f9bb7c31d"
+  },
+  {
+    "path": "assets/css/order-admin.css",
+    "bytes": 16921,
+    "sha256": "484427cc3bc4d8c62d090397567290f153a087ba179da931c1e2e4309b4b4244"
+  },
+  {
+    "path": "assets/js/admin.js",
+    "bytes": 29711,
+    "sha256": "93861fbba8edad7ca396dc4ec4021a9d40a3f093b16e554125456891982f119e"
+  },
+  {
+    "path": "assets/js/notice-preferences.js",
+    "bytes": 542,
+    "sha256": "97cdd58ce03a2c22a222c585c067777cd78ad37031ccd279d1943ae8405cec30"
+  },
+  {
+    "path": "assets/js/order-admin.js",
+    "bytes": 5802,
+    "sha256": "25c0d295e9e7f5b63e1dfcc945008399dbc2f092ef5b869b168073b4feff4f46"
+  },
+  {
+    "path": "changelog.txt",
+    "bytes": 12543,
+    "sha256": "5a64d3d90880032d69df38b47097cf8d56dd558d9154b1ac97e9043a34a464d1"
+  },
+  {
+    "path": "includes/class-yoohw-cos-attention.php",
+    "bytes": 2655,
+    "sha256": "db76eb0009a64ecf493dbf79326e5be3dd4ac92f0eb408c735b5230aa4cb32a6"
+  },
+  {
+    "path": "includes/class-yoohw-cos-blacklist-manager-integration.php",
+    "bytes": 28400,
+    "sha256": "26ca4d15955295e0058596615ee527fbeeb19dc87c1b5366e728f7ccfd950642"
+  },
+  {
+    "path": "includes/class-yoohw-cos-blacklist-manager-premium-integration.php",
+    "bytes": 77573,
+    "sha256": "90cdc5fdf8038877717b75ab8a35419214ccc199824fb267b884c14f4b4d78c9"
+  },
+  {
+    "path": "includes/class-yoohw-cos-commerce-aggregates.php",
+    "bytes": 20452,
+    "sha256": "1da897f257b921e1f5c0ff47385657c027e3fa4c3c9e9975a05f9e4b1e547616"
+  },
+  {
+    "path": "includes/class-yoohw-cos-commerce-metrics-policy.php",
+    "bytes": 10651,
+    "sha256": "5140f12f39e7a24902b7edb96c5408df1e52a35ff1565154446b8ce2aaae940e"
+  },
+  {
+    "path": "includes/class-yoohw-cos-customer-facts.php",
+    "bytes": 3411,
+    "sha256": "ee62653038a03b9cfd6e24bf4f42514bbdda033fb05cd4b537585e6e85a0114d"
+  },
+  {
+    "path": "includes/class-yoohw-cos-customer-identity.php",
+    "bytes": 8252,
+    "sha256": "52635ea4815e62cbc1af6af84c877abb75f922833478f47624ba0a79a7da3589"
+  },
+  {
+    "path": "includes/class-yoohw-cos-customer-query.php",
+    "bytes": 19134,
+    "sha256": "664e382cee7d50e7b17c8d47ebd014e0943ac90334bc79b96bff0424a27bd463"
+  },
+  {
+    "path": "includes/class-yoohw-cos-customers.php",
+    "bytes": 62287,
+    "sha256": "028f78e2075f6959d3e8071fcf47d035dd1dec4ebd32430ee6ff90d03c4b1c6c"
+  },
+  {
+    "path": "includes/class-yoohw-cos-db.php",
+    "bytes": 5855,
+    "sha256": "71e0247e24ff6199a575cbc822d953e1de5fdfe6bf8f22ac3468c8b363f17be7"
+  },
+  {
+    "path": "includes/class-yoohw-cos-diagnostics.php",
+    "bytes": 14185,
+    "sha256": "3c45c760c0d10e63a31943ff6f69d9190c931b7dbd8d26ed868838aab55b62a9"
+  },
+  {
+    "path": "includes/class-yoohw-cos-email-notifications.php",
+    "bytes": 36570,
+    "sha256": "3868ac447b2b7aabc7e3e55c0f594302816541cc9e38f78fb76c2773232fccdf"
+  },
+  {
+    "path": "includes/class-yoohw-cos-events.php",
+    "bytes": 13963,
+    "sha256": "f057de9e848475fcc02e3ac46c4e3b34fee70789a6874ff9f591b56e86db7c50"
+  },
+  {
+    "path": "includes/class-yoohw-cos-extensions.php",
+    "bytes": 8351,
+    "sha256": "bc381b4f44e0ad085af3d9884261eb71bbd79b10fc4946d696d33f2be5e2df2d"
+  },
+  {
+    "path": "includes/class-yoohw-cos-install.php",
+    "bytes": 44151,
+    "sha256": "6a351e4e39cacf01249a877c9ac2b6ef589b0678c5418aa07b927a07c041f202"
+  },
+  {
+    "path": "includes/class-yoohw-cos-integrations.php",
+    "bytes": 2793,
+    "sha256": "5997fb2723cd1fc4ad0ac0c8e36f5cfa5ed90409c42600ae18f983a150557f5d"
+  },
+  {
+    "path": "includes/class-yoohw-cos-intelligence.php",
+    "bytes": 24875,
+    "sha256": "0f0fe1ae99532142284f376af37ec08999daf6b77aacd12621275e608189defe"
+  },
+  {
+    "path": "includes/class-yoohw-cos-loader.php",
+    "bytes": 5975,
+    "sha256": "6966cb1a93e4ca2e936bccf052fb153ef44feec8b40a2b8cb4afe7e1e39e0113"
+  },
+  {
+    "path": "includes/class-yoohw-cos-loyalty-integration.php",
+    "bytes": 41087,
+    "sha256": "14f918ea660549ba7d80f169ce59d256e691991c8b7dfc2cc2bd721e89c3553c"
+  },
+  {
+    "path": "includes/class-yoohw-cos-migration-runner.php",
+    "bytes": 32287,
+    "sha256": "7d177f0d810c1a4894ac13bfaf6fa4328757ad80434c9e4675621bbeb546742b"
+  },
+  {
+    "path": "includes/class-yoohw-cos-notes.php",
+    "bytes": 6435,
+    "sha256": "a7d914c36acabda2f2e6ab777f5f16bf3f4bf132164436f7920533548c40aa3f"
+  },
+  {
+    "path": "includes/class-yoohw-cos-notification-ledger.php",
+    "bytes": 4955,
+    "sha256": "a95645dcd6cad132aa774887f13da64b6b907a126b12962ec1d31be44bbf2a14"
+  },
+  {
+    "path": "includes/class-yoohw-cos-overview.php",
+    "bytes": 11907,
+    "sha256": "9de729ef106d224a0c3cf3f6608bf69824c4885003b2d1a67da1dc2d62406afc"
+  },
+  {
+    "path": "includes/class-yoohw-cos-privacy-erasure.php",
+    "bytes": 23736,
+    "sha256": "596b8002046fb22b639abdb0abbf23c81f2551a755e8a7ac7123cbbefcb857ae"
+  },
+  {
+    "path": "includes/class-yoohw-cos-privacy-exporter.php",
+    "bytes": 22441,
+    "sha256": "11021eeddfcf63c636aa2047ba72d1924d4fd6e186c775b97ab4f4b8ce5ae601"
+  },
+  {
+    "path": "includes/class-yoohw-cos-reset-guard.php",
+    "bytes": 24724,
+    "sha256": "f67a96a5be91cc34ed5f77836fabcbe7f8bfecd400d6de5199a11b19194ce609"
+  },
+  {
+    "path": "includes/class-yoohw-cos-rfm.php",
+    "bytes": 1669,
+    "sha256": "b048c48ba94b9b7d5ccd3c5536213d15654712e51672c0ac2e9d8c8ed52f2a5e"
+  },
+  {
+    "path": "includes/class-yoohw-cos-saved-views.php",
+    "bytes": 7366,
+    "sha256": "7d15f3a538b2b835881a36314ca17fa05de8dd464094798f080478c5f9a612e2"
+  },
+  {
+    "path": "includes/class-yoohw-cos-segments.php",
+    "bytes": 10381,
+    "sha256": "9dd7f2be56396fbd7d4fd2ff83624cc10f9ae39dea81d82a89c5eadf9859abba"
+  },
+  {
+    "path": "includes/class-yoohw-cos-tags.php",
+    "bytes": 9984,
+    "sha256": "7ee7f3d5fe5c9eb60a16a1e68ee69e0ca0e2198f0dcfef146200f1a7a947a384"
+  },
+  {
+    "path": "includes/class-yoohw-cos-tasks.php",
+    "bytes": 28615,
+    "sha256": "d3f6af63777704e01f973392edccd00f9dab27acbd718fc98e8439c78258f0ad"
+  },
+  {
+    "path": "includes/emails/class-yoohw-cos-email-crm-base.php",
+    "bytes": 14944,
+    "sha256": "a7f5e58a990c95a88643e77a4f0e16929edf82d0985248b23b1853be1cae3e9d"
+  },
+  {
+    "path": "includes/emails/class-yoohw-cos-email-customer-message.php",
+    "bytes": 3608,
+    "sha256": "1b1ea8da885469f8742dffbff6f822d79d3184495222e33058e368d3fbc106dc"
+  },
+  {
+    "path": "includes/emails/class-yoohw-cos-email-task-digests.php",
+    "bytes": 8455,
+    "sha256": "6792bbabb315f54c3e48de2dff37787cf3fd285e927b01f9e61e8098bf28d621"
+  },
+  {
+    "path": "includes/emails/class-yoohw-cos-email-task-events.php",
+    "bytes": 8151,
+    "sha256": "a8538e953478e495ad49410899bce13191e231658d7fa799484f57ed52ddf40c"
+  },
+  {
+    "path": "languages/yoohw-customer-intelligence.pot",
+    "bytes": 111807,
+    "sha256": "fc2f929159bd61c1ecc5297ac27d21c3c00455dd4745c5f84c0b3525671477c8"
+  },
+  {
+    "path": "readme.txt",
+    "bytes": 9340,
+    "sha256": "69a3f57ec9838922bb869774adb1062e2c2cc08a1e148a0262654d5422f75558"
+  },
+  {
+    "path": "templates/emails/block/customer-message.php",
+    "bytes": 1004,
+    "sha256": "24bd819edf67c7e2b2f323add689ed66705023aad3ac22d59637916b042527e8"
+  },
+  {
+    "path": "templates/emails/crm-task-digest.php",
+    "bytes": 6887,
+    "sha256": "5ba13e47fc0c22890047e0c0f8426aff7b7e026d27d0f1825ce5ff13acba30bb"
+  },
+  {
+    "path": "templates/emails/crm-task-notification.php",
+    "bytes": 8658,
+    "sha256": "8bce7e487244fb0a79bc3560aac88a9490e6d49b24d056c3a3ba6d1229c740f6"
+  },
+  {
+    "path": "templates/emails/customer-message.php",
+    "bytes": 2580,
+    "sha256": "9f4e82d37c3ee67938618deab32767fb5310b142744ffefc5fabc1250362cde3"
+  },
+  {
+    "path": "templates/emails/plain/crm-task-digest.php",
+    "bytes": 4498,
+    "sha256": "0b7b814c3adeccb2468591f2a5cafe15a51c5dc2fe8b2c17712fb2840425b284"
+  },
+  {
+    "path": "templates/emails/plain/crm-task-notification.php",
+    "bytes": 5066,
+    "sha256": "850b80bf6523b9d06cb78de2f1a6224016fe26eb149616a1503eb21add5d66b1"
+  },
+  {
+    "path": "templates/emails/plain/customer-message.php",
+    "bytes": 973,
+    "sha256": "a688775688a9acbe1b5886c1da266ab720a248c03a22eb787b32df70b7c4db3c"
+  },
+  {
+    "path": "uninstall.php",
+    "bytes": 1558,
+    "sha256": "a7a1f55275e00f15e2d734d7138da35600485b8d931fc00be4e391caa20ca46b"
+  },
+  {
+    "path": "yoohw-customer-intelligence.php",
+    "bytes": 1630,
+    "sha256": "5bbe127124f4a3c76122e021831399769c0f415849e9e9aba6badcf57f076aba"
+  }
+]
