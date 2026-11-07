@@ -2592,15 +2592,17 @@ final class YoOhw_COS_Admin_Menu {
 		}
 
 		echo '<div class="wrap yoohw-cos-admin yoohw-cos-settings-page">';
+		echo '<div class="yoohw-cos-settings-heading"><p class="yoohw-cos-settings-product">' . esc_html__( 'Customer Intelligence for WooCommerce', 'yoohw-customer-intelligence' ) . '</p>';
 		echo '<h1>' . esc_html__( 'Settings', 'yoohw-customer-intelligence' ) . '</h1>';
+		echo '<p class="description">' . esc_html__( 'Configure customer intelligence and manage your customer data.', 'yoohw-customer-intelligence' ) . '</p></div>';
 
 		$stats      = YoOhw_COS_Customers::get_stats();
 		$sync_state = self::get_sync_state();
 		$readiness  = self::get_setup_readiness( $sync_state );
 
-		self::render_setup_panel( $readiness, $sync_state, $stats );
-		self::render_diagnostics( YoOhw_COS_Diagnostics::snapshot() );
-		YoOhw_COS_Reset_Guard::render_incidents();
+		if ( YoOhw_COS_Reset_Guard::operational_incidents() ) {
+			echo '<div class="notice notice-warning inline"><p>' . esc_html__( 'There are unresolved customer-data operations.', 'yoohw-customer-intelligence' ) . ' <a href="#yoohw-cos-incidents">' . esc_html__( 'Review recovery options', 'yoohw-customer-intelligence' ) . '</a></p></div>';
+		}
 
 		if ( isset( $_GET['yoohw_cos_processed'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only admin display/filter context; mutation handlers verify their own capability, nonce and Reset epoch.
 			$summary = self::get_sync_status_summary( $sync_state );
@@ -2699,8 +2701,64 @@ final class YoOhw_COS_Admin_Menu {
 			echo '</p></div>';
 		}
 
+		$settings_section = 'scoring';
+		$section_results = array(
+			'automation' => array( 'yoohw_cos_loyalty_task_automation_saved' ),
+			'system'     => array( 'yoohw_cos_reset' ),
+			'data'       => array( 'yoohw_cos_processed', 'yoohw_cos_recalculated', 'yoohw_cos_backfilled', 'yoohw_cos_blacklist_synced', 'yoohw_cos_has_more', 'yoohw_cos_recalculate_more', 'yoohw_cos_backfill_more', 'yoohw_cos_blacklist_sync_more' ),
+		);
+		foreach ( $section_results as $section => $flags ) {
+			if ( array_intersect( $flags, array_keys( $_GET ) ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only navigation; flash receipts and continuation handlers retain their own validation.
+				$settings_section = $section;
+				break;
+			}
+		}
+		// Capture the destination before flash notices clean result flags from the URL.
+		echo '<div class="yoohw-cos-settings-layout" data-yoohw-cos-settings data-yoohw-cos-settings-default="yoohw-cos-settings-' . esc_attr( $settings_section ) . '">';
+		echo '<nav class="yoohw-cos-settings-nav" aria-label="' . esc_attr__( 'Settings categories', 'yoohw-customer-intelligence' ) . '">';
+		$settings_sections = array(
+			'scoring'      => array( 'admin-generic', __( 'Customer scoring', 'yoohw-customer-intelligence' ) ),
+			'automation'   => array( 'email-alt', __( 'Automation & emails', 'yoohw-customer-intelligence' ) ),
+			'data'         => array( 'update', __( 'Data & sync', 'yoohw-customer-intelligence' ) ),
+			'integrations' => array( 'admin-plugins', __( 'Integrations', 'yoohw-customer-intelligence' ) ),
+			'system'       => array( 'shield', __( 'System & recovery', 'yoohw-customer-intelligence' ) ),
+		);
+		foreach ( $settings_sections as $section => $item ) {
+			if ( 'scoring' === $section || 'data' === $section ) {
+				echo '<span class="yoohw-cos-settings-nav__label">' . esc_html( 'scoring' === $section ? __( 'Configuration', 'yoohw-customer-intelligence' ) : __( 'Operations', 'yoohw-customer-intelligence' ) ) . '</span>';
+			}
+			echo '<a href="#yoohw-cos-settings-' . esc_attr( $section ) . '" data-yoohw-cos-settings-link><span class="dashicons dashicons-' . esc_attr( $item[0] ) . '" aria-hidden="true"></span>' . esc_html( $item[1] ) . '</a>';
+		}
+		echo '</nav><div class="yoohw-cos-settings-content">';
+
+		echo '<section id="yoohw-cos-settings-scoring" data-yoohw-cos-settings-section aria-label="' . esc_attr__( 'Customer scoring', 'yoohw-customer-intelligence' ) . '">';
+		self::render_customer_scoring_settings_panel();
+		echo '</section>';
+
+		echo '<section id="yoohw-cos-settings-automation" data-yoohw-cos-tab-group="Automation" data-yoohw-cos-settings-section aria-label="' . esc_attr__( 'Automation & emails', 'yoohw-customer-intelligence' ) . '">';
+		echo '<h2>' . esc_html__( 'Automation & emails', 'yoohw-customer-intelligence' ) . '</h2>';
+		echo '<div class="yoohw-cos-settings-tabs" role="tablist" aria-label="' . esc_attr__( 'Automation and email sections', 'yoohw-customer-intelligence' ) . '" hidden>';
+		foreach ( array( 'loyalty' => __( 'Loyalty automation', 'yoohw-customer-intelligence' ), 'emails' => __( 'CRM emails', 'yoohw-customer-intelligence' ) ) as $tab => $label ) {
+			echo '<button type="button" role="tab" id="yoohw-cos-automation-tab-' . esc_attr( $tab ) . '" aria-controls="yoohw-cos-automation-' . esc_attr( $tab ) . '" aria-selected="false">' . esc_html( $label ) . '</button>';
+		}
+		echo '</div>';
+		echo '<div id="yoohw-cos-automation-loyalty" data-yoohw-cos-tab-panel role="tabpanel" aria-labelledby="yoohw-cos-automation-tab-loyalty">';
+		self::render_loyalty_task_automation_panel();
+		if ( ! self::is_loyalty_integration_active() ) {
+			echo '<div class="postbox yoohw-cos-settings-panel"><div class="inside"><h2>' . esc_html__( 'Loyalty task automation', 'yoohw-customer-intelligence' ) . '</h2><p>' . esc_html__( 'Activate the Loyalty plugin to configure tasks from loyalty signals.', 'yoohw-customer-intelligence' ) . '</p></div></div>';
+		}
+		echo '</div><div id="yoohw-cos-automation-emails" data-yoohw-cos-tab-panel role="tabpanel" aria-labelledby="yoohw-cos-automation-tab-emails">';
+		echo '<div class="postbox yoohw-cos-settings-panel"><div class="postbox-header"><h2 class="hndle">' . esc_html__( 'CRM emails', 'yoohw-customer-intelligence' ) . '</h2></div><div class="inside">';
+		echo '<p>' . esc_html__( 'Manage CRM email templates and delivery settings in WooCommerce.', 'yoohw-customer-intelligence' ) . '</p>';
+		echo '<p><a class="button" href="' . esc_url( self::get_crm_email_settings_url() ) . '">' . esc_html__( 'Manage CRM emails', 'yoohw-customer-intelligence' ) . ' <span aria-hidden="true">&rarr;</span></a></p></div></div></div></section>';
+
+		echo '<section id="yoohw-cos-settings-integrations" data-yoohw-cos-settings-section aria-label="' . esc_attr__( 'Integrations', 'yoohw-customer-intelligence' ) . '">';
+		self::render_settings_integrations_panel();
+		echo '</section>';
+
+		echo '<section id="yoohw-cos-settings-data" data-yoohw-cos-settings-section aria-label="' . esc_attr__( 'Data & sync', 'yoohw-customer-intelligence' ) . '">';
 		echo '<div class="postbox yoohw-cos-operations-panel">';
-		echo '<div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Operations', 'yoohw-customer-intelligence' ) . '</h2></div>';
+		echo '<div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Data & sync', 'yoohw-customer-intelligence' ) . '</h2></div>';
 		echo '<div class="inside">';
 		echo '<div id="yoohw-cos-sync-center" class="yoohw-cos-operation yoohw-cos-operation--primary" data-yoohw-cos-sync-center>';
 		echo '<div class="yoohw-cos-operation__body">';
@@ -2838,6 +2896,12 @@ final class YoOhw_COS_Admin_Menu {
 		echo '</form>';
 		echo '</div>';
 
+		echo '</div></div></div></div></section>';
+		echo '<section id="yoohw-cos-settings-system" data-yoohw-cos-settings-section aria-label="' . esc_attr__( 'System & recovery', 'yoohw-customer-intelligence' ) . '">';
+		self::render_setup_panel( $readiness, $sync_state, $stats );
+		self::render_diagnostics( YoOhw_COS_Diagnostics::snapshot() );
+		YoOhw_COS_Reset_Guard::render_incidents();
+		echo '<div class="postbox yoohw-cos-settings-panel"><div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Reset customer data', 'yoohw-customer-intelligence' ) . '</h2></div><div class="inside">';
 		echo '<div class="yoohw-cos-operation-row yoohw-cos-operation-row--danger">';
 		echo '<div class="yoohw-cos-operation-row__content">';
 		echo '<h4>' . esc_html__( 'Reset customer data', 'yoohw-customer-intelligence' ) . '</h4>';
@@ -2857,15 +2921,26 @@ final class YoOhw_COS_Admin_Menu {
 
 		echo '</form>';
 		echo '</div>';
-		echo '</div>';
-		echo '</div>';
-		echo '</div>';
-		echo '</div>';
+		echo '</div></div></section>';
+		echo '</div></div></div>';
+	}
 
-		self::render_customer_scoring_settings_panel();
-		self::render_loyalty_task_automation_panel();
-
-		echo '</div>';
+	private static function render_settings_integrations_panel(): void {
+		$integrations = array(
+			array( 'WooCommerce', class_exists( 'WooCommerce' ), __( 'Orders and customer commerce data.', 'yoohw-customer-intelligence' ) ),
+			array( 'Loyalty', self::is_loyalty_integration_active(), __( 'Customer points, loyalty levels and task signals.', 'yoohw-customer-intelligence' ) ),
+			array( 'Blacklist Manager', self::is_blacklist_manager_integration_active(), __( 'Core blacklist signals.', 'yoohw-customer-intelligence' ) ),
+			array( 'Blacklist Manager Premium', self::is_blacklist_manager_premium_integration_active(), __( 'Premium risk signals require an active Premium license.', 'yoohw-customer-intelligence' ) ),
+		);
+		echo '<div class="postbox yoohw-cos-settings-panel"><div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Integrations', 'yoohw-customer-intelligence' ) . '</h2></div><div class="inside">';
+		echo '<p>' . esc_html__( 'Plugins that provide data and signals to Customer Intelligence.', 'yoohw-customer-intelligence' ) . '</p>';
+		foreach ( $integrations as $integration ) {
+			echo '<div class="yoohw-cos-operation-row"><div><h3>' . esc_html( $integration[0] ) . '</h3><p>' . esc_html( $integration[2] ) . '</p></div>';
+			echo self::render_status_pill( $integration[1] ? __( 'Active', 'yoohw-customer-intelligence' ) : __( 'Unavailable', 'yoohw-customer-intelligence' ), $integration[1] ? 'good' : 'info' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped fixed markup from render_status_pill().
+			echo '</div>';
+		}
+		echo '<p><a class="button" href="#yoohw-cos-settings-automation">' . esc_html__( 'Configure loyalty tasks', 'yoohw-customer-intelligence' ) . '</a> <a class="button" href="#yoohw-cos-settings-data">' . esc_html__( 'Open data tools', 'yoohw-customer-intelligence' ) . '</a></p>';
+		echo '</div></div>';
 	}
 
 	private static function render_customer_scoring_settings_panel(): void {
@@ -2881,7 +2956,7 @@ final class YoOhw_COS_Admin_Menu {
 		$lifecycle = $settings['lifecycle'];
 		$status   = $settings['customer_status'];
 
-		echo '<div class="postbox yoohw-cos-settings-panel yoohw-cos-scoring-settings-panel">';
+		echo '<div class="postbox yoohw-cos-settings-panel yoohw-cos-scoring-settings-panel" data-yoohw-cos-tab-group="Scoring">';
 		echo '<div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Customer scoring', 'yoohw-customer-intelligence' ) . '</h2></div>';
 		echo '<div class="inside">';
 		echo '<p>' . esc_html__( 'Configure the thresholds used to classify customer status, value tier, and lifecycle stage.', 'yoohw-customer-intelligence' ) . '</p>';
@@ -2890,6 +2965,13 @@ final class YoOhw_COS_Admin_Menu {
 
 		wp_nonce_field( 'yoohw_cos_save_scoring_settings' );
 
+		echo '<div class="yoohw-cos-scoring-tabs yoohw-cos-settings-tabs" role="tablist" aria-label="' . esc_attr__( 'Customer scoring sections', 'yoohw-customer-intelligence' ) . '" hidden>';
+		foreach ( array( 'value-tiers' => __( 'Value tiers', 'yoohw-customer-intelligence' ), 'lifecycle' => __( 'Lifecycle', 'yoohw-customer-intelligence' ), 'customer-status' => __( 'Customer status', 'yoohw-customer-intelligence' ) ) as $tab => $label ) {
+			echo '<button type="button" role="tab" id="yoohw-cos-scoring-tab-' . esc_attr( $tab ) . '" aria-controls="yoohw-cos-scoring-' . esc_attr( $tab ) . '" aria-selected="false">' . esc_html( $label ) . '</button>';
+		}
+		echo '</div>';
+
+		echo '<div id="yoohw-cos-scoring-value-tiers" class="yoohw-cos-scoring-tab-panel" data-yoohw-cos-tab-panel role="tabpanel" aria-labelledby="yoohw-cos-scoring-tab-value-tiers">';
 		echo '<h3>' . esc_html__( 'Value tiers', 'yoohw-customer-intelligence' ) . '</h3>';
 		echo '<table class="widefat striped yoohw-cos-scoring-table"><thead><tr>';
 		echo '<th>' . esc_html__( 'Tier', 'yoohw-customer-intelligence' ) . '</th>';
@@ -2911,8 +2993,9 @@ final class YoOhw_COS_Admin_Menu {
 			self::render_scoring_input( 'value_tiers', 'top_customer_spent', $tiers['top_customer_spent'], '0.01' ),
 			self::render_scoring_input( 'value_tiers', 'top_customer_orders', $tiers['top_customer_orders'] )
 		);
-		echo '</tbody></table>';
+		echo '</tbody></table></div>';
 
+		echo '<div id="yoohw-cos-scoring-lifecycle" class="yoohw-cos-scoring-tab-panel" data-yoohw-cos-tab-panel role="tabpanel" aria-labelledby="yoohw-cos-scoring-tab-lifecycle">';
 		echo '<h3>' . esc_html__( 'Lifecycle stage', 'yoohw-customer-intelligence' ) . '</h3>';
 		echo '<table class="form-table yoohw-cos-scoring-form-table" role="presentation"><tbody>';
 		self::render_scoring_setting_row( __( 'Repeat customer orders', 'yoohw-customer-intelligence' ), self::render_scoring_input( 'lifecycle', 'repeat_orders', $lifecycle['repeat_orders'] ) );
@@ -2921,8 +3004,9 @@ final class YoOhw_COS_Admin_Menu {
 		self::render_scoring_setting_row( __( 'Top lifecycle spent', 'yoohw-customer-intelligence' ), self::render_scoring_input( 'lifecycle', 'top_customer_spent', $lifecycle['top_customer_spent'], '0.01' ) );
 		self::render_scoring_setting_row( __( 'Top lifecycle orders', 'yoohw-customer-intelligence' ), self::render_scoring_input( 'lifecycle', 'top_customer_orders', $lifecycle['top_customer_orders'] ) );
 		self::render_scoring_setting_row( __( 'Dormant after days', 'yoohw-customer-intelligence' ), self::render_scoring_input( 'lifecycle', 'dormant_days', $lifecycle['dormant_days'] ) );
-		echo '</tbody></table>';
+		echo '</tbody></table></div>';
 
+		echo '<div id="yoohw-cos-scoring-customer-status" class="yoohw-cos-scoring-tab-panel" data-yoohw-cos-tab-panel role="tabpanel" aria-labelledby="yoohw-cos-scoring-tab-customer-status">';
 		echo '<h3>' . esc_html__( 'Customer status', 'yoohw-customer-intelligence' ) . '</h3>';
 		echo '<table class="form-table yoohw-cos-scoring-form-table" role="presentation"><tbody>';
 		self::render_scoring_setting_row( __( 'New through order count', 'yoohw-customer-intelligence' ), self::render_scoring_input( 'customer_status', 'new_max_orders', $status['new_max_orders'], '1', '0' ) );
@@ -2930,8 +3014,9 @@ final class YoOhw_COS_Admin_Menu {
 		self::render_scoring_setting_row( __( 'VIP order threshold', 'yoohw-customer-intelligence' ), self::render_scoring_input( 'customer_status', 'vip_orders', $status['vip_orders'] ) );
 		self::render_scoring_setting_row( __( 'At risk after days', 'yoohw-customer-intelligence' ), self::render_scoring_input( 'customer_status', 'at_risk_days', $status['at_risk_days'] ) );
 		self::render_scoring_setting_row( __( 'Inactive after days', 'yoohw-customer-intelligence' ), self::render_scoring_input( 'customer_status', 'inactive_days', $status['inactive_days'] ) );
-		echo '</tbody></table>';
+		echo '</tbody></table></div>';
 
+		echo '<p class="description">' . esc_html__( 'All three tabs are saved together.', 'yoohw-customer-intelligence' ) . '</p>';
 		echo '<p class="description">' . esc_html__( 'After changing thresholds, run Recalculate intelligence so existing customer profiles use the new scoring rules.', 'yoohw-customer-intelligence' ) . '</p>';
 
 		submit_button( __( 'Save scoring settings', 'yoohw-customer-intelligence' ) );
