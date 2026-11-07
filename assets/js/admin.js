@@ -754,7 +754,157 @@
 		});
 	}
 
+	function initSettingsTabs() {
+		document.querySelectorAll('[data-yoohw-cos-tab-group]').forEach(function(group) {
+			var tabs = group.querySelectorAll('[role="tab"]');
+			var panels = group.querySelectorAll('[data-yoohw-cos-tab-panel]');
+			var form = group.querySelector('form');
+			var storageKey = 'yoohwCos' + group.getAttribute('data-yoohw-cos-tab-group') + 'Tab:' + window.location.pathname;
+
+			function selectTab(tab, focus) {
+				tabs.forEach(function(item) {
+					var selected = item === tab;
+					item.setAttribute('aria-selected', String(selected));
+					item.tabIndex = selected ? 0 : -1;
+				});
+				panels.forEach(function(panel) {
+					panel.hidden = panel.id !== tab.getAttribute('aria-controls');
+				});
+				try {
+					window.sessionStorage.setItem(storageKey, tab.id);
+				} catch (error) {
+					// Tab switching still works when browser storage is unavailable.
+				}
+				if (focus) {
+					tab.focus();
+				}
+			}
+
+			tabs.forEach(function(tab, index) {
+				tab.addEventListener('click', function() {
+					selectTab(tab, false);
+				});
+				tab.addEventListener('keydown', function(event) {
+					var next = index;
+					if ('ArrowRight' === event.key) {
+						next = (index + 1) % tabs.length;
+					} else if ('ArrowLeft' === event.key) {
+						next = (index + tabs.length - 1) % tabs.length;
+					} else if ('Home' === event.key) {
+						next = 0;
+					} else if ('End' === event.key) {
+						next = tabs.length - 1;
+					} else {
+						return;
+					}
+					event.preventDefault();
+					selectTab(tabs[next], true);
+				});
+			});
+
+			// Native validation must be able to focus an invalid field in another tab.
+			group.addEventListener('invalid', function() {
+				var invalid = form ? form.querySelector('input:invalid') : null;
+				var panel = invalid ? invalid.closest('[data-yoohw-cos-tab-panel]') : null;
+				if (panel) {
+					tabs.forEach(function(tab) {
+						if (tab.getAttribute('aria-controls') === panel.id) {
+							selectTab(tab, false);
+						}
+					});
+				}
+			}, true);
+
+			group.classList.add('yoohw-cos-settings-is-tabbed');
+			group.querySelector('[role="tablist"]').hidden = false;
+			var initialTab = tabs[0];
+			try {
+				var savedTabId = window.sessionStorage.getItem(storageKey);
+				tabs.forEach(function(tab) {
+					if (tab.id === savedTabId) {
+						initialTab = tab;
+					}
+				});
+			} catch (error) {
+				// Use the first tab when browser storage is unavailable.
+			}
+			selectTab(initialTab, false);
+		});
+	}
+
+	function initSettingsNavigation() {
+		var settings = document.querySelector('[data-yoohw-cos-settings]');
+
+		if (!settings) {
+			return;
+		}
+
+		var sections = settings.querySelectorAll('[data-yoohw-cos-settings-section]');
+		var links = settings.querySelectorAll('[data-yoohw-cos-settings-link]');
+		var defaultId = settings.getAttribute('data-yoohw-cos-settings-default') || 'yoohw-cos-settings-scoring';
+
+		function showSection(section) {
+			sections.forEach(function(item) {
+				item.hidden = item !== section;
+			});
+			links.forEach(function(link) {
+				if (link.hash === '#' + section.id) {
+					link.setAttribute('aria-current', 'page');
+				} else {
+					link.removeAttribute('aria-current');
+				}
+			});
+		}
+
+		function openHashTarget() {
+			var target = null;
+			try {
+				target = document.getElementById(decodeURIComponent(window.location.hash.slice(1)));
+			} catch (error) {
+				// A malformed fragment must not prevent access to Settings.
+			}
+			var section = target ? target.closest('[data-yoohw-cos-settings-section]') : null;
+			if (section && settings.contains(section)) {
+				showSection(section);
+				if (target !== section) {
+					target.scrollIntoView();
+				}
+				return;
+			}
+			showSection(document.getElementById(defaultId));
+			if (!window.location.hash && 'yoohw-cos-settings-scoring' !== defaultId) {
+				// Keep the result section on reload after flash notices clean the URL.
+				window.history.replaceState(window.history.state, '', window.location.pathname + window.location.search + '#' + defaultId);
+			}
+		}
+
+		// Reveal the target before the browser scrolls to an existing deep link.
+		settings.addEventListener('click', function(event) {
+			var link = event.target.closest('a[href]');
+			if (!link || event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+				return;
+			}
+			if (link.origin !== window.location.origin || link.pathname !== window.location.pathname || link.search !== window.location.search || !link.hash) {
+				return;
+			}
+			var target;
+			try {
+				target = document.getElementById(decodeURIComponent(link.hash.slice(1)));
+			} catch (error) {
+				return;
+			}
+			var section = target ? target.closest('[data-yoohw-cos-settings-section]') : null;
+			if (section && settings.contains(section)) {
+				showSection(section);
+			}
+		});
+		window.addEventListener('hashchange', openHashTarget);
+		openHashTarget();
+	}
+
 	ready(function() {
+		initSettingsNavigation();
+		initSettingsTabs();
 		var profileTaskCreate = document.getElementById('yoohw-cos-profile-task-create');
 		var profileTaskTitle = document.getElementById('yoohw_cos_profile_task_title');
 		var profileTaskToggle = document.querySelector('[data-yoohw-cos-profile-task-toggle]');

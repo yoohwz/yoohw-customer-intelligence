@@ -3513,3 +3513,227 @@ a.yoohw-cos-attention-card:hover {
 	}
 
 }
+
+/* Settings: category navigation progressively enhances the existing forms. */
+.yoohw-cos-settings-page {
+	max-width: 1240px;
+}
+
+.yoohw-cos-settings-heading {
+	margin: 20px 0 24px;
+}
+
+.yoohw-cos-settings-product {
+	color: var(--yoohw-cos-muted);
+	font-size: 12px;
+	margin: 0 0 4px;
+}
+
+.yoohw-cos-settings-heading .description {
+	margin-top: 8px;
+}
+
+.yoohw-cos-settings-layout {
+	align-items: start;
+	display: grid;
+	gap: 24px;
+	grid-template-columns: 210px minmax(0, 1fr);
+	margin-top: 24px;
+}
+
+.yoohw-cos-settings-nav {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	position: sticky;
+	top: 48px;
+}
+
+.yoohw-cos-settings-nav__label {
+	color: var(--yoohw-cos-muted);
+	font-size: 11px;
+	letter-spacing: .06em;
+	padding: 16px 12px 6px;
+	text-transform: uppercase;
+}
+
+.yoohw-cos-settings-nav__label:first-child {
+	padding-top: 0;
+}
+
+.yoohw-cos-settings-nav a {
+	align-items: center;
+	border-radius: 6px;
+	color: var(--yoohw-cos-muted);
+	display: flex;
+	gap: 9px;
+	min-height: 42px;
+	padding: 0 12px;
+	text-decoration: none;
+}
+
+.yoohw-cos-settings-nav a:hover {
+	background: var(--yoohw-cos-bg);
+	color: var(--yoohw-cos-primary);
+}
+
+.yoohw-cos-settings-nav a[aria-current="page"] {
+	background: var(--yoohw-cos-blue-bg);
+	color: var(--yoohw-cos-primary);
+	font-weight: 600;
+}
+
+.yoohw-cos-settings-nav .dashicons {
+	flex: 0 0 18px;
+	font-size: 18px;
+	height: 18px;
+	width: 18px;
+}
+
+.yoohw-cos-settings-content {
+	min-width: 0;
+}
+
+.yoohw-cos-settings-content [hidden] {
+	display: none !important;
+}
+
+.yoohw-cos-settings-content [id] {
+	scroll-margin-top: 48px;
+}
+
+.yoohw-cos-settings-content .postbox {
+	margin: 0 0 20px;
+	max-width: none;
+	min-width: 0;
+}
+
+.yoohw-cos-settings-content .postbox .inside {
+	margin-top: 0;
+	padding: 16px;
+}
+
+.yoohw-cos-settings-content .inside > p:first-child {
+	color: var(--yoohw-cos-muted);
+	margin-top: 0;
+}
+
+.yoohw-cos-settings-content .yoohw-cos-scoring-table {
+	max-width: none;
+}
+
+.yoohw-cos-settings-content .yoohw-cos-scoring-table th {
+	width: 33.33%;
+}
+
+.yoohw-cos-settings-content .yoohw-cos-operation-row h3 {
+	font-size: 14px;
+	margin: 0;
+}
+
+.yoohw-cos-settings-content #yoohw-cos-incidents {
+	margin-bottom: 20px;
+}
+
+.yoohw-cos-settings-content .yoohw-cos-status-pill {
+	align-self: start;
+}
+
+.yoohw-cos-settings-content .yoohw-cos-operation-row--danger {
+	border: 0;
+	padding: 0;
+}
+
+.yoohw-cos-settings-content .yoohw-cos-operation-row--danger h4 {
+	display: none;
+}
+
+@media screen and (max-width: 1100px) {
+	.yoohw-cos-settings-layout {
+		gap: 16px;
+		grid-template-columns: 190px minmax(0, 1fr);
+	}
+
+	.yoohw-cos-settings-content .yoohw-cos-operation-row {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
+
+@media screen and (max-width: 782px) {
+	.yoohw-cos-settings-layout {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.yoohw-cos-settings-nav {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		position: static;
+	}
+
+	.yoohw-cos-settings-nav__label {
+		display: none;
+	}
+
+	.yoohw-cos-settings-nav a {
+		min-height: 44px;
+	}
+
+	.yoohw-cos-settings-content .yoohw-cos-scoring-input.small-text {
+		box-sizing: border-box;
+		max-width: 100%;
+		width: 100%;
+	}
+
+	.yoohw-cos-settings-content .yoohw-cos-readiness-grid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	.yoohw-cos-settings-content #yoohw-cos-diagnostics th,
+	.yoohw-cos-settings-content #yoohw-cos-diagnostics td {
+		overflow-wrap: anywhere;
+	}
+}
+
+.yoohw-cos-settings-tabs {
+	border-bottom: 1px solid var(--yoohw-cos-border-soft);
+	display: flex;
+	flex-wrap: wrap;
+	gap: 20px;
+	margin: 18px 0;
+}
+
+.yoohw-cos-settings-tabs[hidden] {
+	display: none;
+}
+
+.yoohw-cos-settings-tabs button {
+	background: transparent;
+	border: 0;
+	border-bottom: 2px solid transparent;
+	color: var(--yoohw-cos-muted);
+	cursor: pointer;
+	font: inherit;
+	min-height: 44px;
+	padding: 8px 0 12px;
+}
+
+.yoohw-cos-settings-tabs button[aria-selected="true"] {
+	border-bottom-color: var(--yoohw-cos-primary);
+	color: var(--yoohw-cos-primary);
+	font-weight: 600;
+}
+
+.yoohw-cos-settings-tabs button:focus-visible {
+	outline: 2px solid var(--yoohw-cos-primary);
+	outline-offset: 3px;
+}
+
+.yoohw-cos-settings-is-tabbed .yoohw-cos-scoring-tab-panel > h3 {
+	display: none;
+}
+
+@media screen and (max-width: 480px) {
+	.yoohw-cos-settings-tabs {
+		gap: 12px;
+	}
+}
