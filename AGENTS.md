@@ -17,45 +17,30 @@ to GitHub Issue `#N` first, then recover the branch/PR and current evidence from
 Search repository text for `CIT-N` only if the Issue is missing/unreadable, the repository
 is uncertain or GitHub facts materially conflict; a search never replaces a consistent Issue.
 
-- `Create ...` — ChatGPT records the minimum useful Issue boundary and risk.
-- `Run CIT-N` — Codex recovers current GitHub state and performs the next
-  implementation-owned step. For `Controlled` work it also delegates the required
-  fresh Technical Reviewer after an exact candidate is pushed when supported.
-- `Continue CIT-N` — recover current GitHub state and resume the same task without
-  restarting or asking the Human to repeat recoverable context.
-- `Plan Review CIT-N` — ChatGPT resolves a genuinely unresolved product, architecture,
-  data, permission or compatibility boundary. It is not required for every Controlled task.
-- `Review CIT-N` — manual/standalone fresh Technical Review fallback for a frozen
-  Controlled candidate. Review never authorizes merge.
-- `Acceptance Review CIT-N` — ChatGPT performs exact-head external Acceptance and
-  records the verdict in GitHub. Acceptance never authorizes release.
-- `Merge CIT-N` — Human authorizes merge of the unchanged accepted candidate after
-  fresh verification.
-- `Finalize CIT-N` — convenience compatibility shortcut authorizing Acceptance plus
-  conditional squash merge of the unchanged identified candidate in one turn, except
-  for workflow-governance amendments, which require separate Acceptance and Human Merge.
-- `Chốt PR #N` remains a compatibility alias for Finalize only when the exact PR
-  candidate is already identified to the Human.
+- `Create ...` — Codex frames the minimum useful Issue from the Human goal.
+- `Run CIT-N` / `Continue CIT-N` — Codex resumes the same outcome and continues through
+  implementation, validation, required independent review, corrections, CI and completion
+  verification without Human commands between internal stages.
+- `Review CIT-N` — fresh Technical Review fallback; no merge authority.
+- `Merge CIT-N` — Human authorizes the unchanged verified candidate after fresh checks.
 
-For an admitted task, every terminal or handoff report should end with the smallest
-useful navigation footer:
+For new-policy tasks, `Plan Review` and `Acceptance Review` are optional compatibility
+requests to Codex, not mandatory external gates. `Finalize CIT-N` / `Chốt PR #N` retain
+candidate-bound explicit Human merge semantics; governance amendments require separate
+Human Merge. Follow the canonical workflow for compatibility and navigation details.
 
-`STATUS: <navigation label>`
-`Task: CIT-N`
-`Next: <one exact short Human command, or None>`
-
-Useful labels include `READY_TO_RUN`, `IN_PROGRESS`, `PLAN_REVIEW_REQUIRED`,
-`TECHNICAL_REVIEW_REQUIRED`, `TECHNICAL_REVIEW_BLOCKED`,
-`ACCEPTANCE_REVIEW_REQUIRED`, `READY_TO_MERGE`, `HUMAN_DECISION_REQUIRED`
-and `FINALIZED`. These are Human navigation hints only: never parse them as authority,
-never store them as workflow state, and never let them replace GitHub facts.
+Codex owns technical choices within the Human-authorized outcome. Ask Human only for
+material product/scope/support-contract decisions, unresolved material risk or authority
+not already granted. Human retains priorities, merge, release, deployment and rollback.
+ChatGPT has no mandatory role for tasks admitted after this amendment's authorized merge.
+Earlier tasks, including CIT-112 itself, retain their admitted rules and approval provenance.
 
 ## Compute and delegation
 
 Compute is selected by phase, not stored as task lifecycle state.
 
 - Root / ordinary implementation / correction: GPT-6.1 Sol / MEDIUM.
-- Controlled discovery or architecture when a separate Plan Review is actually needed:
+- Controlled discovery or architecture with a genuinely unresolved technical boundary:
   GPT-6.1 Sol / HIGH.
 - Every fresh independent Technical Reviewer and re-reviewer: GPT-6.1 Sol / HIGH.
 - GPT-6.1 Sol / XHIGH is exceptional and requires a specific unresolved
@@ -65,21 +50,29 @@ Compute is selected by phase, not stored as task lifecycle state.
 Reduce irrelevant context before increasing compute. Do not switch models for shell/Git/test
 substeps inside a phase.
 
-Use one implementer. For Controlled work, delegate only the required independent reviewer,
-in a fresh context and source-read-only checkout/environment. The reviewer receives the
-Issue/approved boundary, approved base, exact candidate SHA/diff and required validation,
-not implementer scratch reasoning or self-review conclusions. A changed candidate requires
-a new fresh reviewer. Never delegate recursively.
+Codex Main owns orchestration and verification. Use one default writer, optional useful
+read-only support agents, and implementation delegates only with clearly disjoint write
+scopes and isolated test resources. Define each assignment's goal, scope, output and
+completion condition. Do not require Human to coordinate agents or relay prompts.
+Never delegate recursively.
+
+For Controlled work, use a distinct fresh reviewer in a separate source-read-only
+checkout/environment. No contributor to discovery, design, implementation or correction
+may review that candidate independently. Provide the Issue/accepted boundary, approved
+base, exact candidate SHA/diff, contracts and validation evidence, not implementer scratch
+reasoning or self-review conclusions. Review covers correctness and acceptance criteria;
+Main verifies final evidence without another mandatory Acceptance agent. A changed
+candidate requires a new fresh reviewer.
 
 If fresh reviewer delegation is unavailable, preserve the candidate and stop at
 `TECHNICAL_REVIEW_REQUIRED` with `Next: Review CIT-N`; never weaken independence to
 avoid a manual review.
 
 Workflow-governance semantic changes are always `Controlled`, even in Markdown.
-Risk lane and tool access never transfer implementation ownership: Codex implements;
-ChatGPT frames, resolves boundaries and accepts; Human authorizes merge and release.
-Governance amendments require Codex implementation, fresh exact-candidate Technical
-Review, exact-head `YCI Required CI`, ChatGPT Acceptance Review and separate Human Merge.
+New-policy amendments require Codex implementation, fresh exact-candidate Technical
+Review, exact-head `YCI Required CI`, Codex completion verification and separate Human
+Merge. The admitted-base workflow governs each amendment itself; proposed text cannot
+waive its requirements. Keep all existing data-safety and release boundaries.
 
 Do not run the integration bootstrap against an existing WordPress installation.
 Do not merge or release without the separate authority described in the workflow.
