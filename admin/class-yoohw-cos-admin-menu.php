@@ -2592,7 +2592,7 @@ final class YoOhw_COS_Admin_Menu {
 		}
 
 		echo '<div class="wrap yoohw-cos-admin yoohw-cos-settings-page">';
-		echo '<div class="yoohw-cos-settings-heading"><p class="yoohw-cos-settings-product">' . esc_html__( 'Customer Intelligence for WooCommerce', 'yoohw-customer-intelligence' ) . '</p>';
+		echo '<div class="yoohw-cos-settings-heading">';
 		echo '<h1>' . esc_html__( 'Settings', 'yoohw-customer-intelligence' ) . '</h1>';
 		echo '<p class="description">' . esc_html__( 'Configure customer intelligence and manage your customer data.', 'yoohw-customer-intelligence' ) . '</p></div>';
 
