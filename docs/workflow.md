@@ -1,13 +1,12 @@
 # YCI Lean Delivery
 
-The approved Issue defines the outcome and boundary. Codex owns discovery, concise
-technical design, implementation, validation, PR upkeep and bounded corrections.
-ChatGPT owns framing, unresolved boundary decisions, Plan Review when required and
-external Acceptance Review. Human owns merge and release authority.
-Tool capability never transfers another role's authority.
-Risk lane does not transfer role authority: Fast may omit independent Technical Review,
-but Codex still owns implementation. GitHub write access does not authorize ChatGPT to
-implement a Codex-owned task.
+The Human-authorized Issue defines the outcome and boundary. Codex Main owns Issue
+framing, discovery, technical design, implementation, subagent orchestration, validation,
+PR upkeep, corrections and completion verification. ChatGPT has no mandatory role.
+Human owns product priorities, material product/scope/support-contract decisions,
+acceptance of unresolved material risk, and merge, release, deployment and rollback.
+Tool capability never transfers authority. Engineering completion never authorizes merge
+or production changes.
 
 ## Start and recover
 
@@ -20,7 +19,10 @@ or delete unrelated branches.
 For any workflow-governance amendment, the workflow accepted on the task's admitted
 base governs admission, implementation, review, Acceptance and merge. Proposed or
 unmerged text cannot grant, waive, downgrade or redefine authority for its own task.
-The amendment takes effect only after Human-authorized merge.
+The amendment takes effect only after Human-authorized merge. This Codex-owned workflow
+applies to tasks admitted after that merge. Earlier tasks, including CIT-112 itself,
+retain their admitted rules and approval provenance; do not silently migrate them,
+rewrite historical verdicts or infer a missing approval from this document.
 
 No task document, allocator, state JSON, ledger, identity ref, digest chain or approval
 parser exists. After compaction/resume, recover current Issue, PR, head/base, CI, reviews,
@@ -34,47 +36,45 @@ GitHub Issue `#N` is the canonical task identity `CIT-N`; roadmap labels such as
 For `Run CIT-N` and `Continue CIT-N` in a known repository, use the numeric `N` as the
 GitHub Issue number and open Issue `#N` directly first. From that Issue and current
 GitHub state, recover admitted scope/risk, acceptance boundary, base, existing branch
-and PR, exact head/base, CI/review evidence and the next implementation-owned step or
+and PR, exact head/base, CI/review evidence and the next authorized step or
 handoff. Do not start by searching source/repository text for `CIT-N`. Search by task
 code only if the Issue is missing or unreadable, repository identity is uncertain, or
 GitHub Issue/branch/PR facts materially conflict and source inspection can reconcile
 them. A fallback search never supersedes an existing, consistent Issue as task authority.
 
-- `Create ...` — ChatGPT creates the minimum useful Issue boundary and risk.
-- `Run CIT-N` — Codex recovers Issue/branch/PR/head/base/current evidence and performs
-  the next implementation-owned step. For Controlled work, the same run should delegate
-  the required fresh reviewer after publishing the exact candidate when native
-  per-role delegation is available.
-- `Continue CIT-N` — recover GitHub state and resume the same task. This is a Human
-  convenience alias for continued execution, not lifecycle state.
-- `Plan Review CIT-N` — ChatGPT resolves a genuinely unresolved product/architecture/
-  data/permission/compatibility boundary and returns execution to `Run CIT-N`.
-- `Review CIT-N` — manual/standalone fresh Technical Review fallback. It never grants
-  merge authority.
-- `Acceptance Review CIT-N` — ChatGPT evaluates the frozen exact candidate against
-  current scope, CI and required Technical Review, then records an exact-head verdict
-  in GitHub.
-- `Merge CIT-N` — Human authorizes merge of the unchanged accepted candidate.
-- `Finalize CIT-N` — shortcut that conditionally authorizes Acceptance plus squash
-  merge in one turn when every prerequisite is already current. It is unavailable for
-  workflow-governance amendments, which require separate Acceptance and Human Merge.
-- `Chốt PR #N` remains a compatibility alias for Finalize when the exact PR candidate
-  is already unambiguous to the Human.
+- `Create ...` — Codex frames the minimum useful Issue from the Human goal: outcome,
+  scope/exclusions, invariants, acceptance criteria, risk and admitted base. A clear
+  Human request authorizes routine framing and in-scope execution without another gate.
+- `Run CIT-N` — Codex continues through discovery, implementation, relevant validation,
+  required fresh review, corrections, CI and completion verification without requiring
+  Human commands between internal stages.
+- `Continue CIT-N` — recover GitHub state and resume the same task, with no new authority.
+- `Review CIT-N` — manual/standalone fresh Technical Review fallback when native
+  delegation is unavailable. It never grants merge authority.
+- `Merge CIT-N` — Human authorizes merge of the unchanged verified candidate after
+  fresh pre-merge verification. It never authorizes release.
+
+For new-policy tasks, legacy `Plan Review CIT-N` requests Codex technical assessment;
+`Acceptance Review CIT-N` requests Codex completion verification. Neither is a required
+external stage, grants merge authority or restarts the task. `Finalize CIT-N` and
+`Chốt PR #N` remain explicit Human merge shortcuts only for an unchanged candidate
+already identified to Human and satisfying all current prerequisites. Governance
+amendments still require a separate Human Merge after completion verification.
+Earlier tasks retain the command semantics required by their admitted workflow.
 
 Legacy `Chạy` / `Tiếp tục` may continue one unambiguous active task, but explicit
 Issue-based commands are preferred for durable handoffs.
 
-Every terminal or handoff Human-facing response should end with:
+For an admitted task, use a concise footer when handing work to Human:
 
 `STATUS: <navigation label>`
 `Task: CIT-N`
 `Next: <one exact short Human command, or None>`
 
 Useful labels are navigation prose only, not machine state:
-`READY_TO_RUN`, `IN_PROGRESS`, `PLAN_REVIEW_REQUIRED`,
-`TECHNICAL_REVIEW_REQUIRED`, `TECHNICAL_REVIEW_BLOCKED`,
-`ACCEPTANCE_REVIEW_REQUIRED`, `READY_TO_MERGE`,
-`HUMAN_DECISION_REQUIRED`, `FINALIZED`.
+`READY_TO_MERGE`, `HUMAN_DECISION_REQUIRED`, `TECHNICAL_REVIEW_REQUIRED`
+and `FINALIZED`. Internal progress needs no command handoff. Earlier tasks may retain
+the navigation labels required by their admitted policy.
 
 ## Risk and execution
 
@@ -93,17 +93,20 @@ Plan Review/Acceptance/Merge authority, operator-command semantics or release/de
 authority boundaries. Classify by semantics, not file type. Proven typo, formatting or
 link fixes with no semantic change may remain Fast. Neither lane changes role ownership.
 
-Separate Plan Review is required only when discovery exposes a genuinely unresolved
-product, architecture, data, permission or compatibility boundary. A fully bounded
-Controlled bug/fix may implement directly without a Plan Review.
+Codex resolves technical architecture, data handling, permissions, compatibility
+approaches and test design within the accepted outcome and contracts. No separate
+Plan Review is mandatory. Record a concise technical plan in the existing Issue/PR
+only when complexity or continuity warrants it. Escalate material product/policy,
+scope/support-contract changes or unresolved material risk directly to Human with
+evidence, options and a recommendation; continue independent safe work where possible.
+Do not ask Human to choose routine implementation details or restart an internal stage.
 
 If Fast discovery reveals a Controlled trigger, stop before the sensitive change,
 keep the same Issue/PR, escalate risk and continue under the Controlled rules.
 
-A governance amendment follows `Create/admit` then `Run CIT-N` for Codex implementation,
-fresh independent Technical Review, exact-head `YCI Required CI`,
-`Acceptance Review CIT-N` by ChatGPT, then separate Human `Merge CIT-N`. Use Plan Review only for a
-genuinely unresolved boundary. Tool availability does not replace any of these gates.
+A new-policy governance amendment requires Codex implementation, fresh independent
+Technical Review, exact-head `YCI Required CI`, Codex completion verification and
+separate Human Merge. Its admitted-base rules govern the amendment itself.
 
 ## Compute policy
 
@@ -113,7 +116,7 @@ Compute follows phase rather than mutable task metadata:
 - Fast implementation: GPT-6.1 Sol / MEDIUM.
 - Controlled deterministic implementation and correction after the boundary is settled:
   GPT-6.1 Sol / MEDIUM.
-- Controlled discovery/architecture when a separate Plan Review is actually needed:
+- Controlled discovery/architecture with a genuinely unresolved technical boundary:
   GPT-6.1 Sol / HIGH.
 - Independent Technical Review, including every fresh re-review: GPT-6.1 Sol / HIGH.
 - GPT-6.1 Sol / XHIGH is exceptional for a specific unresolved architecture/security
@@ -125,25 +128,21 @@ Reduce irrelevant context before increasing compute. Do not serialize model, eff
 execution history into the Issue merely because a phase used them, and do not change
 models for individual shell/Git/lint/test commands inside a phase.
 
-## Discovery and Plan Review
+## Subagent orchestration
 
-Discovery normally happens inside `Run CIT-N`. If the implementation boundary is
-already clear, proceed without a separate ceremony.
+Codex Main remains accountable for the whole outcome. Use one default writer and
+optional read-only support agents for useful independent discovery, compatibility,
+security or test inspection. Delegate implementation only when write scopes and test
+resources are clearly disjoint; avoid concurrent writes to the same files or shared
+mutable test state. Main defines each assignment's goal, scope, output and completion
+condition, resolves conflicts and verifies the integrated result. Human does not relay
+prompts or coordinate agents. Do not add mandatory agent stages or an orchestration system.
+Do not delegate recursively.
 
-When a material boundary is unresolved, discovery uses the Controlled discovery compute,
-does not broaden writes, and returns:
-
-`STATUS: PLAN_REVIEW_REQUIRED`
-`Task: CIT-N`
-`Next: Plan Review CIT-N`
-
-ChatGPT Plan Review resolves only the product/scope/architecture boundary that blocks
-safe execution. It should not prescribe unnecessary implementation mechanics. After
-approval, return:
-
-`STATUS: READY_TO_RUN`
-`Task: CIT-N`
-`Next: Run CIT-N`
+Support agents are contributors, not independent reviewers of their own candidate.
+Anyone contributing to discovery, design, implementation or correction is ineligible
+to provide that candidate's independent Technical Review. A Controlled candidate always
+requires a distinct fresh reviewer under the rules below.
 
 ## Candidate and independent review
 
@@ -162,12 +161,12 @@ per-role delegation. The reviewer must:
 
 - use GPT-6.1 Sol / HIGH;
 - start in a fresh context;
-- treat runtime/test source as read-only;
+- treat the entire reviewed source as read-only, in a separate checkout/environment;
 - receive the Issue/approved Plan boundary, approved base, exact candidate SHA/diff,
   relevant contracts and validation evidence;
 - not receive or rely on implementer scratch reasoning/self-review conclusions;
-- independently inspect correctness, failure paths, security/privacy, compatibility and
-  tests as applicable;
+- independently inspect correctness, failure paths, security/privacy, compatibility,
+  tests, Issue acceptance criteria and unnecessary solution complexity as applicable;
 - bind findings or PASS to the exact reviewed SHA in GitHub PR review/comment evidence.
 
 A changed candidate invalidates the old review, including for documentation-only edits,
@@ -183,6 +182,10 @@ the requirement. Preserve the candidate and return:
 `Review CIT-N` is therefore the manual/standalone fallback, not the normal Human step
 for every Controlled task.
 
+Correctness, safety, regression, contract or acceptance failures are blockers.
+Optional cleanup, naming preferences and speculative refactors are advisory and do not
+create mandatory correction cycles.
+
 If review finds blocking P0/P1/P2 issues, keep corrections in the same Issue/PR. Route
 the durable findings back to the same implementer at GPT-6.1 Sol / MEDIUM, rerun relevant
 checks, push a new exact candidate and use a **new fresh reviewer** at HIGH.
@@ -190,44 +193,41 @@ checks, push a new exact candidate and use a **new fresh reviewer** at HIGH.
 Continue correction, validation and fresh re-review without a numeric round cap while
 each round makes material progress on current in-scope findings. Stop and return
 `HUMAN_DECISION_REQUIRED` for no material progress, a repeated or stagnant material
-blocker, oscillation, unsafe continuation or architecture/scope expansion requiring a
-new boundary decision.
+blocker, oscillation, unsafe continuation or material product/scope/support-contract
+expansion requiring Human decision. Routine technical redesign within scope remains
+Codex-owned.
 
-## Acceptance Review and merge
+## Completion verification and merge
 
-Fast work normally reaches Acceptance after relevant exact-head checks and
+Fast work reaches completion verification after relevant exact-head checks and
 `YCI Required CI` pass. Controlled work additionally requires fresh exact-candidate
-Technical Review PASS.
+Technical Review PASS, covering both technical correctness and Issue acceptance criteria.
 
-When those prerequisites are current, hand off with:
+Codex Main checks the current Issue boundary, total diff, exact head/base, CI and required
+review evidence, unresolved findings, acceptance criteria and limitations. Record one
+concise SHA-bound completion verdict in the existing PR evidence; do not add a separate
+mandatory Acceptance agent, status-only source commit or parallel approval record.
+Missing evidence is not PASS. Report material limitations and residual risks accurately;
+unresolved material risk requiring acceptance belongs to Human.
 
-`STATUS: ACCEPTANCE_REVIEW_REQUIRED`
-`Task: CIT-N`
-`Next: Acceptance Review CIT-N`
-
-`Acceptance Review CIT-N` is a ChatGPT gate distinct from Technical Review. It reads
-the current Issue boundary, total diff, exact-head CI and required SHA-bound Technical
-Review, verifies there is no unapproved scope/product/architecture drift, and records
-the exact accepted head in a GitHub PR review/comment. Do not mutate the source branch
-solely to add an Acceptance marker.
-
-On Acceptance PASS:
+When all prerequisites are current, hand off with:
 
 `STATUS: READY_TO_MERGE`
 `Task: CIT-N`
 `Next: Merge CIT-N`
 
-A direct Human `Merge CIT-N` authorizes only merge of the unchanged accepted
-candidate. Immediately before merge, reverify head/base, required checks, branch
-protection, no unresolved blockers and the exact Acceptance head. Any head movement
-invalidates the prior Acceptance. Any candidate movement invalidates the applicable
-Technical Review, regardless of file type.
+A direct Human `Merge CIT-N` authorizes only merge of the unchanged verified candidate.
+Immediately before merge, reverify head/base, required checks, branch protection,
+no unresolved blockers and the exact completion-verification head. Any head movement
+invalidates prior completion verification and applicable Technical Review, regardless
+of file type. If the base changes, inspect the delta and refresh affected validation
+and review before declaring readiness; do not infer compatibility from an older PASS.
 
-`Finalize CIT-N` remains a convenience shortcut. It may perform Acceptance Review plus
-conditional squash merge in one turn only when the candidate already identified to the
-Human is unchanged and every current-head prerequisite is satisfied. It never skips
-Technical Review, CI or fresh pre-merge verification. A workflow-governance amendment
-must instead use separate `Acceptance Review CIT-N` and Human `Merge CIT-N` commands.
+`Finalize CIT-N` or `Chốt PR #N` may verify and conditionally squash merge only when
+Human has already identified and authorized the unchanged candidate and all current
+prerequisites pass. Governance amendments require completion verification followed by
+a separate Human Merge. No convenience command bypasses required review or CI.
+Earlier tasks retain their admitted external Acceptance requirements.
 
 Observe the actual GitHub merge before reporting `FINALIZED`. Merge authority remains
 separate from version bumps, Git tags, GitHub Releases, WordPress.org publication,
