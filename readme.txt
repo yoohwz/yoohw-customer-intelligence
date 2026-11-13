@@ -7,7 +7,7 @@ Requires PHP: 7.4
 Requires Plugins: woocommerce
 WC requires at least: 8.2
 WC tested up to: 11.0
-Stable tag: 1.4.4
+Stable tag: 1.4.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -123,11 +123,10 @@ Archive removes a CRM profile from the main customer list. It does not delete Wo
 
 == Changelog ==
 
-= 1.4.4 =
+= 1.4.5 =
 
-Oct 22, 2026.
+Nov 13, 2026.
 
-* Improved the Overview dashboard and Customer Details layouts with clearer KPI, follow-up task, and attention sections, better use of available space and responsive mobile behavior.
-* Made task details and purchase-history panels easier to scan while preserving accurate empty, updating, unavailable and currency-specific data explanations.
-* Made it easier to undo a completed task using the existing reopen action.
-* Improved CRM task and digest email heading spacing and kept counts beside their headings.
+* Added a read-only Advanced Accounts profile summary with verification, membership, and program information when the supported integration and features are available.
+* Grouped Settings navigation while retaining the scoring and automation tabs, and simplified the Settings heading.
+* Improved Activity table column proportions for clearer event details.

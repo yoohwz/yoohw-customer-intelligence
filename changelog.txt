@@ -1,5 +1,11 @@
 === Customer Intelligence for WooCommerce Changelog ===
 
+= 1.4.5 (Nov 13, 2026) =
+
+* Added a read-only Advanced Accounts profile summary with verification, membership, and program information when the supported integration and features are available.
+* Grouped Settings navigation while retaining the scoring and automation tabs, and simplified the Settings heading.
+* Improved Activity table column proportions for clearer event details.
+
 = 1.4.4 (Oct 22, 2026) =
 
 * Improved the Overview dashboard and Customer Details layouts with clearer KPI, follow-up task, and attention sections, better use of available space and responsive mobile behavior.
