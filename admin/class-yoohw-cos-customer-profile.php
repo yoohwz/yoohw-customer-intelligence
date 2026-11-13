@@ -190,6 +190,7 @@ final class YoOhw_COS_Customer_Profile {
 
 		echo '<aside class="yoohw-cos-profile-side">';
 		self::render_identity_panel( $customer );
+		YoOhw_COS_AAP_Integration::render_panel( $customer );
 		echo '<div class="yoohw-cos-profile-terms postbox"><div class="postbox-header"><h2 class="hndle">' . esc_html__( 'Tags & segments', 'yoohw-customer-intelligence' ) . '</h2></div><div class="inside">';
 		self::render_customer_tags( (int) $customer['id'], $tags );
 		self::render_customer_segments( (int) $customer['id'], $segments );
