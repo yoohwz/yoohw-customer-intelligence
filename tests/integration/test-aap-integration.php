@@ -33,7 +33,11 @@ final class YCI_AAP_Integration_Test extends WP_UnitTestCase {
 			'verification' => array( 'email' => 'verified', 'phone' => 'unknown' ),
 			'memberships' => array(
 				array( 'role' => 'gold', 'label' => 'Gold <script>alert(1)</script>', 'effective' => true, 'unknown' => false, 'loyalty' => false,
-					'sources' => array( array( 'type' => 'order', 'status' => 'active', 'effective' => true, 'end' => '2030-01-01 00:00:00', 'duration_type' => 'period' ) ) ),
+					'sources' => array(
+						array( 'type' => 'order', 'status' => 'active', 'effective' => true, 'end' => '2030-01-01 00:00:00', 'duration_type' => 'period' ),
+						array( 'type' => 'order', 'status' => 'active', 'effective' => true, 'end' => '2020-01-01 00:00:00', 'duration_type' => 'unlimited' ),
+						array( 'type' => 'subscription', 'status' => 'active', 'effective' => true, 'end' => '2021-01-01 00:00:00', 'duration_type' => 'period' ),
+					) ),
 				array( 'role' => 'expired', 'label' => 'Expired membership', 'effective' => false, 'unknown' => false, 'loyalty' => false, 'sources' => array() ),
 				array( 'role' => 'legacy', 'label' => 'Legacy membership', 'effective' => false, 'unknown' => true, 'loyalty' => true, 'sources' => array() ),
 			),
@@ -52,6 +56,10 @@ final class YCI_AAP_Integration_Test extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'Unknown', $html );
 		$this->assertStringContainsString( 'Profile approved', $html );
 		$this->assertStringContainsString( 'Ends: 2030-01-01', $html );
+		$this->assertStringContainsString( 'No fixed end', $html );
+		$this->assertStringContainsString( 'Term and renewal managed by subscription', $html );
+		$this->assertStringNotContainsString( 'Ends: 2020', $html );
+		$this->assertStringNotContainsString( 'Ends: 2021', $html );
 		$this->assertStringContainsString( 'Inactive', $html );
 		$this->assertStringContainsString( 'Unconfirmed', $html );
 		$this->assertStringContainsString( 'Loyalty access evidence', $html );

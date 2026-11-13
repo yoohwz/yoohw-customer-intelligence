@@ -97,7 +97,13 @@ final class YoOhw_COS_AAP_Integration {
 				echo '<ul>';
 				$types = array( 'order' => __( 'Order', 'yoohw-customer-intelligence' ), 'subscription' => __( 'Subscription', 'yoohw-customer-intelligence' ), 'legacy' => __( 'Legacy source', 'yoohw-customer-intelligence' ) );
 				foreach ( $membership['sources'] as $source ) {
-					$term = '' !== $source['end'] ? sprintf( __( 'Ends: %s', 'yoohw-customer-intelligence' ), $source['end'] ) : ( 'unlimited' === $source['duration_type'] ? __( 'No fixed end', 'yoohw-customer-intelligence' ) : __( 'Term managed by source or unknown', 'yoohw-customer-intelligence' ) );
+					if ( 'subscription' === $source['type'] || 'subscription' === $source['duration_type'] ) {
+						$term = __( 'Term and renewal managed by subscription', 'yoohw-customer-intelligence' );
+					} elseif ( 'unlimited' === $source['duration_type'] ) {
+						$term = __( 'No fixed end', 'yoohw-customer-intelligence' );
+					} else {
+						$term = '' !== $source['end'] ? sprintf( __( 'Ends: %s', 'yoohw-customer-intelligence' ), $source['end'] ) : __( 'Term not confirmed', 'yoohw-customer-intelligence' );
+					}
 					echo '<li>' . esc_html( ( $types[ $source['type'] ] ?? __( 'Other source', 'yoohw-customer-intelligence' ) ) . ' — ' . ( $source['effective'] ? __( 'Active', 'yoohw-customer-intelligence' ) : __( 'Inactive', 'yoohw-customer-intelligence' ) ) . ' — ' . $term ) . '</li>';
 				}
 				echo '</ul>';
