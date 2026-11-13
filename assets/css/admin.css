@@ -3173,6 +3173,116 @@ a.yoohw-cos-attention-card:hover {
 	padding: 16px;
 }
 
+/* AAP's availability-aware summary uses the profile's native card and theme colors. */
+.yoohw-cos-profile-aap .postbox-header {
+	justify-content: space-between;
+}
+
+.yoohw-cos-profile-aap .yoohw-cos-aap-manage {
+	font-size: 12px;
+}
+
+.yoohw-cos-profile-aap .yoohw-cos-aap-section + .yoohw-cos-aap-section {
+	border-top: 1px solid var(--yoohw-cos-border-soft);
+	margin-top: 16px;
+	padding-top: 16px;
+}
+
+.yoohw-cos-profile-aap .yoohw-cos-aap-section h3 {
+	margin: 0 0 10px;
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--yoohw-cos-muted);
+}
+
+.yoohw-cos-profile-aap .yoohw-cos-aap-checks {
+	margin: 0;
+}
+
+.yoohw-cos-profile-aap .yoohw-cos-aap-row {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	flex-wrap: wrap;
+	gap: 6px 12px;
+	min-width: 0;
+}
+
+.yoohw-cos-profile-aap .yoohw-cos-aap-row > * {
+	min-width: 0;
+	max-width: 100%;
+	overflow-wrap: anywhere;
+}
+
+.yoohw-cos-profile-aap .yoohw-cos-aap-checks .yoohw-cos-aap-row + .yoohw-cos-aap-row {
+	margin-top: 10px;
+}
+
+.yoohw-cos-profile-aap .yoohw-cos-aap-row dd {
+	margin: 0;
+}
+
+.yoohw-cos-profile-aap .yoohw-cos-aap-status {
+	display: inline-block;
+	padding: 2px 8px;
+	border-radius: 4px;
+	font-size: 12px;
+	font-weight: 500;
+	line-height: 1.6;
+	color: var(--yoohw-cos-muted);
+	background: var(--yoohw-cos-bg-soft);
+}
+
+.yoohw-cos-profile-aap .yoohw-cos-aap-status--positive {
+	color: #1e6037;
+	background: var(--yoohw-cos-green-bg);
+}
+
+.yoohw-cos-profile-aap .yoohw-cos-aap-status--warning {
+	color: #6c4a00;
+	background: var(--yoohw-cos-yellow-bg);
+}
+
+.yoohw-cos-profile-aap .yoohw-cos-aap-membership + .yoohw-cos-aap-membership {
+	margin-top: 14px;
+}
+
+.yoohw-cos-profile-aap .yoohw-cos-aap-note {
+	display: block;
+	margin: 6px 0 0;
+	font-size: 12px;
+	line-height: 1.6;
+	color: var(--yoohw-cos-muted);
+	overflow-wrap: anywhere;
+}
+
+.yoohw-cos-profile-aap .yoohw-cos-aap-sources {
+	margin-top: 8px;
+	font-size: 12px;
+}
+
+.yoohw-cos-profile-aap .yoohw-cos-aap-sources summary {
+	cursor: pointer;
+	color: var(--yoohw-cos-primary);
+}
+
+.yoohw-cos-profile-aap .yoohw-cos-aap-sources ul {
+	margin: 10px 0 0;
+	padding-left: 12px;
+	border-left: 2px solid var(--yoohw-cos-border-soft);
+	list-style: none;
+}
+
+.yoohw-cos-profile-aap .yoohw-cos-aap-sources li + li {
+	margin-top: 10px;
+}
+
+.yoohw-cos-profile-aap .yoohw-cos-aap-review {
+	display: inline-block;
+	margin-top: 10px;
+	font-size: 12px;
+}
+
 .yoohw-cos-profile-attention {
 	display: flex;
 	gap: 8px 12px;

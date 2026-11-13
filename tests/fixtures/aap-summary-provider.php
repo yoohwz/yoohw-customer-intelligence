@@ -4,7 +4,7 @@ yci_test_environment();
 
 /** Deliberately narrow companion stand-in; native AAP behavior is tested in AAP. */
 final class WCAAP_Customer_Summary {
-	public const VERSION = 1;
+	public const VERSION = 2;
 	public static $response;
 	public static $calls = array();
 	public static function read( $user_id ) {
