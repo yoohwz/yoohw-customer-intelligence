@@ -5,7 +5,6 @@
  * Description: Unified customer intelligence and operations platform for WooCommerce.
  * Version: 1.4.5
  * Requires at least: 6.9
- * Tested up to: 7.1
  * Requires PHP: 7.4
  * Requires Plugins: woocommerce
  * WC requires at least: 8.2
