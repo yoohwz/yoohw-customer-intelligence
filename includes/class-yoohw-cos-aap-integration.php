@@ -123,6 +123,7 @@ final class YoOhw_COS_AAP_Integration {
 			} elseif ( 'unlimited' === $source['duration_type'] ) {
 				$term = __( 'No fixed end', 'yoohw-customer-intelligence' );
 			} else {
+				/* translators: %s: Membership source end date supplied by Advanced Accounts. */
 				$term = '' !== $source['end'] ? sprintf( __( 'Ends: %s', 'yoohw-customer-intelligence' ), $source['end'] ) : __( 'Term not confirmed', 'yoohw-customer-intelligence' );
 			}
 			echo '<li><div class="yoohw-cos-aap-row"><span>' . esc_html( $types[ $source['type'] ] ?? __( 'Other source', 'yoohw-customer-intelligence' ) ) . '</span>';
