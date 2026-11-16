@@ -494,27 +494,37 @@
 }
 
 .yoohw-cos-order-task-item {
-	align-items: center;
-	background: #f6f7f7;
+	background: #fff;
 	border: 1px solid #dcdcde;
 	border-radius: 4px;
 	display: grid;
 	gap: 10px;
-	grid-template-columns: minmax(0, 1fr) auto;
+	min-width: 0;
 	margin: 0;
-	padding: 10px;
+	padding: 12px;
 }
 
-.yoohw-cos-order-task-item__main {
+.yoohw-cos-order-task-item__header,
+.yoohw-cos-order-task-item__footer {
+	align-items: center;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
 	min-width: 0;
 }
 
+.yoohw-cos-order-task-item__header {
+	align-items: flex-start;
+}
+
 .yoohw-cos-order-task-item__title {
-	display: block;
-	font-size: 13px;
+	flex: 1 1 120px;
+	font-size: 14px;
 	font-weight: 600;
-	line-height: 1.35;
+	line-height: 1.45;
 	margin: 0;
+	min-width: 0;
+	overflow-wrap: anywhere;
 }
 
 .yoohw-cos-order-task-meta {
@@ -522,18 +532,20 @@
 	display: flex;
 	flex-wrap: wrap;
 	gap: 6px;
-	margin-top: 6px;
+	min-width: 0;
+	overflow-wrap: anywhere;
 }
 
 .yoohw-cos-order-task-badge {
 	background: #f6f7f7;
-	border: 1px solid #c3c4c7;
+	border: 1px solid transparent;
 	border-radius: 3px;
-	color: #3c434a;
-	display: inline-block;
-	font-size: 12px;
-	font-weight: 600;
-	line-height: 1.4;
+	color: #646970;
+	font-size: 11px;
+	font-weight: 500;
+	line-height: 1.5;
+	max-width: 100%;
+	overflow-wrap: anywhere;
 	padding: 1px 6px;
 }
 
@@ -553,28 +565,52 @@
 .yoohw-cos-order-task-overdue {
 	color: #b32d2e;
 	font-size: 12px;
-	font-weight: 600;
 	line-height: 1.45;
 }
 
+.yoohw-cos-order-task-overdue-label {
+	font-size: 11px;
+	font-weight: 600;
+}
+
+.yoohw-cos-order-task-assignee {
+	align-items: center;
+	display: inline-flex;
+	gap: 6px;
+	min-width: 0;
+	max-width: 100%;
+	overflow-wrap: anywhere;
+}
+
+.yoohw-cos-order-task-item .dashicons {
+	flex: 0 0 14px;
+	font-size: 14px;
+	height: 14px;
+	width: 14px;
+}
+
 .yoohw-cos-order-task-actions {
-	white-space: nowrap;
+	margin-inline-start: auto;
+	max-width: 100%;
 }
 
 .yoohw-cos-order-task-actions .button {
-	line-height: 2;
+	align-items: center;
+	display: inline-flex;
+	gap: 4px;
+	font-size: 12px;
+	justify-content: center;
+	line-height: 1.6;
 	min-height: 28px;
-	padding: 0 10px;
+	max-width: 100%;
+	overflow-wrap: anywhere;
+	padding: 3px 9px;
+	white-space: normal;
 }
 
 @media screen and (max-width: 782px) {
-	.yoohw-cos-order-task-item {
-		align-items: flex-start;
-		grid-template-columns: 1fr;
-	}
-
-	.yoohw-cos-order-task-actions {
-		justify-self: start;
+	.yoohw-cos-order-task-actions .button {
+		min-height: 40px;
 	}
 }
 #order_data .order_data_column .yoohw-cos-order-customer-field .select2-container--default .select2-selection--single,

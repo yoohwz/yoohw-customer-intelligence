@@ -810,22 +810,31 @@ final class YoOhw_COS_Order_Admin {
 			&& YoOhw_COS_DB::date_timestamp( $task['due_date'] ?? '' ) < current_time( 'timestamp' );
 
 		echo '<div class="yoohw-cos-order-task-item">';
-		echo '<div class="yoohw-cos-order-task-item__main">';
+		echo '<div class="yoohw-cos-order-task-item__header">';
 		echo '<strong class="yoohw-cos-order-task-item__title">' . esc_html( $task['title'] ?? '' ) . '</strong>';
-		echo '<div class="yoohw-cos-order-task-meta">';
 		echo '<span class="yoohw-cos-order-task-badge yoohw-cos-order-task-badge--' . esc_attr( sanitize_html_class( $priority ) ) . '">' . esc_html( YoOhw_COS_Tasks::get_priorities()[ $priority ] ?? __( 'Normal', 'yoohw-customer-intelligence' ) ) . '</span>';
+		echo '</div>';
 
 		if ( '&mdash;' !== $due_date ) {
-			echo '<span class="' . esc_attr( $overdue ? 'yoohw-cos-order-task-overdue' : 'yoohw-cos-order-task-due' ) . '">' . wp_kses_post( $due_date ) . '</span>';
+			echo '<div class="yoohw-cos-order-task-meta ' . esc_attr( $overdue ? 'yoohw-cos-order-task-overdue' : 'yoohw-cos-order-task-due' ) . '">';
+			echo '<span class="dashicons dashicons-clock" aria-hidden="true"></span>';
+			echo '<span>' . wp_kses_post( $due_date ) . '</span>';
+
+			if ( $overdue ) {
+				echo '<span class="yoohw-cos-order-task-overdue-label">' . esc_html__( 'Overdue', 'yoohw-customer-intelligence' ) . '</span>';
+			}
+
+			echo '</div>';
 		}
+
+		echo '<div class="yoohw-cos-order-task-item__footer">';
 
 		if ( ! empty( $task['assignee_name'] ) ) {
-			echo '<span class="yoohw-cos-order-task-assignee">' . esc_html( $task['assignee_name'] ) . '</span>';
+			echo '<span class="yoohw-cos-order-task-assignee"><span class="dashicons dashicons-admin-users" aria-hidden="true"></span><span>' . esc_html( $task['assignee_name'] ) . '</span></span>';
 		}
 
+		echo '<div class="yoohw-cos-order-task-actions"><a class="button button-small" href="' . esc_url( $action_url ) . '"><span class="dashicons ' . esc_attr( $is_complete ? 'dashicons-undo' : 'dashicons-yes' ) . '" aria-hidden="true"></span>' . esc_html( $is_complete ? __( 'Reopen', 'yoohw-customer-intelligence' ) : __( 'Complete', 'yoohw-customer-intelligence' ) ) . '</a></div>';
 		echo '</div>';
-		echo '</div>';
-		echo '<div class="yoohw-cos-order-task-actions"><a class="button button-small" href="' . esc_url( $action_url ) . '">' . esc_html( $is_complete ? __( 'Reopen', 'yoohw-customer-intelligence' ) : __( 'Complete', 'yoohw-customer-intelligence' ) ) . '</a></div>';
 		echo '</div>';
 	}
 
