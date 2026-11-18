@@ -39,13 +39,13 @@ Earlier tasks, including CIT-112 itself, retain their admitted rules and approva
 
 Compute is selected by phase, not stored as task lifecycle state.
 
-- Root / ordinary implementation / correction: GPT-6.1 Sol / MEDIUM.
+- Root / ordinary implementation / correction: GPT-6.2 Sol / MEDIUM.
 - Controlled discovery or architecture with a genuinely unresolved technical boundary:
-  GPT-6.1 Sol / HIGH.
-- Every fresh independent Technical Reviewer and re-reviewer: GPT-6.1 Sol / HIGH.
-- GPT-6.1 Sol / XHIGH is exceptional and requires a specific unresolved
+  GPT-6.2 Sol / HIGH.
+- Every fresh independent Technical Reviewer and re-reviewer: GPT-6.2 Sol / HIGH.
+- GPT-6.2 Sol / XHIGH is exceptional and requires a specific unresolved
   architecture/security reason.
-- GPT-6 Astra is exceptional manual escalation, not a governed default.
+- GPT-6.2 Astra is exceptional manual escalation, not a governed default.
 
 Reduce irrelevant context before increasing compute. Do not switch models for shell/Git/test
 substeps inside a phase.
