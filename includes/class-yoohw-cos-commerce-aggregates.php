@@ -218,7 +218,7 @@ final class YoOhw_COS_Commerce_Aggregates {
 		$row = $wpdb->get_row( $wpdb->prepare(
 			'SELECT order_id, order_date, revenue_amount, currency FROM %i
 			WHERE customer_id = %d AND counts_as_order = 1 AND order_date > %s AND order_date <= %s
-			AND policy_version >= %d ORDER BY order_date ASC, order_id ASC LIMIT 1',
+			AND policy_version >= %d ORDER BY order_date ASC, order_id ASC LIMIT 1 FOR UPDATE',
 			YoOhw_COS_DB::order_facts_table(), $customer_id, $after, $through, YoOhw_COS_Commerce_Metrics_Policy::VERSION
 		), ARRAY_A );
 		return '' !== $wpdb->last_error ? null : ( $row ?? array() );

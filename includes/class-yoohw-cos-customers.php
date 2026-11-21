@@ -821,14 +821,14 @@ final class YoOhw_COS_Customers {
 		);
 	}
 
-	public static function get_customer( int $customer_id ): array {
+	public static function get_customer( int $customer_id, bool $current = false ): array {
 		global $wpdb;
 
 		$table = YoOhw_COS_DB::customers_table();
 
 		$customer = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
-				'SELECT * FROM %i WHERE id = %d LIMIT 1',
+				'SELECT * FROM %i WHERE id = %d LIMIT 1' . ( $current ? ' FOR UPDATE' : '' ),
 				$table,
 				absint( $customer_id )
 			),

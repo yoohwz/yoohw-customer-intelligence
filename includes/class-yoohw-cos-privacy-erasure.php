@@ -21,27 +21,38 @@ final class YoOhw_COS_Privacy_Erasure {
 		return $erasers;
 	}
 
-	/** Null means suppression could not be evaluated and the writer must fail closed. */
-	public static function is_suppressed( array $identity ): ?bool {
+	/**
+	 * Null means suppression could not be evaluated and the writer must fail closed.
+	 * Use a current read under the Reset guard for a persisted customer reference.
+	 */
+	public static function is_suppressed( array $identity, bool $current = false ): ?bool {
 		global $wpdb;
 		$table = YoOhw_COS_DB::table( 'privacy_suppression' );
-		$secret = get_option( self::SECRET_OPTION, null );
+		$lock = $current ? ' FOR UPDATE' : '';
+		if ( $current ) {
+			$secret = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s FOR UPDATE', $wpdb->options, self::SECRET_OPTION ) );
+			if ( '' !== $wpdb->last_error ) {
+				return null;
+			}
+		} else {
+			$secret = get_option( self::SECRET_OPTION, null );
+		}
 		$exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM privacy/export state must reflect current rows; no WordPress object API exists.
 		if ( '' !== $wpdb->last_error || $exists !== $table ) {
 			return null;
 		}
 		if ( null === $secret ) {
-			$row = $wpdb->get_var( $wpdb->prepare( 'SELECT id FROM %i LIMIT 1', $table ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM privacy/export state must reflect current rows; no WordPress object API exists.
+			$row = $wpdb->get_var( $wpdb->prepare( 'SELECT id FROM %i LIMIT 1' . $lock, $table ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM privacy/export state must reflect current rows; no WordPress object API exists.
 			return '' === $wpdb->last_error && null === $row ? false : null;
 		}
 		if ( ! is_string( $secret ) || ! preg_match( '/^[a-f0-9]{64}$/D', $secret ) ) {
 			return null;
 		}
-		$unknown = $wpdb->get_var( $wpdb->prepare( 'SELECT id FROM %i WHERE hash_version <> 1 LIMIT 1', $table ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM privacy/export state must reflect current rows; no WordPress object API exists.
+		$unknown = $wpdb->get_var( $wpdb->prepare( 'SELECT id FROM %i WHERE hash_version <> 1 LIMIT 1' . $lock, $table ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM privacy/export state must reflect current rows; no WordPress object API exists.
 		if ( '' !== $wpdb->last_error || null !== $unknown ) { return null; }
 		foreach ( self::identity_values( $identity ) as $kind => $value ) {
 			$digest = hash_hmac( 'sha256', $kind . '|' . $value, hex2bin( $secret ) );
-			$found = $wpdb->get_var( $wpdb->prepare( 'SELECT id FROM %i WHERE identity_kind = %s AND identity_digest = %s AND hash_version = 1 LIMIT 1', $table, $kind, $digest ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM privacy/export state must reflect current rows; no WordPress object API exists.
+			$found = $wpdb->get_var( $wpdb->prepare( 'SELECT id FROM %i WHERE identity_kind = %s AND identity_digest = %s AND hash_version = 1 LIMIT 1' . $lock, $table, $kind, $digest ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM privacy/export state must reflect current rows; no WordPress object API exists.
 			if ( '' !== $wpdb->last_error ) {
 				return null;
 			}

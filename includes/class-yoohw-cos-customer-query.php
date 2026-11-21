@@ -99,7 +99,7 @@ final class YoOhw_COS_Customer_Query {
 	public static function scan( int $after_id, int $limit ): ?array {
 		global $wpdb;
 		$items = $wpdb->get_results( $wpdb->prepare(
-			'SELECT * FROM %i WHERE id > %d ORDER BY id ASC LIMIT %d',
+			'SELECT * FROM %i WHERE id > %d ORDER BY id ASC LIMIT %d FOR UPDATE',
 			YoOhw_COS_DB::customers_table(), max( 0, $after_id ), min( 250, max( 1, $limit ) )
 		), ARRAY_A );
 		if ( ! is_array( $items ) || '' !== $wpdb->last_error ) {

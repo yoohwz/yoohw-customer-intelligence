@@ -65,6 +65,8 @@ for canonical safe rows in ascending ID order, including archived profiles, with
 at most 250 rows. Start at zero and advance using the last returned ID. A null
 result is a read failure and must preserve the cursor. Hold the Reset guard before
 reading or writing customer-bound state and bind persisted cursors to its epoch.
+The scan reads current profile rows even when the caller has an older database
+snapshot.
 
 `YoOhw_COS_Commerce_Aggregates::first_recognized_order( $customer_id, $after, $through )`
 reads the first current-policy recognized order with date in `(after, through]`
@@ -84,8 +86,9 @@ Operational failures preserve erasure retry or the pending Reset boundary. Each
 provider remains responsible for a WordPress privacy exporter and retention.
 
 A scan is a read, so it can still include a customer whose erasure spans pages.
-Before every customer-bound add-on write, load the current profile and verify
-`YoOhw_COS_Privacy_Erasure::is_suppressed( $profile ) === false` while holding the
-Reset guard. Suppression receipts are persisted before Core drains dependent rows.
+Before every customer-bound add-on write, hold the Reset guard and load the current
+profile through the scan or `YoOhw_COS_Customers::get_customer( $id, true )`.
+Verify `YoOhw_COS_Privacy_Erasure::is_suppressed( $profile, true ) === false`.
+The explicit current reads also exclude an older transaction snapshot. Suppression receipts are persisted before Core drains dependent rows.
 Abort or defer on a missing profile, a changed identity or an unavailable decision.
 Check the epoch before resolving any previously stored customer or task ID.
