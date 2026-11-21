@@ -13,6 +13,9 @@ final class YoOhw_COS_Dependent_Data {
 	 * customer-bound operational data, with no foreign key to Core tables.
 	 */
 	public static function register( array $suffixes ): bool {
+		if ( ! self::valid( $suffixes ) ) {
+			return false;
+		}
 		$registered = self::registered();
 		$combined = array_values( array_unique( array_merge( $registered, $suffixes ), SORT_REGULAR ) );
 		if ( ! self::valid( $combined ) ) {
@@ -34,7 +37,12 @@ final class YoOhw_COS_Dependent_Data {
 	}
 
 	private static function registered(): array {
-		$registered = get_option( self::OPTION, array() );
+		global $wpdb;
+		$value = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, self::OPTION ) );
+		if ( '' !== $wpdb->last_error ) {
+			throw new RuntimeException( 'Dependent customer data registration could not be read.' );
+		}
+		$registered = null === $value ? array() : maybe_unserialize( $value );
 		if ( ! is_array( $registered ) || ! self::valid( $registered ) ) {
 			throw new RuntimeException( 'Dependent customer data registration is invalid.' );
 		}
