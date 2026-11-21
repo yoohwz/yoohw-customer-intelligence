@@ -276,4 +276,18 @@ final class YCI_Dependent_Data_Test extends WP_UnitTestCase {
 		}
 	}
 
+
+	public function test_nontransactional_tables_cannot_be_registered(): void {
+		global $wpdb;
+		$suffix = 'yoohw_test_dependent_legacy_engine';
+		$table = $wpdb->prefix . $suffix;
+		$this->assertNotFalse( $wpdb->query( $wpdb->prepare( 'CREATE TABLE %i (customer_id BIGINT UNSIGNED NOT NULL, KEY subject (customer_id)) ENGINE=MyISAM', $table ) ) );
+		try {
+			$this->assertFalse( YoOhw_COS_Dependent_Data::register( array( $suffix ) ) );
+			$this->assertNotContains( $suffix, get_option( 'yoohw_cos_dependent_customer_tables', array() ) );
+		} finally {
+			$wpdb->query( $wpdb->prepare( 'DROP TABLE %i', $table ) );
+		}
+	}
+
 }

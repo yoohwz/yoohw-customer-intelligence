@@ -79,10 +79,12 @@ Callers must apply Core currency comparability before displaying or comparing mo
 
 Under the Reset guard, register site-relative suffixes with
 `YoOhw_COS_Dependent_Data::register()` after creating add-on tables. Registered
-tables must consist entirely of customer-bound rows, with a nonnullable `BIGINT UNSIGNED customer_id` as the
+tables must use InnoDB and consist entirely of customer-bound rows, with a nonnullable `BIGINT UNSIGNED customer_id` as the
 leading column of an index and no foreign keys in either direction, including
 between dependent tables. Core checks the installed schema before each
-destructive operation so a recreated, incompatible table cannot widen erasure. The contract accepts up to 16 unique
+destructive operation so a recreated, incompatible table cannot widen erasure.
+Register and write data on the same WordPress database connection. If called
+inside a transaction, commit the registration and dependent writes together. The contract accepts up to 16 unique
 `yoohw_*` add-on suffixes, excluding the Core namespace. Check the return value
 before writing customer-bound data. Core stores only the suffixes, so it can
 drain rows in bounded erasure pages and clear the tables during Reset even when

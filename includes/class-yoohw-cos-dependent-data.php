@@ -8,7 +8,7 @@ final class YoOhw_COS_Dependent_Data {
 	private const DELETE_LIMIT = 250;
 
 	/**
-	 * Register site-relative suffixes of tables with an indexed unsigned BIGINT customer_id.
+	 * Register site-relative suffixes of InnoDB tables with an indexed unsigned BIGINT customer_id.
 	 * Call under the Reset guard after installation. Tables must contain only
 	 * customer-bound operational data. Foreign keys in either direction are
 	 * unsupported, including relationships between dependent tables.
@@ -69,6 +69,12 @@ final class YoOhw_COS_Dependent_Data {
 
 	private static function eligible_table( string $table ): bool {
 		global $wpdb;
+		$engine = $wpdb->get_var( $wpdb->prepare(
+			'SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s', $table
+		) );
+		if ( '' !== $wpdb->last_error || 'InnoDB' !== $engine ) {
+			return false;
+		}
 		$column = $wpdb->get_row( $wpdb->prepare( "SHOW COLUMNS FROM %i WHERE Field = 'customer_id'", $table ), ARRAY_A );
 		if ( '' !== $wpdb->last_error || ! $column || 'NO' !== $column['Null'] ||
 			! preg_match( '/^bigint(?:\([0-9]+\))? unsigned$/Di', $column['Type'] ) ) {
