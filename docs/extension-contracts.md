@@ -66,7 +66,10 @@ at most 250 rows. Start at zero and advance using the last returned ID. A null
 result is a read failure and must preserve the cursor. Hold the Reset guard before
 reading or writing customer-bound state and bind persisted cursors to its epoch.
 The scan reads current profile rows and current scoring and migration state even
-when the caller has an older database snapshot.
+when the caller has an older database snapshot. Current reads omit stale derived
+classifications rather than recalculating them from an older settings snapshot.
+Check `core/monetary_intelligence_fresh` in the facts map before treating a
+classification as known.
 
 `YoOhw_COS_Commerce_Aggregates::first_recognized_order( $customer_id, $after, $through )`
 reads the first current-policy recognized order with date in `(after, through]`
@@ -76,8 +79,10 @@ Callers must apply Core currency comparability before displaying or comparing mo
 
 Under the Reset guard, register site-relative suffixes with
 `YoOhw_COS_Dependent_Data::register()` after creating add-on tables. Registered
-tables must consist entirely of customer-bound rows, with a leading `customer_id` index column and no foreign
-keys in either direction, including between dependent tables. The contract accepts up to 16 unique
+tables must consist entirely of customer-bound rows, with a nonnullable `BIGINT UNSIGNED customer_id` as the
+leading column of an index and no foreign keys in either direction, including
+between dependent tables. Core checks the installed schema before each
+destructive operation so a recreated, incompatible table cannot widen erasure. The contract accepts up to 16 unique
 `yoohw_*` add-on suffixes, excluding the Core namespace. Check the return value
 before writing customer-bound data. Core stores only the suffixes, so it can
 drain rows in bounded erasure pages and clear the tables during Reset even when

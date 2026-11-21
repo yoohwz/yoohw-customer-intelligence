@@ -113,14 +113,21 @@ final class YoOhw_COS_Commerce_Metrics_Policy {
 		}
 		if ( $current ) {
 			global $wpdb;
+			$option = 'woocommerce_currency';
+			$pre = apply_filters( 'pre_option_woocommerce_currency', false, $option, false );
+			$pre = apply_filters( 'pre_option', $pre, $option, false );
+			if ( false !== $pre ) {
+				return (string) apply_filters( 'woocommerce_currency', $pre );
+			}
 			$saved = $wpdb->get_var( $wpdb->prepare(
-				'SELECT option_value FROM %i WHERE option_name = %s FOR UPDATE', $wpdb->options, 'woocommerce_currency'
+				'SELECT option_value FROM %i WHERE option_name = %s FOR UPDATE', $wpdb->options, $option
 			) );
 			if ( '' !== $wpdb->last_error ) {
 				return '';
 			}
-			// Preserve the WooCommerce currency filter on the current option value.
-			return (string) apply_filters( 'woocommerce_currency', $saved ?? false );
+			$value = null === $saved ? apply_filters( 'default_option_woocommerce_currency', false, $option, false )
+				: apply_filters( 'option_woocommerce_currency', maybe_unserialize( $saved ), $option );
+			return (string) apply_filters( 'woocommerce_currency', $value );
 		}
 		$generation = YoOhw_COS_Intelligence::get_scoring_generation();
 		if ( self::$store_currency_generation !== $generation ) {

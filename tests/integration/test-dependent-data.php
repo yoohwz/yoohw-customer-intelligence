@@ -103,7 +103,7 @@ final class YCI_Dependent_Data_Test extends WP_UnitTestCase {
 		}
 	}
 
-	public function test_erasure_reads_registration_after_an_older_transaction_snapshot(): void {
+	public function test_erasure_reads_new_subject_and_registration_after_an_older_snapshot(): void {
 		global $wpdb;
 		$suffix = 'yoohw_test_dependent_late';
 		$table = $wpdb->prefix . $suffix;
@@ -112,16 +112,19 @@ final class YCI_Dependent_Data_Test extends WP_UnitTestCase {
 		$other = new wpdb( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST );
 		try {
 			delete_option( $option );
-			$subject = YoOhw_COS_Customers::create_customer( array( 'email' => 'addon-late@example.test' ) );
-			$this->assertGreaterThan( 0, $subject );
 			$this->assertNotFalse( $wpdb->query( 'START TRANSACTION WITH CONSISTENT SNAPSHOT' ) );
 			$this->assertNull( $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, $option ) ) );
+			$this->assertSame( 1, $other->insert( YoOhw_COS_DB::customers_table(), array(
+				'email' => 'addon-late@example.test', 'created_at' => YoOhw_COS_DB::now(), 'updated_at' => YoOhw_COS_DB::now(),
+			) ) );
+			$subject = (int) $other->insert_id;
+			$this->assertEmpty( YoOhw_COS_Customers::get_customer( $subject ) );
 			$this->assertSame( 1, $other->insert( $wpdb->options, array( 'option_name' => $option, 'option_value' => serialize( array( $suffix ) ), 'autoload' => 'off' ) ) );
 			$this->assertSame( 1, $other->insert( $table, array( 'customer_id' => $subject ) ) );
 			$this->assertNull( $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, $option ) ) );
 			$result = YoOhw_COS_Privacy_Erasure::erase( 'addon-late@example.test' );
 			$this->assertTrue( $result['items_removed'] );
-			$this->assertNotEmpty( YoOhw_COS_Customers::get_customer( $subject ) );
+			$this->assertNotEmpty( YoOhw_COS_Customers::get_customer( $subject, true ) );
 			$this->assertSame( '0', (string) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i', $table ) ) );
 		} finally {
 			$wpdb->query( 'ROLLBACK' );
@@ -183,7 +186,10 @@ final class YCI_Dependent_Data_Test extends WP_UnitTestCase {
 		$name = 'yoohw_cos_intelligence_generation';
 		$old = wp_generate_uuid4();
 		$current = wp_generate_uuid4();
-		$profile = YoOhw_COS_Customers::create_customer( array( 'email' => 'addon-scoring@example.test' ) );
+		$profile = YoOhw_COS_Customers::create_customer( array(
+			'email' => 'addon-scoring@example.test', 'vip_status' => 'gold',
+			'intelligence_generation' => $old, 'intelligence_currency_ready' => 1,
+		) );
 		$this->assertGreaterThan( 0, $profile );
 		$previous = get_option( $name, null );
 		update_option( $name, $old, false );
@@ -198,6 +204,8 @@ final class YCI_Dependent_Data_Test extends WP_UnitTestCase {
 			try {
 				$rows = YoOhw_COS_Customer_Query::scan( $profile - 1, 1 );
 				$this->assertSame( $current, $rows[0]['_commerce_context']['generation'] );
+				$this->assertArrayNotHasKey( 'vip_status', $rows[0] );
+				$this->assertFalse( YoOhw_COS_Customer_Facts::core_snapshot( $rows[0] )['core/monetary_intelligence_fresh'] );
 			} finally {
 				YoOhw_COS_Reset_Guard::leave();
 			}
@@ -206,6 +214,32 @@ final class YCI_Dependent_Data_Test extends WP_UnitTestCase {
 			$other->close();
 			wp_cache_delete( $name, 'options' );
 			null === $previous ? delete_option( $name ) : update_option( $name, $previous, false );
+		}
+	}
+
+
+	public function test_erasure_does_not_coerce_text_customer_ids(): void {
+		global $wpdb;
+		$suffix = 'yoohw_test_dependent_text';
+		$table = $wpdb->prefix . $suffix;
+		$option = 'yoohw_cos_dependent_customer_tables';
+		$this->assertNotFalse( $wpdb->query( $wpdb->prepare( 'CREATE TABLE %i (customer_id VARCHAR(20) NOT NULL, KEY subject (customer_id)) ENGINE=InnoDB', $table ) ) );
+		try {
+			$this->assertFalse( YoOhw_COS_Dependent_Data::register( array( $suffix ) ) );
+			$this->assertSame( 1, $wpdb->insert( $table, array( 'customer_id' => '9007199254740992' ) ) );
+			$this->assertSame( 1, $wpdb->insert( $table, array( 'customer_id' => '9007199254740993' ) ) );
+			// A stale manifest can point to a different schema after a table is recreated.
+			update_option( $option, array( $suffix ), false );
+			try {
+				YoOhw_COS_Dependent_Data::erase( 9007199254740992 );
+				$this->fail( 'Expected erasure to reject the changed column type.' );
+			} catch ( RuntimeException $exception ) {
+				$this->assertSame( 'Dependent customer table schema is incompatible.', $exception->getMessage() );
+			}
+			$this->assertSame( '2', (string) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i', $table ) ) );
+		} finally {
+			$wpdb->query( $wpdb->prepare( 'DROP TABLE %i', $table ) );
+			delete_option( $option );
 		}
 	}
 

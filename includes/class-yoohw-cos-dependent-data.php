@@ -8,7 +8,7 @@ final class YoOhw_COS_Dependent_Data {
 	private const DELETE_LIMIT = 250;
 
 	/**
-	 * Register suffixes of per-site add-on tables with an indexed customer_id.
+	 * Register site-relative suffixes of tables with an indexed unsigned BIGINT customer_id.
 	 * Call under the Reset guard after installation. Tables must contain only
 	 * customer-bound operational data. Foreign keys in either direction are
 	 * unsupported, including relationships between dependent tables.
@@ -22,15 +22,15 @@ final class YoOhw_COS_Dependent_Data {
 		if ( ! self::valid( $combined ) ) {
 			return false;
 		}
-		foreach ( array_diff( $combined, $registered ) as $suffix ) {
-			if ( ! self::eligible_table( $suffix ) ) {
+		global $wpdb;
+		foreach ( $suffixes as $suffix ) {
+			if ( ! self::eligible_table( $wpdb->prefix . $suffix ) ) {
 				return false;
 			}
 		}
 		if ( $combined === $registered ) {
 			return true;
 		}
-		global $wpdb;
 		$serialized = maybe_serialize( $combined );
 		$stored = $wpdb->query( $wpdb->prepare(
 			"INSERT INTO %i (option_name, option_value, autoload) VALUES (%s, %s, 'off')
@@ -67,11 +67,11 @@ final class YoOhw_COS_Dependent_Data {
 		return $registered;
 	}
 
-	private static function eligible_table( string $suffix ): bool {
+	private static function eligible_table( string $table ): bool {
 		global $wpdb;
-		$table = $wpdb->prefix . $suffix;
-		$found = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table ) ) );
-		if ( '' !== $wpdb->last_error || $found !== $table ) {
+		$column = $wpdb->get_row( $wpdb->prepare( "SHOW COLUMNS FROM %i WHERE Field = 'customer_id'", $table ), ARRAY_A );
+		if ( '' !== $wpdb->last_error || ! $column || 'NO' !== $column['Null'] ||
+			! preg_match( '/^bigint(?:\([0-9]+\))? unsigned$/Di', $column['Type'] ) ) {
 			return false;
 		}
 		$index = $wpdb->get_row( $wpdb->prepare( "SHOW INDEX FROM %i WHERE Column_name = 'customer_id' AND Seq_in_index = 1", $table ) );
@@ -98,6 +98,9 @@ final class YoOhw_COS_Dependent_Data {
 				throw new RuntimeException( 'Dependent customer tables could not be read.' );
 			}
 			if ( $found === $table ) {
+				if ( ! self::eligible_table( $table ) ) {
+					throw new RuntimeException( 'Dependent customer table schema is incompatible.' );
+				}
 				$tables[] = $table;
 			}
 		}

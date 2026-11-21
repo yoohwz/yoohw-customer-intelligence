@@ -39,8 +39,12 @@ final class YoOhw_COS_Intelligence {
 			&& (string) ( $customer['intelligence_generation'] ?? '' ) === ( null === $generation ? self::get_scoring_generation() : $generation );
 	}
 
-	public static function safe_customer_decisions( array $customer, ?string $generation = null ): array {
+	public static function safe_customer_decisions( array $customer, ?string $generation = null, bool $recalculate = true ): array {
 		if ( self::persisted_decisions_are_safe( $customer, $generation ) ) {
+			return $customer;
+		}
+		if ( ! $recalculate ) {
+			unset( $customer['customer_status'], $customer['lifecycle_stage'], $customer['vip_status'], $customer['risk_score'], $customer['trust_score'] );
 			return $customer;
 		}
 		$customer['customer_status'] = self::calculate_customer_status( $customer );

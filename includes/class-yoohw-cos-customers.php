@@ -835,7 +835,14 @@ final class YoOhw_COS_Customers {
 			ARRAY_A
 		);
 
-		return is_array( $customer ) ? YoOhw_COS_Intelligence::safe_customer_decisions( $customer ) : array();
+		if ( ! is_array( $customer ) ) {
+			return array();
+		}
+		if ( $current ) {
+			$context = YoOhw_COS_Commerce_Metrics_Policy::read_context( true );
+			return YoOhw_COS_Intelligence::safe_customer_decisions( $customer, $context['generation'], false ) + array( '_commerce_context' => $context );
+		}
+		return YoOhw_COS_Intelligence::safe_customer_decisions( $customer );
 	}
 
 	public static function customer_exists( int $customer_id ): bool {
