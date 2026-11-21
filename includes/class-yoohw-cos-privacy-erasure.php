@@ -218,7 +218,7 @@ final class YoOhw_COS_Privacy_Erasure {
 					}
 				}
 				// The profile is deleted only after all dependent tables are empty.
-				if ( $user_id && ! self::delete_views( $user_id ) ) {
+				if ( $user_id && null === self::delete_views( $user_id ) ) {
 					return self::result( false, true, false, true );
 				}
 				$deleted = $wpdb->delete( $table, array( 'id' => $customer_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM privacy/export state must reflect current rows; no WordPress object API exists.
@@ -234,11 +234,9 @@ final class YoOhw_COS_Privacy_Erasure {
 			}
 			$links = self::drain_order_link_snapshot( $snapshot_option );
 			if ( null !== $links ) { return self::result( $links['removed'], true, false, $links['retry'] ); }
-			$had_views = $user_id && metadata_exists( 'user', $user_id, '_yoohw_cos_saved_customer_views' );
-			if ( $user_id && ! self::delete_views( $user_id ) ) {
-				return self::result( false, true, false, true );
-			}
-			return self::result( $had_views, true, true );
+			$removed_views = $user_id ? self::delete_views( $user_id ) : 0;
+			return null === $removed_views ? self::result( false, true, false, true )
+				: self::result( $removed_views > 0, true, true );
 		} catch ( Throwable $exception ) {
 			return self::result( false, false, false, true );
 		} finally {
@@ -368,7 +366,7 @@ final class YoOhw_COS_Privacy_Erasure {
 	private static function first_unlinked_events( int $user_id ): ?array {
 		global $wpdb;
 		$rows = $wpdb->get_results( $wpdb->prepare( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM privacy/export state must reflect current rows; no WordPress object API exists.
-			"SELECT id FROM %i WHERE customer_id IS NULL AND wp_user_id = %d AND event_source IN ('wc_blacklist_manager', 'wc_blacklist_manager_premium', 'wc_loyalty') ORDER BY id ASC LIMIT %d",
+			"SELECT id FROM %i WHERE customer_id IS NULL AND wp_user_id = %d AND event_source IN ('wc_blacklist_manager', 'wc_blacklist_manager_premium', 'wc_loyalty') ORDER BY id ASC LIMIT %d FOR UPDATE",
 			YoOhw_COS_DB::events_table(), $user_id, self::PAGE_SIZE
 		), ARRAY_A );
 		return '' === $wpdb->last_error && is_array( $rows ) ? $rows : null;
@@ -385,12 +383,15 @@ final class YoOhw_COS_Privacy_Erasure {
 		return false === $deleted ? 0 : (int) $deleted;
 	}
 
-	private static function delete_views( int $user_id ): bool {
+	/** Delete this plugin's private user metadata against the current subject row. */
+	private static function delete_views( int $user_id ): ?int {
+		global $wpdb;
 		$key = '_yoohw_cos_saved_customer_views';
-		if ( ! metadata_exists( 'user', $user_id, $key ) ) {
-			return true;
-		}
-		delete_user_meta( $user_id, $key );
-		return ! metadata_exists( 'user', $user_id, $key );
+		$removed = $wpdb->query( $wpdb->prepare(
+			'DELETE FROM %i WHERE user_id = %d AND meta_key = %s AND BINARY meta_key = BINARY %s',
+			$wpdb->usermeta, $user_id, $key, $key
+		) );
+		wp_cache_delete( $user_id, 'user_meta' );
+		return false === $removed ? null : $removed;
 	}
 }

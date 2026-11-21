@@ -243,4 +243,37 @@ final class YCI_Dependent_Data_Test extends WP_UnitTestCase {
 		}
 	}
 
+
+	public function test_native_legacy_dependencies_are_current_under_erasure(): void {
+		global $wpdb;
+		$email = 'addon-native-erasure@example.test';
+		$user = self::factory()->user->create( array( 'user_email' => $email ) );
+		$wpdb->query( 'COMMIT' );
+		$other = new wpdb( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST );
+		$event_table = YoOhw_COS_DB::events_table();
+		$key = '_yoohw_cos_saved_customer_views';
+		$wpdb->query( 'START TRANSACTION WITH CONSISTENT SNAPSHOT' );
+		try {
+			$this->assertFalse( metadata_exists( 'user', $user, $key ) );
+			$this->assertSame( 1, $other->insert( $event_table, array(
+				'wp_user_id' => $user, 'event_type' => 'fixture_late_event', 'event_source' => 'wc_loyalty',
+				'description' => 'Synthetic event', 'created_at' => YoOhw_COS_DB::now(),
+			) ) );
+			$this->assertSame( 1, $other->insert( $wpdb->usermeta, array(
+				'user_id' => $user, 'meta_key' => $key, 'meta_value' => maybe_serialize( array( 'synthetic' ) ),
+			) ) );
+			$first = YoOhw_COS_Privacy_Erasure::erase( $email );
+			$this->assertTrue( $first['items_removed'] );
+			$this->assertFalse( $first['done'] );
+			$next = YoOhw_COS_Privacy_Erasure::erase( $email, 2 );
+			$this->assertTrue( $next['items_removed'] );
+			$this->assertTrue( $next['done'] );
+		} finally {
+			$wpdb->query( 'ROLLBACK' );
+			$other->delete( $event_table, array( 'wp_user_id' => $user, 'event_type' => 'fixture_late_event' ) );
+			$other->delete( $wpdb->usermeta, array( 'user_id' => $user, 'meta_key' => $key ) );
+			$other->close();
+		}
+	}
+
 }
