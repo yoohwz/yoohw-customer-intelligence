@@ -105,7 +105,7 @@ final class YoOhw_COS_Customer_Query {
 		if ( ! is_array( $items ) || '' !== $wpdb->last_error ) {
 			return null;
 		}
-		$context = YoOhw_COS_Commerce_Metrics_Policy::read_context();
+		$context = YoOhw_COS_Commerce_Metrics_Policy::read_context( true );
 		return array_map( static fn( array $item ): array => YoOhw_COS_Intelligence::safe_customer_decisions( $item, $context['generation'] ) + array( '_commerce_context' => $context ), $items );
 	}
 

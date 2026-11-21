@@ -8,7 +8,7 @@ final class YCI_Dependent_Data_Test extends WP_UnitTestCase {
 		parent::set_up();
 		remove_filter( 'query', array( $this, '_create_temporary_tables' ) );
 		remove_filter( 'query', array( $this, '_drop_temporary_tables' ) );
-		YoOhw_COS_Reset_Guard::init();
+		$this->assertTrue( YoOhw_COS_Customers::reset_data() );
 	}
 
 	public function tear_down(): void {
@@ -174,6 +174,38 @@ final class YCI_Dependent_Data_Test extends WP_UnitTestCase {
 				wp_cache_delete( $option, 'options' );
 				wp_cache_delete( 'notoptions', 'options' );
 			}
+		}
+	}
+
+
+	public function test_scan_uses_current_scoring_generation(): void {
+		global $wpdb;
+		$name = 'yoohw_cos_intelligence_generation';
+		$old = wp_generate_uuid4();
+		$current = wp_generate_uuid4();
+		$profile = YoOhw_COS_Customers::create_customer( array( 'email' => 'addon-scoring@example.test' ) );
+		$this->assertGreaterThan( 0, $profile );
+		$previous = get_option( $name, null );
+		update_option( $name, $old, false );
+		$wpdb->query( 'COMMIT' );
+		$other = new wpdb( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST );
+		$wpdb->query( 'START TRANSACTION WITH CONSISTENT SNAPSHOT' );
+		try {
+			$this->assertSame( $old, YoOhw_COS_Intelligence::get_scoring_generation() );
+			$this->assertSame( 1, $other->update( $wpdb->options, array( 'option_value' => $current ), array( 'option_name' => $name ) ) );
+			$this->assertSame( $old, YoOhw_COS_Intelligence::get_scoring_generation() );
+			$this->assertTrue( YoOhw_COS_Reset_Guard::enter() );
+			try {
+				$rows = YoOhw_COS_Customer_Query::scan( $profile - 1, 1 );
+				$this->assertSame( $current, $rows[0]['_commerce_context']['generation'] );
+			} finally {
+				YoOhw_COS_Reset_Guard::leave();
+			}
+		} finally {
+			$wpdb->query( 'ROLLBACK' );
+			$other->close();
+			wp_cache_delete( $name, 'options' );
+			null === $previous ? delete_option( $name ) : update_option( $name, $previous, false );
 		}
 	}
 

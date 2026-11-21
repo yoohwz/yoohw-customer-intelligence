@@ -65,8 +65,8 @@ for canonical safe rows in ascending ID order, including archived profiles, with
 at most 250 rows. Start at zero and advance using the last returned ID. A null
 result is a read failure and must preserve the cursor. Hold the Reset guard before
 reading or writing customer-bound state and bind persisted cursors to its epoch.
-The scan reads current profile rows even when the caller has an older database
-snapshot.
+The scan reads current profile rows and current scoring and migration state even
+when the caller has an older database snapshot.
 
 `YoOhw_COS_Commerce_Aggregates::first_recognized_order( $customer_id, $after, $through )`
 reads the first current-policy recognized order with date in `(after, through]`

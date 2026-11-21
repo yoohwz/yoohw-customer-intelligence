@@ -212,7 +212,7 @@ final class YoOhw_COS_Commerce_Aggregates {
 	 */
 	public static function first_recognized_order( int $customer_id, string $after, string $through ): ?array {
 		global $wpdb;
-		if ( ! YoOhw_COS_Migration_Runner::currency_backfill_is_complete() ) {
+		if ( ! YoOhw_COS_Migration_Runner::currency_backfill_is_complete( true ) ) {
 			return null;
 		}
 		$row = $wpdb->get_row( $wpdb->prepare(

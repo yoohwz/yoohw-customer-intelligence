@@ -30,8 +30,16 @@ final class YoOhw_COS_Dependent_Data {
 		if ( $combined === $registered ) {
 			return true;
 		}
-		update_option( self::OPTION, $combined, false );
-		return $combined === self::registered();
+		global $wpdb;
+		$serialized = maybe_serialize( $combined );
+		$stored = $wpdb->query( $wpdb->prepare(
+			"INSERT INTO %i (option_name, option_value, autoload) VALUES (%s, %s, 'off')
+			ON DUPLICATE KEY UPDATE option_value = %s, autoload = 'off'",
+			$wpdb->options, self::OPTION, $serialized, $serialized
+		) );
+		wp_cache_delete( self::OPTION, 'options' );
+		wp_cache_delete( 'notoptions', 'options' );
+		return false !== $stored && $combined === self::registered();
 	}
 
 	private static function valid( array $suffixes ): bool {

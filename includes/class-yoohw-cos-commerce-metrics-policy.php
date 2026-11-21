@@ -50,15 +50,19 @@ final class YoOhw_COS_Commerce_Metrics_Policy {
 	}
 
 	/** Immutable read model for one already-loaded list page; never used for writes. */
-	public static function read_context(): array {
-		return array( 'site' => self::site_readiness(), 'generation' => YoOhw_COS_Intelligence::get_scoring_generation(), 'store_currency' => self::current_store_currency() );
+	public static function read_context( bool $current = false ): array {
+		return array(
+			'site' => self::site_readiness( $current ),
+			'generation' => YoOhw_COS_Intelligence::get_scoring_generation( $current ),
+			'store_currency' => self::current_store_currency( $current ),
+		);
 	}
 
-	public static function site_readiness(): array {
-		$state = YoOhw_COS_Migration_Runner::get_state();
+	public static function site_readiness( bool $current = false ): array {
+		$state = YoOhw_COS_Migration_Runner::get_state( $current );
 		$migration = $state['commerce_currency_v3'] ?? $state['commerce_facts_v2'] ?? array();
 		$scheduled = wp_next_scheduled( YoOhw_COS_Migration_Runner::HOOK );
-		$ready = YoOhw_COS_Migration_Runner::currency_backfill_is_complete();
+		$ready = YoOhw_COS_Migration_Runner::currency_backfill_is_complete( $current );
 		$status = $migration['status'] ?? '';
 		$site = $ready ? 'ready' : 'attention';
 		global $wpdb;
@@ -103,9 +107,20 @@ final class YoOhw_COS_Commerce_Metrics_Policy {
 		return $customer['money_currency'] === self::current_store_currency();
 	}
 
-	public static function current_store_currency(): string {
+	public static function current_store_currency( bool $current = false ): string {
 		if ( ! function_exists( 'get_woocommerce_currency' ) ) {
 			return '';
+		}
+		if ( $current ) {
+			global $wpdb;
+			$saved = $wpdb->get_var( $wpdb->prepare(
+				'SELECT option_value FROM %i WHERE option_name = %s FOR UPDATE', $wpdb->options, 'woocommerce_currency'
+			) );
+			if ( '' !== $wpdb->last_error ) {
+				return '';
+			}
+			// Preserve the WooCommerce currency filter on the current option value.
+			return (string) apply_filters( 'woocommerce_currency', $saved ?? false );
 		}
 		$generation = YoOhw_COS_Intelligence::get_scoring_generation();
 		if ( self::$store_currency_generation !== $generation ) {
