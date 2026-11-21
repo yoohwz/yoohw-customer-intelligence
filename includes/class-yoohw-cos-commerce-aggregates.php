@@ -206,6 +206,24 @@ final class YoOhw_COS_Commerce_Aggregates {
 		return $customer_id;
 	}
 
+	/**
+	 * First recognized order in the bounded local-date interval (after, through].
+	 * Null means unavailable and an empty array means no qualifying order.
+	 */
+	public static function first_recognized_order( int $customer_id, string $after, string $through ): ?array {
+		global $wpdb;
+		if ( ! YoOhw_COS_Migration_Runner::currency_backfill_is_complete( true ) ) {
+			return null;
+		}
+		$row = $wpdb->get_row( $wpdb->prepare(
+			'SELECT order_id, order_date, revenue_amount, currency FROM %i
+			WHERE customer_id = %d AND counts_as_order = 1 AND order_date > %s AND order_date <= %s
+			AND policy_version >= %d ORDER BY order_date ASC, order_id ASC LIMIT 1 FOR UPDATE',
+			YoOhw_COS_DB::order_facts_table(), $customer_id, $after, $through, YoOhw_COS_Commerce_Metrics_Policy::VERSION
+		), ARRAY_A );
+		return '' !== $wpdb->last_error ? null : ( $row ?? array() );
+	}
+
 	public static function get_customer_metrics( int $customer_id ): array {
 		global $wpdb;
 

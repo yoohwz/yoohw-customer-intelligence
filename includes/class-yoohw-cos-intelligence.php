@@ -39,8 +39,12 @@ final class YoOhw_COS_Intelligence {
 			&& (string) ( $customer['intelligence_generation'] ?? '' ) === ( null === $generation ? self::get_scoring_generation() : $generation );
 	}
 
-	public static function safe_customer_decisions( array $customer, ?string $generation = null ): array {
+	public static function safe_customer_decisions( array $customer, ?string $generation = null, bool $recalculate = true ): array {
 		if ( self::persisted_decisions_are_safe( $customer, $generation ) ) {
+			return $customer;
+		}
+		if ( ! $recalculate ) {
+			unset( $customer['customer_status'], $customer['lifecycle_stage'], $customer['vip_status'], $customer['risk_score'], $customer['trust_score'] );
 			return $customer;
 		}
 		$customer['customer_status'] = self::calculate_customer_status( $customer );
@@ -126,10 +130,11 @@ final class YoOhw_COS_Intelligence {
 	}
 
 	/** Read uncached so an in-flight worker observes another request's invalidation. */
-	public static function get_scoring_generation(): string {
+	public static function get_scoring_generation( bool $current = false ): string {
 		global $wpdb;
-		$generation = (string) $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, 'yoohw_cos_intelligence_generation' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
-		if ( YoOhw_COS_Migration_Runner::currency_backfill_is_complete() ) { return $generation; }
+		$generation = (string) $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, 'yoohw_cos_intelligence_generation' ) . ( $current ? ' FOR UPDATE' : '' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
+		$readable = '' === $wpdb->last_error;
+		if ( ( ! $current || $readable ) && YoOhw_COS_Migration_Runner::currency_backfill_is_complete( $current ) ) { return $generation; }
 		// The active-readiness identity fences old decisions at the single state write,
 		// even if a companion invalidation fails or an in-flight worker cached options.
 		$hash = substr( hash( 'sha256', 'currency-unready|' . $generation ), 0, 32 );

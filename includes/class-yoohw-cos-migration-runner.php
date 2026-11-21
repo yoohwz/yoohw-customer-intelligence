@@ -243,33 +243,47 @@ final class YoOhw_COS_Migration_Runner {
 		if ( self::get_state() !== $state ) { throw new RuntimeException( 'Migration checkpoint was not persisted.' ); }
 	}
 
-	public static function get_state(): array {
+	public static function get_state( bool $current = false ): array {
 		global $wpdb;
-		$value = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, self::STATE_OPTION ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM coordination/readiness state requires a live database result, not cached obligations.
+		$value = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, self::STATE_OPTION ) . ( $current ? ' FOR UPDATE' : '' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM coordination/readiness state requires a live database result, not cached obligations.
 		if ( '' !== $wpdb->last_error ) { return array( '_read_error' => true ); }
 		$state = null === $value ? array() : maybe_unserialize( $value );
 		return is_array( $state ) ? $state : array( '_read_error' => true );
 	}
 
-	public static function currency_backfill_is_complete(): bool {
+	public static function currency_backfill_is_complete( bool $current = false ): bool {
 		// Install verifies the schema at request admission. Do not run its writable
 		// schema checker once per amount/getter; consume the admitted status read-only.
-		$schema = get_option( 'yoohw_cos_schema_status', array() );
-		if ( version_compare( (string) get_option( 'yoohw_cos_db_version', '' ), '0.2.2', '<' ) || 'blocked' === ( $schema['status'] ?? '' ) ) {
+		global $wpdb;
+		if ( $current ) {
+			$options = $wpdb->get_results( $wpdb->prepare(
+				"SELECT option_name, option_value FROM %i WHERE option_name IN ('yoohw_cos_schema_status', 'yoohw_cos_db_version') FOR UPDATE",
+				$wpdb->options
+			), ARRAY_A );
+			if ( ! is_array( $options ) || '' !== $wpdb->last_error ) {
+				return false;
+			}
+			$values = array_column( $options, 'option_value', 'option_name' );
+			$schema = maybe_unserialize( $values['yoohw_cos_schema_status'] ?? '' );
+			$version = $values['yoohw_cos_db_version'] ?? '';
+		} else {
+			$schema = get_option( 'yoohw_cos_schema_status', array() );
+			$version = (string) get_option( 'yoohw_cos_db_version', '' );
+		}
+		if ( version_compare( $version, '0.2.2', '<' ) || 'blocked' === ( $schema['status'] ?? '' ) ) {
 			return false;
 		}
-		$state = self::get_state();
+		$state = self::get_state( $current );
 		if ( ! empty( $state['_read_error'] ) ) { return false; }
 		if ( isset( $state['commerce_currency_v3'] ) ) {
 			if ( 'completed' !== ( $state['commerce_currency_v3']['status'] ?? '' ) ) { return false; }
 		} elseif ( isset( $state['commerce_facts_v2'] ) && 'completed' !== ( $state['commerce_facts_v2']['status'] ?? '' ) ) {
 			return false;
 		}
-		global $wpdb;
 		$issue = $wpdb->get_var( $wpdb->prepare( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Owned CRM coordination/readiness state requires a live database result, not cached obligations.
 			"SELECT 1 FROM %i WHERE migration_id IN ('commerce_facts_v2', 'commerce_currency_v3') AND status IN ('pending', 'unresolved') LIMIT 1",
 			YoOhw_COS_DB::migration_issues_table()
-		) );
+		) . ( $current ? ' FOR UPDATE' : '' ) );
 		return '' === $wpdb->last_error && ! $issue;
 	}
 

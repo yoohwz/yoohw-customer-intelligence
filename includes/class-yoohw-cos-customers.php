@@ -821,21 +821,28 @@ final class YoOhw_COS_Customers {
 		);
 	}
 
-	public static function get_customer( int $customer_id ): array {
+	public static function get_customer( int $customer_id, bool $current = false ): array {
 		global $wpdb;
 
 		$table = YoOhw_COS_DB::customers_table();
 
 		$customer = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 			$wpdb->prepare(
-				'SELECT * FROM %i WHERE id = %d LIMIT 1',
+				'SELECT * FROM %i WHERE id = %d LIMIT 1' . ( $current ? ' FOR UPDATE' : '' ),
 				$table,
 				absint( $customer_id )
 			),
 			ARRAY_A
 		);
 
-		return is_array( $customer ) ? YoOhw_COS_Intelligence::safe_customer_decisions( $customer ) : array();
+		if ( ! is_array( $customer ) ) {
+			return array();
+		}
+		if ( $current ) {
+			$context = YoOhw_COS_Commerce_Metrics_Policy::read_context( true );
+			return YoOhw_COS_Intelligence::safe_customer_decisions( $customer, $context['generation'], false ) + array( '_commerce_context' => $context );
+		}
+		return YoOhw_COS_Intelligence::safe_customer_decisions( $customer );
 	}
 
 	public static function customer_exists( int $customer_id ): bool {
@@ -1030,6 +1037,8 @@ final class YoOhw_COS_Customers {
 			YoOhw_COS_DB::notification_log_table(),
 			YoOhw_COS_DB::migration_issues_table(),
 		);
+		YoOhw_COS_Dependent_Data::reset();
+
 		foreach ( $tables as $table ) {
 			if ( false === $wpdb->query( $wpdb->prepare( 'TRUNCATE TABLE %i', $table ) ) || '0' !== (string) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i', $table ) ) ) { // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 				throw new RuntimeException( 'Reset recovery required: customer tables were not fully cleared. Retry Reset.' );
