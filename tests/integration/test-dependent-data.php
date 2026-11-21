@@ -59,11 +59,42 @@ final class YCI_Dependent_Data_Test extends WP_UnitTestCase {
 			$other = YoOhw_COS_Customers::create_customer( array( 'email' => 'addon-retained@example.test' ) );
 			$this->assertSame( 1, $wpdb->insert( $table, array( 'customer_id' => $subject ) ) );
 			$this->assertSame( 1, $wpdb->insert( $table, array( 'customer_id' => $other ) ) );
+			$fail_delete = static function ( string $query ) use ( $table ): string {
+				if ( 0 === strpos( $query, 'DELETE FROM `' . $table . '`' ) ) {
+					throw new RuntimeException( 'Synthetic dependent delete failure.' );
+				}
+				return $query;
+			};
+			add_filter( 'query', $fail_delete );
+			try {
+				$blocked = YoOhw_COS_Privacy_Erasure::erase( 'addon-erasure@example.test' );
+				$this->assertFalse( $blocked['items_removed'] );
+				$this->assertFalse( $blocked['done'] );
+				$this->assertNotEmpty( YoOhw_COS_Customers::get_customer( $subject ) );
+			} finally {
+				remove_filter( 'query', $fail_delete );
+			}
 			$first = YoOhw_COS_Privacy_Erasure::erase( 'addon-erasure@example.test' );
 			$this->assertTrue( $first['items_removed'] );
 			$this->assertFalse( $first['done'] );
 			$this->assertNotEmpty( YoOhw_COS_Customers::get_customer( $subject ) );
 			$this->assertSame( array( (string) $other ), array_map( 'strval', $wpdb->get_col( $wpdb->prepare( 'SELECT customer_id FROM %i', $table ) ) ) );
+			$fail_truncate = static function ( string $query ) use ( $table ): string {
+				if ( 0 === strpos( $query, 'TRUNCATE TABLE `' . $table . '`' ) ) {
+					throw new RuntimeException( 'Synthetic dependent Reset failure.' );
+				}
+				return $query;
+			};
+			add_filter( 'query', $fail_truncate );
+			try {
+				YoOhw_COS_Customers::reset_data();
+				$this->fail( 'Expected dependent Reset interruption.' );
+			} catch ( RuntimeException $exception ) {
+				$this->assertSame( 'Synthetic dependent Reset failure.', $exception->getMessage() );
+				$this->assertFalse( YoOhw_COS_Reset_Guard::ready() );
+			} finally {
+				remove_filter( 'query', $fail_truncate );
+			}
 			$this->assertTrue( YoOhw_COS_Customers::reset_data() );
 			$this->assertSame( array(), $wpdb->get_col( $wpdb->prepare( 'SELECT customer_id FROM %i', $table ) ) );
 		} finally {
