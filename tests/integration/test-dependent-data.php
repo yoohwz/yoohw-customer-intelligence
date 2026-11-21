@@ -305,11 +305,29 @@ final class YCI_Dependent_Data_Test extends WP_UnitTestCase {
 			$this->assertTrue( YoOhw_COS_Dependent_Data::register( array( $suffix ) ) );
 			$profile = YoOhw_COS_Customers::create_customer( array( 'email' => $email ) );
 			$this->assertGreaterThan( 0, $profile );
+			$inaccessible = static function ( string $query ) use ( $wpdb, $table ): string {
+				if ( false !== strpos( $query, 'information_schema.TABLES' ) && false !== strpos( $query, $table ) ) {
+					return 'SELECT 1 WHERE 1 = 0';
+				}
+				if ( $query === $wpdb->prepare( 'SELECT 1 FROM %i LIMIT 1', $table ) ) {
+					// A probe failure other than ER_NO_SUCH_TABLE must retain the profile.
+					return $wpdb->prepare( 'SELECT unavailable_fixture_column FROM %i LIMIT 1', $table );
+				}
+				return $query;
+			};
+			add_filter( 'query', $inaccessible );
+			try {
+				$result = YoOhw_COS_Privacy_Erasure::erase( $email );
+				$this->assertFalse( $result['done'] );
+				$this->assertFalse( $result['items_removed'] );
+				$this->assertNotEmpty( YoOhw_COS_Customers::get_customer( $profile ) );
+			} finally {
+				remove_filter( 'query', $inaccessible );
+			}
 			$this->assertNotFalse( $wpdb->query( $wpdb->prepare( 'DROP TABLE %i', $table ) ) );
 			$result = YoOhw_COS_Privacy_Erasure::erase( $email );
-			$this->assertFalse( $result['done'] );
-			$this->assertFalse( $result['items_removed'] );
-			$this->assertNotEmpty( YoOhw_COS_Customers::get_customer( $profile ) );
+			$this->assertTrue( $result['items_removed'] );
+			$this->assertEmpty( YoOhw_COS_Customers::get_customer( $profile ) );
 		} finally {
 			$wpdb->query( $wpdb->prepare( 'ALTER TABLE %i ENGINE=InnoDB', $profiles ) );
 			$wpdb->query( $wpdb->prepare( 'DROP TABLE IF EXISTS %i', $table ) );

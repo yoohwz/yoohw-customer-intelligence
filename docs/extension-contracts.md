@@ -89,9 +89,10 @@ both together when using a transaction. The contract accepts up to 16 unique
 `yoohw_*` add-on suffixes, excluding the Core namespace. Check the return value
 before writing customer-bound data. Core stores only the suffixes, so it can
 drain rows in bounded erasure pages and clear the tables during Reset even when
-the provider is inactive. Keep registered storage accessible for cleanup.
-A missing or unreadable registered table preserves erasure retry or the pending
-Reset boundary, since restricted grants can hide a table that still holds data. Each
+the provider is inactive. A table confirmed absent by MySQL can be skipped
+after uninstall. An unreadable registered table preserves erasure retry or
+the pending Reset boundary, since restricted grants can hide a table that
+still holds data. Each
 provider remains responsible for a WordPress privacy exporter and retention.
 
 A scan is a read, so it can still include a customer whose erasure spans pages.

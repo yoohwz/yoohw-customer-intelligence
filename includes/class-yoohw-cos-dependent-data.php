@@ -111,12 +111,26 @@ final class YoOhw_COS_Dependent_Data {
 		$tables = array();
 		foreach ( $registered as $suffix ) {
 			$table = $wpdb->prefix . $suffix;
-			if ( ! self::eligible_table( $table ) ) {
+			if ( self::eligible_table( $table ) ) {
+				$tables[] = $table;
+			} elseif ( ! self::table_was_removed( $table ) ) {
 				throw new RuntimeException( 'Dependent customer table schema is incompatible.' );
 			}
-			$tables[] = $table;
 		}
 		return $tables;
+	}
+
+	/** An absent metadata row can also mean restricted grants. Check the driver result. */
+	private static function table_was_removed( string $table ): bool {
+		global $wpdb;
+		$suppressed = $wpdb->suppress_errors( true );
+		try {
+			$wpdb->get_var( $wpdb->prepare( 'SELECT 1 FROM %i LIMIT 1', $table ) );
+			$connection = $wpdb->dbh;
+			return $connection instanceof mysqli && 1146 === mysqli_errno( $connection ); // ER_NO_SUCH_TABLE.
+		} finally {
+			$wpdb->suppress_errors( $suppressed );
+		}
 	}
 
 	/** A nonzero result keeps the profile available for the next erasure page. */
