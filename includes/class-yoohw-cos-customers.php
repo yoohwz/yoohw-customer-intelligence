@@ -1030,6 +1030,8 @@ final class YoOhw_COS_Customers {
 			YoOhw_COS_DB::notification_log_table(),
 			YoOhw_COS_DB::migration_issues_table(),
 		);
+		YoOhw_COS_Dependent_Data::reset();
+
 		foreach ( $tables as $table ) {
 			if ( false === $wpdb->query( $wpdb->prepare( 'TRUNCATE TABLE %i', $table ) ) || '0' !== (string) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i', $table ) ) ) { // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom CRM/integration tables have no WordPress object API; operate on current persisted state.
 				throw new RuntimeException( 'Reset recovery required: customer tables were not fully cleared. Retry Reset.' );

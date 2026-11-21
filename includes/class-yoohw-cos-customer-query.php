@@ -91,6 +91,24 @@ final class YoOhw_COS_Customer_Query {
 		);
 	}
 
+	/**
+	 * Canonical profiles in ID order, including archived profiles for reconciliation.
+	 * Null means the batch could not be read. Call under the Reset guard when
+	 * retaining a cursor or using the result to write customer-bound state.
+	 */
+	public static function scan( int $after_id, int $limit ): ?array {
+		global $wpdb;
+		$items = $wpdb->get_results( $wpdb->prepare(
+			'SELECT * FROM %i WHERE id > %d ORDER BY id ASC LIMIT %d',
+			YoOhw_COS_DB::customers_table(), max( 0, $after_id ), min( 250, max( 1, $limit ) )
+		), ARRAY_A );
+		if ( ! is_array( $items ) || '' !== $wpdb->last_error ) {
+			return null;
+		}
+		$context = YoOhw_COS_Commerce_Metrics_Policy::read_context();
+		return array_map( static fn( array $item ): array => YoOhw_COS_Intelligence::safe_customer_decisions( $item, $context['generation'] ) + array( '_commerce_context' => $context ), $items );
+	}
+
 	public static function evaluation_reason( array $args, ?array $predicates = null ): string {
 		$args = self::sanitize_args( $args );
 		$monetary = '' !== $args['rfm_monetary_min'];

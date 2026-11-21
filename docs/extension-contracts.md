@@ -57,3 +57,28 @@ add_action( 'plugins_loaded', static function (): void {
 ```
 
 These contracts do not provide a Smart Segment rule engine, stored membership, Premium code, background evaluator, workflow scheduler, automatic action execution, AI or remote registration. Free remains functional with no providers. Existing Reset, privacy suppression and currency boundaries still govern all underlying customer data.
+
+## Bounded reads and dependent-data cleanup
+
+Add-ons can feature-detect `YoOhw_COS_Customer_Query::scan( $after_id, $limit )`
+for canonical safe rows in ascending ID order, including archived profiles, with
+at most 250 rows. Start at zero and advance using the last returned ID. A null
+result is a read failure and must preserve the cursor. Hold the Reset guard before
+reading or writing customer-bound state and bind persisted cursors to its epoch.
+
+`YoOhw_COS_Commerce_Aggregates::first_recognized_order( $customer_id, $after, $through )`
+reads the first current-policy recognized order with date in `(after, through]`
+using Core's local SQL dates. It returns the order ID, date, net revenue and recorded
+currency, an empty array for no order, or null when the data is unavailable.
+Callers must apply Core currency comparability before displaying or comparing money.
+
+Under the Reset guard, register site-relative suffixes with
+`YoOhw_COS_Dependent_Data::register()` after creating add-on tables. Registered
+tables must consist entirely of customer-bound rows, with indexed `customer_id`
+and no foreign keys to Core tables. The contract accepts up to 16 unique
+`yoohw_*` add-on suffixes, excluding the Core namespace. Check the return value
+before writing customer-bound data. Core stores only the suffixes, so it can
+drain rows in bounded erasure pages and clear the tables during Reset even when
+the provider is inactive. Missing tables are skipped for uninstalled add-ons.
+Operational failures preserve erasure retry or the pending Reset boundary. Each
+provider remains responsible for a WordPress privacy exporter and retention.

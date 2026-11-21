@@ -171,6 +171,9 @@ final class YoOhw_COS_Privacy_Erasure {
 			}
 			if ( $profile ) {
 				$customer_id = (int) $profile['id'];
+				if ( YoOhw_COS_Dependent_Data::erase( $customer_id ) > 0 ) {
+					return self::result( true, true, false );
+				}
 				foreach ( array( 'notes', 'tasks', 'events', 'customer_tags', 'customer_segments', 'order_facts' ) as $kind ) {
 					if ( 'order_facts' === $kind ) {
 						$links = self::drain_order_link_snapshot( $snapshot_option );
