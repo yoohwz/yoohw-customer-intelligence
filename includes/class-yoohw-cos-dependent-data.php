@@ -10,7 +10,8 @@ final class YoOhw_COS_Dependent_Data {
 	/**
 	 * Register suffixes of per-site add-on tables with an indexed customer_id.
 	 * Call under the Reset guard after installation. Tables must contain only
-	 * customer-bound operational data, with no foreign key to Core tables.
+	 * customer-bound operational data. Foreign keys in either direction are
+	 * unsupported, including relationships between dependent tables.
 	 */
 	public static function register( array $suffixes ): bool {
 		if ( ! self::valid( $suffixes ) ) {
@@ -20,6 +21,11 @@ final class YoOhw_COS_Dependent_Data {
 		$combined = array_values( array_unique( array_merge( $registered, $suffixes ), SORT_REGULAR ) );
 		if ( ! self::valid( $combined ) ) {
 			return false;
+		}
+		foreach ( array_diff( $combined, $registered ) as $suffix ) {
+			if ( ! self::eligible_table( $suffix ) ) {
+				return false;
+			}
 		}
 		return $combined === $registered || update_option( self::OPTION, $combined, false );
 	}
@@ -38,7 +44,7 @@ final class YoOhw_COS_Dependent_Data {
 
 	private static function registered(): array {
 		global $wpdb;
-		$value = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, self::OPTION ) );
+		$value = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s FOR UPDATE', $wpdb->options, self::OPTION ) );
 		if ( '' !== $wpdb->last_error ) {
 			throw new RuntimeException( 'Dependent customer data registration could not be read.' );
 		}
@@ -47,6 +53,27 @@ final class YoOhw_COS_Dependent_Data {
 			throw new RuntimeException( 'Dependent customer data registration is invalid.' );
 		}
 		return $registered;
+	}
+
+	private static function eligible_table( string $suffix ): bool {
+		global $wpdb;
+		$table = $wpdb->prefix . $suffix;
+		$found = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table ) ) );
+		if ( '' !== $wpdb->last_error || $found !== $table ) {
+			return false;
+		}
+		$index = $wpdb->get_row( $wpdb->prepare( "SHOW INDEX FROM %i WHERE Column_name = 'customer_id' AND Seq_in_index = 1", $table ) );
+		if ( '' !== $wpdb->last_error || ! $index ) {
+			return false;
+		}
+		$foreign_key = $wpdb->get_var( $wpdb->prepare(
+			'SELECT 1 FROM information_schema.KEY_COLUMN_USAGE
+			WHERE REFERENCED_TABLE_NAME IS NOT NULL
+				AND ((TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s)
+					OR (REFERENCED_TABLE_SCHEMA = DATABASE() AND REFERENCED_TABLE_NAME = %s))
+			LIMIT 1', $table, $table
+		) );
+		return '' === $wpdb->last_error && null === $foreign_key;
 	}
 
 	private static function tables(): array {

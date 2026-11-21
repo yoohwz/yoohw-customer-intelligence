@@ -58,4 +58,35 @@ final class YCI_Dependent_Data_Test extends WP_UnitTestCase {
 			delete_option( 'yoohw_cos_dependent_customer_tables' );
 		}
 	}
+
+	public function test_erasure_reads_registration_after_an_older_transaction_snapshot(): void {
+		global $wpdb;
+		$suffix = 'yoohw_test_dependent_late';
+		$table = $wpdb->prefix . $suffix;
+		$option = 'yoohw_cos_dependent_customer_tables';
+		$this->assertNotFalse( $wpdb->query( $wpdb->prepare( 'CREATE TABLE %i (customer_id BIGINT UNSIGNED NOT NULL, KEY subject (customer_id)) ENGINE=InnoDB', $table ) ) );
+		$other = new wpdb( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST );
+		try {
+			delete_option( $option );
+			$subject = YoOhw_COS_Customers::create_customer( array( 'email' => 'addon-late@example.test' ) );
+			$this->assertGreaterThan( 0, $subject );
+			$this->assertNotFalse( $wpdb->query( 'START TRANSACTION WITH CONSISTENT SNAPSHOT' ) );
+			$this->assertNull( $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, $option ) ) );
+			$this->assertSame( 1, $other->insert( $wpdb->options, array( 'option_name' => $option, 'option_value' => serialize( array( $suffix ) ), 'autoload' => 'off' ) ) );
+			$this->assertSame( 1, $other->insert( $table, array( 'customer_id' => $subject ) ) );
+			$this->assertNull( $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, $option ) ) );
+			$result = YoOhw_COS_Privacy_Erasure::erase( 'addon-late@example.test' );
+			$this->assertTrue( $result['items_removed'] );
+			$this->assertNotEmpty( YoOhw_COS_Customers::get_customer( $subject ) );
+			$this->assertSame( '0', (string) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i', $table ) ) );
+		} finally {
+			$wpdb->query( 'ROLLBACK' );
+			$other->close();
+			$wpdb->query( $wpdb->prepare( 'DROP TABLE %i', $table ) );
+			$wpdb->delete( $wpdb->options, array( 'option_name' => $option ) );
+			wp_cache_delete( $option, 'options' );
+			wp_cache_delete( 'notoptions', 'options' );
+		}
+	}
+
 }

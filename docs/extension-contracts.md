@@ -74,11 +74,18 @@ Callers must apply Core currency comparability before displaying or comparing mo
 
 Under the Reset guard, register site-relative suffixes with
 `YoOhw_COS_Dependent_Data::register()` after creating add-on tables. Registered
-tables must consist entirely of customer-bound rows, with indexed `customer_id`
-and no foreign keys to Core tables. The contract accepts up to 16 unique
+tables must consist entirely of customer-bound rows, with a leading `customer_id` index column and no foreign
+keys in either direction, including between dependent tables. The contract accepts up to 16 unique
 `yoohw_*` add-on suffixes, excluding the Core namespace. Check the return value
 before writing customer-bound data. Core stores only the suffixes, so it can
 drain rows in bounded erasure pages and clear the tables during Reset even when
 the provider is inactive. Missing tables are skipped for uninstalled add-ons.
 Operational failures preserve erasure retry or the pending Reset boundary. Each
 provider remains responsible for a WordPress privacy exporter and retention.
+
+A scan is a read, so it can still include a customer whose erasure spans pages.
+Before every customer-bound add-on write, load the current profile and verify
+`YoOhw_COS_Privacy_Erasure::is_suppressed( $profile ) === false` while holding the
+Reset guard. Suppression receipts are persisted before Core drains dependent rows.
+Abort or defer on a missing profile, a changed identity or an unavailable decision.
+Check the epoch before resolving any previously stored customer or task ID.
