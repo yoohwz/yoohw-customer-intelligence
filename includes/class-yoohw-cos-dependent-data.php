@@ -27,7 +27,11 @@ final class YoOhw_COS_Dependent_Data {
 				return false;
 			}
 		}
-		return $combined === $registered || update_option( self::OPTION, $combined, false );
+		if ( $combined === $registered ) {
+			return true;
+		}
+		update_option( self::OPTION, $combined, false );
+		return $combined === self::registered();
 	}
 
 	private static function valid( array $suffixes ): bool {

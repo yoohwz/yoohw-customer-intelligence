@@ -8,6 +8,13 @@ final class YCI_Dependent_Data_Test extends WP_UnitTestCase {
 		parent::set_up();
 		remove_filter( 'query', array( $this, '_create_temporary_tables' ) );
 		remove_filter( 'query', array( $this, '_drop_temporary_tables' ) );
+		YoOhw_COS_Reset_Guard::init();
+	}
+
+	public function tear_down(): void {
+		global $wpdb;
+		$wpdb->query( 'COMMIT' );
+		parent::tear_down();
 	}
 
 	public function test_keyset_and_recognized_order_evidence(): void {
@@ -99,18 +106,21 @@ final class YCI_Dependent_Data_Test extends WP_UnitTestCase {
 	public function test_current_profile_and_suppression_bypass_an_older_snapshot(): void {
 		global $wpdb;
 		$other = new wpdb( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST );
-		$secret = str_repeat( 'a', 64 );
+		$option = 'yoohw_cos_privacy_suppression_secret';
+		$previous = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, $option ) );
+		$secret = $previous ?? str_repeat( 'a', 64 );
 		$email = 'addon-suppression-current@example.test';
 		$subject = YoOhw_COS_Customers::create_customer( array( 'email' => $email ) );
 		// Make the synthetic profile visible to the second connection before the snapshot.
 		$wpdb->query( 'COMMIT' );
-		$wpdb->delete( $wpdb->options, array( 'option_name' => 'yoohw_cos_privacy_suppression_secret' ) );
 		$wpdb->query( 'START TRANSACTION WITH CONSISTENT SNAPSHOT' );
 		try {
 			$this->assertNotEmpty( YoOhw_COS_Customers::get_customer( $subject ) );
-			$this->assertSame( 1, $other->insert( $wpdb->options, array(
-				'option_name' => 'yoohw_cos_privacy_suppression_secret', 'option_value' => $secret, 'autoload' => 'off',
-			) ) );
+			if ( null === $previous ) {
+				$this->assertSame( 1, $other->insert( $wpdb->options, array(
+					'option_name' => $option, 'option_value' => $secret, 'autoload' => 'off',
+				) ) );
+			}
 			$this->assertSame( 1, $other->insert( YoOhw_COS_DB::table( 'privacy_suppression' ), array(
 				'identity_kind' => 'email', 'identity_digest' => hash_hmac( 'sha256', 'email|' . $email, hex2bin( $secret ) ),
 				'hash_version' => 1, 'created_at' => YoOhw_COS_DB::now(),
@@ -128,9 +138,11 @@ final class YCI_Dependent_Data_Test extends WP_UnitTestCase {
 			$wpdb->query( 'ROLLBACK' );
 			$other->close();
 			$wpdb->delete( YoOhw_COS_DB::table( 'privacy_suppression' ), array( 'identity_digest' => hash_hmac( 'sha256', 'email|' . $email, hex2bin( $secret ) ) ) );
-			$wpdb->delete( $wpdb->options, array( 'option_name' => 'yoohw_cos_privacy_suppression_secret' ) );
-			wp_cache_delete( 'yoohw_cos_privacy_suppression_secret', 'options' );
-			wp_cache_delete( 'notoptions', 'options' );
+			if ( null === $previous ) {
+				$wpdb->delete( $wpdb->options, array( 'option_name' => $option ) );
+				wp_cache_delete( $option, 'options' );
+				wp_cache_delete( 'notoptions', 'options' );
+			}
 		}
 	}
 
