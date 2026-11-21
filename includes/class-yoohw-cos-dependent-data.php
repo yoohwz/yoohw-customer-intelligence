@@ -23,6 +23,9 @@ final class YoOhw_COS_Dependent_Data {
 			return false;
 		}
 		global $wpdb;
+		if ( $combined && ! self::is_transactional( YoOhw_COS_DB::customers_table() ) ) {
+			return false;
+		}
 		foreach ( $suffixes as $suffix ) {
 			if ( ! self::eligible_table( $wpdb->prefix . $suffix ) ) {
 				return false;
@@ -67,12 +70,17 @@ final class YoOhw_COS_Dependent_Data {
 		return $registered;
 	}
 
-	private static function eligible_table( string $table ): bool {
+	private static function is_transactional( string $table ): bool {
 		global $wpdb;
 		$engine = $wpdb->get_var( $wpdb->prepare(
 			'SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s', $table
 		) );
-		if ( '' !== $wpdb->last_error || 'InnoDB' !== $engine ) {
+		return '' === $wpdb->last_error && 'InnoDB' === $engine;
+	}
+
+	private static function eligible_table( string $table ): bool {
+		global $wpdb;
+		if ( ! self::is_transactional( $table ) ) {
 			return false;
 		}
 		$column = $wpdb->get_row( $wpdb->prepare( "SHOW COLUMNS FROM %i WHERE Field = 'customer_id'", $table ), ARRAY_A );
@@ -96,19 +104,17 @@ final class YoOhw_COS_Dependent_Data {
 
 	private static function tables(): array {
 		global $wpdb;
+		$registered = self::registered();
+		if ( $registered && ! self::is_transactional( YoOhw_COS_DB::customers_table() ) ) {
+			throw new RuntimeException( 'Dependent data requires an InnoDB customer profile table.' );
+		}
 		$tables = array();
-		foreach ( self::registered() as $suffix ) {
+		foreach ( $registered as $suffix ) {
 			$table = $wpdb->prefix . $suffix;
-			$found = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table ) ) );
-			if ( '' !== $wpdb->last_error ) {
-				throw new RuntimeException( 'Dependent customer tables could not be read.' );
+			if ( ! self::eligible_table( $table ) ) {
+				throw new RuntimeException( 'Dependent customer table schema is incompatible.' );
 			}
-			if ( $found === $table ) {
-				if ( ! self::eligible_table( $table ) ) {
-					throw new RuntimeException( 'Dependent customer table schema is incompatible.' );
-				}
-				$tables[] = $table;
-			}
+			$tables[] = $table;
 		}
 		return $tables;
 	}

@@ -83,13 +83,15 @@ tables must use InnoDB and consist entirely of customer-bound rows, with a nonnu
 leading column of an index and no foreign keys in either direction, including
 between dependent tables. Core checks the installed schema before each
 destructive operation so a recreated, incompatible table cannot widen erasure.
-Register and write data on the same WordPress database connection. If called
-inside a transaction, commit the registration and dependent writes together. The contract accepts up to 16 unique
+Core's profile table must also use InnoDB when these tables are registered.
+Register and write data on the same WordPress database connection and commit
+both together when using a transaction. The contract accepts up to 16 unique
 `yoohw_*` add-on suffixes, excluding the Core namespace. Check the return value
 before writing customer-bound data. Core stores only the suffixes, so it can
 drain rows in bounded erasure pages and clear the tables during Reset even when
-the provider is inactive. Missing tables are skipped for uninstalled add-ons.
-Operational failures preserve erasure retry or the pending Reset boundary. Each
+the provider is inactive. Keep registered storage accessible for cleanup.
+A missing or unreadable registered table preserves erasure retry or the pending
+Reset boundary, since restricted grants can hide a table that still holds data. Each
 provider remains responsible for a WordPress privacy exporter and retention.
 
 A scan is a read, so it can still include a customer whose erasure spans pages.

@@ -290,4 +290,31 @@ final class YCI_Dependent_Data_Test extends WP_UnitTestCase {
 		}
 	}
 
+
+	public function test_cleanup_requires_visible_registered_storage_and_matching_profile_engine(): void {
+		global $wpdb;
+		$suffix = 'yoohw_test_dependent_visibility';
+		$table = $wpdb->prefix . $suffix;
+		$profiles = YoOhw_COS_DB::customers_table();
+		$email = 'addon-hidden-table@example.test';
+		$this->assertNotFalse( $wpdb->query( $wpdb->prepare( 'CREATE TABLE %i (customer_id BIGINT UNSIGNED NOT NULL, KEY subject (customer_id)) ENGINE=InnoDB', $table ) ) );
+		try {
+			$this->assertNotFalse( $wpdb->query( $wpdb->prepare( 'ALTER TABLE %i ENGINE=MyISAM', $profiles ) ) );
+			$this->assertFalse( YoOhw_COS_Dependent_Data::register( array( $suffix ) ) );
+			$this->assertNotFalse( $wpdb->query( $wpdb->prepare( 'ALTER TABLE %i ENGINE=InnoDB', $profiles ) ) );
+			$this->assertTrue( YoOhw_COS_Dependent_Data::register( array( $suffix ) ) );
+			$profile = YoOhw_COS_Customers::create_customer( array( 'email' => $email ) );
+			$this->assertGreaterThan( 0, $profile );
+			$this->assertNotFalse( $wpdb->query( $wpdb->prepare( 'DROP TABLE %i', $table ) ) );
+			$result = YoOhw_COS_Privacy_Erasure::erase( $email );
+			$this->assertFalse( $result['done'] );
+			$this->assertFalse( $result['items_removed'] );
+			$this->assertNotEmpty( YoOhw_COS_Customers::get_customer( $profile ) );
+		} finally {
+			$wpdb->query( $wpdb->prepare( 'ALTER TABLE %i ENGINE=InnoDB', $profiles ) );
+			$wpdb->query( $wpdb->prepare( 'DROP TABLE IF EXISTS %i', $table ) );
+			delete_option( 'yoohw_cos_dependent_customer_tables' );
+		}
+	}
+
 }
